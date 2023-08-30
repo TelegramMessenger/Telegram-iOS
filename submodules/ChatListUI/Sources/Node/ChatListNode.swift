@@ -2992,12 +2992,12 @@ public final class ChatListNode: ListView {
 //        })
 //        guard isHiddenItemVisible else { return }
 
-        let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
+//        let toggleTemporaryRevealHiddenItems = !self.currentState.hiddenItemShouldBeTemporaryRevealed
 //        print("toggle temporary reveal hidden items: \(toggleTemporaryRevealHiddenItems)")
         self.updateState { state in
             var state = state
             state.archiveParams = params
-            state.hiddenItemShouldBeTemporaryRevealed = toggleTemporaryRevealHiddenItems
+            state.hiddenItemShouldBeTemporaryRevealed = true
             return state
         }
 //        guard (abs(currentState.topOffset) - abs(offset) < 1.0 ) else {

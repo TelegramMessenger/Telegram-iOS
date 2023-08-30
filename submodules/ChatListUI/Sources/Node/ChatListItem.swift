@@ -2703,6 +2703,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = .zero
             if case let .groupReference(data) = item.content, data.groupId == .archive {
+                itemHeight *= 1.2
                 heightOffset = -(itemHeight-item.params.expandedHeight)
 //                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
@@ -2716,7 +2717,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
             }
             
-//            print("layout height: \(layout.contentSize.height)")
+            print("layout height: \(layout.contentSize.height)")
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -2763,13 +2764,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if case let .groupReference(data) = item.content, data.groupId == .archive {
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
-                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: contextContainerFrame.size, params: item.params, presentationData: item.presentationData)
-                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
-                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: .zero)
+                        strongSelf.archiveTransitionNode.updateLayout(transition: transition, size: contextContainerFrame.size, params: item.params, presentationData: item.presentationData, avatarNode: strongSelf.avatarNode)
+//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: .zero)
+//                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: .zero)
                     } else {
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
-                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
-                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: 1.0)
+//                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
+//                        transition.updateAlpha(node: strongSelf.contextContainer, alpha: 1.0)
                     }
 //                    print("top offset: \(item.hiddenOffsetValue) hiddenOffset: \(item.hiddenOffset)")
 //                    let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
@@ -3859,37 +3860,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode.layer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "opacity", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.3, delay: 0.7, completion: { [weak self] _ in
             self?.updateIsHighlighted(transition: .immediate)
         })
-    }
-    
-    func updateExpandedHeight(transition: ContainedViewLayoutTransition, params: ArchiveAnimationParams) {
-        guard self.item?.params.expandedHeight != params.expandedHeight else { return }
-        self.item?.params = params
-
-//        let archiveTransitionFrame = CGRect(origin: CGPoint(), size: CGSize(width: self.layout.contentSize.width, height: currentItemHeight))
-        let layout = self.asyncLayout()
-
-        if let layoutParams = self.layoutParams {
-            let updatedParams = ListViewItemLayoutParams(
-                width: layoutParams.5.width,
-                leftInset: layoutParams.5.leftInset,
-                rightInset: layoutParams.5.rightInset,
-                availableHeight: params.expandedHeight
-            )
-            let (nodeLayout, apply) = layout(self.item ?? layoutParams.0, updatedParams, layoutParams.1, layoutParams.2, layoutParams.3, layoutParams.4)
-            apply(true, true)
-            self.contentSize = nodeLayout.contentSize
-            self.insets = nodeLayout.insets
-        }
-        
-//        if let presentationData = self.item?.presentationData  {
-//            self.archiveTransitionNode.updateLayout(transition: transition,
-//                                                    size: archiveTransitionFrame.size,
-//                                                    storiesFraction: 0.5,
-//                                                    scrollOffset: .zero,
-//                                                    presentationData: presentationData)
-//        }
-//        transition.updatePosition(node: self.archiveTransitionNode, position: archiveTransitionFrame.center)
-//        transition.updateBounds(node: self.archiveTransitionNode, bounds: archiveTransitionFrame)
     }
     
     func playArchiveAnimation() {

@@ -2533,8 +2533,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         archiveFraction != 0,
 //                        self.allowOverscrollItemExpansion,
                         let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
-                        let itemHeight = node.currentItemHeight, itemHeight > 0 {
-
+                        var itemHeight = node.currentItemHeight, itemHeight > 0 {
+                        itemHeight *= 1.2
+                        
                         let expandedHeight: CGFloat
                         if archiveFraction < 0 {
                             expandedHeight = itemHeight - (-archiveFraction * itemHeight)
@@ -2567,7 +2568,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                             self.mainContainerNode.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
-                                                expandedHeight: expandedHeight
+                                                expandedHeight: expandedHeight,
+                                                finalizeAnimation: false
                                             ))
 
 //                                            chatNode.updateExpandedHeight(
@@ -2591,7 +2593,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                             self.inlineStackContainerNode?.currentItemNode.updateArchiveTopOffset(params: .init(
                                                 scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
-                                                expandedHeight: expandedHeight
+                                                expandedHeight: expandedHeight,
+                                                finalizeAnimation: false
                                             ))
 
 //                                            chatNode.updateExpandedHeight(
@@ -2657,6 +2660,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         self.allowOverscrollItemExpansion = false
         self.currentOverscrollItemExpansionTimestamp = nil
+        let params = self.mainContainerNode.currentItemNode.currentState.archiveParams
+        self.mainContainerNode.currentItemNode.updateArchiveTopOffset(params: .init(scrollOffset: params.scrollOffset, storiesFraction: params.storiesFraction, expandedHeight: params.expandedHeight, finalizeAnimation: true))
     }
     
     private func contentScrollingEnded(listView: ListView, isPrimary: Bool) -> Bool {
@@ -2668,7 +2673,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View else {
             return false
         }
-        
+                
         if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
             let searchScrollOffset = clippedScrollOffset
             if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {

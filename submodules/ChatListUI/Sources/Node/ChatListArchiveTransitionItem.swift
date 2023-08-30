@@ -2,6 +2,7 @@
 import UIKit
 import AsyncDisplayKit
 import Display
+import AvatarNode
 import SwiftSignalKit
 import AnimationUI
 import ComponentFlow
@@ -11,9 +12,10 @@ public struct ArchiveAnimationParams: Equatable {
     public let scrollOffset: CGFloat
     public let storiesFraction: CGFloat
     public let expandedHeight: CGFloat
+    public let finalizeAnimation: Bool
     
     public static var empty: ArchiveAnimationParams{
-        return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero)
+        return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: false)
     }
 }
 
@@ -78,15 +80,15 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         super.didLoad()
     }
         
-    func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData) {
-        let frame = self.bounds
+    func updateLayout(transition: ContainedViewLayoutTransition, size: CGSize, params: ArchiveAnimationParams, presentationData: ChatListPresentationData, avatarNode: AvatarNode) {
+        let frame = CGRect(origin: self.bounds.origin, size: CGSize(width: self.bounds.width, height: self.bounds.height + 10))
 //        var transition = transition
         
-        guard self.animation.params != params || self.frame.size != size else { return }
+//        guard self.animation.params != params || self.frame.size != size else { return }
         let updateLayers = self.animation.params != params
         
         self.animation.params = params
-//        print("params: \(params) previous params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
+        print("params: \(params) \nprevious params: \(self.animation.params) \nsize: \(size) previous size: \(self.frame.size)")
         let previousState = self.animation.state
         self.animation.state = .init(params: params, previousState: previousState)
         
@@ -331,11 +333,11 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 //        }
         
         mutating func animateLayers(gradientNode: ASDisplayNode, textNode: ASTextNode, arrowContainerNode: ASDisplayNode, transition: ContainedViewLayoutTransition) {
-            print("""
-            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
-            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
-            ##
-            """)
+//            print("""
+//            animate layers with fraction: \(self.params.storiesFraction) animation progress: \(self.state.animationProgress(fraction: self.params.storiesFraction))
+//            state: \(self.state), offset: \(self.params.scrollOffset) height: \(self.params.expandedHeight)
+//            ##
+//            """)
 //            if !(arrowContainerNode.layer.animationKeys()?.contains(where: { $0 == "arrow_rotation" }) ?? false) {
 //                let rotationAnimation = makeArrowRotationAnimation(arrowContainerNode: arrowContainerNode, isRotated: true)
 //                self.rotationPausedTime = arrowContainerNode.layer.convertTime(CACurrentMediaTime(), from: nil)
@@ -407,22 +409,31 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
                 }
             case .transitionToArchive:
-                let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
-                
-                let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
-                transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
-                
-                if let releaseTextNode, let supernode = releaseTextNode.supernode {
-                    let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
-                    transition.updatePosition(node: releaseTextNode, position: targetPosition)
-                        
-                    let textNodeTargetPosition = supernode.bounds.center.interpolate(to: supernode.bounds.center.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
-                    transition.updatePosition(node: textNode, position: textNodeTargetPosition)
-                }
-                                
-                if let gradientMaskLayer {
-                    let targetPath = generateGradientMaskPath(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode, fraction: animationProgress)
-                    transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
+                if params.finalizeAnimation {
+                    print("should finalize animation")
+                    //duration = 0.5
+                    //show animation arrow node
+                    //play animation arrow to archive
+                    //update gradient mask path to avatar node frame
+                    //scale up then scale down avatar node gradient
+                } else {
+                    let animationProgress = self.state.animationProgress(fraction: self.params.storiesFraction)
+                    
+                    let rotationDegree = TransitionAnimation.degreesToRadians(CGFloat(0).interpolate(to: CGFloat(-180), amount: animationProgress))
+                    transition.updateTransformRotation(node: arrowContainerNode, angle: rotationDegree)
+                    
+                    if let releaseTextNode, let supernode = releaseTextNode.supernode {
+                        let targetPosition = supernode.bounds.center.offsetBy(dx: -supernode.bounds.width, dy: .zero).interpolate(to: supernode.bounds.center, amount: animationProgress)
+                        transition.updatePosition(node: releaseTextNode, position: targetPosition)
+                            
+                        let textNodeTargetPosition = supernode.bounds.center.interpolate(to: supernode.bounds.center.offsetBy(dx: supernode.bounds.width, dy: .zero), amount: animationProgress)
+                        transition.updatePosition(node: textNode, position: textNodeTargetPosition)
+                    }
+                                    
+                    if let gradientMaskLayer {
+                        let targetPath = generateGradientMaskPath(gradientContainerNode: gradientNode, arrowContainerNode: arrowContainerNode, fraction: animationProgress)
+                        transition.updatePath(layer: gradientMaskLayer, path: targetPath.cgPath)
+                    }
                 }
             }
             self.isAnimated = true
