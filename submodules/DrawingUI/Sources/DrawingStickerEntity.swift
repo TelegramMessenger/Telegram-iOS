@@ -33,7 +33,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     private var outlineView: UIImageView?
     
     private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    private var animationNode: DefaultAnimatedStickerNodeImpl?
     private var videoNode: UniversalVideoNode?
         
     private var didSetUpAnimationNode = false
@@ -125,6 +125,24 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    private func updateAnimationColor() {
+        let color: UIColor?
+        if case let .file(file, type) = self.stickerEntity.content, file.isCustomTemplateEmoji {
+            if case let .reaction(_, style) = type {
+                if case .white = style {
+                    color = UIColor(rgb: 0x000000)
+                } else {
+                    color = UIColor(rgb: 0xffffff)
+                }
+            } else {
+                color = UIColor(rgb: 0xffffff)
+            }
+        } else {
+            color = nil
+        }
+        self.animationNode?.dynamicColor = color
+    }
+    
     private func setup() {
         if let file = self.file {
             if let dimensions = file.dimensions {
@@ -149,9 +167,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         }
                         self.addSubnode(animationNode)
                         
-                        if file.isCustomTemplateEmoji {
-                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
-                        }
+                        self.updateAnimationColor()
                         
                         if !self.stickerEntity.isAnimated {
                             self.imageNode.isHidden = true
@@ -639,6 +655,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 self.outlineView?.tintColor = UIColor(rgb: 0x000000, alpha: 0.5)
             }
         }
+        self.updateAnimationColor()
         
         let isReaction = self.isReaction
         let staticTransform = CATransform3DMakeScale(self.stickerEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
