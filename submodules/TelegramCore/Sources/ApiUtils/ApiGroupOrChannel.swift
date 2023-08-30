@@ -225,7 +225,8 @@ func mergeChannel(lhs: TelegramChannel?, rhs: TelegramChannel) -> TelegramChanne
     }
     
     if case .personal? = rhs.accessHash {
-        return rhs
+        let storiesHidden: Bool? = rhs.storiesHidden ?? lhs.storiesHidden
+        return rhs.withUpdatedStoriesHidden(storiesHidden)
     }
     
     var channelFlags = lhs.flags
