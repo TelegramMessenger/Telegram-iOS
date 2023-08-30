@@ -9868,3 +9868,5 @@ Sorry for the inconvenience.";
 "Story.Privacy.PostStoryAsHeader" = "POST STORY AS";
 "Story.Privacy.KeepOnChannelPage" = "Post to Channel Profile";
 "Story.Privacy.KeepOnChannelPageInfo" = "Keep this story on channel profile even after it expires in %@.";
+
+"Story.Editor.TooltipPremiumReaction" = "Subscribe to [Telegram Premium]() to use this reaction.";

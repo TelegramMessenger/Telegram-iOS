@@ -1950,6 +1950,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.entitiesView.getAvailableReactions = { [weak self] in
                 return self?.availableReactions ?? []
             }
+            self.entitiesView.present = { [weak self] c in
+                if let self {
+                    self.controller?.dismissAllTooltips()
+                    self.controller?.present(c, in: .current)
+                }
+            }
+            self.entitiesView.push = { [weak self] c in
+                if let self {
+                    self.controller?.push(c)
+                }
+            }
             
             self.availableReactionsDisposable = (allowedStoryReactions(context: controller.context)
             |> deliverOnMainQueue).start(next: { [weak self] reactions in
@@ -3959,8 +3970,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
-            return false }
-        )
+            return false
+        })
         self.present(controller, in: .current)
     }
 
@@ -3980,8 +3991,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
                 self.push(controller)
             }
-            return false }
-        )
+            return false
+        })
         self.present(controller, in: .current)
     }
     

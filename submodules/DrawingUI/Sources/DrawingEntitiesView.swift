@@ -75,6 +75,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
     
     public var getAvailableReactions: () -> [ReactionItem] = { return [] }
+    public var present: (ViewController) -> Void = { _ in }
+    public var push: (ViewController) -> Void = { _ in }
     
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
