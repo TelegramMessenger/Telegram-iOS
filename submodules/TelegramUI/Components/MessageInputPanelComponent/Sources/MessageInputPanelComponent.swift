@@ -37,6 +37,7 @@ public final class MessageInputPanelComponent: Component {
     public enum Style {
         case story
         case editor
+        case media
     }
     
     public enum InputMode: Hashable {
@@ -619,7 +620,12 @@ public final class MessageInputPanelComponent: Component {
                 insets.right = 41.0
             }
             
-            let mediaInsets = UIEdgeInsets(top: insets.top, left: 9.0, bottom: insets.bottom, right: 41.0)
+            var textFieldSideInset = 9.0
+            if case .media = component.style {
+                textFieldSideInset = 8.0
+            }
+            
+            let mediaInsets = UIEdgeInsets(top: insets.top, left: textFieldSideInset, bottom: insets.bottom, right: 41.0)
             
             let baseFieldHeight: CGFloat = 40.0
 
@@ -744,7 +750,7 @@ public final class MessageInputPanelComponent: Component {
             var fieldBackgroundFrame: CGRect
             if hasMediaRecording {
                 fieldBackgroundFrame = CGRect(origin: CGPoint(x: mediaInsets.left, y: insets.top), size: CGSize(width: availableSize.width - mediaInsets.left - mediaInsets.right, height: textFieldSize.height))
-            } else if isEditing || component.style == .editor {
+            } else if isEditing || component.style == .editor || component.style == .media {
                 fieldBackgroundFrame = fieldFrame
             } else {
                 if component.forwardAction != nil && component.likeAction != nil {
@@ -1019,6 +1025,8 @@ public final class MessageInputPanelComponent: Component {
             
             let inputActionButtonMode: MessageInputActionButtonComponent.Mode
             if case .editor = component.style {
+                inputActionButtonMode = isEditing ? .apply : .none
+            } else if case .media = component.style {
                 inputActionButtonMode = isEditing ? .apply : .none
             } else {
                 if hasMediaEditing {
@@ -1326,7 +1334,7 @@ public final class MessageInputPanelComponent: Component {
             }
             
             if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
-                func generateIcon(value: String) -> UIImage? {
+                func generateIcon(value: String, selected: Bool) -> UIImage? {
                     let image = UIImage(bundleImageName: "Media Editor/Timeout")!
                     let valueString = NSAttributedString(string: value, font: Font.with(size: value.count == 1 ? 12.0 : 10.0, design: .round, weight: .semibold), textColor: .white, paragraphAlignment: .center)
                    
@@ -1334,8 +1342,13 @@ public final class MessageInputPanelComponent: Component {
                         let bounds = CGRect(origin: CGPoint(), size: size)
                         context.clear(bounds)
                         
-                        if let cgImage = image.cgImage {
-                            context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                        if selected {
+                            context.setFillColor(UIColor(rgb: 0x3478f6).cgColor)
+                            context.fillEllipse(in: CGRect(origin: .zero, size: size))
+                        } else {
+                            if let cgImage = image.cgImage {
+                                context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                            }
                         }
                         
                         var offset: CGPoint = CGPoint(x: 0.0, y: -3.0 - UIScreenPixel)
@@ -1349,14 +1362,14 @@ public final class MessageInputPanelComponent: Component {
                         let valueFramesetter = CTFramesetterCreateWithAttributedString(valueString as CFAttributedString)
                         let valyeFrame = CTFramesetterCreateFrame(valueFramesetter, CFRangeMake(0, valueString.length), valuePath, nil)
                         CTFrameDraw(valyeFrame, context)
-                    })?.withRenderingMode(.alwaysTemplate)
+                    })
                 }
                 
-                let icon = generateIcon(value: timeoutValue)
+                let icon = generateIcon(value: timeoutValue, selected: component.timeoutSelected)
                 let timeoutButtonSize = self.timeoutButton.update(
                     transition: transition,
                     component: AnyComponent(Button(
-                        content: AnyComponent(Image(image: icon, tintColor: component.timeoutSelected ? UIColor(rgb: 0xf8d74a) : UIColor(white: 1.0, alpha: 1.0), size: CGSize(width: 20.0, height: 20.0))),
+                        content: AnyComponent(Image(image: icon, size: CGSize(width: 20.0, height: 20.0))),
                         action: { [weak self] in
                             guard let self, let timeoutButtonView = self.timeoutButton.view else {
                                 return
@@ -1382,7 +1395,9 @@ public final class MessageInputPanelComponent: Component {
             }
             
             var fieldBackgroundIsDark = false
-            if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
+            if component.style == .media {
+                
+            } else if self.textFieldExternalState.hasText && component.alwaysDarkWhenHasText {
                 fieldBackgroundIsDark = true
             } else if isEditing || component.style == .editor {
                 fieldBackgroundIsDark = true
