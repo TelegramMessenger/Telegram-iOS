@@ -477,7 +477,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             } else {
                 animationSize = CGSize(width: 32.0, height: 32.0)
             }
-            if animationName == "anim_autoremove_on" {
+            if ["anim_autoremove_on", "anim_autoremove_off"].contains(animationName) {
                 animationOffset = -3.0
             } else if animationName == "ChatListFoldersTooltip" {
                 animationInset = (70.0 - animationSize.width) / 2.0

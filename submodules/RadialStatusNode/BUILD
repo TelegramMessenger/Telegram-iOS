@@ -14,6 +14,7 @@ swift_library(
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode"
     ],
     visibility = [
         "//visibility:public",

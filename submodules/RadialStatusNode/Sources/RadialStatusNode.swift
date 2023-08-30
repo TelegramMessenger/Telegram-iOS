@@ -12,6 +12,7 @@ public enum RadialStatusNodeState: Equatable {
     case cloudProgress(color: UIColor, strokeBackgroundColor: UIColor, lineWidth: CGFloat, value: CGFloat?)
     case check(UIColor)
     case customIcon(UIImage)
+    case staticTimeout
     case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double, sparks: Bool)
     
     public static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
@@ -60,6 +61,12 @@ public enum RadialStatusNodeState: Equatable {
                 }
             case let .customIcon(lhsImage):
                 if case let .customIcon(rhsImage) = rhs, lhsImage === rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case .staticTimeout:
+                if case .staticTimeout = rhs {
                     return true
                 } else {
                     return false
@@ -123,6 +130,12 @@ public enum RadialStatusNodeState: Equatable {
                 } else {
                     return false
                 }
+            case .staticTimeout:
+                if case .staticTimeout = rhs{
+                    return true
+                } else {
+                    return false
+                }
             case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout, lhsSparks):
                 if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
                     return true
@@ -179,6 +192,8 @@ public enum RadialStatusNodeState: Equatable {
                     node.progress = value
                     return node
                 }
+            case .staticTimeout:
+                return RadialStatusIconContentNode(icon: .timeout, synchronous: synchronous)
             case let .secretTimeout(color, icon, beginTime, timeout, sparks):
                 return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon, sparks: sparks)
         }
@@ -188,7 +203,9 @@ public enum RadialStatusNodeState: Equatable {
 public final class RadialStatusNode: ASControlNode {
     public var backgroundNodeColor: UIColor {
         didSet {
-            self.transitionToBackgroundColor(self.state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, synchronous: false, completion: {})
+            if self.backgroundNodeColor != oldValue {
+                self.transitionToBackgroundColor(self.state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, synchronous: false, completion: {})
+            }
         }
     }
 

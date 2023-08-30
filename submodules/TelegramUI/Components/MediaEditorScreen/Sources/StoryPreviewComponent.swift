@@ -293,7 +293,8 @@ final class StoryPreviewComponent: Component {
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
                     isChannel: false,
-                    storyItem: nil
+                    storyItem: nil,
+                    chatLocation: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 200.0)

@@ -22,17 +22,21 @@
 @property (nonatomic, copy) void (^panelFocused)(void);
 @property (nonatomic, copy) void (^finishedWithCaption)(NSAttributedString *caption);
 @property (nonatomic, copy) void (^keyboardHeightChanged)(CGFloat keyboardHeight, NSTimeInterval duration, NSInteger animationCurve);
+@property (nonatomic, copy) void (^timerUpdated)(NSNumber *timeout);
 
 - (void)createInputPanelIfNeeded;
 - (void)beginEditing;
 - (void)enableDismissal;
 
+- (void)onAnimateOut;
+    
 - (void)destroy;
 
 @property (nonatomic, strong) NSAttributedString *caption;
 - (void)setCaption:(NSAttributedString *)caption animated:(bool)animated;
-
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)animated;
+
+- (void)setTimeout:(int32_t)timeout;
 
 - (void)updateLayoutWithFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets animated:(bool)animated;
 

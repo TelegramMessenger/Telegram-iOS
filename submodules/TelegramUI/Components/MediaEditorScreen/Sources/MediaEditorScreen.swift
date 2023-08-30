@@ -415,7 +415,6 @@ final class MediaEditorScreenComponent: Component {
             guard let _ = self.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
             }
-//            if view.canDeactivateInput() {
             self.currentInputMode = .text
             if hasFirstResponder(self) {
                 if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
@@ -429,12 +428,6 @@ final class MediaEditorScreenComponent: Component {
             } else {
                 self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
             }
-//            } else {
-//                if let controller = self.environment?.controller() as? MediaEditorScreen {
-//                    controller.presentCaptionLimitPremiumSuggestion(isPremium: self.sta)
-//                }
-//                view.animateError()
-//            }
         }
         
         private var animatingButtons = false
@@ -511,7 +504,7 @@ final class MediaEditorScreenComponent: Component {
         
         func animateOut(to source: TransitionAnimationSource) {
             self.isDismissed = true
-            
+                        
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.cancelButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
@@ -939,7 +932,6 @@ final class MediaEditorScreenComponent: Component {
             self.appliedAudioData = audioData
                         
             var timeoutValue: String
-            let timeoutSelected: Bool
             switch component.privacy.timeout {
             case 21600:
                 timeoutValue = "6"
@@ -952,7 +944,6 @@ final class MediaEditorScreenComponent: Component {
             default:
                 timeoutValue = "24"
             }
-            timeoutSelected = false
             
             var inputPanelAvailableWidth = previewSize.width
             var inputPanelAvailableHeight = 103.0
@@ -1192,7 +1183,7 @@ final class MediaEditorScreenComponent: Component {
                     hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
                     timeoutValue: timeoutValue,
-                    timeoutSelected: timeoutSelected,
+                    timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: 0.0,
                     isFormattingLocked: !state.isPremium,
@@ -1200,7 +1191,8 @@ final class MediaEditorScreenComponent: Component {
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil,
                     isChannel: false,
-                    storyItem: nil
+                    storyItem: nil,
+                    chatLocation: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
@@ -1952,6 +1944,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.entitiesView.getAvailableReactions = { [weak self] in
                 return self?.availableReactions ?? []
             }
+            self.entitiesView.present = { [weak self] c in
+                if let self {
+                    self.controller?.dismissAllTooltips()
+                    self.controller?.present(c, in: .current)
+                }
+            }
+            self.entitiesView.push = { [weak self] c in
+                if let self {
+                    self.controller?.push(c)
+                }
+            }
             
             self.availableReactionsDisposable = (allowedStoryReactions(context: controller.context)
             |> deliverOnMainQueue).start(next: { [weak self] reactions in
@@ -2584,6 +2587,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.isDismissed = true
             controller.statusBar.statusBarStyle = .Ignore
             self.isUserInteractionEnabled = false
+            
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
             
             let previousDimAlpha = self.backgroundDimView.alpha
             self.backgroundDimView.alpha = 0.0
@@ -3795,6 +3802,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     })
                 }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }
@@ -3846,6 +3859,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 editCategory: { _, _, _ in },
                 editBlockedPeers: { _, _, _ in }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }
@@ -3949,8 +3968,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
                 self.push(controller)
             }
-            return false }
-        )
+            return false
+        })
         self.present(controller, in: .current)
     }
 
@@ -3970,8 +3989,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
                 self.push(controller)
             }
-            return false }
-        )
+            return false
+        })
         self.present(controller, in: .current)
     }
     

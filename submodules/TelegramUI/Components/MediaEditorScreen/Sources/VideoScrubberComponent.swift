@@ -581,6 +581,7 @@ final class VideoScrubberComponent: Component {
                     audioTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected || component.audioOnly ? 0.0 : 6.0), size: audioWaveformSize))
                 }
             }
+            self.cursorView.isHidden = component.audioOnly
             
             let bounds = CGRect(origin: .zero, size: scrubberSize)
             

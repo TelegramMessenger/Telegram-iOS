@@ -111,8 +111,12 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         switch self.content {
         case let .image(image, _):
             dimensions = image.size
-        case let .file(file, _):
-            dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        case let .file(file, type):
+            if case .reaction = type {
+                dimensions = CGSize(width: 512.0, height: 512.0)
+            } else {
+                dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+            }
         case let .video(file):
             dimensions = file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case .dualVideoReference:

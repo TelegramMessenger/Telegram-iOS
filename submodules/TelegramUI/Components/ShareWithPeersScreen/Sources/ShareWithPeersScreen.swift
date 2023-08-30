@@ -135,7 +135,7 @@ final class ShareWithPeersScreenComponent: Component {
                 self.itemHeight = itemHeight
                 self.itemCount = itemCount
                 
-                self.totalHeight = insets.top + itemHeight * CGFloat(itemCount)
+                self.totalHeight = insets.top + itemHeight * CGFloat(itemCount) + insets.bottom
             }
         }
         
@@ -818,8 +818,16 @@ final class ShareWithPeersScreenComponent: Component {
             var topOffsetFraction = topOffset / topOffsetDistance
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
             
-            //let transitionFactor: CGFloat = 1.0 - topOffsetFraction
-            //controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
+            let transitionFactor: CGFloat = 1.0 - topOffsetFraction
+            if let controller = environment.controller() {
+                Queue.mainQueue().justDispatch {
+                    var transition = transition
+                    if controller.modalStyleOverlayTransitionFactor.isZero && transitionFactor > 0.0, transition.animation.isImmediate {
+                        transition = .spring(duration: 0.4)
+                    }
+                    controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
+                }
+            }
             
             var visibleBounds = self.scrollView.bounds
             visibleBounds.origin.y -= itemLayout.topInset
@@ -907,7 +915,7 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let sectionTitle: String
                         if section.id == 0, case .stories = component.stateContext.subject {
-                            sectionTitle = "POST STORY AS"
+                            sectionTitle = environment.strings.Story_Privacy_PostStoryAsHeader
                         } else if section.id == 2 {
                             sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
                         } else if section.id == 1 {
@@ -1362,11 +1370,16 @@ final class ShareWithPeersScreenComponent: Component {
                             self.visibleItems[itemId] = visibleItem
                         }
                         
+                        var title = item.title
+                        if item.id == .pin && !hasCategories {
+                            title = environment.strings.Story_Privacy_KeepOnChannelPage
+                        }
+                        
                         let _ = visibleItem.update(
                             transition: itemTransition,
                             component: AnyComponent(OptionListItemComponent(
                                 theme: environment.theme,
-                                title: item.title,
+                                title: title,
                                 hasNext: i != component.optionItems.count - 1,
                                 selected: self.selectedOptions.contains(item.id),
                                 selectionChanged: { [weak self] selected in
@@ -1414,7 +1427,7 @@ final class ShareWithPeersScreenComponent: Component {
                     var footerText = environment.strings.Story_Privacy_KeepOnMyPageInfo(footerValue).string
                     
                     if self.sendAsPeerId?.isGroupOrChannel == true {
-                        footerText = "Keep this story on channel profile even after it expires in 24 hours."
+                        footerText = environment.strings.Story_Privacy_KeepOnChannelPageInfo(footerValue).string
                     }
                     
                     let footerSize = sectionFooter.update(
@@ -1507,6 +1520,9 @@ final class ShareWithPeersScreenComponent: Component {
             }
             for id in removeSectionBackgroundIds {
                 self.visibleSectionBackgrounds.removeValue(forKey: id)
+            }
+            for id in removeSectionFooterIds {
+                self.visibleSectionFooters.removeValue(forKey: id)
             }
             
             let fadeTransition = Transition.easeInOut(duration: 0.25)
@@ -1932,10 +1948,15 @@ final class ShareWithPeersScreenComponent: Component {
             )
             
             var hasCategories = false
+            var hasChannels = false
             if case .stories = component.stateContext.subject {
                 if let peerId = self.sendAsPeerId, peerId.isGroupOrChannel {
                 } else {
                     hasCategories = true
+                }
+                let sendAsPeersCount = component.stateContext.stateValue?.sendAsPeers.count ?? 1
+                if sendAsPeersCount > 1 {
+                    hasChannels = true
                 }
             }
             
@@ -2016,16 +2037,15 @@ final class ShareWithPeersScreenComponent: Component {
                 if case let .peers(peers, _) = component.stateContext.subject {
                     sections.append(ItemLayout.Section(
                         id: 0,
-                        insets: UIEdgeInsets(top: 12.0, left: 0.0, bottom: 24.0, right: 0.0),
+                        insets: UIEdgeInsets(top: 12.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: peerItemSize.height,
                         itemCount: peers.count
                     ))
                 } else if case let .stories(editing) = component.stateContext.subject {
-                    let sendAsPeersCount = component.stateContext.stateValue?.sendAsPeers.count ?? 1
-                    if !editing && sendAsPeersCount > 1 {
+                    if !editing && hasChannels {
                         sections.append(ItemLayout.Section(
                             id: 0,
-                            insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 24.0, right: 0.0),
+                            insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                             itemHeight: peerItemSize.height,
                             itemCount: 1
                         ))
@@ -2040,7 +2060,7 @@ final class ShareWithPeersScreenComponent: Component {
                     }
                     sections.append(ItemLayout.Section(
                         id: 3,
-                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 24.0, right: 0.0),
+                        insets: UIEdgeInsets(top: 28.0, left: 0.0, bottom: 0.0, right: 0.0),
                         itemHeight: optionItemSize.height,
                         itemCount: component.optionItems.count
                     ))
@@ -2110,7 +2130,7 @@ final class ShareWithPeersScreenComponent: Component {
             let title: String
             switch component.stateContext.subject {
             case .peers:
-                title = "Post Story As"
+                title = environment.strings.Story_Privacy_PostStoryAs
             case let .stories(editing):
                 if editing {
                     title = environment.strings.Story_Privacy_EditStory
@@ -2178,11 +2198,16 @@ final class ShareWithPeersScreenComponent: Component {
                         inset = 351.0
                         inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                     } else {
-                        if hasCategories {
-                            inset = 1000.0
-                        } else {
+                        if !hasCategories {
                             inset = 314.0
                             inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
+                        } else {
+                            if hasChannels {
+                                inset = 1000.0
+                            } else {
+                                inset = 464.0
+                                inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
+                            }
                         }
                     }
                 } else if case .peers = component.stateContext.subject {
@@ -2201,7 +2226,7 @@ final class ShareWithPeersScreenComponent: Component {
             var bottomPanelHeight: CGFloat = 0.0
             var bottomPanelInset: CGFloat = 0.0
             if case .peers = component.stateContext.subject {
-                
+                bottomPanelInset = environment.safeInsets.bottom
             } else {
                 let badge: Int
                 if case .stories = component.stateContext.subject {
@@ -2367,7 +2392,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             }
                                             return Array(filteredMentions)
                                         }
-                                                 |> deliverOnMainQueue).start(next: { mentions in
+                                        |> deliverOnMainQueue).start(next: { mentions in
                                             if mentions.isEmpty {
                                                 proceed()
                                             } else {
@@ -2377,7 +2402,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     }
                                 } else if case .contacts = base {
                                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                             |> map { contacts -> [String] in
+                                    |> map { contacts -> [String] in
                                         var filteredMentions = Set(component.mentions)
                                         let peers = contacts.peers
                                         for peer in peers {
@@ -2390,7 +2415,7 @@ final class ShareWithPeersScreenComponent: Component {
                                         }
                                         return Array(filteredMentions)
                                     }
-                                             |> deliverOnMainQueue).start(next: { mentions in
+                                    |> deliverOnMainQueue).start(next: { mentions in
                                         if mentions.isEmpty {
                                             proceed()
                                         } else {
@@ -2399,7 +2424,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     })
                                 } else if case .closeFriends = base {
                                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                             |> map { contacts -> [String] in
+                                    |> map { contacts -> [String] in
                                         var filteredMentions = Set(component.mentions)
                                         let peers = contacts.peers
                                         for peer in peers {
@@ -2409,7 +2434,7 @@ final class ShareWithPeersScreenComponent: Component {
                                         }
                                         return Array(filteredMentions)
                                     }
-                                             |> deliverOnMainQueue).start(next: { mentions in
+                                    |> deliverOnMainQueue).start(next: { mentions in
                                         if mentions.isEmpty {
                                             proceed()
                                         } else {
@@ -2452,7 +2477,7 @@ final class ShareWithPeersScreenComponent: Component {
             let previousItemLayout = self.itemLayout
             self.itemLayout = itemLayout
             
-            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight)))
+            contentTransition.setFrame(view: self.itemContainerView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: containerWidth, height: itemLayout.contentHeight + footersTotalHeight)))
             
             let scrollContentHeight = max(topInset + itemLayout.contentHeight + containerInset, availableSize.height - containerInset)
             

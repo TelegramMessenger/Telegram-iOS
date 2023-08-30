@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import LegacyComponents
+import ManagedAnimationNode
 
 private struct ContentParticle {
     var position: CGPoint
@@ -53,6 +54,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     private var progress: CGFloat = 0.0
     private var particles: [ContentParticle] = []
     
+    private let animationNode = FireIconNode()
+    
     private var displayLink: CADisplayLink?
     
     init(color: UIColor, beginTime: Double, timeout: Double, icon: UIImage?, sparks: Bool) {
@@ -65,7 +68,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         super.init()
         
         self.isOpaque = false
-        self.isLayerBacked = true
+//        self.isLayerBacked = true
         
         class DisplayLinkProxy: NSObject {
             weak var target: RadialStatusSecretTimeoutContentNode?
@@ -81,6 +84,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         self.displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
         self.displayLink?.isPaused = true
         self.displayLink?.add(to: RunLoop.main, forMode: .common)
+        
+        self.addSubnode(self.animationNode)
     }
     
     deinit {
@@ -89,6 +94,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     
     override func layout() {
         super.layout()
+        
+        self.animationNode.frame = CGRect(x: 6.0, y: 2.0, width: 36.0, height: 36.0)
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
@@ -231,3 +238,10 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     }
 }
 
+final class FireIconNode: ManagedAnimationNode {    
+    init() {
+        super.init(size: CGSize(width: 100.0, height: 100.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0))
+    }
+}

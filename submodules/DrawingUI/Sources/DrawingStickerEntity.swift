@@ -33,7 +33,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     private var outlineView: UIImageView?
     
     private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    private var animationNode: DefaultAnimatedStickerNodeImpl?
     private var videoNode: UniversalVideoNode?
         
     private var didSetUpAnimationNode = false
@@ -125,6 +125,24 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    private func updateAnimationColor() {
+        let color: UIColor?
+        if case let .file(file, type) = self.stickerEntity.content, file.isCustomTemplateEmoji {
+            if case let .reaction(_, style) = type {
+                if case .white = style {
+                    color = UIColor(rgb: 0x000000)
+                } else {
+                    color = UIColor(rgb: 0xffffff)
+                }
+            } else {
+                color = UIColor(rgb: 0xffffff)
+            }
+        } else {
+            color = nil
+        }
+        self.animationNode?.dynamicColor = color
+    }
+    
     private func setup() {
         if let file = self.file {
             if let dimensions = file.dimensions {
@@ -149,9 +167,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         }
                         self.addSubnode(animationNode)
                         
-                        if file.isCustomTemplateEmoji {
-                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
-                        }
+                        self.updateAnimationColor()
                         
                         if !self.stickerEntity.isAnimated {
                             self.imageNode.isHidden = true
@@ -525,50 +541,21 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
         
         reactionContextNode.premiumReactionsSelected = { [weak self] file in
-            let _ = self
-            let _ = file
-//                guard let self, let component = self.component else {
-//                    return
-//                }
-//
-//                guard let file else {
-//                    let context = component.context
-//                    var replaceImpl: ((ViewController) -> Void)?
-//                    let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, forceDark: true, action: {
-//                        let controller = PremiumIntroScreen(context: context, source: .reactions)
-//                        replaceImpl?(controller)
-//                    })
-//                    controller.disposed = { [weak self] in
-//                        self?.updateIsProgressPaused()
-//                    }
-//                    replaceImpl = { [weak controller] c in
-//                        controller?.replace(with: c)
-//                    }
-//                    component.controller()?.push(controller)
-//                    return
-//                }
-//
-//                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-//                let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: file, loop: true, title: nil, text: presentationData.strings.Chat_PremiumReactionToastTitle, undoText: presentationData.strings.Chat_PremiumReactionToastAction, customAction: { [weak self] in
-//                    guard let self, let component = self.component else {
-//                        return
-//                    }
-//
-//                    let context = component.context
-//                    var replaceImpl: ((ViewController) -> Void)?
-//                    let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, forceDark: true, action: {
-//                        let controller = PremiumIntroScreen(context: context, source: .reactions)
-//                        replaceImpl?(controller)
-//                    })
-//                    controller.disposed = { [weak self] in
-//                        self?.updateIsProgressPaused()
-//                    }
-//                    replaceImpl = { [weak controller] c in
-//                        controller?.replace(with: c)
-//                    }
-//                    component.controller()?.push(controller)
-//                }), elevatedLayout: false, animateInAsReplacement: false, blurred: true, action: { _ in true })
-//                component.controller()?.present(undoController, in: .current)
+            guard let self, let file else {
+                return
+            }
+                        
+            let context = self.context
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                
+            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
+                if case .info = action, let self {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                    self.containerView?.push(controller)
+                }
+                return false
+            })
+            self.containerView?.present(controller)
         }
         
         let anchorRect = self.convert(self.bounds, to: superview).offsetBy(dx: 0.0, dy: -20.0)
@@ -639,6 +626,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 self.outlineView?.tintColor = UIColor(rgb: 0x000000, alpha: 0.5)
             }
         }
+        self.updateAnimationColor()
         
         let isReaction = self.isReaction
         let staticTransform = CATransform3DMakeScale(self.stickerEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
