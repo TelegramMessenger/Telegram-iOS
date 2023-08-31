@@ -95,7 +95,14 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     override func layout() {
         super.layout()
         
-        self.animationNode.frame = CGRect(x: 6.0, y: 2.0, width: 36.0, height: 36.0)
+        var factor: CGFloat = 0.75
+        var offset: CGFloat = 0.0415
+        if self.bounds.width < 30.0 {
+            factor = 0.66
+            offset = 0.08
+        }
+        let size = floorToScreenPixels(self.bounds.width * factor)
+        self.animationNode.frame = CGRect(x: floorToScreenPixels((self.bounds.width - size) / 2.0), y: ceil(self.bounds.height * offset), width: size, height: size)
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
@@ -194,15 +201,15 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         }
         
         if let parameters = parameters as? RadialStatusSecretTimeoutContentNodeParameters {
-            if let icon = parameters.icon, let iconImage = icon.cgImage {
-                let imageRect = CGRect(origin: CGPoint(x: floor((bounds.size.width - icon.size.width) / 2.0), y: floor((bounds.size.height - icon.size.height) / 2.0)), size: icon.size)
-                context.saveGState()
-                context.translateBy(x: imageRect.midX, y: imageRect.midY)
-                context.scaleBy(x: 1.0, y: -1.0)
-                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-                context.draw(iconImage, in: imageRect)
-                context.restoreGState()
-            }
+//            if let icon = parameters.icon, let _ = icon.cgImage {
+//                let imageRect = CGRect(origin: CGPoint(x: floor((bounds.size.width - icon.size.width) / 2.0), y: floor((bounds.size.height - icon.size.height) / 2.0)), size: icon.size)
+//                context.saveGState()
+//                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+//                context.scaleBy(x: 1.0, y: -1.0)
+//                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+//                context.draw(iconImage, in: imageRect)
+//                context.restoreGState()
+//            }
             
             let lineWidth: CGFloat
             if parameters.sparks {

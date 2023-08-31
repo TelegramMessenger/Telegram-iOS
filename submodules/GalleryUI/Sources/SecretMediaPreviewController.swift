@@ -483,7 +483,7 @@ public final class SecretMediaPreviewController: ViewController {
             if !self.didSetReady {
                 self._ready.set(.single(true))
             }
-            if !(self.currentNodeMessageIsVideo && !self.currentNodeMessageIsViewOnce) {
+            if !(self.currentNodeMessageIsVideo || self.currentNodeMessageIsViewOnce) {
                 self.dismiss()
             }
         }
