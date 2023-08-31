@@ -122,7 +122,8 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         }
         
         if self.animation.rotatedGradientImage == nil {
-            let blueRotatedGradientImage = generateGradientImage(size: gradientImageSize, colors: [blueColors.1, blueColors.0], locations: [1.0, 0.0], direction: .vertical)
+//            let blueRotatedGradientImage = generateGradientFilledCircleImage(diameter: 60, colors: [blueColors.1.cgColor, blueColors.0.cgColor])
+            let blueRotatedGradientImage = generateGradientImage(size: gradientImageSize, colors: [blueColors.1, blueColors.1, blueColors.0, blueColors.0], locations: [1.0, 0.65, 0.25, 0.05], direction: .vertical)
             self.animation.rotatedGradientImage = blueRotatedGradientImage
         }
         
@@ -133,9 +134,18 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
 
         let blueGradientColorAtFraction = blueColors.0.interpolateTo(blueColors.1, fraction: 40 / gradientImageSize.width)
         if let blueGradientColorAtFraction {
-            self.arrowReleaseBackgroundColor = blueGradientColorAtFraction
             if self.arrowReleaseIcon == nil {
                 self.arrowReleaseIcon = PresentationResourcesItemList.archiveTransitionArrowIcon(theme, backgroundColor: blueGradientColorAtFraction)
+            }
+            if self.arrowReleaseBackgroundColor == nil {
+                arrowAnimationNode.setAnimation(name: "anim_arrow_to_archive", colors: [
+                    "Arrow 1.Arrow 1.Stroke 1": blueGradientColorAtFraction,
+                    "Arrow 2.Arrow 2.Stroke 1": blueGradientColorAtFraction,
+                    "Cap.cap2.Fill 1": .white,
+                    "Cap.cap1.Fill 1": .white,
+                    "Box.box1.Fill 1": .white
+                ])
+                self.arrowReleaseBackgroundColor = blueGradientColorAtFraction
             }
         }
     }
@@ -156,6 +166,9 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         let previousState = self.animation.state
         self.animation.state = .init(params: params, previousState: previousState)
         self.animation.presentationData = presentationData
+        if self.presentationData?.theme != presentationData.theme {
+            print("need to update gradients")
+        }
         self.presentationData = presentationData
         
 //        if updateLayers {
@@ -191,15 +204,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
             
             if let size = self.arrowAnimationNode.preferredSize(), !params.finalizeAnimation {
                 let arrowAnimationFrame = CGRect(x: arrowFrame.midX - size.width / 2, y: arrowFrame.midY - size.height / 2, width: size.width, height: size.height)
-                if let arrowReleaseBackgroundColor, arrowAnimationNode.position != arrowAnimationFrame.center {
-                    arrowAnimationNode.setAnimation(name: "anim_arrow_to_archive", colors: [
-                        "Arrow 1.Arrow 1.Stroke 1": arrowReleaseBackgroundColor,
-                        "Arrow 2.Arrow 2.Stroke 1": arrowReleaseBackgroundColor,
-                        "Cap.cap2.Fill 1": .white,
-                        "Cap.cap1.Fill 1": .white,
-                        "Box.box1.Fill 1": .white
-                    ])
-                }
                 transition.updatePosition(node: arrowAnimationNode, position: arrowAnimationFrame.center)
                 transition.updateBounds(node: arrowAnimationNode, bounds: arrowAnimationFrame)
             }
@@ -388,10 +392,13 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     let newPosition = CGPoint(x: arrowAnimationNode.position.x, y: gradientNode.position.y)
                     transition.updatePosition(node: arrowAnimationNode, position: newPosition)
                     
-                    let avatarNodeFrame = avatarNode.convert(avatarNode.frame, to: gradientNode)
-                    if let gradientMaskLayer {
+                    let avatarNodeFrame = gradientNode.convert(avatarNode.contentNode.layer.frame, from: avatarNode.contentNode)
+//                    avatarNodeFrame = avatarNode.supernode?.convert(avatarNodeFrame, to: gradientNode) ?? avatarNodeFrame
+                    if let gradientMaskLayer, let gradientLayer {
                         let targetPath = UIBezierPath(roundedRect: avatarNodeFrame, cornerRadius: avatarNodeFrame.width / 2).cgPath
                         transition.updatePath(layer: gradientMaskLayer, path: targetPath)
+                        
+                        gradientLayer.contents = rotatedGradientImage?.cgImage
                     }
                     print("avatar node frame: \(avatarNode.convert(avatarNode.frame, to: gradientNode))")
 
@@ -465,7 +472,6 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
                     //play animation arrow to archive
                     //update gradient mask path to avatar node frame
                     //scale up then scale down avatar node gradient
-                    
                 } else {
                     if let supernode = textNode.supernode {
                         let textLayout = textNode.calculateLayoutThatFits(ASSizeRange(min: .zero, max: CGSize(width: supernode.bounds.width - 120, height: 25)))
@@ -502,6 +508,8 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
     mutating internal func makeGradientOverlay(gradientContainerNode: ASDisplayNode, arrowContainerNode: ASDisplayNode) {
         if self.gradientLayer == nil {
             self.gradientLayer = CALayer()
+            self.gradientLayer?.contentsGravity = .resizeAspect
+            self.gradientLayer?.contentsScale = 3.0
         }
         
         if self.gradientMaskLayer == nil {
@@ -527,9 +535,7 @@ extension ChatListArchiveTransitionNode.TransitionAnimation {
             gradientLayer.mask = gradientMaskLayer
         }
         
-        if gradientLayer.contents == nil {
-            gradientLayer.contents = self.gradientImage?.cgImage
-        }
+        gradientLayer.contents = self.gradientImage?.cgImage
     }
     
     internal func generateGradientMaskPath(gradientContainerNode: ASDisplayNode, arrowContainerNode: ASDisplayNode, fraction: CGFloat) -> UIBezierPath {
