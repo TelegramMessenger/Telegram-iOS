@@ -1268,7 +1268,7 @@ func _internal_deleteStories(account: Account, peerId: PeerId, ids: [Int32]) -> 
             }
         }
         if updated {
-            transaction.setStoryItems(peerId: account.peerId, items: items)
+            transaction.setStoryItems(peerId: peerId, items: items)
         }
         account.stateManager.injectStoryUpdates(updates: ids.map { id in
             return .deleted(peerId: peerId, id: id)
