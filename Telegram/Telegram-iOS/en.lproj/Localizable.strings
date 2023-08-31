@@ -9878,3 +9878,17 @@ Sorry for the inconvenience.";
 
 "SecretImage.ViewOnce.Title" = "Disappearing Photo";
 "SecretVideo.ViewOnce.Title" = "Disappearing Video";
+
+"MediaPicker.Timer.Description" = "Choose how long the media will be kept after opening.";
+"MediaPicker.Timer.ViewOnce" = "View Once";
+"MediaPicker.Timer.Seconds_1" = "%d Second";
+"MediaPicker.Timer.Seconds_any" = "%d Seconds";
+"MediaPicker.Timer.DoNotDelete" = "Do Not Delete";
+
+"MediaPicker.Timer.Photo.ViewOnceTooltip" = "Photo set to view once.";
+"MediaPicker.Timer.Photo.TimerTooltip" = "Photo will be deleted in\n%@ seconds after opening.";
+"MediaPicker.Timer.Photo.KeepTooltip" = "Photo will be kept in chat.";
+
+"MediaPicker.Timer.Video.ViewOnceTooltip" = "Video set to view once.";
+"MediaPicker.Timer.Video.TimerTooltip" = "Video will be deleted in\n%@ seconds after opening.";
+"MediaPicker.Timer.Video.KeepTooltip" = "Video will be kept in chat.";
