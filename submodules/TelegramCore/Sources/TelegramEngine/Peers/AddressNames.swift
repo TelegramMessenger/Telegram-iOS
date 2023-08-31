@@ -546,6 +546,33 @@ func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChann
     }
 }
 
+func _internal_channelsForStories(account: Account) -> Signal<[Peer], NoError> {
+    let accountPeerId = account.peerId
+    return account.network.request(Api.functions.stories.getChatsToSend())
+    |> retryRequest
+    |> mapToSignal { result -> Signal<[Peer], NoError> in
+        return account.postbox.transaction { transaction -> [Peer] in
+            let chats: [Api.Chat]
+            let parsedPeers: AccumulatedPeers
+            switch result {
+            case let .chats(apiChats):
+                chats = apiChats
+            case let .chatsSlice(_, apiChats):
+                chats = apiChats
+            }
+            parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+            var peers: [Peer] = []
+            for chat in chats {
+                if let peer = transaction.getPeer(chat.peerId) {
+                    peers.append(peer)
+                }
+            }
+            return peers
+        }
+    }
+}
+
 public enum ChannelAddressNameAssignmentAvailability {
     case available
     case unknown

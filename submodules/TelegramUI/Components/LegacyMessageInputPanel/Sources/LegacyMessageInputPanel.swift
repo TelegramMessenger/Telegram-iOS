@@ -180,11 +180,11 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     likeAction: nil,
                     likeOptionsAction: nil,
                     inputModeAction: nil,
-                    timeoutAction: { [weak self] sourceView in
+                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView in
                         if let self {
                             self.presentTimeoutSetup(sourceView: sourceView)
                         }
-                    },
+                    } : nil,
                     forwardAction: nil,
                     moreAction: nil,
                     presentVoiceMessagesUnavailableTooltip: nil,

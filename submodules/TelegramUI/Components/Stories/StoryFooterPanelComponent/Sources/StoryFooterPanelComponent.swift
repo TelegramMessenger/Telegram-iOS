@@ -387,9 +387,18 @@ public final class StoryFooterPanelComponent: Component {
                 var likeStatsFrame = CGRect(origin: CGPoint(x: rightContentOffset - reactionStatsLayout.size.width, y: floor((size.height - reactionStatsLayout.size.height) * 0.5)), size: reactionStatsLayout.size)
                 likeStatsFrame.origin.y += component.expandFraction * 45.0
                 
-                likeStatsTransition.setFrame(view: likeStatsText, frame: likeStatsFrame)
-                likeStatsTransition.setAlpha(view: likeStatsText, alpha: 1.0 - component.expandFraction)
-                rightContentOffset -= reactionStatsLayout.size.width + 1.0
+                likeStatsTransition.setPosition(view: likeStatsText, position: likeStatsFrame.center)
+                likeStatsTransition.setBounds(view: likeStatsText, bounds: CGRect(origin: CGPoint(), size:    likeStatsFrame.size))
+                var likeStatsAlpha: CGFloat = (1.0 - component.expandFraction)
+                if reactionCount == 0 {
+                    likeStatsAlpha = 0.0
+                }
+                likeStatsTransition.setAlpha(view: likeStatsText, alpha: likeStatsAlpha)
+                likeStatsTransition.setScale(view: likeStatsText, scale: reactionCount == 0 ? 0.001 : 1.0)
+                
+                if reactionCount != 0 {
+                    rightContentOffset -= reactionStatsLayout.size.width + 1.0
+                }
                 
                 let likeButton: ComponentView<Empty>
                 if let current = self.likeButton {

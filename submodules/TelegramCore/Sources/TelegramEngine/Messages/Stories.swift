@@ -1268,7 +1268,7 @@ func _internal_deleteStories(account: Account, peerId: PeerId, ids: [Int32]) -> 
             }
         }
         if updated {
-            transaction.setStoryItems(peerId: account.peerId, items: items)
+            transaction.setStoryItems(peerId: peerId, items: items)
         }
         account.stateManager.injectStoryUpdates(updates: ids.map { id in
             return .deleted(peerId: peerId, id: id)
@@ -1342,7 +1342,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
             return nil
         }
         
-        var items = transaction.getStoryItems(peerId: account.peerId)
+        var items = transaction.getStoryItems(peerId: peerId)
         var updatedItems: [Stories.Item] = []
         for (id, referenceItem) in ids {
             if let index = items.firstIndex(where: { $0.id == id }), case let .item(item) = items[index].value.get(Stories.StoredItem.self) {
@@ -1396,7 +1396,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                 updatedItems.append(updatedItem)
             }
         }
-        transaction.setStoryItems(peerId: account.peerId, items: items)
+        transaction.setStoryItems(peerId: peerId, items: items)
         if !updatedItems.isEmpty {
             DispatchQueue.main.async {
                 account.stateManager.injectStoryUpdates(updates: updatedItems.map { updatedItem in
