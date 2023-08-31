@@ -60,7 +60,7 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
     
     var beginTimeAndTimeout: (Double, Double)? {
         didSet {
-            if let (beginTime, timeout) = self.beginTimeAndTimeout {
+            if let (beginTime, timeout) = self.beginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
                 if self.timeoutNode == nil {
                     let timeoutNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
                     self.timeoutNode = timeoutNode
@@ -289,10 +289,18 @@ public final class SecretMediaPreviewController: ViewController {
                             if file.isAnimated {
                                 strongSelf.title = strongSelf.presentationData.strings.SecretGif_Title
                             } else {
-                                strongSelf.title = strongSelf.presentationData.strings.SecretVideo_Title
+                                if strongSelf.currentNodeMessageIsViewOnce {
+                                    strongSelf.title = strongSelf.presentationData.strings.SecretVideo_ViewOnce_Title
+                                } else {
+                                    strongSelf.title = strongSelf.presentationData.strings.SecretVideo_Title
+                                }
                             }
                         } else {
-                            strongSelf.title = strongSelf.presentationData.strings.SecretImage_Title
+                            if strongSelf.currentNodeMessageIsViewOnce {
+                                strongSelf.title = strongSelf.presentationData.strings.SecretImage_ViewOnce_Title
+                            } else {
+                                strongSelf.title = strongSelf.presentationData.strings.SecretImage_Title
+                            }
                         }
                         
                         if let beginTimeAndTimeout = beginTimeAndTimeout {

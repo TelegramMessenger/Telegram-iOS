@@ -9875,3 +9875,6 @@ Sorry for the inconvenience.";
 
 "Story.Editor.TooltipMutedWithAudio" = "Original audio will be removed";
 "Story.Editor.TooltipUnmutedWithAudio" = "Original audio will be preserved";
+
+"SecretImage.ViewOnce.Title" = "Disappearing Photo";
+"SecretVideo.ViewOnce.Title" = "Disappearing Video";
