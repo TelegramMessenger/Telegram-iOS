@@ -1988,7 +1988,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     } else {
                         secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
                     }
-                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, timeout != viewOnceTimeout {
+                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
                         state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
                         backgroundColor = messageTheme.mediaDateAndStatusFillColor
                     } else if isSecretMedia, let _ = secretProgressIcon {
