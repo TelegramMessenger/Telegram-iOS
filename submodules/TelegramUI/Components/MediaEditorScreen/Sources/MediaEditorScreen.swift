@@ -3712,7 +3712,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         self.displayNode.view.addInteraction(dropInteraction)
         
         Queue.mainQueue().after(1.0) {
-            self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.adminedPublicChannels(scope: .all)))
+            self.adminedChannels.set(.single([]) |> then(self.context.engine.peers.channelsForStories()))
             self.closeFriends.set(self.context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.CloseFriends()))
         }
     }

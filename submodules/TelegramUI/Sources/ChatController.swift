@@ -9996,6 +9996,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            var signal = strongSelf.context.engine.messages.requestMessageSelectPollOption(messageId: id, opaqueIdentifiers: [])
             let disposables: DisposableDict<MessageId>
             if let current = strongSelf.selectMessagePollOptionDisposables {
                 disposables = current
@@ -10003,24 +10005,43 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 disposables = DisposableDict()
                 strongSelf.selectMessagePollOptionDisposables = disposables
             }
-            let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
-            strongSelf.present(controller, in: .window(.root))
-            let signal = strongSelf.context.engine.messages.requestMessageSelectPollOption(messageId: id, opaqueIdentifiers: [])
-            |> afterDisposed { [weak controller] in
-                Queue.mainQueue().async {
-                    controller?.dismiss()
+            
+            var cancelImpl: (() -> Void)?
+            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
                 }
             }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.3, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            signal = signal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            cancelImpl = {
+                disposables.set(nil, forKey: id)
+            }
+            
             disposables.set((signal
-            |> deliverOnMainQueue).start(error: { _ in
-                guard let _ = self else {
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let self else {
                     return
                 }
-            }, completed: {
-                if strongSelf.selectPollOptionFeedback == nil {
-                    strongSelf.selectPollOptionFeedback = HapticFeedback()
+                if self.selectPollOptionFeedback == nil {
+                    self.selectPollOptionFeedback = HapticFeedback()
                 }
-                strongSelf.selectPollOptionFeedback?.success()
+                self.selectPollOptionFeedback?.success()
             }), forKey: id)
         }, requestStopPollInMessage: { [weak self] id in
             guard let strongSelf = self, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(id) else {

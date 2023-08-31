@@ -72,6 +72,13 @@ public extension TelegramEngine {
                 return peers.map(EnginePeer.init)
             }
         }
+        
+        public func channelsForStories() -> Signal<[EnginePeer], NoError> {
+            return _internal_channelsForStories(account: self.account)
+            |> map { peers -> [EnginePeer] in
+                return peers.map(EnginePeer.init)
+            }
+        }
 
         public func channelAddressNameAssignmentAvailability(peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
             return _internal_channelAddressNameAssignmentAvailability(account: self.account, peerId: peerId)
