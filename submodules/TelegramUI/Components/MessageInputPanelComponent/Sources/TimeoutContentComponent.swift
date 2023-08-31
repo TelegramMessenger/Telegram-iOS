@@ -78,13 +78,13 @@ public final class TimeoutContentComponent: Component {
                     if let textView = self.text.view, let snapshotView = textView.snapshotView(afterScreenUpdates: false) {
                         snapshotView.frame = textView.frame
                         self.addSubview(snapshotView)
-                        snapshotView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 3.0), duration: 0.2, removeOnCompletion: false, additive: true)
+                        snapshotView.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -3.0), duration: 0.2, removeOnCompletion: false, additive: true)
                         snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                             snapshotView.removeFromSuperview()
                         })
                         
                         textView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        textView.layer.animatePosition(from: CGPoint(x: 0.0, y: -3.0), to: .zero, duration: 0.2, additive: true)
+                        textView.layer.animatePosition(from: CGPoint(x: 0.0, y: 3.0), to: .zero, duration: 0.2, additive: true)
                     }
                 }
             }

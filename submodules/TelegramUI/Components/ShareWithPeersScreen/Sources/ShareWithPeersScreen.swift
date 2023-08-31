@@ -503,6 +503,8 @@ final class ShareWithPeersScreenComponent: Component {
                 let translation = recognizer.translation(in: self)
                 self.dismissPanState = DismissPanState(translation: translation.y)
                 self.state?.updated(transition: .immediate)
+                
+                self.updateModalOverlayTransition(transition: .immediate)
             case .cancelled, .ended:
                 if self.dismissPanState != nil {
                     let translation = recognizer.translation(in: self)
@@ -512,8 +514,13 @@ final class ShareWithPeersScreenComponent: Component {
                 
                     if translation.y > 100.0 || velocity.y > 10.0 {
                         controller.requestDismiss()
+                        Queue.mainQueue().justDispatch {
+                            controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .spring))
+                        }
                     } else {
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
+                        let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                        self.state?.updated(transition: transition)
+                        self.updateModalOverlayTransition(transition: transition)
                     }
                 }
             default:
@@ -782,7 +789,7 @@ final class ShareWithPeersScreenComponent: Component {
                 guard let self else {
                     return
                 }
-                let controller = ShareWithPeersScreen(
+                let peersController = ShareWithPeersScreen(
                     context: component.context,
                     initialPrivacy: EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: []),
                     stateContext: stateContext,
@@ -797,8 +804,38 @@ final class ShareWithPeersScreenComponent: Component {
                         self.state?.updated(transition: .spring(duration: 0.4))
                     }
                 )
-                self.environment?.controller()?.push(controller)
+                if let controller = self.environment?.controller() as? ShareWithPeersScreen {
+                    controller.dismissAllTooltips()
+                    controller.push(peersController)
+                }
             })
+        }
+        
+        private func updateModalOverlayTransition(transition: Transition) {
+            guard let _ = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
+                return
+            }
+            
+            var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
+            topOffset = max(0.0, topOffset)
+            if let dismissPanState = self.dismissPanState {
+                topOffset += dismissPanState.translation
+            }
+            
+            let topOffsetDistance: CGFloat = min(200.0, floor(itemLayout.containerSize.height * 0.25))
+            var topOffsetFraction = topOffset / topOffsetDistance
+            topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
+            
+            let transitionFactor: CGFloat = 1.0 - topOffsetFraction
+            if let controller = environment.controller() {
+                Queue.mainQueue().justDispatch {
+                    var transition = transition
+                    if controller.modalStyleOverlayTransitionFactor.isZero && transitionFactor > 0.0, transition.animation.isImmediate {
+                        transition = .spring(duration: 0.4)
+                    }
+                    controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
+                }
+            }
         }
         
         private func updateScrolling(transition: Transition) {
@@ -819,21 +856,7 @@ final class ShareWithPeersScreenComponent: Component {
             var bottomAlpha: CGFloat = bottomDistance / bottomAlphaDistance
             bottomAlpha = max(0.0, min(1.0, bottomAlpha))
             
-            let topOffsetDistance: CGFloat = min(200.0, floor(itemLayout.containerSize.height * 0.25))
-            self.topOffsetDistance = topOffsetDistance
-            var topOffsetFraction = topOffset / topOffsetDistance
-            topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
-            
-            let transitionFactor: CGFloat = 1.0 - topOffsetFraction
-            if let controller = environment.controller() {
-                Queue.mainQueue().justDispatch {
-                    var transition = transition
-                    if controller.modalStyleOverlayTransitionFactor.isZero && transitionFactor > 0.0, transition.animation.isImmediate {
-                        transition = .spring(duration: 0.4)
-                    }
-                    controller.updateModalStyleOverlayTransitionFactor(transitionFactor, transition: transition.containedViewLayoutTransition)
-                }
-            }
+            self.updateModalOverlayTransition(transition: transition)
             
             var visibleBounds = self.scrollView.bounds
             visibleBounds.origin.y -= itemLayout.topInset
@@ -1043,7 +1066,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     if isStories {
                                         let _ = self.presentSendAsPeer()
                                     } else {
-                                        self.hapticFeedback.tap()
+                                        self.hapticFeedback.impact(.light)
                                         self.environment?.controller()?.dismiss()
                                         self.component?.peerCompletion(peer.id)
                                     }

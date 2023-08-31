@@ -181,9 +181,9 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     likeAction: nil,
                     likeOptionsAction: nil,
                     inputModeAction: nil,
-                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView in
+                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView, gesture in
                         if let self {
-                            self.presentTimeoutSetup(sourceView: sourceView)
+                            self.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
                         }
                     } : nil,
                     forwardAction: nil,
@@ -235,7 +235,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         return inputPanelSize.height - 8.0
     }
     
-    private func presentTimeoutSetup(sourceView: UIView) {
+    private func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?) {
         self.hapticFeedback.impact(.light)
         
         var items: [ContextMenuItem] = []
@@ -284,7 +284,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             updateTimeout(nil)
         })))
         
-        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.present(contextController)
     }
     

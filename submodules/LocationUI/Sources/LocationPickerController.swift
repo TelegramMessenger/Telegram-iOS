@@ -412,6 +412,7 @@ private final class LocationPickerContext: AttachmentMediaPickerContext {
 public func storyLocationPickerController(
     context: AccountContext,
     location: CLLocationCoordinate2D?,
+    dismissed: @escaping () -> Void,
     completion: @escaping (TelegramMediaMap, Int64?, String?, String?, String?) -> Void
 ) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkColorPresentationTheme)
@@ -427,5 +428,8 @@ public func storyLocationPickerController(
     }
     controller.navigationPresentation = .flatModal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    controller.didDismiss = {
+        dismissed()
+    }
     return controller
 }

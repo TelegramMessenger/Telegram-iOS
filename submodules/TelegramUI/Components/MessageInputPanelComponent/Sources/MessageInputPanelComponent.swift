@@ -18,6 +18,9 @@ import AudioToolbox
 import AnimatedTextComponent
 import AnimatedCountLabelNode
 import MessageInputActionButtonComponent
+import ContextReferenceButtonComponent
+
+private let timeoutButtonTag = GenericComponentViewTag()
 
 public final class MessageInputPanelComponent: Component {
     public struct ContextQueryTypes: OptionSet {
@@ -120,7 +123,7 @@ public final class MessageInputPanelComponent: Component {
     public let likeAction: (() -> Void)?
     public let likeOptionsAction: ((UIView, ContextGesture?) -> Void)?
     public let inputModeAction: (() -> Void)?
-    public let timeoutAction: ((UIView) -> Void)?
+    public let timeoutAction: ((UIView, ContextGesture?) -> Void)?
     public let forwardAction: (() -> Void)?
     public let moreAction: ((UIView, ContextGesture?) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
@@ -172,7 +175,7 @@ public final class MessageInputPanelComponent: Component {
         likeAction: (() -> Void)?,
         likeOptionsAction: ((UIView, ContextGesture?) -> Void)?,
         inputModeAction: (() -> Void)?,
-        timeoutAction: ((UIView) -> Void)?,
+        timeoutAction: ((UIView, ContextGesture?) -> Void)?,
         forwardAction: (() -> Void)?,
         moreAction: ((UIView, ContextGesture?) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
@@ -1458,7 +1461,7 @@ public final class MessageInputPanelComponent: Component {
             if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
                 let timeoutButtonSize = self.timeoutButton.update(
                     transition: transition,
-                    component: AnyComponent(Button(
+                    component: AnyComponent(ContextReferenceButtonComponent(
                         content: AnyComponent(
                             TimeoutContentComponent(
                                 color: .white,
@@ -1467,13 +1470,12 @@ public final class MessageInputPanelComponent: Component {
                                 value: timeoutValue
                             )
                         ),
-                        action: { [weak self] in
-                            guard let self, let timeoutButtonView = self.timeoutButton.view else {
-                                return
-                            }
-                            timeoutAction(timeoutButtonView)
+                        tag: timeoutButtonTag,
+                        minSize: CGSize(width: 32.0, height: 32.0),
+                        action: { view, gesture in
+                            timeoutAction(view, gesture)
                         }
-                    ).minSize(CGSize(width: 32.0, height: 32.0))),
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)
                 )

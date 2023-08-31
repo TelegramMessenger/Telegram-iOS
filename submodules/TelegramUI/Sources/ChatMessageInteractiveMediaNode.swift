@@ -2045,7 +2045,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         
         if isSecretMedia {
             let remainingTime: Int32?
-            if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
+            if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
                 if let beginTime = maybeBeginTime {
                     let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
                     remainingTime = Int32(max(0.0, timeout - elapsedTime))
