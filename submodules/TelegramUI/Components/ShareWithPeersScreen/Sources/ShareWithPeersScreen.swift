@@ -345,6 +345,8 @@ final class ShareWithPeersScreenComponent: Component {
         private var searchStateContext: ShareWithPeersScreen.StateContext?
         private var searchStateDisposable: Disposable?
         
+        private let hapticFeedback = HapticFeedback()
+        
         private var effectiveStateValue: ShareWithPeersScreen.State? {
             return self.searchStateContext?.stateValue ?? self.defaultStateValue
         }
@@ -549,7 +551,11 @@ final class ShareWithPeersScreenComponent: Component {
             case .pin:
                 if self.selectedOptions.contains(.pin) {
                     animationName = "anim_profileadd"
-                    text = presentationData.strings.Story_Privacy_TooltipStoryArchived
+                    if let peerId = self.sendAsPeerId, peerId.namespace != Namespaces.Peer.CloudUser {
+                        text = presentationData.strings.Story_Privacy_TooltipStoryArchivedChannel
+                    } else {
+                        text = presentationData.strings.Story_Privacy_TooltipStoryArchived
+                    }
                 } else {
                     animationName = "anim_autoremove_on"
                     text = presentationData.strings.Story_Privacy_TooltipStoryExpires
@@ -996,9 +1002,9 @@ final class ShareWithPeersScreenComponent: Component {
                         
                         let subtitle: String?
                         if case .user = peer {
-                            subtitle = "personal account"
+                            subtitle = environment.strings.VoiceChat_PersonalAccount
                         } else {
-                            subtitle = "channel"
+                            subtitle = environment.strings.Channel_Status
                         }
                         
                         var isStories = false
@@ -1037,6 +1043,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     if isStories {
                                         let _ = self.presentSendAsPeer()
                                     } else {
+                                        self.hapticFeedback.tap()
                                         self.environment?.controller()?.dismiss()
                                         self.component?.peerCompletion(peer.id)
                                     }

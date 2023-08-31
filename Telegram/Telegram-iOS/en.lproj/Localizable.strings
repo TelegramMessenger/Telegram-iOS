@@ -9870,3 +9870,8 @@ Sorry for the inconvenience.";
 "Story.Privacy.KeepOnChannelPageInfo" = "Keep this story on channel profile even after it expires in %@.";
 
 "Story.Editor.TooltipPremiumReaction" = "Subscribe to [Telegram Premium]() to use this reaction.";
+
+"Story.Privacy.TooltipStoryArchivedChannel" = "Users will see this story on the channel page even after it expires.";
+
+"Story.Editor.TooltipMutedWithAudio" = "Original audio will be removed";
+"Story.Editor.TooltipUnmutedWithAudio" = "Original audio will be preserved";

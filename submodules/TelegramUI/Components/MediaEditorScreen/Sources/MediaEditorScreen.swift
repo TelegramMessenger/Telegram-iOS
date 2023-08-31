@@ -2778,7 +2778,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? self.presentationData.strings.Story_Editor_TooltipMuted : self.presentationData.strings.Story_Editor_TooltipUnmuted), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let text: String
+            if let _ = self.mediaEditor?.values.audioTrack {
+                if isMuted {
+                    text = self.presentationData.strings.Story_Editor_TooltipMutedWithAudio
+                } else {
+                    text = self.presentationData.strings.Story_Editor_TooltipUnmutedWithAudio
+                }
+            } else {
+                if isMuted {
+                    text = self.presentationData.strings.Story_Editor_TooltipMuted
+                } else {
+                    text = self.presentationData.strings.Story_Editor_TooltipUnmuted
+                }
+            }
+            
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.muteTooltip = tooltipController

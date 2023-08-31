@@ -56,7 +56,11 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = countdownBeginTime
         
         if let countdownBeginTime = countdownBeginTime {
-            self.automaticTimestampBasedAttribute = (1, countdownBeginTime + timeout)
+            if self.timeout == viewOnceTimeout {
+                self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
+            } else {
+                self.automaticTimestampBasedAttribute = (1, countdownBeginTime + timeout)
+            }
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
@@ -67,7 +71,11 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
         
         if let countdownBeginTime = self.countdownBeginTime {
-            self.automaticTimestampBasedAttribute = (1, countdownBeginTime + self.timeout)
+            if self.timeout == viewOnceTimeout {
+                self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
+            } else {
+                self.automaticTimestampBasedAttribute = (1, countdownBeginTime + self.timeout)
+            }
         } else {
             self.automaticTimestampBasedAttribute = nil
         }

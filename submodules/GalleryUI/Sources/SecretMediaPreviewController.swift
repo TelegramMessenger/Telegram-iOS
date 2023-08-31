@@ -139,6 +139,7 @@ public final class SecretMediaPreviewController: ViewController {
     private var messageView: MessageView?
     private var currentNodeMessageId: MessageId?
     private var currentNodeMessageIsVideo = false
+    private var currentNodeMessageIsViewOnce = false
     private var tempFile: TempBoxFile?
     
     private let _hiddenMedia = Promise<(MessageId, Media)?>(nil)
@@ -263,6 +264,8 @@ public final class SecretMediaPreviewController: ViewController {
                         }
                         
                         if let attribute = message.autoclearAttribute {
+                            strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
+                            
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
                                     beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
@@ -271,6 +274,8 @@ public final class SecretMediaPreviewController: ViewController {
                                 }
                             }
                         } else if let attribute = message.autoremoveAttribute {
+                            strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
+                            
                             if let countdownBeginTime = attribute.countdownBeginTime {
                                 if let videoDuration = videoDuration {
                                     beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, videoDuration)
@@ -478,7 +483,7 @@ public final class SecretMediaPreviewController: ViewController {
             if !self.didSetReady {
                 self._ready.set(.single(true))
             }
-            if !self.currentNodeMessageIsVideo {
+            if !(self.currentNodeMessageIsVideo && !self.currentNodeMessageIsViewOnce) {
                 self.dismiss()
             }
         }
