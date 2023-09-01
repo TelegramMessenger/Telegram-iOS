@@ -9900,4 +9900,4 @@ Sorry for the inconvenience.";
 
 "WebApp.SharePhoneTitle" = "Share Phone Number?";
 "WebApp.SharePhoneConfirmation" = "**%@** will know your phone number. This can be useful for integration with other services.";
-"WebApp.SharePhoneConfirmationUnblock" = "**%@** will know your phone number. This can be useful for integration with other services.\n\nThe bot will also be unblocked.";
+"WebApp.SharePhoneConfirmationUnblock" = "**%@** will know your phone number. This can be useful for integration with other services.\n\nThis will also unblock the bot.";

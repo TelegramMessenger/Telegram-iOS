@@ -1104,7 +1104,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if result {
                     sendEvent(true)
                 } else {
-                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_AllowWriteTitle, text: self.presentationData.strings.WebApp_AllowWriteConfirmation(controller.botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                    let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_AllowWriteTitle, text: self.presentationData.strings.WebApp_AllowWriteConfirmation(controller.botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                         sendEvent(false)
                     }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                         guard let self else {
@@ -1115,7 +1115,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         |> deliverOnMainQueue).start(completed: {
                             sendEvent(true)
                         })
-                    })], parseMarkdown: true), in: .window(.root))
+                    })], parseMarkdown: true)
+                    alertController.dismissed = { byOutsideTap in
+                        if byOutsideTap {
+                            sendEvent(false)
+                        }
+                    }
+                    controller.present(alertController, in: .window(.root))
                 }
             })
         }
