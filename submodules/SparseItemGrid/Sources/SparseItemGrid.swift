@@ -820,7 +820,7 @@ public final class SparseItemGrid: ASDisplayNode {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
         }
 
-        func ensureItemVisible(index: Int) {
+        func ensureItemVisible(index: Int, anyAmount: Bool) {
             guard let layout = self.layout, let _ = self.items else {
                 return
             }
@@ -830,8 +830,14 @@ public final class SparseItemGrid: ASDisplayNode {
 
             let itemFrame = layout.frame(at: index)
             let visibleBounds = self.scrollView.bounds
-            if itemFrame.intersects(visibleBounds) {
-                return
+            if anyAmount {
+                if itemFrame.intersects(visibleBounds) {
+                    return
+                }
+            } else {
+                if visibleBounds.contains(itemFrame) {
+                    return
+                }
             }
 
             var contentOffset: CGFloat
@@ -1936,11 +1942,11 @@ public final class SparseItemGrid: ASDisplayNode {
         currentViewport.scrollToItem(at: index)
     }
 
-    public func ensureItemVisible(index: Int) {
+    public func ensureItemVisible(index: Int, anyAmount: Bool = true) {
         guard let currentViewport = self.currentViewport else {
             return
         }
-        currentViewport.ensureItemVisible(index: index)
+        currentViewport.ensureItemVisible(index: index, anyAmount: anyAmount)
     }
 
     public func scrollToTop() -> Bool {

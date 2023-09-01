@@ -481,21 +481,29 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
 }
 
 private final class ItemTransitionView: UIView {
-    private weak var itemLayer: ItemLayer?
+    private weak var itemLayer: CALayer?
     private var copyDurationLayer: SimpleLayer?
     
     private var durationLayerBottomLeftPosition: CGPoint?
     
-    init(itemLayer: ItemLayer?) {
+    init(itemLayer: CALayer?) {
         self.itemLayer = itemLayer
         
         super.init(frame: CGRect())
         
         if let itemLayer {
-            self.layer.contents = itemLayer.contents
             self.layer.contentsRect = itemLayer.contentsRect
             
-            if let durationLayer = itemLayer.durationLayer {
+            var durationLayer: CALayer?
+            if let itemLayer = itemLayer as? CaptureProtectedItemLayer {
+                durationLayer = itemLayer.durationLayer
+                self.layer.contents = itemLayer.getContents()
+            } else if let itemLayer = itemLayer as? ItemLayer {
+                durationLayer = itemLayer.durationLayer
+                self.layer.contents = itemLayer.contents
+            }
+            
+            if let durationLayer {
                 let copyDurationLayer = SimpleLayer()
                 copyDurationLayer.contents = durationLayer.contents
                 copyDurationLayer.contentsRect = durationLayer.contentsRect
@@ -1074,7 +1082,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 destinationView: self.view,
                                 transitionView: StoryContainerScreen.TransitionView(
                                     makeView: { [weak foundItemLayer] in
-                                        return ItemTransitionView(itemLayer: foundItemLayer as? ItemLayer)
+                                        return ItemTransitionView(itemLayer: foundItemLayer)
                                     },
                                     updateView: { view, state, transition in
                                         (view as? ItemTransitionView)?.update(state: state, transition: transition)
@@ -1104,10 +1112,15 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         return
                     }
                     if let itemId {
+                        let anyAmount = self.itemInteraction.hiddenMedia.isEmpty
                         self.itemInteraction.hiddenMedia = Set([itemId.id])
+                        if let items = self.items, let item = items.items.first(where: { $0.id == AnyHashable(itemId.id) }) {
+                            self.itemGrid.ensureItemVisible(index: item.index, anyAmount: anyAmount)
+                        }
                     } else {
                         self.itemInteraction.hiddenMedia = Set()
                     }
+                    
                     self.updateHiddenItems()
                 })
                 

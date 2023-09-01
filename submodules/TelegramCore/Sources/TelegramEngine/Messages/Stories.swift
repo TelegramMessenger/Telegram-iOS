@@ -1000,6 +1000,15 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         updatedItems.append(updatedItem)
                                                     }
                                                     transaction.setStoryItems(peerId: toPeerId, items: items)
+                                                    
+                                                    if let peer = transaction.getPeer(toPeerId) as? TelegramChannel, let storiesHidden = peer.storiesHidden {
+                                                        let subscriptionsKey: PostboxStorySubscriptionsKey = storiesHidden ? .hidden : .filtered
+                                                        var (state, peerIds) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
+                                                        if !peerIds.contains(toPeerId) {
+                                                            peerIds.append(toPeerId)
+                                                        }
+                                                        transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                                                    }
                                                 }
                                                 
                                                 id = idValue

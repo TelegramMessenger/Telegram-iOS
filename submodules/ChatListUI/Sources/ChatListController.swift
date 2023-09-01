@@ -3118,8 +3118,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    public func scrollToStories() {
+    public func scrollToStories(peerId: EnginePeer.Id? = nil) {
         self.chatListDisplayNode.scrollToStories(animated: false)
+        
+        if let peerId, let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
+            storyPeerListView.ensureItemVisible(peerId: peerId)
+        }
     }
     
     public func scrollToStoriesAnimated() {

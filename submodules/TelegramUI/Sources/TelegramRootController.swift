@@ -382,6 +382,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             }
                         }
                         
+                        let target: Stories.PendingTarget
+                        let targetPeerId: EnginePeer.Id
+                        if let sendAsPeerId = options.sendAsPeerId {
+                            target = .peer(sendAsPeerId)
+                            targetPeerId = sendAsPeerId
+                        } else {
+                            target = .myStories
+                            targetPeerId = context.account.peerId
+                        }
+                        storyTarget = target
+                        
                         let completionImpl: () -> Void = { [weak self] in
                             guard let self else {
                                 return
@@ -393,7 +404,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 |> take(1)
                                 |> timeout(0.25, queue: .mainQueue(), alternate: .single(true))
                                 |> deliverOnMainQueue).start(completed: { [weak chatListController] in
-                                    chatListController?.scrollToStories()
+                                    guard let chatListController else {
+                                        return
+                                    }
+                                    
+                                    chatListController.scrollToStories(peerId: targetPeerId)
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
@@ -404,14 +419,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 }
                             }
                         }
-                        
-                        let target: Stories.PendingTarget
-                        if let sendAsPeerId = options.sendAsPeerId {
-                            target = .peer(sendAsPeerId)
-                        } else {
-                            target = .myStories
-                        }
-                        storyTarget = target
                         
                         if let _ = self.chatListController as? ChatListControllerImpl {
                             switch mediaResult {
