@@ -68,7 +68,6 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         super.init()
         
         self.isOpaque = false
-//        self.isLayerBacked = true
         
         class DisplayLinkProxy: NSObject {
             weak var target: RadialStatusSecretTimeoutContentNode?
@@ -85,7 +84,9 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         self.displayLink?.isPaused = true
         self.displayLink?.add(to: RunLoop.main, forMode: .common)
         
-        self.addSubnode(self.animationNode)
+        if icon != nil {
+            self.addSubnode(self.animationNode)
+        }
     }
     
     deinit {
