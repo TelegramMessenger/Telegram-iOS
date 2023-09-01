@@ -69,9 +69,13 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         }
     }
     
+    private var scheduledMessageInput: MessageInputPanelComponent.SendMessageInput?
     public func setCaption(_ caption: NSAttributedString?) {
+        let sendMessageInput = MessageInputPanelComponent.SendMessageInput.text(caption ?? NSAttributedString())
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-            view.setSendMessageInput(value: .text(caption ?? NSAttributedString()), updateState: true)
+            view.setSendMessageInput(value: sendMessageInput, updateState: true)
+        } else {
+            self.scheduledMessageInput = sendMessageInput
         }
     }
     
@@ -143,6 +147,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             maxInputPanelHeight = 60.0
         }
         
+        var resetInputContents: MessageInputPanelComponent.SendMessageInput?
+        if let scheduledMessageInput = self.scheduledMessageInput {
+            resetInputContents = scheduledMessageInput
+            self.scheduledMessageInput = nil
+        }
+        
         self.inputPanel.parentState = self.state
         let inputPanelSize = self.inputPanel.update(
             transition: Transition(transition),
@@ -157,7 +167,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     maxLength: 1024,
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
-                    resetInputContents: nil,
+                    resetInputContents: resetInputContents,
                     nextInputMode: { _ in
                         return .emoji
                     },
