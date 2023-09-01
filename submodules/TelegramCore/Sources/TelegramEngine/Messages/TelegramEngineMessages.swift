@@ -953,6 +953,10 @@ public extension TelegramEngine {
                             return lhs.peer.id < rhs.peer.id
                         })
                         
+                        if !isHidden {
+                            assert(true)
+                        }
+                        
                         return EngineStorySubscriptions(accountItem: accountItem, items: items, hasMoreToken: hasMoreToken)
                     }
                 }

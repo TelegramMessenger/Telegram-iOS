@@ -880,6 +880,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             displayCaption = !self.textNode.isHidden
         }
         
+        if metrics.isTablet {
+            self.fullscreenButton.isHidden = true
+        }
+        
         var textFrame = CGRect()
         var visibleTextHeight: CGFloat = 0.0
         if !self.textNode.isHidden {

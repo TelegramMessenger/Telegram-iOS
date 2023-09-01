@@ -1466,6 +1466,7 @@ public class CameraScreen: ViewController {
             })
         }
         
+        fileprivate var captureStartTimestamp: Double?
         private func setupCamera() {
             guard self.camera == nil else {
                 return
@@ -1575,6 +1576,7 @@ public class CameraScreen: ViewController {
             
             camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             camera.startCapture()
+            self.captureStartTimestamp = CACurrentMediaTime()
             
             self.camera = camera
             
@@ -2515,8 +2517,19 @@ public class CameraScreen: ViewController {
             guard let self, !self.didStopCameraCapture else {
                 return
             }
-            self.didStopCameraCapture = true
-            self.node.pauseCameraCapture()
+            let currentTimestamp = CACurrentMediaTime()
+            if let startTimestamp = self.node.captureStartTimestamp {
+                let difference = currentTimestamp - startTimestamp
+                if difference < 2.0 {
+                    Queue.mainQueue().after(2.0 - difference) {
+                        self.didStopCameraCapture = true
+                        self.node.pauseCameraCapture()
+                    }
+                } else {
+                    self.didStopCameraCapture = true
+                    self.node.pauseCameraCapture()
+                }
+            }
         }
         
         let resumeCameraCapture = { [weak self] in

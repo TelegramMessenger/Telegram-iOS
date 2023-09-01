@@ -444,6 +444,7 @@ public final class StoryItemSetContainerComponent: Component {
         var reactionContextNode: ReactionContextNode?
         weak var disappearingReactionContextNode: ReactionContextNode?
         var displayLikeReactions: Bool = false
+        var tempReactionsGesture: ContextGesture?
         var waitingForReactionAnimateOutToLike: MessageReaction.Reaction?
         weak var standaloneReactionAnimation: StandaloneReactionAnimation?
         
@@ -1656,7 +1657,10 @@ public final class StoryItemSetContainerComponent: Component {
                                     externalViews: nil,
                                     expandFraction: footerExpandFraction,
                                     expandViewStats: { [weak self] in
-                                        guard let self else {
+                                        guard let self, let component = self.component else {
+                                            return
+                                        }
+                                        if self.viewLists[component.slice.item.storyItem.id] == nil {
                                             return
                                         }
                                         
@@ -2024,6 +2028,13 @@ public final class StoryItemSetContainerComponent: Component {
             
             self.contextController?.dismiss()
             self.contextController = nil
+            
+            if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                self.standaloneReactionAnimation = nil
+                standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                    standaloneReactionAnimation?.view.removeFromSuperview()
+                })
+            }
             
             if let inputPanelView = self.inputPanel.view {
                 inputPanelView.layer.animatePosition(
@@ -2769,12 +2780,11 @@ public final class StoryItemSetContainerComponent: Component {
                             self.performLikeAction()
                         },
                         likeOptionsAction: !haveLikeOptions ? nil : { [weak self] sourceView, gesture in
-                            gesture?.cancel()
-                            
                             guard let self else {
+                                gesture?.cancel()
                                 return
                             }
-                            self.performLikeOptionsAction(sourceView: sourceView)
+                            self.performLikeOptionsAction(sourceView: sourceView, gesture: gesture)
                         },
                         inputModeAction: { [weak self] in
                             guard let self else {
@@ -3108,20 +3118,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.isSearchActive = false
                                 self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
                             },
-                            expandViewStats: { [weak self] in
-                                guard let self else {
-                                    return
-                                }
-                                
-                                if self.viewListDisplayState == .hidden {
-                                    self.viewListDisplayState = .half
-                                    
-                                    self.preparingToDisplayViewList = true
-                                    self.updateScrolling(transition: .immediate)
-                                    self.preparingToDisplayViewList = false
-                                    
-                                    self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-                                }
+                            expandViewStats: {
                             },
                             deleteAction: { [weak self] in
                                 guard let self, let component = self.component else {
@@ -4160,6 +4157,26 @@ public final class StoryItemSetContainerComponent: Component {
                     reactionContextNode.forceDark = true
                     self.reactionContextNode = reactionContextNode
                     
+                    if let tempReactionsGesture = self.tempReactionsGesture {
+                        tempReactionsGesture.externalUpdated = { [weak self] view, point in
+                            guard let self, let view, let reactionContextNode = self.reactionContextNode else {
+                                return
+                            }
+                            let presentationPoint = view.convert(point, to: reactionContextNode.view)
+                            reactionContextNode.highlightGestureMoved(location: presentationPoint, hover: false)
+                        }
+                        tempReactionsGesture.externalEnded = { [weak self] viewAndPoint in
+                            guard let self, let viewAndPoint, let reactionContextNode = self.reactionContextNode else {
+                                return
+                            }
+                            let _ = viewAndPoint
+                            /*let (view, point) = viewAndPoint
+                            let presentationPoint = view.convert(point, to: reactionContextNode.view)
+                            let _ = presentationPoint*/
+                            reactionContextNode.highlightGestureFinished(performAction: true)
+                        }
+                    }
+                    
                     reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
                         guard let self else {
                             return
@@ -4553,7 +4570,7 @@ public final class StoryItemSetContainerComponent: Component {
             } else if let inputPanelFrameValue {
                 component.externalState.derivedBottomInset = availableSize.height - min(inputPanelFrameValue.minY, contentFrame.maxY)
             } else {
-                component.externalState.derivedBottomInset = 0.0
+                component.externalState.derivedBottomInset = availableSize.height - itemsContainerFrame.maxY
             }
             
             if !"".isEmpty {
@@ -5332,12 +5349,14 @@ public final class StoryItemSetContainerComponent: Component {
             }
         }
         
-        private func performLikeOptionsAction(sourceView: UIView) {
+        private func performLikeOptionsAction(sourceView: UIView, gesture: ContextGesture?) {
             HapticFeedback().tap()
             
             self.displayLikeReactions = true
+            self.tempReactionsGesture = gesture
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
             self.updateIsProgressPaused()
+            self.tempReactionsGesture = nil
         }
         
         func dismissAllTooltips() {

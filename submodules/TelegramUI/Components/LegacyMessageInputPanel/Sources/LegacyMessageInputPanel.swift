@@ -69,9 +69,13 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         }
     }
     
+    private var scheduledMessageInput: MessageInputPanelComponent.SendMessageInput?
     public func setCaption(_ caption: NSAttributedString?) {
+        let sendMessageInput = MessageInputPanelComponent.SendMessageInput.text(caption ?? NSAttributedString())
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-            view.setSendMessageInput(value: .text(caption ?? NSAttributedString()), updateState: true)
+            view.setSendMessageInput(value: sendMessageInput, updateState: true)
+        } else {
+            self.scheduledMessageInput = sendMessageInput
         }
     }
     
@@ -81,6 +85,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     }
     
     public func setTimeout(_ timeout: Int32) {
+        self.dismissTimeoutTooltip()
         var timeout: Int32? = timeout
         if timeout == 0 {
             timeout = nil
@@ -142,6 +147,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             maxInputPanelHeight = 60.0
         }
         
+        var resetInputContents: MessageInputPanelComponent.SendMessageInput?
+        if let scheduledMessageInput = self.scheduledMessageInput {
+            resetInputContents = scheduledMessageInput
+            self.scheduledMessageInput = nil
+        }
+        
         self.inputPanel.parentState = self.state
         let inputPanelSize = self.inputPanel.update(
             transition: Transition(transition),
@@ -156,7 +167,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     maxLength: 1024,
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
-                    resetInputContents: nil,
+                    resetInputContents: resetInputContents,
                     nextInputMode: { _ in
                         return .emoji
                     },
@@ -180,9 +191,9 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     likeAction: nil,
                     likeOptionsAction: nil,
                     inputModeAction: nil,
-                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView in
+                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView, gesture in
                         if let self {
-                            self.presentTimeoutSetup(sourceView: sourceView)
+                            self.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
                         }
                     } : nil,
                     forwardAction: nil,
@@ -234,7 +245,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         return inputPanelSize.height - 8.0
     }
     
-    private func presentTimeoutSetup(sourceView: UIView) {
+    private func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?) {
         self.hapticFeedback.impact(.light)
         
         var items: [ContextMenuItem] = []
@@ -250,12 +261,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                 
         let currentValue = self.currentTimeout
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
-        let title = "Choose how long the media will be kept after opening."
+        let title = presentationData.strings.MediaPicker_Timer_Description
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
         
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
 
-        items.append(.action(ContextMenuActionItem(text: "View Once", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_ViewOnce, icon: { theme in
             return currentValue == viewOnceTimeout ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
         }, action: { _, a in
             a(.default)
@@ -263,31 +274,19 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             updateTimeout(viewOnceTimeout)
         })))
         
-        items.append(.action(ContextMenuActionItem(text: "3 Seconds", icon: { theme in
-            return currentValue == 3 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(3)
-        })))
+        let values: [Int32] = [3, 10, 30]
         
-        items.append(.action(ContextMenuActionItem(text: "10 Seconds", icon: { theme in
-            return currentValue == 10 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-        }, action: { _, a in
-            a(.default)
+        for value in values {
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_Seconds(value), icon: { theme in
+                return currentValue == value ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            }, action: { _, a in
+                a(.default)
+                
+                updateTimeout(value)
+            })))
+        }
             
-            updateTimeout(10)
-        })))
-        
-        items.append(.action(ContextMenuActionItem(text: "30 Seconds", icon: { theme in
-            return currentValue == 30 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
-        }, action: { _, a in
-            a(.default)
-            
-            updateTimeout(30)
-        })))
-    
-        items.append(.action(ContextMenuActionItem(text: "Do Not Delete", icon: { theme in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.MediaPicker_Timer_DoNotDelete, icon: { theme in
             return currentValue == nil ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
         }, action: { _, a in
             a(.default)
@@ -295,34 +294,41 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             updateTimeout(nil)
         })))
         
-        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.present(contextController)
     }
     
     private weak var tooltipController: TooltipScreen?
-    private func presentTimeoutTooltip(sourceView: UIView, timeout: Int32?) {
-        guard let superview = self.view.superview?.superview else {
-            return
-        }
+    
+    private func dismissTimeoutTooltip() {
         if let tooltipController = self.tooltipController {
             self.tooltipController = nil
             tooltipController.dismiss()
         }
+    }
+    
+    private func presentTimeoutTooltip(sourceView: UIView, timeout: Int32?) {
+        guard let superview = self.view.superview?.superview else {
+            return
+        }
+        self.dismissTimeoutTooltip()
         
         let parentFrame = superview.convert(superview.bounds, to: nil)
         let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
         let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 2.0), size: CGSize())
         
+        let isVideo = !"".isEmpty
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let text: String
         let iconName: String
         if timeout == viewOnceTimeout {
-            text = "Photo set to view once."
+            text = isVideo ? presentationData.strings.MediaPicker_Timer_Video_ViewOnceTooltip : presentationData.strings.MediaPicker_Timer_Photo_ViewOnceTooltip
             iconName = "anim_autoremove_on"
         } else if let timeout {
-            text = "Photo will be deleted in \(timeout) seconds after opening."
+            text = isVideo ? presentationData.strings.MediaPicker_Timer_Video_TimerTooltip("\(timeout)").string : presentationData.strings.MediaPicker_Timer_Photo_TimerTooltip("\(timeout)").string
             iconName = "anim_autoremove_on"
         } else {
-            text = "Photo will be kept in chat."
+            text = isVideo ? presentationData.strings.MediaPicker_Timer_Video_KeepTooltip : presentationData.strings.MediaPicker_Timer_Photo_KeepTooltip
             iconName = "anim_autoremove_off"
         }
         
@@ -330,7 +336,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
             account: self.context.account,
             sharedContext: self.context.sharedContext,
             text: .plain(text: text),
-            balancedTextLayout: true,
+            balancedTextLayout: false,
             style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
             arrowStyle: .small,
             icon: .animation(name: iconName, delay: 0.1, tintColor: nil),

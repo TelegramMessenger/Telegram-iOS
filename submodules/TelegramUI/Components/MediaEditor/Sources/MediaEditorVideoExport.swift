@@ -389,7 +389,7 @@ public final class MediaEditorVideoExport {
             
             try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
             
-            if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+            if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid), !self.configuration.values.videoIsMuted {
                 try? audioTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: .zero)
             }
             
@@ -488,7 +488,7 @@ public final class MediaEditorVideoExport {
         }
         
         let audioTracks = inputAsset.tracks(withMediaType: .audio)
-        if audioTracks.count > 0, !self.configuration.values.videoIsMuted {
+        if audioTracks.count > 0, !self.configuration.values.videoIsMuted || self.configuration.values.audioTrack != nil {
             let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
             audioOutput.alwaysCopiesSampleData = false
             if reader.canAdd(audioOutput) {

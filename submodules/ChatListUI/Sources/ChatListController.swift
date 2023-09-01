@@ -941,7 +941,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         self.chatListDisplayNode.mainContainerNode.present = { [weak self] c in
             if let strongSelf = self {
-                strongSelf.present(c, in: .window(.root))
+                if c is UndoOverlayController {
+                    strongSelf.dismissAllUndoControllers()
+                    strongSelf.present(c, in: .current)
+                } else {
+                    strongSelf.present(c, in: .window(.root))
+                }
             }
         }
         
@@ -3118,8 +3123,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    public func scrollToStories() {
+    public func scrollToStories(peerId: EnginePeer.Id? = nil) {
         self.chatListDisplayNode.scrollToStories(animated: false)
+        
+        if let peerId, let componentView = self.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
+            storyPeerListView.ensureItemVisible(peerId: peerId)
+        }
     }
     
     public func scrollToStoriesAnimated() {

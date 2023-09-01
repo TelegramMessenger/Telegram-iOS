@@ -189,7 +189,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     var isRevealed = false
     var tapped: () -> Void = {}
     
-    init(enableAnimations: Bool) {
+    init(hasImageOverlay: Bool, enableAnimations: Bool) {
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
          
@@ -212,7 +212,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
                 
         super.init()
                 
-        self.addSubnode(self.blurredImageNode)
+        if hasImageOverlay {
+            self.addSubnode(self.blurredImageNode)
+        }
         self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
 
@@ -1986,7 +1988,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     } else {
                         secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
                     }
-                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime {
+                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
                         state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
                         backgroundColor = messageTheme.mediaDateAndStatusFillColor
                     } else if isSecretMedia, let _ = secretProgressIcon {
@@ -2043,7 +2045,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         
         if isSecretMedia {
             let remainingTime: Int32?
-            if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
+            if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
                 if let beginTime = maybeBeginTime {
                     let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
                     remainingTime = Int32(max(0.0, timeout - elapsedTime))
@@ -2133,7 +2135,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     self?.internallyVisible = true
                     self?.updateVisibility()

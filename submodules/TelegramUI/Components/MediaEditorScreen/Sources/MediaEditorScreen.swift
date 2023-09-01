@@ -1117,7 +1117,7 @@ final class MediaEditorScreenComponent: Component {
                             }
                         }
                     },
-                    timeoutAction: isEditingStory ? nil : { [weak self] view in
+                    timeoutAction: isEditingStory ? nil : { [weak self] view, gesture in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
@@ -1130,7 +1130,7 @@ final class MediaEditorScreenComponent: Component {
                             } else {
                                 hasPremium = false
                             }
-                            controller?.presentTimeoutSetup(sourceView: view, hasPremium: hasPremium)
+                            controller?.presentTimeoutSetup(sourceView: view, gesture: gesture, hasPremium: hasPremium)
                         })
                     },
                     forwardAction: nil,
@@ -2778,7 +2778,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? self.presentationData.strings.Story_Editor_TooltipMuted : self.presentationData.strings.Story_Editor_TooltipUnmuted), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let text: String
+            if let _ = self.mediaEditor?.values.audioTrack {
+                if isMuted {
+                    text = self.presentationData.strings.Story_Editor_TooltipMutedWithAudio
+                } else {
+                    text = self.presentationData.strings.Story_Editor_TooltipUnmutedWithAudio
+                }
+            } else {
+                if isMuted {
+                    text = self.presentationData.strings.Story_Editor_TooltipMuted
+                } else {
+                    text = self.presentationData.strings.Story_Editor_TooltipUnmuted
+                }
+            }
+            
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.muteTooltip = tooltipController
@@ -2957,7 +2972,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     location = draft.location
                 }
             }
-            let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address, countryCode in
+            let locationController = storyLocationPickerController(
+                context: self.context,
+                location: location,
+                dismissed: { [weak self] in
+                    if let self {
+                        self.mediaEditor?.play()
+                    }
+                },
+                completion: { [weak self] location, queryId, resultId, address, countryCode in
                 if let self  {
                     let emojiFile: Signal<TelegramMediaFile?, NoError>
                     if let countryCode {
@@ -3035,7 +3058,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentAudioPicker() {
-            self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, completion: { [weak self] urls in
+            self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, dismissed: { [weak self] in
+                if let self {
+                    Queue.mainQueue().after(0.1) {
+                        self.mediaEditor?.play()
+                    }
+                }
+            }, completion: { [weak self] urls in
                 guard let self, let mediaEditor = self.mediaEditor, !urls.isEmpty, let url = urls.first else {
                     return
                 }
@@ -3060,10 +3089,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 
                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
-                
-                Queue.mainQueue().after(0.1) {
-                    self.mediaEditor?.play()
-                }
             }), in: .window(.root))
         }
         
@@ -3081,7 +3106,13 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         action: { [weak self] f in
                             f.dismissWithResult(.default)
                             if let self {
-                                self.mediaEditor?.setAudioTrack(nil)
+                                if let mediaEditor = self.mediaEditor {
+                                    mediaEditor.setAudioTrack(nil)
+                                    
+                                    if !mediaEditor.sourceIsVideo && !mediaEditor.isPlaying {
+                                        mediaEditor.play()
+                                    }
+                                }
                                 self.requestUpdate(transition: .easeInOut(duration: 0.25))
                             }
                         }
@@ -3872,7 +3903,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
-    func presentTimeoutSetup(sourceView: UIView, hasPremium: Bool) {
+    func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?, hasPremium: Bool) {
         self.hapticFeedback.impact(.light)
         
         var items: [ContextMenuItem] = []
@@ -3893,7 +3924,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let title = presentationData.strings.Story_Editor_ExpirationText
         let currentValue = self.state.privacy.timeout
-        let currentArchived = self.state.privacy.pin
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
         
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
@@ -3929,7 +3959,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(24), icon: { theme in
-            return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return currentValue == 86400 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
         }, action: { _, a in
             a(.default)
             
@@ -3951,7 +3981,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         })))
         
-        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.present(contextController, in: .window(.root))
     }
     
