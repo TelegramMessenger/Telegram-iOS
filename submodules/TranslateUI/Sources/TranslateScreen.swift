@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 import AccountContext
@@ -537,6 +536,8 @@ public class TranslateScreen: ViewController {
             self.component = component
             self.theme = theme
             
+            let effectiveTheme = theme ?? self.presentationData.theme
+            
             self.dim = ASDisplayNode()
             self.dim.alpha = 0.0
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
@@ -552,7 +553,7 @@ public class TranslateScreen: ViewController {
             self.scrollView.showsVerticalScrollIndicator = false
             
             self.containerView.clipsToBounds = true
-            self.containerView.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+            self.containerView.backgroundColor = effectiveTheme.list.blocksBackgroundColor
             
             self.addSubnode(self.dim)
             
@@ -991,7 +992,9 @@ public class TranslateScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
-    public convenience init(context: AccountContext, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false) {
+    public var wasDismissed: (() -> Void)?
+    
+    public convenience init(context: AccountContext, forceTheme: PresentationTheme? = nil, text: String, canCopy: Bool, fromLanguage: String?, toLanguage: String? = nil, isExpanded: Bool = false, ignoredLanguages: [String]? = nil) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         var baseLanguageCode = presentationData.strings.baseLanguageCode
@@ -1000,9 +1003,15 @@ public class TranslateScreen: ViewController {
             baseLanguageCode = String(baseLanguageCode.dropLast(rawSuffix.count))
         }
         
+        let dontTranslateLanguages = effectiveIgnoredTranslationLanguages(context: context, ignoredLanguages: ignoredLanguages)
+        
         var toLanguage = toLanguage ?? baseLanguageCode
         if toLanguage == fromLanguage {
-            toLanguage = "en"
+            if fromLanguage == "en" {
+                toLanguage = dontTranslateLanguages.first(where: { $0 != "en" }) ?? "en"
+            } else {
+                toLanguage = "en"
+            }
         }
         
         if toLanguage == "nb" {
@@ -1020,13 +1029,13 @@ public class TranslateScreen: ViewController {
             changeLanguageImpl?(fromLang, toLang, completion)
         }, expand: {
             expandImpl?()
-        }))
+        }), theme: forceTheme)
         
         self.isInitiallyExpanded = isExpanded
                 
         self.title = presentationData.strings.Translate_Title
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -1040,8 +1049,8 @@ public class TranslateScreen: ViewController {
         changeLanguageImpl = { [weak self] fromLang, toLang, completion in
             let pushController = self?.pushController
             let presentController = self?.presentController
-            let controller = languageSelectionController(context: context, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
-                let controller = TranslateScreen(context: context, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true)
+            let controller = languageSelectionController(context: context, forceTheme: forceTheme, fromLanguage: fromLang, toLanguage: toLang, completion: { fromLang, toLang in
+                let controller = TranslateScreen(context: context, forceTheme: forceTheme, text: text, canCopy: canCopy, fromLanguage: fromLang, toLanguage: toLang, isExpanded: true, ignoredLanguages: ignoredLanguages)
                 controller.pushController = pushController ?? { _ in }
                 controller.presentController = presentController ?? { _ in }
                 presentController?(controller)
@@ -1064,7 +1073,7 @@ public class TranslateScreen: ViewController {
     private init<C: Component>(context: AccountContext, component: C, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
         self.context = context
         self.component = AnyComponent(component)
-        self.theme = nil
+        self.theme = theme
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: context.sharedContext.currentPresentationData.with { $0 }))
     }
@@ -1087,13 +1096,16 @@ public class TranslateScreen: ViewController {
     
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
+        let wasDismissed = self.wasDismissed
         if flag {
             self.node.animateOut(completion: {
                 super.dismiss(animated: false, completion: {})
+                wasDismissed?()
                 completion?()
             })
         } else {
             super.dismiss(animated: false, completion: {})
+            wasDismissed?()
             completion?()
         }
     }

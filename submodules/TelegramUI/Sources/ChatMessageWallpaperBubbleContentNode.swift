@@ -130,7 +130,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
         item.context.account.pendingPeerMediaUploadManager.cancel(peerId: item.message.id.peerId)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId {
             return (self.imageNode, self.imageNode.bounds, { [weak self] in
                 guard let strongSelf = self else {

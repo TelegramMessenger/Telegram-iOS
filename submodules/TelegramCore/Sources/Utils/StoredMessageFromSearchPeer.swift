@@ -5,7 +5,7 @@ import SwiftSignalKit
 func _internal_storedMessageFromSearchPeer(account: Account, peer: Peer) -> Signal<Peer, NoError> {
     return account.postbox.transaction { transaction -> Peer in
         if transaction.getPeer(peer.id) == nil {
-            updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
+            updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updatedPeer in
                 return updatedPeer
             })
         }
@@ -24,7 +24,7 @@ func _internal_storedMessageFromSearchPeers(account: Account, peers: [Peer]) -> 
     return account.postbox.transaction { transaction -> Void in
         for peer in peers {
             if transaction.getPeer(peer.id) == nil {
-                updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updatedPeer in
                     return updatedPeer
                 })
             }
@@ -37,7 +37,7 @@ func _internal_storeMessageFromSearch(transaction: Transaction, message: Message
     if transaction.getMessage(message.id) == nil {
         for (_, peer) in message.peers {
             if transaction.getPeer(peer.id) == nil {
-                updatePeers(transaction: transaction, peers: [peer], update: { previousPeer, updatedPeer in
+                updatePeersCustom(transaction: transaction, peers: [peer], update: { _, updatedPeer in
                     return updatedPeer
                 })
             }

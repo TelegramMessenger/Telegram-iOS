@@ -153,6 +153,9 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: EngineCo
             }  else if let _ = media as? TelegramMediaInvoice {
                 hasUneditableAttributes = true
                 break
+            }  else if let _ = media as? TelegramMediaStory {
+                hasUneditableAttributes = true
+                break
             }
         }
         
@@ -340,7 +343,7 @@ func messageMediaEditingOptions(message: Message) -> MessageMediaEditingOptions 
                         return []
                     case .Animated:
                         return []
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return []
                         } else {
@@ -459,9 +462,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         actions.append(.action(ContextMenuActionItem(text: presentationData.strings.SponsoredMessageMenu_Info, textColor: .primary, textLayout: .twoLinesMax, textFont: .custom(font: Font.regular(presentationData.listsFontSize.baseDisplaySize - 1.0), height: nil, verticalOffset: nil), badge: nil, icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
         }, iconSource: nil, action: { _, f in
-            /*c.dismiss(completion: {
-                controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
-            })*/
             f(.dismissWithoutContent)
             controllerInteraction.navigationController()?.pushViewController(AdInfoScreen(context: context))
         })))
@@ -567,6 +567,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             } else if let dice = media as? TelegramMediaDice {
                 diceEmoji = dice.emoji
+            } else if let story = media as? TelegramMediaStory {
+                if story.isMention {
+                    isAction = true
+                }
             }
         }
     }
@@ -624,6 +628,16 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         if !(peer is TelegramSecretChat) && messages[0].id.namespace != Namespaces.Message.Cloud {
             canPin = false
             canReply = false
+        }
+    }
+    
+    for media in messages[0].media {
+        if let story = media as? TelegramMediaStory {
+            if let story = message.associatedStories[story.storyId], story.data.isEmpty {
+                canPin = false
+            } else if story.isMention {
+                canPin = false
+            }
         }
     }
     
@@ -789,7 +803,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         
                                         let id = Int64.random(in: Int64.min ... Int64.max)
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
-                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
@@ -873,136 +887,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             }
                         })))
                         actions.append(.separator)
-                    }
-                }
-            }
-            
-            if context.sharedContext.immediateExperimentalUISettings.enableReactionOverrides {
-                for media in message.media {
-                    if let file = media as? TelegramMediaFile, file.isAnimatedSticker {
-                        actions.append(.action(ContextMenuActionItem(text: "Set as Reaction Effect", icon: { _ in
-                            return nil
-                        }, action: { c, _ in
-                            let subItems: Signal<ContextController.Items, NoError> = context.engine.stickers.availableReactions()
-                            |> map { reactions -> ContextController.Items in
-                                var subActions: [ContextMenuItem] = []
-                                
-                                if let reactions = reactions {
-                                    for reaction in reactions.reactions {
-                                        if !reaction.isEnabled || !reaction.isPremium {
-                                            continue
-                                        }
-                                        
-                                        guard case let .builtin(emojiValue) = reaction.value else {
-                                            continue
-                                        }
-                                        
-                                        subActions.append(.action(ContextMenuActionItem(text: emojiValue, icon: { _ in
-                                            return nil
-                                        }, action: { _, f in
-                                            let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                                                var settings = settings
-                                                
-                                                var currentItems: [ExperimentalUISettings.AccountReactionOverrides.Item]
-                                                if let value = settings.accountReactionEffectOverrides.first(where: { $0.accountId == context.account.id.int64 }) {
-                                                    currentItems = value.items
-                                                } else {
-                                                    currentItems = []
-                                                }
-                                                
-                                                currentItems.removeAll(where: { $0.key == reaction.value })
-                                                currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
-                                                    key: reaction.value,
-                                                    messageId: message.id,
-                                                    mediaId: file.fileId
-                                                ))
-                                                
-                                                settings.accountReactionEffectOverrides.removeAll(where: { $0.accountId == context.account.id.int64 })
-                                                settings.accountReactionEffectOverrides.append(ExperimentalUISettings.AccountReactionOverrides(accountId: context.account.id.int64, items: currentItems))
-                                                
-                                                return settings
-                                            }).start()
-                                            
-                                            f(.default)
-                                        })))
-                                    }
-                                }
-                                
-                                return ContextController.Items(content: .list(subActions), disablePositionLock: true, tip: nil)
-                            }
-                            
-                            c.pushItems(items: subItems)
-                        })))
-                        
-                        actions.append(.action(ContextMenuActionItem(text: "Set as Sticker Effect", icon: { _ in
-                            return nil
-                        }, action: { c, _ in
-                            let stickersKey: PostboxViewKey = .orderedItemList(id: Namespaces.OrderedItemList.CloudPremiumStickers)
-                            let subItems: Signal<ContextController.Items, NoError> = context.account.postbox.combinedView(keys: [stickersKey])
-                            |> map { views -> [String] in
-                                if let view = views.views[stickersKey] as? OrderedItemListView, !view.items.isEmpty {
-                                    return view.items.compactMap { item -> String? in
-                                        guard let mediaItem = item.contents.get(RecentMediaItem.self) else {
-                                            return nil
-                                        }
-                                        let file = mediaItem.media
-                                        for attribute in file.attributes {
-                                            switch attribute {
-                                            case let .Sticker(text, _, _):
-                                                return text
-                                            default:
-                                                break
-                                            }
-                                        }
-                                        return nil
-                                    }
-                                } else {
-                                    return []
-                                }
-                            }
-                            |> map { stickerNames -> ContextController.Items in
-                                var subActions: [ContextMenuItem] = []
-                                
-                                for stickerName in stickerNames {
-                                    subActions.append(.action(ContextMenuActionItem(text: stickerName, icon: { _ in
-                                        return nil
-                                    }, action: { _, f in
-                                        let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
-                                            var settings = settings
-                                            
-                                            var currentItems: [ExperimentalUISettings.AccountReactionOverrides.Item]
-                                            if let value = settings.accountStickerEffectOverrides.first(where: { $0.accountId == context.account.id.int64 }) {
-                                                currentItems = value.items
-                                            } else {
-                                                currentItems = []
-                                            }
-                                            
-                                            currentItems.removeAll(where: { $0.key == MessageReaction.Reaction.builtin(stickerName) })
-                                            currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
-                                                key: .builtin(stickerName),
-                                                messageId: message.id,
-                                                mediaId: file.fileId
-                                            ))
-                                            
-                                            settings.accountStickerEffectOverrides.removeAll(where: { $0.accountId == context.account.id.int64 })
-                                            settings.accountStickerEffectOverrides.append(ExperimentalUISettings.AccountReactionOverrides(accountId: context.account.id.int64, items: currentItems))
-                                            
-                                            return settings
-                                        }).start()
-                                        
-                                        f(.default)
-                                    })))
-                                }
-                                
-                                return ContextController.Items(content: .list(subActions), disablePositionLock: true, tip: nil)
-                            }
-                            
-                            c.pushItems(items: subItems)
-                        })))
-                        
-                        actions.append(.separator)
-                        
-                        break
                     }
                 }
             }
@@ -1980,6 +1864,12 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         }
                     } else if let action = media as? TelegramMediaAction, case .phoneCall = action.action {
                         optionsMap[id]!.insert(.rateCall)
+                    } else if let story = media as? TelegramMediaStory {
+                        if let story = message.associatedStories[story.storyId], story.data.isEmpty {
+                            isShareProtected = true
+                        } else if story.isMention {
+                            isShareProtected = true
+                        }
                     }
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
@@ -1999,7 +1889,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         optionsMap[id]!.insert(.deleteLocally)
                     }
                 } else if id.peerId == accountPeerId {
-                    if !(message.flags.isSending || message.flags.contains(.Failed)) {
+                    if !(message.flags.isSending || message.flags.contains(.Failed)) && !isShareProtected {
                         optionsMap[id]!.insert(.forward)
                     }
                     optionsMap[id]!.insert(.deleteLocally)
@@ -2043,7 +1933,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                                 banPeer = nil
                             }
                         }
-                        if !message.containsSecretMedia && !isAction {
+                        if !message.containsSecretMedia && !isAction && !isShareProtected {
                             if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.isCopyProtected() {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
@@ -2060,7 +1950,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                         }
                     } else if let group = peer as? TelegramGroup {
                         if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia {
-                            if !isAction && !message.isCopyProtected() {
+                            if !isAction && !message.isCopyProtected() && !isShareProtected {
                                 if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                     optionsMap[id]!.insert(.forward)
                                 }
@@ -2094,7 +1984,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                             }
                         }
                     } else if let user = peer as? TelegramUser {
-                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() {
+                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction && !message.id.peerId.isReplies && !message.isCopyProtected() && !isShareProtected {
                             if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                 optionsMap[id]!.insert(.forward)
                             }

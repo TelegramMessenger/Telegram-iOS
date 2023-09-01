@@ -387,7 +387,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
             updatedPeer = updatedPeer.withUpdatedEmbeddedState(updatedState.embeddedState.peerState)
         }
         if !peer.isEqual(updatedPeer) {
-            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+            updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                 return updated
             })
         }
@@ -613,7 +613,7 @@ extension TelegramMediaFileAttribute {
                 }
                 self = .Sticker(displayText: alt, packReference: packReference, maskData: nil)
             case let .documentAttributeVideo(duration, w, h):
-                self = .Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: [])
+                self = .Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: [], preloadSize: nil)
         }
     }
 }
@@ -645,7 +645,7 @@ extension TelegramMediaFileAttribute {
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
                 }
-                self = .Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags)
+                self = .Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: nil)
         }
     }
 }
@@ -677,7 +677,7 @@ extension TelegramMediaFileAttribute {
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
                 }
-                self = .Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags)
+                self = .Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: nil)
         }
     }
 }
@@ -709,7 +709,7 @@ extension TelegramMediaFileAttribute {
                 if (flags & (1 << 0)) != 0 {
                     videoFlags.insert(.instantRoundVideo)
                 }
-                self = .Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags)
+                self = .Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: videoFlags, preloadSize: nil)
         }
     }
 }
@@ -752,7 +752,7 @@ private func maximumMediaAutoremoveTimeout(_ media: [Media]) -> Int32 {
     for media in media {
         if let file = media as? TelegramMediaFile {
             if let duration = file.duration {
-                maxDuration = max(maxDuration, duration)
+                maxDuration = max(maxDuration, Int32(duration))
             }
         }
     }
@@ -825,7 +825,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             text = caption
                         }
                         if let file = file {
-                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
+                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: [], preloadSize: nil), .FileName(fileName: "video.mov")]
                             var immediateThumbnailData: Data?
                             if thumb.size != 0 {
                                 if let image = UIImage(data: thumb.makeData()) {
@@ -1026,7 +1026,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             
                             loop: for attr in parsedAttributes {
                                 switch attr {
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         attributes.append(ConsumableContentMessageAttribute(consumed: false))
                                     }
@@ -1045,7 +1045,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             text = caption
                         }
                         if let file = file {
-                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
+                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: [], preloadSize: nil), .FileName(fileName: "video.mov")]
                             var immediateThumbnailData: Data?
                             if thumb.size != 0 {
                                 if let image = UIImage(data: thumb.makeData()) {
@@ -1306,7 +1306,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             
                             loop: for attr in parsedAttributes {
                                 switch attr {
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         attributes.append(ConsumableContentMessageAttribute(consumed: false))
                                     }
@@ -1325,7 +1325,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             text = caption
                         }
                         if let file = file {
-                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
+                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: [], preloadSize: nil), .FileName(fileName: "video.mov")]
                             var immediateThumbnailData: Data?
                             if thumb.size != 0 {
                                 if let image = UIImage(data: thumb.makeData()) {
@@ -1508,7 +1508,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             
                             loop: for attr in parsedAttributes {
                                 switch attr {
-                                case let .Video(_, _, flags):
+                                case let .Video(_, _, flags, _):
                                     if flags.contains(.instantRoundVideo) {
                                         attributes.append(ConsumableContentMessageAttribute(consumed: false))
                                     }
@@ -1527,7 +1527,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             text = caption
                         }
                         if let file = file {
-                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Int(duration), size: PixelDimensions(width: w, height: h), flags: []), .FileName(fileName: "video.mov")]
+                            let parsedAttributes: [TelegramMediaFileAttribute] = [.Video(duration: Double(duration), size: PixelDimensions(width: w, height: h), flags: [], preloadSize: nil), .FileName(fileName: "video.mov")]
                             var immediateThumbnailData: Data?
                             if thumb.size != 0 {
                                 if let image = UIImage(data: thumb.makeData()) {

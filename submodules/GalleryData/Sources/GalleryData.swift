@@ -14,6 +14,7 @@ import PeerAvatarGalleryUI
 import GalleryUI
 import MediaResources
 import WebsiteType
+import StoryContainerScreen
 
 public enum ChatMessageGalleryControllerData {
     case url(String)
@@ -28,19 +29,20 @@ public enum ChatMessageGalleryControllerData {
     case chatAvatars(AvatarGalleryController, Media)
     case theme(TelegramMediaFile)
     case other(Media)
+    case story(Signal<StoryContainerScreen, NoError>)
 }
 
 private func instantPageBlockMedia(pageId: MediaId, block: InstantPageBlock, media: [MediaId: Media], counter: inout Int) -> [InstantPageGalleryEntry] {
     switch block {
         case let .image(id, caption, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
         case let .video(id, caption, _, _):
             if let m = media[id] {
-                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: m, url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
+                let result = [InstantPageGalleryEntry(index: Int32(counter), pageId: pageId, media: InstantPageMedia(index: counter, media: EngineMedia(m), url: nil, caption: caption.text, credit: caption.credit), caption: caption.text, credit: caption.credit, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0))]
                 counter += 1
                 return result
             }
@@ -79,7 +81,7 @@ public func instantPageGalleryMedia(webpageId: MediaId, page: InstantPage, galle
     }
     
     if !found {
-        result.insert(InstantPageGalleryEntry(index: Int32(counter), pageId: webpageId, media: InstantPageMedia(index: counter, media: galleryMedia, url: nil, caption: nil, credit: nil), caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0)), at: 0)
+        result.insert(InstantPageGalleryEntry(index: Int32(counter), pageId: webpageId, media: InstantPageMedia(index: counter, media: EngineMedia(galleryMedia), url: nil, caption: nil, credit: nil), caption: nil, credit: nil, location: InstantPageGalleryEntryLocation(position: Int32(counter), totalCount: 0)), at: 0)
     }
     
     for i in 0 ..< result.count {
@@ -120,7 +122,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     if case .suggestedProfilePhoto = action.action {
                         isSuggested = true
                     }
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action", false, nil)])
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer, message.timestamp, nil, message.id, image.immediateThumbnailData, "action", false, nil)])
                     
                     let sourceCorners: AvatarGalleryController.SourceCorners
                     if case .photoUpdated = action.action {
@@ -128,7 +130,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     } else {
                         sourceCorners = .round
                     }
-                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: sourceCorners, remoteEntries: promise, isSuggested: isSuggested, skipInitial: true, replaceRootController: { controller, ready in
+                    let galleryController = AvatarGalleryController(context: context, peer: peer, sourceCorners: sourceCorners, remoteEntries: promise, isSuggested: isSuggested, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)

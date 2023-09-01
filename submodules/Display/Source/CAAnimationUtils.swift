@@ -226,7 +226,7 @@ public extension CALayer {
         self.add(animationGroup, forKey: key)
     }
     
-    func animateKeyframes(values: [AnyObject], duration: Double, keyPath: String, timingFunction: String = CAMediaTimingFunctionName.linear.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    func animateKeyframes(values: [AnyObject], keyTimes: [NSNumber]? = nil, duration: Double, keyPath: String, timingFunction: String = CAMediaTimingFunctionName.linear.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let k = Float(UIView.animationDurationFactor())
         var speed: Float = 1.0
         if k != 0 && k != 1 {
@@ -235,20 +235,25 @@ public extension CALayer {
         
         let animation = CAKeyframeAnimation(keyPath: keyPath)
         animation.values = values
-        var keyTimes: [NSNumber] = []
-        for i in 0 ..< values.count {
-            if i == 0 {
-                keyTimes.append(0.0)
-            } else if i == values.count - 1 {
-                keyTimes.append(1.0)
-            } else {
-                keyTimes.append((Double(i) / Double(values.count - 1)) as NSNumber)
+        var effectiveKeyTimes: [NSNumber] = []
+        if let keyTimes {
+            effectiveKeyTimes = keyTimes
+        } else {
+            for i in 0 ..< values.count {
+                if i == 0 {
+                    effectiveKeyTimes.append(0.0)
+                } else if i == values.count - 1 {
+                    effectiveKeyTimes.append(1.0)
+                } else {
+                    effectiveKeyTimes.append((Double(i) / Double(values.count - 1)) as NSNumber)
+                }
             }
         }
-        animation.keyTimes = keyTimes
+        animation.keyTimes = effectiveKeyTimes
         animation.speed = speed
         animation.duration = duration
         animation.isAdditive = additive
+        animation.calculationMode = .linear
         if let mediaTimingFunction = mediaTimingFunction {
             animation.timingFunction = mediaTimingFunction
         } else {
@@ -446,6 +451,10 @@ public extension CALayer {
     
     func animateBoundsOriginYAdditive(from: CGFloat, to: CGFloat, duration: Double, mediaTimingFunction: CAMediaTimingFunction) {
         self.animate(from: from as NSNumber, to: to as NSNumber, keyPath: "bounds.origin.y", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: duration, mediaTimingFunction: mediaTimingFunction, additive: true)
+    }
+    
+    func animateShapeLineWidth(from: CGFloat, to: CGFloat, duration: Double, delay: Double = 0.0, timingFunction: String = CAMediaTimingFunctionName.easeInEaseOut.rawValue, mediaTimingFunction: CAMediaTimingFunction? = nil, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animate(from: NSNumber(value: Float(from)), to: NSNumber(value: Float(to)), keyPath: "lineWidth", timingFunction: timingFunction, duration: duration, delay: delay, mediaTimingFunction: mediaTimingFunction, removeOnCompletion: removeOnCompletion, additive: additive, completion: completion)
     }
     
     func animatePositionKeyframes(values: [CGPoint], duration: Double, removeOnCompletion: Bool = true, completion: ((Bool) -> Void)? = nil) {

@@ -74,18 +74,21 @@ private enum Knob {
     case right
 }
 
-private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+public final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var longTapTimer: Timer?
     private var movingKnob: (Knob, CGPoint, CGPoint)?
     private var currentLocation: CGPoint?
     
-    var beginSelection: ((CGPoint) -> Void)?
-    var knobAtPoint: ((CGPoint) -> (Knob, CGPoint)?)?
-    var moveKnob: ((Knob, CGPoint) -> Void)?
-    var finishedMovingKnob: (() -> Void)?
-    var clearSelection: (() -> Void)?
+    public var canBeginSelection: ((CGPoint) -> Bool)?
+    public var beginSelection: ((CGPoint) -> Void)?
+    fileprivate var knobAtPoint: ((CGPoint) -> (Knob, CGPoint)?)?
+    fileprivate var moveKnob: ((Knob, CGPoint) -> Void)?
+    public var finishedMovingKnob: (() -> Void)?
+    public var clearSelection: (() -> Void)?
+    public private(set) var didRecognizeTap: Bool = false
+    fileprivate var isSelecting: Bool = false
     
-    override init(target: Any?, action: Selector?) {
+    override public init(target: Any?, action: Selector?) {
         super.init(target: nil, action: nil)
         
         self.delegate = self
@@ -101,7 +104,7 @@ private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestu
         self.currentLocation = nil
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         let currentLocation = touches.first?.location(in: self.view)
@@ -112,28 +115,32 @@ private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestu
                 self.movingKnob = (knob, knobPosition, currentLocation)
                 cancelScrollViewGestures(view: self.view?.superview)
                 self.state = .began
-            } else if self.longTapTimer == nil {
-                final class TimerTarget: NSObject {
-                    let f: () -> Void
-                    
-                    init(_ f: @escaping () -> Void) {
-                        self.f = f
+            } else if self.canBeginSelection?(currentLocation) ?? true {
+                if self.longTapTimer == nil {
+                    final class TimerTarget: NSObject {
+                        let f: () -> Void
+                        
+                        init(_ f: @escaping () -> Void) {
+                            self.f = f
+                        }
+                        
+                        @objc func event() {
+                            self.f()
+                        }
                     }
-                    
-                    @objc func event() {
-                        self.f()
-                    }
+                    let longTapTimer = Timer(timeInterval: 0.3, target: TimerTarget({ [weak self] in
+                        self?.longTapEvent()
+                    }), selector: #selector(TimerTarget.event), userInfo: nil, repeats: false)
+                    self.longTapTimer = longTapTimer
+                    RunLoop.main.add(longTapTimer, forMode: .common)
                 }
-                let longTapTimer = Timer(timeInterval: 0.3, target: TimerTarget({ [weak self] in
-                    self?.longTapEvent()
-                }), selector: #selector(TimerTarget.event), userInfo: nil, repeats: false)
-                self.longTapTimer = longTapTimer
-                RunLoop.main.add(longTapTimer, forMode: .common)
+            } else {
+                self.state = .failed
             }
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesMoved(touches, with: event)
         
         let currentLocation = touches.first?.location(in: self.view)
@@ -144,12 +151,20 @@ private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestu
         }
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesEnded(touches, with: event)
         
         if let longTapTimer = self.longTapTimer {
             self.longTapTimer = nil
             longTapTimer.invalidate()
+            
+            if self.isSelecting {
+                self.didRecognizeTap = true
+                DispatchQueue.main.async { [weak self] in
+                    self?.didRecognizeTap = false
+                }
+            }
+            
             self.clearSelection?()
         } else {
             if let _ = self.currentLocation, let _ = self.movingKnob {
@@ -159,7 +174,7 @@ private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestu
         self.state = .ended
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesCancelled(touches, with: event)
         
         self.state = .cancelled
@@ -172,12 +187,11 @@ private final class TextSelectionGestureRecognizer: UIGestureRecognizer, UIGestu
         }
     }
     
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         return true
     }
     
-    @available(iOS 9.0, *)
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive press: UIPress) -> Bool {
+    public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive press: UIPress) -> Bool {
         return true
     }
 }
@@ -203,6 +217,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let strings: PresentationStrings
     private let textNode: TextNode
     private let updateIsActive: (Bool) -> Void
+    public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
     public var updateRange: ((NSRange?) -> Void)?
     private let present: (ViewController, Any?) -> Void
     private weak var rootNode: ASDisplayNode?
@@ -216,10 +231,16 @@ public final class TextSelectionNode: ASDisplayNode {
     
     public let highlightAreaNode: ASDisplayNode
     
-    private var recognizer: TextSelectionGestureRecognizer?
+    public private(set) var recognizer: TextSelectionGestureRecognizer?
     private var displayLinkAnimator: DisplayLinkAnimator?
     
-    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
+    public var enableLookup: Bool = true
+    
+    public var didRecognizeTap: Bool {
+        return self.recognizer?.didRecognizeTap ?? false
+    }
+    
+    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
         self.strings = strings
         self.textNode = textNode
@@ -248,8 +269,13 @@ public final class TextSelectionNode: ASDisplayNode {
             return TextSelectionNodeView()
         })
         
-        self.addSubnode(self.leftKnob)
-        self.addSubnode(self.rightKnob)
+        if let externalKnobSurface {
+            externalKnobSurface.addSubnode(self.leftKnob)
+            externalKnobSurface.addSubnode(self.rightKnob)
+        } else {
+            self.addSubnode(self.leftKnob)
+            self.addSubnode(self.rightKnob)
+        }
     }
     
     override public func didLoad() {
@@ -332,11 +358,18 @@ public final class TextSelectionNode: ASDisplayNode {
             }
             strongSelf.updateSelection(range: resultRange, animateIn: true)
             strongSelf.displayMenu()
+            strongSelf.recognizer?.isSelecting = true
             strongSelf.updateIsActive(true)
         }
         recognizer.clearSelection = { [weak self] in
             self?.dismissSelection()
             self?.updateIsActive(false)
+        }
+        recognizer.canBeginSelection = { [weak self] point in
+            guard let self else {
+                return false
+            }
+            return self.canBeginSelection(point)
         }
         self.recognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
@@ -421,9 +454,11 @@ public final class TextSelectionNode: ASDisplayNode {
             } else {
                 highlightOverlay = LinkHighlightingNode(color: self.theme.selection)
                 highlightOverlay.isUserInteractionEnabled = false
-                highlightOverlay.innerRadius = 0.0
-                highlightOverlay.outerRadius = 0.0
+                highlightOverlay.innerRadius = 2.0
+                highlightOverlay.outerRadius = 2.0
                 highlightOverlay.inset = 1.0
+                highlightOverlay.useModernPathCalculation = true
+                
                 self.highlightOverlay = highlightOverlay
                 self.highlightAreaNode.addSubnode(highlightOverlay)
             }
@@ -487,7 +522,13 @@ public final class TextSelectionNode: ASDisplayNode {
     
     private func dismissSelection() {
         self.currentRange = nil
+        self.recognizer?.isSelecting = false
         self.updateSelection(range: nil, animateIn: false)
+    }
+    
+    public func cancelSelection() {
+        self.dismissSelection()
+        self.updateIsActive(false)
     }
     
     private func displayMenu() {
@@ -529,16 +570,18 @@ public final class TextSelectionNode: ASDisplayNode {
         var actions: [ContextMenuAction] = []
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
             self?.performAction(string, .copy)
-            self?.dismissSelection()
+            self?.cancelSelection()
         }))
-        actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuLookUp, accessibilityLabel: self.strings.Conversation_ContextMenuLookUp), action: { [weak self] in
-            self?.performAction(string, .lookup)
-            self?.dismissSelection()
-        }))
+        if self.enableLookup {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuLookUp, accessibilityLabel: self.strings.Conversation_ContextMenuLookUp), action: { [weak self] in
+                self?.performAction(string, .lookup)
+                self?.cancelSelection()
+            }))
+        }
         if #available(iOS 15.0, *) {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                 self?.performAction(string, .translate)
-                self?.dismissSelection()
+                self?.cancelSelection()
             }))
         }
 //        if isSpeakSelectionEnabled() {
@@ -549,7 +592,7 @@ public final class TextSelectionNode: ASDisplayNode {
 //        }
         actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
             self?.performAction(string, .share)
-            self?.dismissSelection()
+            self?.cancelSelection()
         }))
         
         self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

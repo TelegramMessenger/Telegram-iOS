@@ -18,7 +18,9 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     public var placeholderHeight: CGFloat?
     private var disabledOverlay: ASDisplayNode?
     
-    public private(set) var expansionProgress: CGFloat = 1.0
+    public var expansionProgress: CGFloat = 1.0
+    
+    public var additionalHeight: CGFloat = 0.0
 
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
@@ -101,13 +103,18 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     
     private func updatePlaceholder(_ progress: CGFloat, size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let padding: CGFloat = 10.0
-        let baseWidth = self.bounds.width - padding * 2.0 - leftInset - rightInset
+        let baseWidth = size.width - padding * 2.0 - leftInset - rightInset
         
         let fieldHeight: CGFloat = 36.0
         let fraction = fieldHeight / self.nominalHeight
+        let fullFraction = navigationBarSearchContentHeight / self.nominalHeight
         
-        let visibleProgress = max(0.0, min(1.0, self.expansionProgress) - 1.0 + fraction) / fraction
-        let overscrollProgress = max(0.0, max(0.0, self.expansionProgress - 1.0 + fraction) / fraction - visibleProgress)
+        let fromLow: CGFloat = fullFraction - fraction
+        let toLow: CGFloat = 0.0
+        let fromHigh: CGFloat = fullFraction
+        let toHigh: CGFloat = 1.0
+        var visibleProgress: CGFloat = toLow + (self.expansionProgress - fromLow) * (toHigh - toLow) / (fromHigh - fromLow)
+        visibleProgress = max(0.0, min(1.0, visibleProgress))
         
         let searchBarNodeLayout = self.placeholderNode.asyncLayout()
         
@@ -125,7 +132,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         let (searchBarHeight, searchBarApply) = searchBarNodeLayout(placeholderString, compactPlaceholderString, CGSize(width: baseWidth, height: fieldHeight), visibleProgress, textColor, fillColor, backgroundColor, transition)
         searchBarApply()
         
-        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: 8.0 + overscrollProgress * fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))
+        let searchBarFrame = CGRect(origin: CGPoint(x: padding + leftInset, y: size.height + (1.0 - visibleProgress) * fieldHeight - 8.0 - fieldHeight), size: CGSize(width: baseWidth, height: fieldHeight))
         transition.updateFrame(node: self.placeholderNode, frame: searchBarFrame)
         
         self.placeholderHeight = searchBarHeight
@@ -151,7 +158,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
     }
     
     override public var nominalHeight: CGFloat {
-        return navigationBarSearchContentHeight
+        return navigationBarSearchContentHeight + self.additionalHeight
     }
     
     override public var mode: NavigationBarContentMode {

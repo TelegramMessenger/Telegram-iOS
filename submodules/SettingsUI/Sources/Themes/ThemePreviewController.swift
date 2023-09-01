@@ -456,7 +456,7 @@ public final class ThemePreviewController: ViewController {
                                 guard let strongSelf = self, !displayed else {
                                     return
                                 }
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo), elevatedLayout: true, animateInAsReplacement: false, action: { value in
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .actionSucceeded(title: strongSelf.presentationData.strings.Theme_ThemeChanged, text: strongSelf.presentationData.strings.Theme_ThemeChangedText, cancel: strongSelf.presentationData.strings.Undo_Undo, destructive: false), elevatedLayout: true, animateInAsReplacement: false, action: { value in
                                     if value == .undo {
                                         Queue.mainQueue().after(0.2) {
                                             let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current -> PresentationThemeSettings in

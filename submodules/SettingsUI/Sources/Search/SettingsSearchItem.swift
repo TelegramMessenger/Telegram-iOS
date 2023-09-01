@@ -53,6 +53,8 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.devices
             case .premium:
                 return PresentationResourcesSettings.premium
+            case .stories:
+                return PresentationResourcesSettings.stories
         }
     }
 }

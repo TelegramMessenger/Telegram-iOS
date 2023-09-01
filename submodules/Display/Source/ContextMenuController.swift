@@ -27,15 +27,18 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     private let actions: [ContextMenuAction]
     private let catchTapsOutside: Bool
     private let hasHapticFeedback: Bool
+    private let blurred: Bool
     
     private var layout: ContainerViewLayout?
     
+    public var centerHorizontally = false
     public var dismissed: (() -> Void)?
     
-    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
         self.hasHapticFeedback = hasHapticFeedback
+        self.blurred = blurred
         
         super.init(navigationBarPresentationData: nil)
         
@@ -52,7 +55,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
             self?.contextMenuNode.animateOut(bounce: (self?.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: {
                 self?.presentingViewController?.dismiss(animated: false)
             })
-        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback)
+        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback, blurred: self.blurred)
         self.displayNodeDidLoad()
     }
     
@@ -72,6 +75,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.contextMenuNode.centerHorizontally = self.centerHorizontally
         if self.layout != nil && self.layout! != layout {
             self.dismissed?()
             self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in

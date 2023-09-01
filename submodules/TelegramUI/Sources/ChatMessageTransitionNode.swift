@@ -11,6 +11,7 @@ import TelegramCore
 import ReactionSelectionNode
 import ChatControllerInteraction
 import FeaturedStickersScreen
+import ChatTextInputMediaRecordingButton
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {
@@ -187,7 +188,6 @@ public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransiti
             case inputPanel(itemNode: ChatMediaInputStickerGridItemNode)
             case mediaPanel(itemNode: HorizontalStickerGridItemNode)
             case universal(sourceContainerView: UIView, sourceRect: CGRect, sourceLayer: CALayer)
-            case inputPanelSearch(itemNode: StickerPaneSearchStickerItemNode)
             case emptyPanel(itemNode: ChatEmptyNodeStickerContentNode)
         }
 
@@ -441,9 +441,6 @@ public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransiti
                 case let .universal(sourceContainerView, sourceRect, sourceLayer):
                     stickerSource = Sticker(imageNode: nil, animationNode: nil, placeholderNode: nil, imageLayer: sourceLayer, relativeSourceRect: sourceLayer.frame)
                     sourceAbsoluteRect = convertAnimatingSourceRect(sourceRect, fromView: sourceContainerView, toView: self.view)
-                case let .inputPanelSearch(sourceItemNode):
-                    stickerSource = Sticker(imageNode: sourceItemNode.imageNode, animationNode: sourceItemNode.animationNode, placeholderNode: nil, imageLayer: nil, relativeSourceRect: sourceItemNode.imageNode.frame)
-                    sourceAbsoluteRect = sourceItemNode.view.convert(sourceItemNode.imageNode.frame, to: self.view)
                 case let .emptyPanel(sourceItemNode):
                     stickerSource = Sticker(imageNode: sourceItemNode.stickerNode.imageNode, animationNode: sourceItemNode.stickerNode.animationNode, placeholderNode: nil, imageLayer: nil, relativeSourceRect: sourceItemNode.stickerNode.imageNode.frame)
                     sourceAbsoluteRect = sourceItemNode.stickerNode.view.convert(sourceItemNode.stickerNode.imageNode.frame, to: self.view)
@@ -493,8 +490,6 @@ public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransiti
                 case .inputPanel, .universal:
                     break
                 case let .mediaPanel(sourceItemNode):
-                    sourceItemNode.isHidden = true
-                case let .inputPanelSearch(sourceItemNode):
                     sourceItemNode.isHidden = true
                 case let .emptyPanel(sourceItemNode):
                     sourceItemNode.isHidden = true

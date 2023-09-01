@@ -32,10 +32,23 @@ public func ==(lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool
     return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
 }
 
-public func nearbyVenues(context: AccountContext, latitude: Double, longitude: Double, query: String? = nil) -> Signal<[TelegramMediaMap], NoError> {
-    return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
-    |> mapToSignal { searchBotsConfiguration in
-        return context.engine.peers.resolvePeerByName(name: searchBotsConfiguration.venueBotUsername ?? "foursquare")
+public func nearbyVenues(context: AccountContext, story: Bool = false, latitude: Double, longitude: Double, query: String? = nil) -> Signal<ChatContextResultCollection?, NoError> {
+    let botUsername: Signal<String, NoError>
+    if story {
+        botUsername = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App())
+        |> map { appConfiguration in
+            let storiesConfiguration = StoriesConfiguration.with(appConfiguration: appConfiguration)
+            return storiesConfiguration.venueSearchBot
+        }
+    } else {
+        botUsername = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+        |> map { searchBotsConfiguration -> String in
+            return searchBotsConfiguration.venueBotUsername ?? "foursquare"
+        }
+    }
+    return botUsername
+    |> mapToSignal { botUsername in
+        return context.engine.peers.resolvePeerByName(name: botUsername)
         |> take(1)
         |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
             guard let peer = peer else {
@@ -49,22 +62,11 @@ public func nearbyVenues(context: AccountContext, latitude: Double, longitude: D
                 return .single(nil)
             }
         }
-        |> map { contextResult -> [TelegramMediaMap] in
-            guard let contextResult = contextResult else {
-                return []
+        |> map { contextResult -> ChatContextResultCollection? in
+            guard let contextResult else {
+                return nil
             }
-            var list: [TelegramMediaMap] = []
-            for result in contextResult.results {
-                switch result.message {
-                    case let .mapLocation(mapMedia, _):
-                        if let _ = mapMedia.venue {
-                            list.append(mapMedia)
-                        }
-                    default:
-                        break
-                }
-            }
-            return list
+            return contextResult
         }
     }
 }

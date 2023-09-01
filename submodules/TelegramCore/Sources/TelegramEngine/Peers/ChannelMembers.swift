@@ -90,25 +90,17 @@ func _internal_channelMembers(postbox: Postbox, network: Network, accountPeerId:
                         var items: [RenderedChannelParticipant] = []
                         switch result {
                             case let .channelParticipants(_, participants, chats, users):
+                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                                 var peers: [PeerId: Peer] = [:]
-                                var presences: [PeerId: Api.User] = [:]
-                                for user in users {
-                                    let peer = TelegramUser(user: user)
-                                    peers[peer.id] = peer
-                                    presences[peer.id] = user
-                                }
-                                for chat in chats {
-                                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                        peers[groupOrChannel.id] = groupOrChannel
+                                for id in parsedPeers.allIds {
+                                    if let peer = transaction.getPeer(id) {
+                                        peers[peer.id] = peer
                                     }
                                 }
-                                updatePeers(transaction: transaction, peers: Array(peers.values), update: { _, updated in
-                                    return updated
-                                })
-                                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
                                 
                                 for participant in CachedChannelParticipants(apiParticipants: participants).participants {
-                                    if let peer = peers[participant.peerId] {
+                                    if let peer = parsedPeers.get(participant.peerId) {
                                         var renderedPresences: [PeerId: PeerPresence] = [:]
                                         if let presence = transaction.getPeerPresence(peerId: participant.peerId) {
                                             renderedPresences[participant.peerId] = presence

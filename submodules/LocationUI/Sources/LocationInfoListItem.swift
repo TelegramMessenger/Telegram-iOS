@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -21,12 +20,13 @@ final class LocationInfoListItem: ListViewItem {
     let drivingTime: ExpectedTravelTime
     let transitTime: ExpectedTravelTime
     let walkingTime: ExpectedTravelTime
+    let hasEta: Bool
     let action: () -> Void
     let drivingAction: () -> Void
     let transitAction: () -> Void
     let walkingAction: () -> Void
     
-    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, location: TelegramMediaMap, address: String?, distance: String?, drivingTime: ExpectedTravelTime, transitTime: ExpectedTravelTime, walkingTime: ExpectedTravelTime, action: @escaping () -> Void, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
+    public init(presentationData: ItemListPresentationData, engine: TelegramEngine, location: TelegramMediaMap, address: String?, distance: String?, drivingTime: ExpectedTravelTime, transitTime: ExpectedTravelTime, walkingTime: ExpectedTravelTime, hasEta: Bool, action: @escaping () -> Void, drivingAction: @escaping () -> Void, transitAction: @escaping () -> Void, walkingAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.engine = engine
         self.location = location
@@ -35,6 +35,7 @@ final class LocationInfoListItem: ListViewItem {
         self.drivingTime = drivingTime
         self.transitTime = transitTime
         self.walkingTime = walkingTime
+        self.hasEta = hasEta
         self.action = action
         self.drivingAction = drivingAction
         self.transitAction = transitAction
@@ -180,7 +181,8 @@ final class LocationInfoListItemNode: ListViewItemNode {
             
             let titleSpacing: CGFloat = 1.0
             let bottomInset: CGFloat = 4.0
-            let contentSize = CGSize(width: params.width, height: max(100.0, verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset))
+            let textContentSize = verticalInset * 2.0 + titleLayout.size.height + titleSpacing + subtitleLayout.size.height + bottomInset
+            let contentSize = CGSize(width: params.width, height: item.hasEta ? max(100.0, textContentSize) : textContentSize)
             let nodeLayout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (nodeLayout, { [weak self] in
@@ -281,94 +283,98 @@ final class LocationInfoListItemNode: ListViewItemNode {
                         
                         var directionsWidth: CGFloat = 93.0
                         
-                        if item.drivingTime == .unknown && item.transitTime == .unknown && item.walkingTime == .unknown {
-                            strongSelf.drivingButtonNode?.icon = nil
-                            strongSelf.drivingButtonNode?.title = item.presentationData.strings.Map_GetDirections
-                            if let drivingButtonNode = strongSelf.drivingButtonNode {
-                                let buttonSize = drivingButtonNode.sizeThatFits(contentSize)
-                                directionsWidth = buttonSize.width
-                            }
-                            
-                            if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
-                                strongSelf.drivingButtonNode?.alpha = 1.0
-                                strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                            }
-                        } else {
-                            if case let .ready(drivingTime) = item.drivingTime {
-                                strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
+                        if item.hasEta {
+                            if item.drivingTime == .unknown && item.transitTime == .unknown && item.walkingTime == .unknown {
+                                strongSelf.drivingButtonNode?.icon = nil
+                                strongSelf.drivingButtonNode?.title = item.presentationData.strings.Map_GetDirections
+                                if let drivingButtonNode = strongSelf.drivingButtonNode {
+                                    let buttonSize = drivingButtonNode.sizeThatFits(contentSize)
+                                    directionsWidth = buttonSize.width
+                                }
                                 
                                 if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
                                     strongSelf.drivingButtonNode?.alpha = 1.0
                                     strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                                 }
-                            }
-                            
-                            if case let .ready(transitTime) = item.transitTime {
-                                strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
-                                
-                                if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
-                                    strongSelf.transitButtonNode?.alpha = 1.0
-                                    strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                }
-                            }
-                            
-                            if case let .ready(walkingTime) = item.walkingTime {
-                                strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
-                                
-                                if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
-                                    strongSelf.walkingButtonNode?.alpha = 1.0
-                                    strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                }
-                            }
-                        }
-                        
-                        let directionsSpacing: CGFloat = 8.0
-                        
-                        if case .calculating = item.drivingTime, case .calculating = item.transitTime, case .calculating = item.walkingTime {
-                            let shimmerNode: ShimmerEffectNode
-                            if let current = strongSelf.placeholderNode {
-                                shimmerNode = current
                             } else {
-                                shimmerNode = ShimmerEffectNode()
-                                strongSelf.placeholderNode = shimmerNode
-                                strongSelf.addSubnode(shimmerNode)
-                            }
-                            shimmerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: contentSize.width - leftInset, height: 32.0))
-                            if let (rect, size) = strongSelf.absoluteLocation {
-                                shimmerNode.updateAbsoluteRect(rect, within: size)
+                                if case let .ready(drivingTime) = item.drivingTime {
+                                    strongSelf.drivingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: drivingTime, format: { $0 })
+                                    
+                                    if let previousDrivingTime = currentItem?.drivingTime, case .calculating = previousDrivingTime {
+                                        strongSelf.drivingButtonNode?.alpha = 1.0
+                                        strongSelf.drivingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
+                                }
+                                
+                                if case let .ready(transitTime) = item.transitTime {
+                                    strongSelf.transitButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: transitTime, format: { $0 })
+                                    
+                                    if let previousTransitTime = currentItem?.transitTime, case .calculating = previousTransitTime {
+                                        strongSelf.transitButtonNode?.alpha = 1.0
+                                        strongSelf.transitButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
+                                }
+                                
+                                if case let .ready(walkingTime) = item.walkingTime {
+                                    strongSelf.walkingButtonNode?.title = stringForEstimatedDuration(strings: item.presentationData.strings, time: walkingTime, format: { $0 })
+                                    
+                                    if let previousWalkingTime = currentItem?.walkingTime, case .calculating = previousWalkingTime {
+                                        strongSelf.walkingButtonNode?.alpha = 1.0
+                                        strongSelf.walkingButtonNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    }
+                                }
                             }
                             
-                            var shapes: [ShimmerEffectNode.Shape] = []
-                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: 0.0, y: 0.0), width: directionsWidth, diameter: 32.0))
-                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
-                            shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
+                            let directionsSpacing: CGFloat = 8.0
                             
-                            shimmerNode.update(backgroundColor: item.presentationData.theme.list.itemBlocksBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
-                        } else if let shimmerNode = strongSelf.placeholderNode {
-                            strongSelf.placeholderNode = nil
-                            shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerNode] _ in
-                                shimmerNode?.removeFromSupernode()
-                            })
+                            if case .calculating = item.drivingTime, case .calculating = item.transitTime, case .calculating = item.walkingTime {
+                                let shimmerNode: ShimmerEffectNode
+                                if let current = strongSelf.placeholderNode {
+                                    shimmerNode = current
+                                } else {
+                                    shimmerNode = ShimmerEffectNode()
+                                    strongSelf.placeholderNode = shimmerNode
+                                    strongSelf.addSubnode(shimmerNode)
+                                }
+                                shimmerNode.frame = CGRect(origin: CGPoint(x: leftInset, y: subtitleFrame.maxY + 12.0), size: CGSize(width: contentSize.width - leftInset, height: 32.0))
+                                if let (rect, size) = strongSelf.absoluteLocation {
+                                    shimmerNode.updateAbsoluteRect(rect, within: size)
+                                }
+                                
+                                var shapes: [ShimmerEffectNode.Shape] = []
+                                shapes.append(.roundedRectLine(startPoint: CGPoint(x: 0.0, y: 0.0), width: directionsWidth, diameter: 32.0))
+                                shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
+                                shapes.append(.roundedRectLine(startPoint: CGPoint(x: directionsWidth + directionsSpacing + directionsWidth + directionsSpacing, y: 0.0), width: directionsWidth, diameter: 32.0))
+                                
+                                shimmerNode.update(backgroundColor: item.presentationData.theme.list.plainBackgroundColor, foregroundColor: item.presentationData.theme.list.mediaPlaceholderColor, shimmeringColor: item.presentationData.theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.4), shapes: shapes, size: shimmerNode.frame.size)
+                            } else if let shimmerNode = strongSelf.placeholderNode {
+                                strongSelf.placeholderNode = nil
+                                shimmerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak shimmerNode] _ in
+                                    shimmerNode?.removeFromSupernode()
+                                })
+                            }
+                            
+                            let drivingHeight = strongSelf.drivingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                            let transitHeight = strongSelf.transitButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                            let walkingHeight = strongSelf.walkingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
+                            
+                            var buttonOrigin = leftInset
+                            strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
+                            
+                            if case .ready = item.drivingTime {
+                                buttonOrigin += directionsWidth + directionsSpacing
+                            }
+                            
+                            strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
+                            
+                            if case .ready = item.transitTime {
+                                buttonOrigin += directionsWidth + directionsSpacing
+                            }
+                            
+                            strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
+                        } else {
+                            
                         }
-                        
-                        let drivingHeight = strongSelf.drivingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
-                        let transitHeight = strongSelf.transitButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
-                        let walkingHeight = strongSelf.walkingButtonNode?.updateLayout(width: directionsWidth, transition: .immediate) ?? 0.0
-                        
-                        var buttonOrigin = leftInset
-                        strongSelf.drivingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: drivingHeight))
-                        
-                        if case .ready = item.drivingTime {
-                            buttonOrigin += directionsWidth + directionsSpacing
-                        }
-                        
-                        strongSelf.transitButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: transitHeight))
-                        
-                        if case .ready = item.transitTime {
-                            buttonOrigin += directionsWidth + directionsSpacing
-                        }
-                        
-                        strongSelf.walkingButtonNode?.frame = CGRect(origin: CGPoint(x: buttonOrigin, y: subtitleFrame.maxY + 12.0), size: CGSize(width: directionsWidth, height: walkingHeight))
                         
                         strongSelf.buttonNode.frame = CGRect(x: 0.0, y: 0.0, width: contentSize.width, height: 72.0)
                         strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: contentSize.width, height: contentSize.height))

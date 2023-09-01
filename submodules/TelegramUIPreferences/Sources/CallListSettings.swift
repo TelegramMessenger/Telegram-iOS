@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -78,7 +77,7 @@ public func updateCallListSettingsInteractively(accountManager: AccountManager<T
             } else {
                 currentSettings = CallListSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

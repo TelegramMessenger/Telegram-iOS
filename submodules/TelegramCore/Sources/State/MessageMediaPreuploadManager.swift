@@ -32,11 +32,18 @@ private final class MessageMediaPreuploadManagerContext {
         assert(self.queue.isCurrent())
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete: (()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete: (()->Void)? = nil) {
         let context = MessageMediaPreuploadManagerUploadContext()
         self.uploadContexts[id] = context
         let queue = self.queue
-        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false).start(next: { [weak self] next in
+        context.disposable.set(multipartUpload(network: network, postbox: postbox, source: .custom(source |> map { data in
+            return MediaResourceData(
+                path: data.path,
+                offset: 0,
+                size: data.availableSize,
+                complete: data.isComplete
+            )
+        }), encrypt: encrypt, tag: tag, hintFileSize: nil, hintFileIsLarge: false, forceNoBigParts: false).start(next: { [weak self] next in
             queue.async {
                 if let strongSelf = self, let context = strongSelf.uploadContexts[id] {
                     switch next {
@@ -56,7 +63,7 @@ private final class MessageMediaPreuploadManagerContext {
         }))
     }
     
-    func upload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int64?, hintFileIsLarge: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
+    func upload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int64?, hintFileIsLarge: Bool, forceNoBigParts: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
@@ -86,7 +93,7 @@ private final class MessageMediaPreuploadManagerContext {
                         }
                     }
                 } else {
-                    return multipartUpload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: false).start(next: { next in
+                    return multipartUpload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: forceNoBigParts).start(next: { next in
                         subscriber.putNext(next)
                     }, error: { error in
                         subscriber.putError(error)
@@ -112,16 +119,16 @@ final class MessageMediaPreuploadManager {
         })
     }
     
-    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<MediaResourceData, NoError>, onComplete:(()->Void)? = nil) {
+    func add(network: Network, postbox: Postbox, id: Int64, encrypt: Bool, tag: MediaResourceFetchTag?, source: Signal<EngineMediaResource.ResourceData, NoError>, onComplete:(()->Void)? = nil) {
         self.impl.with { context in
             context.add(network: network, postbox: postbox, id: id, encrypt: encrypt, tag: tag, source: source, onComplete: onComplete)
         }
     }
     
-    func upload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int64?, hintFileIsLarge: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
+    func upload(network: Network, postbox: Postbox, source: MultipartUploadSource, encrypt: Bool, tag: MediaResourceFetchTag?, hintFileSize: Int64?, hintFileIsLarge: Bool, forceNoBigParts: Bool) -> Signal<MultipartUploadResult, MultipartUploadError> {
         return Signal<Signal<MultipartUploadResult, MultipartUploadError>, MultipartUploadError> { subscriber in
             self.impl.with { context in
-                subscriber.putNext(context.upload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge))
+                subscriber.putNext(context.upload(network: network, postbox: postbox, source: source, encrypt: encrypt, tag: tag, hintFileSize: hintFileSize, hintFileIsLarge: hintFileIsLarge, forceNoBigParts: forceNoBigParts))
                 subscriber.putCompletion()
             }
             return EmptyDisposable

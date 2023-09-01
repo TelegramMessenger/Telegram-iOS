@@ -3,7 +3,6 @@ import AsyncDisplayKit
 import Display
 import ComponentFlow
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 import TelegramPresentationData
@@ -64,7 +63,7 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                     return
                 }
                 
-                let tempFile = TempBox.shared.tempFile(fileName: "image.png")
+                let tempFile = EngineTempBox.shared.tempFile(fileName: "image.png")
                 guard let _ = try? pngData.write(to: URL(fileURLWithPath: tempFile.path)) else {
                     return
                 }

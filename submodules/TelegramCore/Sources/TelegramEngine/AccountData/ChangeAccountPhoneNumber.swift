@@ -100,6 +100,7 @@ public enum ChangeAccountPhoneNumberError {
 }
 
 func _internal_requestChangeAccountPhoneNumber(account: Account, phoneNumber: String, phoneCodeHash: String, phoneCode: String) -> Signal<Void, ChangeAccountPhoneNumberError> {
+    let accountPeerId = account.peerId
     return account.network.request(Api.functions.account.changePhone(phoneNumber: phoneNumber, phoneCodeHash: phoneCodeHash, phoneCode: phoneCode), automaticFloodWait: false)
         |> mapError { error -> ChangeAccountPhoneNumberError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
@@ -114,10 +115,7 @@ func _internal_requestChangeAccountPhoneNumber(account: Account, phoneNumber: St
         }
         |> mapToSignal { result -> Signal<Void, ChangeAccountPhoneNumberError> in
             return account.postbox.transaction { transaction -> Void in
-                let user = TelegramUser(user: result)
-                updatePeers(transaction: transaction, peers: [user], update: { _, updated in
-                    return updated
-                })
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: [], users: [result]))
             } |> mapError { _ -> ChangeAccountPhoneNumberError in }
         }
 }

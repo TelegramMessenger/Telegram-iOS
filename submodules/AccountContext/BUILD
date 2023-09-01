@@ -22,7 +22,6 @@ swift_library(
         "//submodules/Postbox:Postbox",
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/MusicAlbumArtResources:MusicAlbumArtResources",
-        "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
         "//submodules/TextFormat:TextFormat",

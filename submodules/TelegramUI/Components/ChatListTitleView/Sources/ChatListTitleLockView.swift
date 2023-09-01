@@ -3,11 +3,13 @@ import UIKit
 import Display
 import TelegramPresentationData
 
-final class ChatListTitleLockView: UIView {
+public final class ChatListTitleLockView: UIView {
     private let topView: UIImageView
     private let bottomView: UIImageView
     
-    override init(frame: CGRect) {
+    private var theme: PresentationTheme?
+    
+    override public init(frame: CGRect) {
         self.topView = UIImageView()
         self.bottomView = UIImageView()
         
@@ -21,10 +23,14 @@ final class ChatListTitleLockView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateTheme(_ theme: PresentationTheme) {
-        self.topView.image = PresentationResourcesChatList.lockTopUnlockedImage(theme)
-        self.bottomView.image = PresentationResourcesChatList.lockBottomUnlockedImage(theme)
-        self.layoutItems()
+    public func updateTheme(_ theme: PresentationTheme) {
+        if self.theme !== theme {
+            self.theme = theme
+            
+            self.topView.image = PresentationResourcesChatList.lockTopUnlockedImage(theme)
+            self.bottomView.image = PresentationResourcesChatList.lockBottomUnlockedImage(theme)
+            self.layoutItems()
+        }
     }
     
     private func layoutItems() {
@@ -32,7 +38,7 @@ final class ChatListTitleLockView: UIView {
         self.bottomView.frame = CGRect(x: 0.0, y: 6.0, width: 10.0, height: 8.0)
     }
     
-    override func layoutSubviews() {
+    override public func layoutSubviews() {
         super.layoutSubviews()
         
         self.layoutItems()

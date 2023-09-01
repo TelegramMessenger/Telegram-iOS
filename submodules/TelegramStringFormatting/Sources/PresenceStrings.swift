@@ -362,7 +362,38 @@ public func stringForRelativeLiveLocationUpdateTimestamp(strings: PresentationSt
     }
 }
 
-public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
+    switch index {
+        case 0:
+            return strings.Month_GenJanuary
+        case 1:
+            return strings.Month_GenFebruary
+        case 2:
+            return strings.Month_GenMarch
+        case 3:
+            return strings.Month_GenApril
+        case 4:
+            return strings.Month_GenMay
+        case 5:
+            return strings.Month_GenJune
+        case 6:
+            return strings.Month_GenJuly
+        case 7:
+            return strings.Month_GenAugust
+        case 8:
+            return strings.Month_GenSeptember
+        case 9:
+            return strings.Month_GenOctober
+        case 10:
+            return strings.Month_GenNovember
+        case 11:
+            return strings.Month_GenDecember
+        default:
+            return ""
+    }
+}
+
+public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, preciseTime: Bool = false, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
     let difference = timestamp - relativeTimestamp
     if difference < 60 {
         return strings.Time_JustNow
@@ -392,6 +423,57 @@ public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dat
                 day = .yesterday
             }
             return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min).string
+        } else if preciseTime {
+            return strings.Time_AtPreciseDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat), stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)).string
+        } else {
+            return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
+        }
+    }
+}
+
+public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, preciseTime: Bool = false, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+    let difference = timestamp - relativeTimestamp
+    if difference < 60 {
+        return strings.Time_JustNow
+    } else if difference < 60 * 60 {
+        let minutes = difference / 60
+        return strings.Time_MinutesAgo(minutes)
+    } else {
+        var t: time_t = time_t(relativeTimestamp)
+        var timeinfo: tm = tm()
+        localtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(timestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        if timeinfo.tm_year != timeinfoNow.tm_year {
+            return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
+        }
+        
+        let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+        if dayDifference == 0 || dayDifference == -1 {
+            let day: RelativeTimestampFormatDay
+            if dayDifference == 0 {
+                let minutes = difference / (60 * 60)
+                return strings.Time_HoursAgo(minutes)
+            } else {
+                day = .yesterday
+            }
+            return humanReadableStringForTimestamp(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min).string
+        } else if preciseTime {
+            let yearDate: String
+            if timeinfo.tm_year == timeinfoNow.tm_year {
+                if timeinfo.tm_yday == timeinfoNow.tm_yday {
+                    yearDate = strings.Weekday_Today
+                } else {
+                    yearDate = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").string
+                }
+            } else {
+                yearDate = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").string
+            }
+            
+            return strings.Time_AtPreciseDate(yearDate, stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)).string
         } else {
             return strings.Time_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).string
         }

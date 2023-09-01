@@ -214,7 +214,7 @@ final class ManagedAudioRecorderContext {
                 }
                 return ActionDisposable {
                 }
-            }), playAndRecord: true, ambient: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: ValuePipe<Float>(), updatedRate: {
+            }), playAndRecord: true, soundMuted: false, ambient: false, mixWithOthers: false, forceAudioToSpeaker: false, baseRate: 1.0, audioLevelPipe: ValuePipe<Float>(), updatedRate: {
             }, audioPaused: {})
             self.toneRenderer = toneRenderer
             

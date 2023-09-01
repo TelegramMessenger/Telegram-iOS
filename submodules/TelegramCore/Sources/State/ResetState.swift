@@ -14,7 +14,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
             guard let fetchedChats = fetchedChats else {
                 return .never()
             }
-            return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), peers: Dictionary(fetchedChats.peers.map({ ($0.id, $0) }), uniquingKeysWith: { lhs, _ in lhs }), storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
+            return withResolvedAssociatedMessages(postbox: postbox, source: .network(network), accountPeerId: accountPeerId, parsedPeers: fetchedChats.peers, storeMessages: fetchedChats.storeMessages, { transaction, additionalPeers, additionalMessages -> Void in
                 for peerId in transaction.chatListGetAllPeerIds() {
                     if peerId.namespace != Namespaces.Peer.SecretChat {
                         transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
@@ -40,9 +40,7 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                 transaction.removeAllChatListEntries(groupId: .root, exceptPeerNamespace: Namespaces.Peer.SecretChat)
                 transaction.removeAllChatListEntries(groupId: .group(1), exceptPeerNamespace: Namespaces.Peer.SecretChat)
                 
-                updatePeers(transaction: transaction, peers: fetchedChats.peers + additionalPeers, update: { _, updated -> Peer in
-                    return updated
-                })
+                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: fetchedChats.peers.union(with: additionalPeers))
                 
                 for (threadMessageId, data) in fetchedChats.threadInfos {
                     if let entry = StoredMessageHistoryThreadInfo(data.data) {
@@ -52,7 +50,6 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                     transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: data.unreadReactionCount, maxId: data.topMessageId)
                 }
                 
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: fetchedChats.peerPresences)
                 transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
                 let _ = transaction.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)
                 let _ = transaction.addMessages(additionalMessages, location: .Random)

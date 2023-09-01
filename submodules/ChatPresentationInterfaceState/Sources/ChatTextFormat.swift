@@ -1,6 +1,5 @@
 import Foundation
 import TextFormat
-import Postbox
 import TelegramCore
 import AccountContext
 
@@ -78,7 +77,7 @@ public func chatTextInputAddLinkAttribute(_ state: ChatTextInputState, selection
     }
 }
 
-public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: Peer) -> ChatTextInputState {
+public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: EnginePeer) -> ChatTextInputState {
     let inputText = NSMutableAttributedString(attributedString: state.inputText)
     
     let range = NSMakeRange(state.selectionRange.startIndex, state.selectionRange.endIndex - state.selectionRange.startIndex)
@@ -91,9 +90,9 @@ public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: 
         let selectionPosition = range.lowerBound + (replacementText as NSString).length
         
         return ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition)
-    } else if !EnginePeer(peer).compactDisplayTitle.isEmpty {
+    } else if !peer.compactDisplayTitle.isEmpty {
         let replacementText = NSMutableAttributedString()
-        replacementText.append(NSAttributedString(string: EnginePeer(peer).compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+        replacementText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
         replacementText.append(NSAttributedString(string: " "))
         
         let updatedRange = NSRange(location: range.location , length: range.length)

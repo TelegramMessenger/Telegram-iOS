@@ -472,9 +472,19 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.expandButonNode.isHidden = true
         }
         
-        let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)
-        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: labelFrame.maxY + 3.0), size: textSize)
-        let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.maxY + 3.0), size: additionalTextSize)
+        var topOffset = 11.0
+        var height = topOffset * 2.0
+        let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: labelSize)
+        if labelSize.height > 0.0 {
+            topOffset += labelSize.height + 3.0
+            height += labelSize.height + 3.0
+        }
+        let textFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: textSize)
+        if textSize.height > 0.0 {
+            topOffset += textSize.height + 3.0
+            height += textSize.height
+        }
+        let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: topOffset), size: additionalTextSize)
         
         let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame
@@ -495,8 +505,6 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         textTransition.updateFrame(node: self.textNode, frame: textFrame)
         
         transition.updateFrame(node: self.additionalTextNode, frame: additionalTextFrame)
-        
-        var height = labelSize.height + 3.0 + textSize.height + 22.0
         
         let iconButtonFrame = CGRect(x: width - safeInsets.right - height, y: 0.0, width: height, height: height)
         transition.updateFrame(node: self.iconButtonNode, frame: iconButtonFrame)
@@ -627,7 +635,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
-                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
+                linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.2))
                 self.linkHighlightingNode = linkHighlightingNode
                 self.contextSourceNode.contentNode.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }

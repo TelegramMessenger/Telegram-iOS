@@ -226,7 +226,11 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     
     init(context: AccountContext, controller: FeaturedStickersScreen, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
         self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme = controller.forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        self.presentationData = presentationData
         self.controller = controller
         self.sendSticker = sendSticker
         
@@ -370,6 +374,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
         
         let highlightedPackId = controller.highlightedPackId
         
+        let forceTheme = controller.forceTheme
         self.disposable = (combineLatest(queue: .mainQueue(),
             mappedFeatured,
             self.additionalPacks.get(),
@@ -377,6 +382,11 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
             context.sharedContext.presentationData
         )
         |> map { featuredEntries, additionalPacks, view, presentationData -> FeaturedTransition in
+            var presentationData = presentationData
+            if let forceTheme {
+                presentationData = presentationData.withUpdated(theme: forceTheme)
+            }
+            
             var installedPacks = Set<ItemCollectionId>()
             if let stickerPacksView = view.views[.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudStickerPacks])] as? ItemCollectionInfosView {
                 if let packsEntries = stickerPacksView.entriesByNamespace[Namespaces.ItemCollection.CloudStickerPacks] {
@@ -502,7 +512,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                             |> deliverOnMainQueue).start(next: { result in
                                                 switch result {
                                                     case .generic:
-                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
+                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                                     case let .limitExceeded(limit, premiumLimit):
                                                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                         let text: String
@@ -511,7 +521,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                         } else {
                                                             text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                         }
-                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                                        strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                             if let strongSelf = self {
                                                                 if case .info = action {
                                                                     let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -590,7 +600,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                     |> deliverOnMainQueue).start(next: { result in
                                         switch result {
                                             case .generic:
-                                            strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
+                                            strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.presentationData.strings.Conversation_StickerAddedToFavorites : strongSelf.presentationData.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), with: nil)
                                             case let .limitExceeded(limit, premiumLimit):
                                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                 let text: String
@@ -599,7 +609,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                                                 } else {
                                                     text = strongSelf.presentationData.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                 }
-                                                strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                                strongSelf.controller?.presentInGlobalOverlay(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: strongSelf.presentationData.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                     if let strongSelf = self {
                                                         if case .info = action {
                                                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -801,6 +811,7 @@ public final class FeaturedStickersScreen: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    fileprivate let forceTheme: PresentationTheme?
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
@@ -809,12 +820,18 @@ public final class FeaturedStickersScreen: ViewController {
     
     fileprivate var searchNavigationNode: SearchNavigationContentNode?
     
-    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, highlightedPackId: ItemCollectionId?, forceTheme: PresentationTheme? = nil, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
         self.context = context
         self.highlightedPackId = highlightedPackId
         self.sendSticker = sendSticker
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        
+        self.presentationData = presentationData
+        self.forceTheme = forceTheme
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -833,6 +850,11 @@ public final class FeaturedStickersScreen: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previous = strongSelf.presentationData
+                
+                var presentationData = presentationData
+                if let forceTheme {
+                    presentationData = presentationData.withUpdated(theme: forceTheme)
+                }
                 strongSelf.presentationData = presentationData
                 
                 if previous.theme !== presentationData.theme || previous.strings !== presentationData.strings {
@@ -1037,8 +1059,8 @@ private enum FeaturedSearchEntry: Identifiable, Comparable {
     func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, itemContext: StickerPaneSearchGlobalItemContext) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
+            return StickerPaneSearchStickerItem(context: context, theme: theme, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, selected: { node, layer, rect in
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, layer, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             return StickerPaneSearchGlobalItem(context: context, theme: theme, strings: strings, listAppearance: true, fillsRow: true, info: info, topItems: topItems, topSeparator: topSeparator, regularInsets: false, installed: installed, unread: false, open: {
@@ -1179,7 +1201,7 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceView, sourceRect in
+        }, sendSticker: { [weak self] file, sourceView, layer, sourceRect in
             if let strongSelf = self {
                 let _ = strongSelf.sendSticker?(file, sourceView, sourceRect)
             }
@@ -1499,10 +1521,10 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
 public final class StickerPaneSearchInteraction {
     public let open: (StickerPackCollectionInfo) -> Void
     public let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
-    public let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
+    public let sendSticker: (FileMediaReference, UIView, CALayer, CGRect) -> Void
     public let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    public init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    public init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CALayer, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.open = open
         self.install = install
         self.sendSticker = sendSticker

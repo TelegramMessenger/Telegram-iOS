@@ -4,7 +4,6 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
-import Postbox
 import Display
 import TelegramUIPreferences
 import AccountContext
@@ -80,7 +79,7 @@ public final class ChatControllerInteraction {
     public enum OpenPeerSource {
         case `default`
         case reaction
-        case groupParticipant
+        case groupParticipant(storyStats: PeerStoryStats?, avatarHeaderNode: ASDisplayNode?)
     }
     
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
@@ -173,6 +172,7 @@ public final class ChatControllerInteraction {
     public let cancelInteractiveKeyboardGestures: () -> Void
     public let dismissTextInput: () -> Void
     public let scrollToMessageId: (MessageIndex) -> Void
+    public let navigateToStory: (Message, StoryId) -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -284,6 +284,7 @@ public final class ChatControllerInteraction {
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
         scrollToMessageId: @escaping (MessageIndex) -> Void,
+        navigateToStory: @escaping (Message, StoryId) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -378,6 +379,7 @@ public final class ChatControllerInteraction {
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput
         self.scrollToMessageId = scrollToMessageId
+        self.navigateToStory = navigateToStory
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

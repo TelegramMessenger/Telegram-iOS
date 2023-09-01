@@ -32,6 +32,7 @@ private class AdMessagesHistoryContextImpl {
             enum CodingKeys: String, CodingKey {
                 case peer
                 case invite
+                case webPage
             }
             
             struct Invite: Equatable, Codable {
@@ -39,8 +40,15 @@ private class AdMessagesHistoryContextImpl {
                 var joinHash: String
             }
             
+            struct WebPage: Equatable, Codable {
+                var title: String
+                var url: String
+                var photo: TelegramMediaImage?
+            }
+            
             case peer(PeerId)
             case invite(Invite)
+            case webPage(WebPage)
             
             init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,6 +57,8 @@ private class AdMessagesHistoryContextImpl {
                     self = .peer(PeerId(peer))
                 } else if let invite = try container.decodeIfPresent(Invite.self, forKey: .invite) {
                     self = .invite(invite)
+                } else if let webPage = try container.decodeIfPresent(WebPage.self, forKey: .webPage) {
+                    self = .webPage(webPage)
                 } else {
                     throw DecodingError.generic
                 }
@@ -62,6 +72,8 @@ private class AdMessagesHistoryContextImpl {
                     try container.encode(peerId.toInt64(), forKey: .peer)
                 case let .invite(invite):
                     try container.encode(invite, forKey: .invite)
+                case let .webPage(webPage):
+                    try container.encode(webPage, forKey: .webPage)
                 }
             }
         }
@@ -205,6 +217,8 @@ private class AdMessagesHistoryContextImpl {
                 target = .peer(id: peerId, message: self.messageId, startParam: self.startParam)
             case let .invite(invite):
                 target = .join(title: invite.title, joinHash: invite.joinHash)
+            case let .webPage(webPage):
+                target = .webPage(title: webPage.title, url: webPage.url)
             }
             let mappedMessageType: AdMessageAttribute.MessageType
             switch self.messageType {
@@ -251,6 +265,23 @@ private class AdMessagesHistoryContextImpl {
                     defaultBannedRights: nil,
                     usernames: []
                 )
+            case let .webPage(webPage):
+                author = TelegramChannel(
+                    id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1)),
+                    accessHash: nil,
+                    title: webPage.title,
+                    username: nil,
+                    photo: webPage.photo?.representations ?? [],
+                    creationDate: 0,
+                    version: 0,
+                    participationStatus: .left,
+                    info: .broadcast(TelegramChannelBroadcastInfo(flags: [])),
+                    flags: [],
+                    restrictionInfo: nil,
+                    adminRights: nil,
+                    bannedRights: nil,
+                    defaultBannedRights: nil,
+                    usernames: [])
             }
             
             messagePeers[author.id] = author
@@ -280,7 +311,8 @@ private class AdMessagesHistoryContextImpl {
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
                 associatedMedia: [:],
-                associatedThreadInfo: nil
+                associatedThreadInfo: nil,
+                associatedStories: [:]
             )
         }
     }
@@ -410,6 +442,8 @@ private class AdMessagesHistoryContextImpl {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        
+        let accountPeerId = account.peerId
 
         self.stateValue = State(interPostInterval: nil, messages: [])
 
@@ -446,31 +480,14 @@ private class AdMessagesHistoryContextImpl {
                 return account.postbox.transaction { transaction -> (interPostInterval: Int32?, messages: [Message]) in
                     switch result {
                     case let .sponsoredMessages(_, postsBetween, messages, chats, users):
-                        var peers: [Peer] = []
-                        var peerPresences: [PeerId: Api.User] = [:]
-
-                        for chat in chats {
-                            if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                                peers.append(groupOrChannel)
-                            }
-                        }
-                        for user in users {
-                            let telegramUser = TelegramUser(user: user)
-                            peers.append(telegramUser)
-                            peerPresences[telegramUser.id] = user
-                        }
-
-                        updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                            return updated
-                        })
-
-                        updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
 
                         var parsedMessages: [CachedMessage] = []
 
                         for message in messages {
                             switch message {
-                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, message, entities, sponsorInfo, additionalInfo):
+                            case let .sponsoredMessage(flags, randomId, fromId, chatInvite, chatInviteHash, channelPost, startParam, webPage, message, entities, sponsorInfo, additionalInfo):
                                 var parsedEntities: [MessageTextEntity] = []
                                 if let entities = entities {
                                     parsedEntities = messageTextEntitiesFromApiEntities(entities)
@@ -482,6 +499,12 @@ private class AdMessagesHistoryContextImpl {
                                 var target: CachedMessage.Target?
                                 if let fromId = fromId {
                                     target = .peer(fromId.peerId)
+                                } else if let webPage = webPage {
+                                    switch webPage {
+                                    case let .sponsoredWebPage(_, url, siteName, photo):
+                                        let photo = photo.flatMap { telegramMediaImageFromApiPhoto($0) }
+                                        target = .webPage(CachedMessage.Target.WebPage(title: siteName, url: url, photo: photo))
+                                    }
                                 } else if let chatInvite = chatInvite, let chatInviteHash = chatInviteHash {
                                     switch chatInvite {
                                     case let .chatInvite(flags, title, _, photo, participantsCount, participants):
@@ -579,6 +602,24 @@ private class AdMessagesHistoryContextImpl {
         }
         self.maskAsSeenDisposables.set(signal.start(), forKey: opaqueId)
     }
+    
+    func markAction(opaqueId: Data) {
+        let account = self.account
+        let signal: Signal<Never, NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
+            return transaction.getPeer(self.peerId).flatMap(apiInputChannel)
+        }
+        |> mapToSignal { inputChannel -> Signal<Never, NoError> in
+            guard let inputChannel = inputChannel else {
+                return .complete()
+            }
+            return account.network.request(Api.functions.channels.clickSponsoredMessage(channel: inputChannel, randomId: Buffer(data: opaqueId)))
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+        }
+        let _ = signal.start()
+    }
 }
 
 public class AdMessagesHistoryContext {
@@ -610,6 +651,12 @@ public class AdMessagesHistoryContext {
     public func markAsSeen(opaqueId: Data) {
         self.impl.with { impl in
             impl.markAsSeen(opaqueId: opaqueId)
+        }
+    }
+    
+    public func markAction(opaqueId: Data) {
+        self.impl.with { impl in
+            impl.markAction(opaqueId: opaqueId)
         }
     }
 }

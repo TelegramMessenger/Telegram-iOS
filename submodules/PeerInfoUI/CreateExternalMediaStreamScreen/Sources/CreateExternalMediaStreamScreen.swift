@@ -50,6 +50,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
         let peerId: EnginePeer.Id
         
         private(set) var credentials: GroupCallStreamCredentials?
+        var isDelayingLoadingIndication: Bool = true
         
         private var credentialsDisposable: Disposable?
         private let activeActionDisposable = MetaDisposable()
@@ -98,6 +99,13 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
             let startCall: (Bool) -> Void = { [weak self, weak baseController] endCurrentIfAny in
                 guard let strongSelf = self, let baseController = baseController else {
                     return
+                }
+                
+                strongSelf.isDelayingLoadingIndication = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak strongSelf] in
+                    guard let strongSelf else { return }
+                    strongSelf.isDelayingLoadingIndication = false
+                    strongSelf.updated(transition: .easeInOut(duration: 0.3))
                 }
                 
                 var cancelImpl: (() -> Void)?
@@ -397,7 +405,7 @@ private final class CreateExternalMediaStreamScreenComponent: CombinedComponent 
                 context.add(credentialsCopyKeyButton
                     .position(CGPoint(x: credentialsFrame.maxX - 12.0 - credentialsCopyKeyButton.size.width / 2.0, y: credentialsFrame.minY + credentialsItemHeight + credentialsItemHeight / 2.0))
                 )
-            } else {
+            } else if !context.state.isDelayingLoadingIndication {
                 let activityIndicator = activityIndicator.update(
                     component: ActivityIndicatorComponent(color: environment.theme.list.controlSecondaryColor),
                     availableSize: CGSize(width: 100.0, height: 100.0),
@@ -440,7 +448,7 @@ public final class CreateExternalMediaStreamScreen: ViewControllerComponentConta
         self.peerId = peerId
         self.mode = mode
         
-        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, mode: mode, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent, theme: defaultDarkPresentationTheme)
+        super.init(context: context, component: CreateExternalMediaStreamScreenComponent(context: context, peerId: peerId, mode: mode, credentialsPromise: credentialsPromise), navigationBarAppearance: .transparent, theme: .dark)
         
         self.navigationPresentation = .modal
         

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import Postbox
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -266,20 +265,39 @@ final class LocationActionListItemNode: ListViewItemNode {
                             strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         }
                         
+                        var arguments: TransformImageCustomArguments?
                         if let updatedIcon = updatedIcon {
                             switch updatedIcon {
-                                case .location:
-                                    strongSelf.iconNode.isHidden = false
-                                    strongSelf.venueIconNode.isHidden = true
-                                    strongSelf.iconNode.image = generateLocationIcon(theme: item.presentationData.theme)
-                                case .liveLocation, .stopLiveLocation:
-                                    strongSelf.iconNode.isHidden = false
-                                    strongSelf.venueIconNode.isHidden = true
-                                    strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
-                                case let .venue(venue):
-                                    strongSelf.iconNode.isHidden = true
-                                    strongSelf.venueIconNode.isHidden = false
-                                    strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: venue.venue?.type ?? "", background: true))
+                            case .location:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLocationIcon(theme: item.presentationData.theme)
+                            case .liveLocation, .stopLiveLocation:
+                                strongSelf.iconNode.isHidden = false
+                                strongSelf.venueIconNode.isHidden = true
+                                strongSelf.iconNode.image = generateLiveLocationIcon(theme: item.presentationData.theme, stop: updatedIcon == .stopLiveLocation)
+                            case let .venue(venue):
+                                strongSelf.iconNode.isHidden = true
+                                strongSelf.venueIconNode.isHidden = false
+                            
+                                func flagEmoji(countryCode: String) -> String {
+                                    let base : UInt32 = 127397
+                                    var flagString = ""
+                                    for v in countryCode.uppercased().unicodeScalars {
+                                        flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
+                                    }
+                                    return flagString
+                                }
+                                let type = venue.venue?.type
+                                var flag: String?
+                                if let venue = venue.venue, venue.provider == "city", let countryCode = venue.id {
+                                    flag = flagEmoji(countryCode: countryCode)
+                                }
+                                
+                                if venue.venue?.provider == "city" {
+                                    arguments = VenueIconArguments(defaultBackgroundColor: item.presentationData.theme.chat.inputPanel.actionControlFillColor, defaultForegroundColor: .white)
+                                }
+                                strongSelf.venueIconNode.setSignal(venueIcon(engine: item.engine, type: type ?? "", flag: flag, background: true))
                             }
                             
                             if updatedIcon == .stopLiveLocation {
@@ -293,7 +311,7 @@ final class LocationActionListItemNode: ListViewItemNode {
                             strongSelf.wavesNode?.color = item.presentationData.theme.chat.inputPanel.actionControlForegroundColor
                         }
                         
-                        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets()))
+                        let iconApply = iconLayout(TransformImageArguments(corners: ImageCorners(), imageSize: CGSize(width: iconSize, height: iconSize), boundingSize: CGSize(width: iconSize, height: iconSize), intrinsicInsets: UIEdgeInsets(), custom: arguments))
                         iconApply()
                         
                         let titleNode = titleApply()

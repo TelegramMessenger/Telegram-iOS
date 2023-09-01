@@ -46,7 +46,7 @@ public final class ManagedAnimationState {
             } else if let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
                 data = unpackedData
             }
-            guard let instance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: item.replaceColors, cacheKey: item.source.cacheKey) else {
+            guard let instance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: item.replaceColors, cacheKey: "") else {
                 return nil
             }
             resolvedInstance = instance
@@ -192,20 +192,16 @@ open class ManagedAnimationNode: ASDisplayNode {
         
         displayLinkUpdate = { [weak self] in
             if let strongSelf = self {
-//                let timestamp = CACurrentMediaTime()
-//                var delta: Double
-//                if let previousTimestamp = strongSelf.previousTimestamp {
-//                    delta = min(timestamp - previousTimestamp, 1.0 / 60.0)
-//                    if let currentDelta = strongSelf.delta, currentDelta < delta {
-//                        delta = currentDelta
-//                    }
-//                } else {
-                let delta = 1.0 / 60.0
-//                }
-//                strongSelf.previousTimestamp = timestamp
+                let currentTimestamp = CACurrentMediaTime()
+                let delta: Double
+                if let previousTimestamp = strongSelf.previousTimestamp {
+                    delta = currentTimestamp - previousTimestamp
+                } else {
+                    delta = 1.0 / 60.0
+                }
                 strongSelf.delta = delta
-                
                 strongSelf.updateAnimation()
+                strongSelf.previousTimestamp = currentTimestamp
             }
         }
     }
@@ -225,6 +221,7 @@ open class ManagedAnimationNode: ASDisplayNode {
         }
         
         self.didTryAdvancingState = false
+        self.previousTimestamp = CACurrentMediaTime()
         self.displayLink.isPaused = false
     }
     

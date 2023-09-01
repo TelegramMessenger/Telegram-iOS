@@ -13,6 +13,7 @@ import ChatControllerInteraction
 import MultiplexedVideoNode
 import FeaturedStickersScreen
 import StickerPeekUI
+import EntityKeyboardGifContent
 
 private let searchBarHeight: CGFloat = 52.0
 
@@ -36,7 +37,7 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
     private let context: AccountContext
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: ChatEntityKeyboardInputNode.Interaction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     private let peekBehavior: EmojiContentPeekBehavior?
     
@@ -53,17 +54,17 @@ public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainer
         return self.contentNode.ready
     }
     
-    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void, peekBehavior: EmojiContentPeekBehavior?) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, stickerActionTitle: String? = nil, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void, peekBehavior: EmojiContentPeekBehavior?) {
         self.context = context
         self.mode = mode
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
         self.peekBehavior = peekBehavior
         switch mode {
         case .gif:
-            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
+            self.contentNode = GifPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, trendingPromise: trendingGifsPromise)
         case .sticker, .trending:
-            self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, controllerInteraction: controllerInteraction, inputNodeInteraction: inputNodeInteraction)
+            self.contentNode = StickerPaneSearchContentNode(context: context, theme: theme, strings: strings, interaction: interaction, inputNodeInteraction: inputNodeInteraction, stickerActionTitle: stickerActionTitle)
         }
         self.backgroundNode = ASDisplayNode()
         

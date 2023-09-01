@@ -118,13 +118,15 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
         public var value: MessageReaction.Reaction
         public var isLarge: Bool
         public var isUnseen: Bool
+        public var isMy: Bool
         public var peerId: PeerId
         public var timestamp: Int32?
         
-        public init(value: MessageReaction.Reaction, isLarge: Bool, isUnseen: Bool, peerId: PeerId, timestamp: Int32?) {
+        public init(value: MessageReaction.Reaction, isLarge: Bool, isUnseen: Bool, isMy: Bool, peerId: PeerId, timestamp: Int32?) {
             self.value = value
             self.isLarge = isLarge
             self.isUnseen = isUnseen
+            self.isMy = isMy
             self.peerId = peerId
             self.timestamp = timestamp
         }
@@ -137,6 +139,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             }
             self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
             self.isUnseen = decoder.decodeInt32ForKey("u", orElse: 0) != 0
+            self.isMy = decoder.decodeInt32ForKey("my", orElse: 0) != 0
             self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
             self.timestamp = decoder.decodeOptionalInt32ForKey("ts")
         }
@@ -150,6 +153,7 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
             }
             encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
             encoder.encodeInt32(self.isUnseen ? 1 : 0, forKey: "u")
+            encoder.encodeInt32(self.isMy ? 1 : 0, forKey: "my")
             encoder.encodeInt64(self.peerId.toInt64(), forKey: "p")
             if let timestamp = self.timestamp {
                 encoder.encodeInt32(timestamp, forKey: "ts")
@@ -241,17 +245,25 @@ public final class ReactionsMessageAttribute: Equatable, MessageAttribute {
 public final class PendingReactionsMessageAttribute: MessageAttribute {
     public struct PendingReaction: Equatable, PostboxCoding {
         public var value: MessageReaction.Reaction
+        public var sendAsPeerId: PeerId?
         
-        public init(value: MessageReaction.Reaction) {
+        public init(value: MessageReaction.Reaction, sendAsPeerId: PeerId?) {
             self.value = value
+            self.sendAsPeerId = sendAsPeerId
         }
         
         public init(decoder: PostboxDecoder) {
             self.value = decoder.decodeObjectForKey("val", decoder: { MessageReaction.Reaction(decoder: $0) }) as! MessageReaction.Reaction
+            self.sendAsPeerId = decoder.decodeOptionalInt64ForKey("sa").flatMap(PeerId.init)
         }
         
         public func encode(_ encoder: PostboxEncoder) {
             encoder.encodeObject(self.value, forKey: "val")
+            if let sendAsPeerId = self.sendAsPeerId {
+                encoder.encodeInt64(sendAsPeerId.toInt64(), forKey: "sa")
+            } else {
+                encoder.encodeNil(forKey: "sa")
+            }
         }
     }
     
@@ -261,11 +273,18 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let storeAsRecentlyUsed: Bool
     
     public var associatedPeerIds: [PeerId] {
+        var peerIds: [PeerId] = []
         if let accountPeerId = self.accountPeerId {
-            return [accountPeerId]
-        } else {
-            return []
+            peerIds.append(accountPeerId)
         }
+        for reaction in self.reactions {
+            if let sendAsPeerId = reaction.sendAsPeerId {
+                if !peerIds.contains(sendAsPeerId) {
+                    peerIds.append(sendAsPeerId)
+                }
+            }
+        }
+        return peerIds
     }
     
     public var associatedMediaIds: [MediaId] {

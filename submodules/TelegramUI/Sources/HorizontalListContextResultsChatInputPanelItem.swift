@@ -260,7 +260,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     }
                     imageDimensions = externalReference.content?.dimensions?.cgSize
                     if externalReference.type == "gif", let thumbnailResource = externalReference.thumbnail?.resource, let content = externalReference.content, let dimensions = content.dimensions {
-                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        videoFile = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: thumbnailResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [], preloadSize: nil)])
                         imageResource = nil
                     }
                 

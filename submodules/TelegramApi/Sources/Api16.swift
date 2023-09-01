@@ -1,4 +1,112 @@
 public extension Api {
+    indirect enum PageCaption: TypeConstructorDescription {
+        case pageCaption(text: Api.RichText, credit: Api.RichText)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pageCaption(let text, let credit):
+                    if boxed {
+                        buffer.appendInt32(1869903447)
+                    }
+                    text.serialize(buffer, true)
+                    credit.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pageCaption(let text, let credit):
+                return ("pageCaption", [("text", text as Any), ("credit", credit as Any)])
+    }
+    }
+    
+        public static func parse_pageCaption(_ reader: BufferReader) -> PageCaption? {
+            var _1: Api.RichText?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            var _2: Api.RichText?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PageCaption.pageCaption(text: _1!, credit: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    indirect enum PageListItem: TypeConstructorDescription {
+        case pageListItemBlocks(blocks: [Api.PageBlock])
+        case pageListItemText(text: Api.RichText)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .pageListItemBlocks(let blocks):
+                    if boxed {
+                        buffer.appendInt32(635466748)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(blocks.count))
+                    for item in blocks {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .pageListItemText(let text):
+                    if boxed {
+                        buffer.appendInt32(-1188055347)
+                    }
+                    text.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .pageListItemBlocks(let blocks):
+                return ("pageListItemBlocks", [("blocks", blocks as Any)])
+                case .pageListItemText(let text):
+                return ("pageListItemText", [("text", text as Any)])
+    }
+    }
+    
+        public static func parse_pageListItemBlocks(_ reader: BufferReader) -> PageListItem? {
+            var _1: [Api.PageBlock]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PageBlock.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PageListItem.pageListItemBlocks(blocks: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_pageListItemText(_ reader: BufferReader) -> PageListItem? {
+            var _1: Api.RichText?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.RichText
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.PageListItem.pageListItemText(text: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum PageListOrderedItem: TypeConstructorDescription {
         case pageListOrderedItemBlocks(num: String, blocks: [Api.PageBlock])
         case pageListOrderedItemText(num: String, text: Api.RichText)
@@ -646,13 +754,13 @@ public extension Api {
 }
 public extension Api {
     enum PeerNotifySettings: TypeConstructorDescription {
-        case peerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, iosSound: Api.NotificationSound?, androidSound: Api.NotificationSound?, otherSound: Api.NotificationSound?)
+        case peerNotifySettings(flags: Int32, showPreviews: Api.Bool?, silent: Api.Bool?, muteUntil: Int32?, iosSound: Api.NotificationSound?, androidSound: Api.NotificationSound?, otherSound: Api.NotificationSound?, storiesMuted: Api.Bool?, storiesHideSender: Api.Bool?, storiesIosSound: Api.NotificationSound?, storiesAndroidSound: Api.NotificationSound?, storiesOtherSound: Api.NotificationSound?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let iosSound, let androidSound, let otherSound):
+                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let iosSound, let androidSound, let otherSound, let storiesMuted, let storiesHideSender, let storiesIosSound, let storiesAndroidSound, let storiesOtherSound):
                     if boxed {
-                        buffer.appendInt32(-1472527322)
+                        buffer.appendInt32(-1721619444)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {showPreviews!.serialize(buffer, true)}
@@ -661,14 +769,19 @@ public extension Api {
                     if Int(flags) & Int(1 << 3) != 0 {iosSound!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 4) != 0 {androidSound!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 5) != 0 {otherSound!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {storiesMuted!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 7) != 0 {storiesHideSender!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 8) != 0 {storiesIosSound!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 9) != 0 {storiesAndroidSound!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 10) != 0 {storiesOtherSound!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let iosSound, let androidSound, let otherSound):
-                return ("peerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("iosSound", iosSound as Any), ("androidSound", androidSound as Any), ("otherSound", otherSound as Any)])
+                case .peerNotifySettings(let flags, let showPreviews, let silent, let muteUntil, let iosSound, let androidSound, let otherSound, let storiesMuted, let storiesHideSender, let storiesIosSound, let storiesAndroidSound, let storiesOtherSound):
+                return ("peerNotifySettings", [("flags", flags as Any), ("showPreviews", showPreviews as Any), ("silent", silent as Any), ("muteUntil", muteUntil as Any), ("iosSound", iosSound as Any), ("androidSound", androidSound as Any), ("otherSound", otherSound as Any), ("storiesMuted", storiesMuted as Any), ("storiesHideSender", storiesHideSender as Any), ("storiesIosSound", storiesIosSound as Any), ("storiesAndroidSound", storiesAndroidSound as Any), ("storiesOtherSound", storiesOtherSound as Any)])
     }
     }
     
@@ -697,6 +810,26 @@ public extension Api {
             if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
                 _7 = Api.parse(reader, signature: signature) as? Api.NotificationSound
             } }
+            var _8: Api.Bool?
+            if Int(_1!) & Int(1 << 6) != 0 {if let signature = reader.readInt32() {
+                _8 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _9: Api.Bool?
+            if Int(_1!) & Int(1 << 7) != 0 {if let signature = reader.readInt32() {
+                _9 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
+            var _10: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
+            var _11: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
+                _11 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
+            var _12: Api.NotificationSound?
+            if Int(_1!) & Int(1 << 10) != 0 {if let signature = reader.readInt32() {
+                _12 = Api.parse(reader, signature: signature) as? Api.NotificationSound
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -704,8 +837,13 @@ public extension Api {
             let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 5) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, iosSound: _5, androidSound: _6, otherSound: _7)
+            let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 7) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 8) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 9) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 10) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.PeerNotifySettings.peerNotifySettings(flags: _1!, showPreviews: _2, silent: _3, muteUntil: _4, iosSound: _5, androidSound: _6, otherSound: _7, storiesMuted: _8, storiesHideSender: _9, storiesIosSound: _10, storiesAndroidSound: _11, storiesOtherSound: _12)
             }
             else {
                 return nil
@@ -1110,160 +1248,6 @@ public extension Api {
         }
         public static func parse_phoneCallDiscardReasonMissed(_ reader: BufferReader) -> PhoneCallDiscardReason? {
             return Api.PhoneCallDiscardReason.phoneCallDiscardReasonMissed
-        }
-    
-    }
-}
-public extension Api {
-    enum PhoneCallProtocol: TypeConstructorDescription {
-        case phoneCallProtocol(flags: Int32, minLayer: Int32, maxLayer: Int32, libraryVersions: [String])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .phoneCallProtocol(let flags, let minLayer, let maxLayer, let libraryVersions):
-                    if boxed {
-                        buffer.appendInt32(-58224696)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(minLayer, buffer: buffer, boxed: false)
-                    serializeInt32(maxLayer, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(libraryVersions.count))
-                    for item in libraryVersions {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .phoneCallProtocol(let flags, let minLayer, let maxLayer, let libraryVersions):
-                return ("phoneCallProtocol", [("flags", flags as Any), ("minLayer", minLayer as Any), ("maxLayer", maxLayer as Any), ("libraryVersions", libraryVersions as Any)])
-    }
-    }
-    
-        public static func parse_phoneCallProtocol(_ reader: BufferReader) -> PhoneCallProtocol? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: [String]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.PhoneCallProtocol.phoneCallProtocol(flags: _1!, minLayer: _2!, maxLayer: _3!, libraryVersions: _4!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum PhoneConnection: TypeConstructorDescription {
-        case phoneConnection(flags: Int32, id: Int64, ip: String, ipv6: String, port: Int32, peerTag: Buffer)
-        case phoneConnectionWebrtc(flags: Int32, id: Int64, ip: String, ipv6: String, port: Int32, username: String, password: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .phoneConnection(let flags, let id, let ip, let ipv6, let port, let peerTag):
-                    if boxed {
-                        buffer.appendInt32(-1665063993)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeString(ip, buffer: buffer, boxed: false)
-                    serializeString(ipv6, buffer: buffer, boxed: false)
-                    serializeInt32(port, buffer: buffer, boxed: false)
-                    serializeBytes(peerTag, buffer: buffer, boxed: false)
-                    break
-                case .phoneConnectionWebrtc(let flags, let id, let ip, let ipv6, let port, let username, let password):
-                    if boxed {
-                        buffer.appendInt32(1667228533)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt64(id, buffer: buffer, boxed: false)
-                    serializeString(ip, buffer: buffer, boxed: false)
-                    serializeString(ipv6, buffer: buffer, boxed: false)
-                    serializeInt32(port, buffer: buffer, boxed: false)
-                    serializeString(username, buffer: buffer, boxed: false)
-                    serializeString(password, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .phoneConnection(let flags, let id, let ip, let ipv6, let port, let peerTag):
-                return ("phoneConnection", [("flags", flags as Any), ("id", id as Any), ("ip", ip as Any), ("ipv6", ipv6 as Any), ("port", port as Any), ("peerTag", peerTag as Any)])
-                case .phoneConnectionWebrtc(let flags, let id, let ip, let ipv6, let port, let username, let password):
-                return ("phoneConnectionWebrtc", [("flags", flags as Any), ("id", id as Any), ("ip", ip as Any), ("ipv6", ipv6 as Any), ("port", port as Any), ("username", username as Any), ("password", password as Any)])
-    }
-    }
-    
-        public static func parse_phoneConnection(_ reader: BufferReader) -> PhoneConnection? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: Buffer?
-            _6 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.PhoneConnection.phoneConnection(flags: _1!, id: _2!, ip: _3!, ipv6: _4!, port: _5!, peerTag: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_phoneConnectionWebrtc(_ reader: BufferReader) -> PhoneConnection? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: String?
-            _3 = parseString(reader)
-            var _4: String?
-            _4 = parseString(reader)
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: String?
-            _7 = parseString(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.PhoneConnection.phoneConnectionWebrtc(flags: _1!, id: _2!, ip: _3!, ipv6: _4!, port: _5!, username: _6!, password: _7!)
-            }
-            else {
-                return nil
-            }
         }
     
     }

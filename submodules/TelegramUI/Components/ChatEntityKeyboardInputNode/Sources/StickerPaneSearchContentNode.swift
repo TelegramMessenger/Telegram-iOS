@@ -19,7 +19,6 @@ import UndoUI
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import ChatPresentationInterfaceState
-import FeaturedStickersScreen
 
 private enum StickerSearchEntryId: Equatable, Hashable {
     case sticker(String?, Int64)
@@ -90,8 +89,8 @@ private enum StickerSearchEntry: Identifiable, Comparable {
     func item(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: StickerPaneSearchInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) -> GridItem {
         switch self {
         case let .sticker(_, code, stickerItem, theme):
-            return StickerPaneSearchStickerItem(context: context, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, theme: theme, selected: { node, rect in
-                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, rect)
+            return StickerPaneSearchStickerItem(context: context, theme: theme, code: code, stickerItem: stickerItem, inputNodeInteraction: inputNodeInteraction, selected: { node, layer, rect in
+                interaction.sendSticker(.standalone(media: stickerItem.file), node.view, layer, rect)
             })
         case let .global(_, info, topItems, installed, topSeparator):
             let itemContext = StickerPaneSearchGlobalItemContext()
@@ -136,9 +135,9 @@ private func preparedChatMediaInputGridEntryTransition(context: AccountContext, 
 
 final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     private let context: AccountContext
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: ChatEntityKeyboardInputNode.Interaction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
-    private var interaction: StickerPaneSearchInteraction?
+    private var searchInteraction: StickerPaneSearchInteraction?
     
     private var theme: PresentationTheme
     private var strings: PresentationStrings
@@ -168,17 +167,24 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
     
     private let installDisposable = MetaDisposable()
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, stickerActionTitle: String?) {
         self.context = context
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
         
         self.theme = theme
         self.strings = strings
         
-        self.trendingPane = ChatMediaInputTrendingPane(context: context, controllerInteraction: controllerInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
+        let trendingPaneInteraction = ChatMediaInputTrendingPane.Interaction(
+            sendSticker: interaction.sendSticker,
+            presentController: interaction.presentController,
+            getNavigationController: interaction.getNavigationController
+        )
+        
+        self.trendingPane = ChatMediaInputTrendingPane(context: context, forceTheme: theme, interaction: trendingPaneInteraction, getItemIsPreviewed: { [weak inputNodeInteraction] item in
             return inputNodeInteraction?.previewedStickerPackItemFile?.id == item.file.id
         }, isPane: false)
+        self.trendingPane.stickerActionTitle = stickerActionTitle
         
         self.gridNode = GridNode()
         
@@ -211,18 +217,21 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             self?.deactivateSearchBar?()
         }
         
-        self.interaction = StickerPaneSearchInteraction(open: { [weak self] info in
+        self.searchInteraction = StickerPaneSearchInteraction(open: { [weak self] info in
             if let strongSelf = self {
                 strongSelf.view.window?.endEditing(true)
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
-                let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
+                
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
+                
+                let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: (presentationData, .single(presentationData)), mainStickerPack: packReference, stickerPacks: [packReference], actionTitle: stickerActionTitle, parentNavigationController: strongSelf.interaction.getNavigationController(), sendSticker: { [weak self] fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
+                        return strongSelf.interaction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                     } else {
                         return false
                     }
                 })
-                strongSelf.controllerInteraction.presentController(controller, nil)
+                strongSelf.interaction.presentController(controller, nil)
             }
         }, install: { [weak self] info, items, install in
             guard let strongSelf = self else {
@@ -260,11 +269,11 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 let context = strongSelf.context
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
                     let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
-                    self?.controllerInteraction.presentController(controller, nil)
+                    self?.interaction.presentController(controller, nil)
                     return ActionDisposable { [weak controller] in
                         Queue.mainQueue().async() {
                             controller?.dismiss()
@@ -291,7 +300,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     }
                     
                     var animateInAsReplacement = false
-                    if let navigationController = strongSelf.controllerInteraction.navigationController() {
+                    if let navigationController = strongSelf.interaction.getNavigationController() {
                         for controller in navigationController.overlayControllers {
                             if let controller = controller as? UndoOverlayController {
                                 controller.dismissWithCommitActionAndReplacementAnimation()
@@ -300,8 +309,8 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                         }
                     }
                     
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    strongSelf.controllerInteraction.navigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: theme)
+                    strongSelf.interaction.getNavigationController()?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: presentationData.strings.StickerPackActionInfo_AddedTitle, text: presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: items.first, context: strongSelf.context), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in
                         return true
                     }))
                 }))
@@ -310,9 +319,10 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                 |> deliverOnMainQueue).start(next: { _ in
                 })
             }
-        }, sendSticker: { [weak self] file, sourceView, sourceRect in
-            if let strongSelf = self {
-                let _ = strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil, [])
+        }, sendSticker: { [weak self] file, sourceView, sourceLayer, sourceRect in
+            if let self {
+                let sourceRect = sourceView.convert(sourceRect, to: self.view)
+                let _ = self.interaction.sendSticker(file, false, false, nil, false, self.view, sourceRect, sourceLayer, [])
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItemFile?.id == item.file.id
@@ -451,7 +461,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.searchDisposable.set((signal
         |> deliverOn(self.queue)).start(next: { [weak self] result in
             Queue.mainQueue().async {
-                guard let strongSelf = self, let interaction = strongSelf.interaction else {
+                guard let strongSelf = self, let interaction = strongSelf.searchInteraction else {
                     return
                 }
                 

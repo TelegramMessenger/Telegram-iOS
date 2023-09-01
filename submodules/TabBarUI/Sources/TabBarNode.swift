@@ -316,7 +316,7 @@ final class TabBarNodeItem {
     }
 }
 
-class TabBarNode: ASDisplayNode {
+class TabBarNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var tabBarItems: [TabBarNodeItem] = [] {
         didSet {
             self.reloadTabBarItems()
@@ -378,6 +378,8 @@ class TabBarNode: ASDisplayNode {
         
         self.isOpaque = false
         self.backgroundColor = nil
+        
+        self.isExclusiveTouch = true
 
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
@@ -387,11 +389,19 @@ class TabBarNode: ASDisplayNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.delegate = self
         recognizer.tapActionAtPoint = { _ in
             return .keepWithSingleTap
         }
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if otherGestureRecognizer is UIPanGestureRecognizer {
+            return false
+        }
+        return true
     }
     
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -441,6 +451,11 @@ class TabBarNode: ASDisplayNode {
     func frameForControllerTab(at index: Int) -> CGRect? {
         let container = self.tabBarNodeContainers[index]
         return container.imageNode.frame
+    }
+    
+    func viewForControllerTab(at index: Int) -> UIView? {
+        let container = self.tabBarNodeContainers[index]
+        return container.imageNode.view
     }
     
     private func reloadTabBarItems() {

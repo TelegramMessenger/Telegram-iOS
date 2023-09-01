@@ -10,6 +10,7 @@ import YuvConversion
 import StickerResources
 import DrawingUI
 import SolidRoundedButtonNode
+import MediaEditor
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -142,9 +143,13 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     }
                 }))
             }
-        case let .image(image):
+        case let .image(image, _):
             self.file = nil
             self.imagePromise.set(.single(image))
+        case .video:
+            self.file = nil
+        case .dualVideoReference:
+            self.file = nil
         }
     }
     
@@ -432,7 +437,9 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                     renderEntities.append(LegacyPaintTextEntity(entity: text))
                     if let renderSubEntities = text.renderSubEntities, let account {
                         for entity in renderSubEntities {
-                            renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            if let entity = entity as? DrawingStickerEntity {
+                                renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                            }
                         }
                     }
                 } else if let simpleShape = entity as? DrawingSimpleShapeEntity {
@@ -576,7 +583,7 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let interfaceController: TGPhotoDrawingInterfaceController
         
         init(context: AccountContext, size: CGSize, originalSize: CGSize, isVideo: Bool, isAvatar: Bool, entitiesView: (UIView & TGPhotoDrawingEntitiesView)?) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, entitiesView: entitiesView)
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isVideo: isVideo, isAvatar: isAvatar, drawingView: nil, entitiesView: entitiesView, selectionContainerView: nil)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView

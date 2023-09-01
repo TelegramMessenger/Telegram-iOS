@@ -179,7 +179,7 @@ public final class QrCodeScanScreen: ViewController {
             return
         }
         if let navigationController = navigationController as? NavigationController {
-            self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: self.presentationData.strings.AuthSessions_AddedDeviceTitle, text: session?.appName ?? "Telegram for macOS", cancel: self.presentationData.strings.AuthSessions_AddedDeviceTerminate), elevatedLayout: false, animateInAsReplacement: false, action: { value in
+            self.present(UndoOverlayController(presentationData: self.presentationData, content: .actionSucceeded(title: self.presentationData.strings.AuthSessions_AddedDeviceTitle, text: session?.appName ?? "Telegram for macOS", cancel: self.presentationData.strings.AuthSessions_AddedDeviceTerminate, destructive: true), elevatedLayout: false, animateInAsReplacement: false, action: { value in
                 if value == .undo, let session = session {
                     let _ = activeSessionsContext.remove(hash: session.hash).start()
                     return true
@@ -513,7 +513,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
         self.errorTextNode.textAlignment = .center
         self.errorTextNode.isHidden = true
         
-        self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false))
+        self.camera = Camera(configuration: .init(preset: .hd1920x1080, position: .back, audio: false, photo: true, metadata: true, preferredFps: 60))
         
         super.init()
         

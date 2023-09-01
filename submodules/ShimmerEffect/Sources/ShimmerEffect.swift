@@ -477,6 +477,35 @@ public final class StandaloneShimmerEffect {
         self.updateLayer()
     }
     
+    public func updateHorizontal(background: UIColor, foreground: UIColor) {
+        if self.background == background && self.foreground == foreground {
+            return
+        }
+        self.background = background
+        self.foreground = foreground
+        
+        self.image = generateImage(CGSize(width: 320, height: 1), opaque: false, scale: 1.0, rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(background.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+
+            context.clip(to: CGRect(origin: CGPoint(), size: size))
+
+            let transparentColor = foreground.withAlphaComponent(0.0).cgColor
+            let peakColor = foreground.cgColor
+
+            var locations: [CGFloat] = [0.0, 0.44, 0.55, 1.0]
+            let colors: [CGColor] = [transparentColor, peakColor, peakColor, transparentColor]
+
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            guard let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations) else { return }
+            
+            context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.2), end: CGPoint(x: size.width, y: 0.8), options: CGGradientDrawingOptions())
+        })
+        
+        self.updateHorizontalLayer()
+    }
+    
     public func updateLayer() {
         guard let layer = self.layer, let image = self.image else {
             return
@@ -492,6 +521,26 @@ public final class StandaloneShimmerEffect {
             animation.repeatCount = .infinity
             animation.duration = 0.8
             animation.beginTime = layer.convertTime(1.0, from: nil)
+            layer.add(animation, forKey: "shimmer")
+        }
+    }
+    
+    private func updateHorizontalLayer() {
+        guard let layer = self.layer, let image = self.image else {
+            return
+        }
+        
+        layer.contents = image.cgImage
+        
+        if layer.animation(forKey: "shimmer") == nil {
+            var delay: TimeInterval { 1.6 }
+            let animation = CABasicAnimation(keyPath: "contentsRect.origin.x")
+            animation.fromValue = NSNumber(floatLiteral: delay)
+            animation.toValue = NSNumber(floatLiteral: -delay)
+            animation.isAdditive = true
+            animation.repeatCount = .infinity
+            animation.duration = 0.8 * delay
+            animation.timingFunction = .init(name: .easeInEaseOut)
             layer.add(animation, forKey: "shimmer")
         }
     }

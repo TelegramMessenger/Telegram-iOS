@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -67,14 +66,14 @@ private enum ChannelMembersSearchSection {
 }
 
 private enum ChannelMembersSearchContent: Equatable {
-    case peer(Peer)
+    case peer(EnginePeer)
     case participant(participant: RenderedChannelParticipant, label: String?, revealActions: [ParticipantRevealAction], revealed: Bool, enabled: Bool)
     
     static func ==(lhs: ChannelMembersSearchContent, rhs: ChannelMembersSearchContent) -> Bool {
         switch lhs {
             case let .peer(lhsPeer):
                 if case let .peer(rhsPeer) = rhs {
-                    return lhsPeer.isEqual(rhsPeer)
+                    return lhsPeer == rhsPeer
                 } else {
                     return false
                 }
@@ -87,7 +86,7 @@ private enum ChannelMembersSearchContent: Equatable {
         }
     }
     
-    var peerId: PeerId {
+    var peerId: EnginePeer.Id {
         switch self {
             case let .peer(peer):
                 return peer.id
@@ -98,18 +97,18 @@ private enum ChannelMembersSearchContent: Equatable {
 }
 
 private struct RevealedPeerId: Equatable {
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
     let section: ChannelMembersSearchSection
 }
 
 private final class ChannelMembersSearchContainerInteraction {
-    let peerSelected: (Peer, RenderedChannelParticipant?) -> Void
+    let peerSelected: (EnginePeer, RenderedChannelParticipant?) -> Void
     let setPeerIdWithRevealedOptions: (RevealedPeerId?, RevealedPeerId?) -> Void
     let promotePeer: (RenderedChannelParticipant) -> Void
     let restrictPeer: (RenderedChannelParticipant) -> Void
-    let removePeer: (PeerId) -> Void
+    let removePeer: (EnginePeer.Id) -> Void
     
-    init(peerSelected: @escaping (Peer, RenderedChannelParticipant?) -> Void, setPeerIdWithRevealedOptions: @escaping (RevealedPeerId?, RevealedPeerId?) -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (PeerId) -> Void) {
+    init(peerSelected: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void, setPeerIdWithRevealedOptions: @escaping (RevealedPeerId?, RevealedPeerId?) -> Void, promotePeer: @escaping (RenderedChannelParticipant) -> Void, restrictPeer: @escaping (RenderedChannelParticipant) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void) {
         self.peerSelected = peerSelected
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.promotePeer = promotePeer
@@ -119,7 +118,7 @@ private final class ChannelMembersSearchContainerInteraction {
 }
 
 private struct ChannelMembersSearchEntryId: Hashable {
-    let peerId: PeerId
+    let peerId: EnginePeer.Id
     let section: ChannelMembersSearchSection
 }
 
@@ -153,7 +152,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, interaction: ChannelMembersSearchContainerInteraction) -> ListViewItem {
         switch self.content {
             case let .peer(peer):
-                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(peer), chatPeer: EnginePeer(peer)), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
+                return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: peer, chatPeer: peer), status: .none, enabled: true, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
                     interaction.peerSelected(peer, nil)
                 })
             case let .participant(participant, label, revealActions, revealed, enabled):
@@ -188,7 +187,7 @@ private final class ChannelMembersSearchEntry: Comparable, Identifiable {
                 }
                 
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: .peer, peer: .peer(peer: EnginePeer(participant.peer), chatPeer: EnginePeer(participant.peer)), status: status, enabled: enabled, selection: .none, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: revealed), options: options, actionIcon: actionIcon, index: nil, header: self.section.chatListHeaderType.flatMap({ ChatListSearchItemHeader(type: $0, theme: presentationData.theme, strings: presentationData.strings, actionTitle: nil, action: nil) }), action: { _ in
-                    interaction.peerSelected(participant.peer, participant)
+                    interaction.peerSelected(EnginePeer(participant.peer), participant)
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
                     interaction.setPeerIdWithRevealedOptions(RevealedPeerId(peerId: participant.peer.id, section: self.section), fromPeerId.flatMap({ RevealedPeerId(peerId: $0, section: self.section) }))
                 })
@@ -212,7 +211,7 @@ private enum GroupMemberCategory {
     case members
 }
 
-private func categorySignal(context: AccountContext, peerId: PeerId, category: GroupMemberCategory) -> Signal<[RenderedChannelParticipant], NoError> {
+private func categorySignal(context: AccountContext, peerId: EnginePeer.Id, category: GroupMemberCategory) -> Signal<[RenderedChannelParticipant], NoError> {
     return Signal<[RenderedChannelParticipant], NoError> { subscriber in
         let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
         func processListState(_ listState: ChannelMemberListState) {
@@ -255,7 +254,7 @@ private struct GroupMembersSearchContextState {
 public final class GroupMembersSearchContext {
     fileprivate let state = Promise<GroupMembersSearchContextState>()
     
-    public init(context: AccountContext, peerId: PeerId) {
+    public init(context: AccountContext, peerId: EnginePeer.Id) {
         assert(Queue.mainQueue().isCurrent())
         
         let combinedSignal = combineLatest(queue: .mainQueue(), categorySignal(context: context, peerId: peerId, category: .contacts), categorySignal(context: context, peerId: peerId, category: .bots), categorySignal(context: context, peerId: peerId, category: .admins), categorySignal(context: context, peerId: peerId, category: .members))
@@ -285,12 +284,12 @@ private func channelMembersSearchContainerPreparedRecentTransition(from fromEntr
 
 private struct ChannelMembersSearchContainerState: Equatable {
     var revealedPeerId: RevealedPeerId?
-    var removingParticipantIds = Set<PeerId>()
+    var removingParticipantIds = Set<EnginePeer.Id>()
 }
 
 public final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
-    private let openPeer: (Peer, RenderedChannelParticipant?) -> Void
+    private let openPeer: (EnginePeer, RenderedChannelParticipant?) -> Void
     private let mode: ChannelMembersSearchMode
     
     private let emptyQueryListNode: ListView
@@ -320,7 +319,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
         return _hasDim
     }
     
-    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
+    public init(context: AccountContext, forceTheme: PresentationTheme?, peerId: EnginePeer.Id, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (EnginePeer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
@@ -666,7 +665,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     foundMembers = .single([])
                 }
                 
-                let foundContacts: Signal<([Peer], [PeerId: PeerPresence]), NoError>
+                let foundContacts: Signal<([EnginePeer], [EnginePeer.Id: EnginePeer.Presence]), NoError>
                 let foundRemotePeers: Signal<([FoundPeer], [FoundPeer]), NoError>
                 switch mode {
                     case .inviteActions, .banAndPromoteActions:
@@ -680,7 +679,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                             foundContacts = .single(([], [:]))
                             foundRemotePeers = .single(([], []))
                         } else {
-                            foundContacts = context.account.postbox.searchContacts(query: query.lowercased())
+                            foundContacts = context.engine.contacts.searchContacts(query: query.lowercased())
                             foundRemotePeers = .single(([], [])) |> then(context.engine.contacts.searchRemotePeers(query: query)
                             |> delay(0.2, queue: Queue.concurrentDefaultQueue()))
                         }
@@ -693,7 +692,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 |> map { foundGroupMembers, foundMembers, foundContacts, foundRemotePeers, presentationData, state -> [ChannelMembersSearchEntry]? in
                     var entries: [ChannelMembersSearchEntry] = []
                     
-                    var existingPeerIds = Set<PeerId>()
+                    var existingPeerIds = Set<EnginePeer.Id>()
                     var excludeBots = false
                     for filter in filters {
                         switch filter {
@@ -894,7 +893,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                     }
                     
                     for peer in foundContacts.0 {
-                        if excludeBots, let user = peer as? TelegramUser, user.botInfo != nil {
+                        if excludeBots, case let .user(user) = peer, user.botInfo != nil {
                             continue
                         }
                         
@@ -914,7 +913,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(EnginePeer(peer)), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -927,7 +926,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(EnginePeer(peer)), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -951,12 +950,12 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                 if !peer.indexName.matchesByTokens(query.lowercased()) {
                                     continue
                                 }
-                                var creatorPeer: Peer?
+                                var creatorPeer: EnginePeer?
                                 for participant in participants.participants {
                                     if let peer = peerView.peers[participant.peerId] {
                                         switch participant {
                                             case .creator:
-                                                creatorPeer = peer
+                                                creatorPeer = EnginePeer(peer)
                                             default:
                                                 break
                                         }
@@ -968,16 +967,16 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                                     case .creator:
                                         renderedParticipant = RenderedChannelParticipant(participant: .creator(id: peer.id, adminInfo: nil, rank: nil), peer: peer)
                                     case .admin:
-                                        var peers: [PeerId: Peer] = [:]
+                                        var peers: [EnginePeer.Id: EnginePeer] = [:]
                                         if let creator = creatorPeer {
                                             peers[creator.id] = creator
                                         }
-                                        peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: .legacyGroup(group))), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers)
+                                        peers[peer.id] = EnginePeer(peer)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: .legacyGroup(group))), promotedBy: creatorPeer?.id ?? context.account.peerId, canBeEditedByAccountPeer: creatorPeer?.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
                                     case .member:
-                                        var peers: [PeerId: Peer] = [:]
-                                        peers[peer.id] = peer
-                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers)
+                                        var peers: [EnginePeer.Id: EnginePeer] = [:]
+                                        peers[peer.id] = EnginePeer(peer)
+                                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil), peer: peer, peers: peers.mapValues({ $0._asPeer() }))
                                 }
                                 matchingMembers.append(renderedParticipant)
                             }
@@ -1009,7 +1008,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                 |> map { foundGroupMembers, foundMembers, foundRemotePeers, presentationData, state -> [ChannelMembersSearchEntry]? in
                     var entries: [ChannelMembersSearchEntry] = []
                     
-                    var existingPeerIds = Set<PeerId>()
+                    var existingPeerIds = Set<EnginePeer.Id>()
                     var excludeBots = false
                     for filter in filters {
                         switch filter {
@@ -1166,7 +1165,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(EnginePeer(peer)), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }
@@ -1180,7 +1179,7 @@ public final class ChannelMembersSearchContainerNode: SearchDisplayControllerCon
                         
                         if !existingPeerIds.contains(peer.id) && peer is TelegramUser {
                             existingPeerIds.insert(peer.id)
-                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(peer), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
+                            entries.append(ChannelMembersSearchEntry(index: index, content: .peer(EnginePeer(peer)), section: .global, dateTimeFormat: presentationData.dateTimeFormat))
                             index += 1
                         }
                     }

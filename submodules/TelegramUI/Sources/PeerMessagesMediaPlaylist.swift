@@ -72,7 +72,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         } else {
                             return SharedMediaPlaybackData(type: .music, source: source)
                         }
-                    case let .Video(_, _, flags):
+                    case let .Video(_, _, flags, _):
                         if flags.contains(.instantRoundVideo) {
                             return SharedMediaPlaybackData(type: .instantVideo, source: source)
                         } else {
@@ -111,7 +111,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 case let .Audio(isVoice, duration, title, performer, _):
                     let displayData: SharedMediaPlaybackDisplayData
                     if isVoice {
-                        displayData = SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
+                        displayData = SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor.flatMap(EnginePeer.init), peer: self.message.peers[self.message.id.peerId].flatMap(EnginePeer.init))
                     } else {
                         var updatedTitle = title
                         let updatedPerformer = performer
@@ -129,9 +129,9 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                         displayData = SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: albumArt, long: CGFloat(duration) > 10.0 * 60.0, caption: caption)
                     }
                     return displayData
-                case let .Video(_, _, flags):
+                case let .Video(_, _, flags, _):
                     if flags.contains(.instantRoundVideo) {
-                        return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId], timestamp: self.message.timestamp)
+                        return SharedMediaPlaybackDisplayData.instantVideo(author: self.message.effectiveAuthor.flatMap(EnginePeer.init), peer: self.message.peers[self.message.id.peerId].flatMap(EnginePeer.init), timestamp: self.message.timestamp)
                     } else {
                         return nil
                     }

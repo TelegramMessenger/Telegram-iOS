@@ -13,6 +13,7 @@ import Photos
 import LegacyComponents
 import AttachmentUI
 import ItemListUI
+import CameraScreen
 
 private enum MediaGroupsEntry: Comparable, Identifiable {
     enum StableId: Hashable {
@@ -148,11 +149,23 @@ private func preparedTransition(from fromEntries: [MediaGroupsEntry], to toEntri
     return MediaGroupsTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-public final class MediaGroupsScreen: ViewController {
+public final class MediaGroupsScreen: ViewController, AttachmentContainable {
+    public var requestAttachmentMenuExpansion: () -> Void = {}
+    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    public var cancelPanGesture: () -> Void = { }
+    public var isContainerPanning: () -> Bool = { return false }
+    public var isContainerExpanded: () -> Bool = { return false }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return nil
+    }
+    
     private let context: AccountContext
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let mediaAssetsContext: MediaAssetsContext
+    private let embedded: Bool
     private let openGroup: (PHAssetCollection) -> Void
     
     private class Node: ViewControllerTracingNode {
@@ -165,6 +178,7 @@ public final class MediaGroupsScreen: ViewController {
         private var presentationData: PresentationData
         
         private let containerNode: ASDisplayNode
+        private let backgroundNode: NavigationBackgroundNode
         private let listNode: ListView
     
         private var nextStableId: Int = 1
@@ -187,12 +201,17 @@ public final class MediaGroupsScreen: ViewController {
             self.presentationData = controller.presentationData
 
             self.containerNode = ASDisplayNode()
+            self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.rootController.tabBar.backgroundColor)
+            
             self.listNode = ListView()
 
             super.init()
             
-            self.containerNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            
+            if !controller.embedded {
+                self.addSubnode(self.backgroundNode)
+            } else {
+                self.containerNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            }
             self.addSubnode(self.containerNode)
             self.containerNode.addSubnode(self.listNode)
                         
@@ -207,6 +226,10 @@ public final class MediaGroupsScreen: ViewController {
             
             self.listNode.beganInteractiveDragging = { [weak self] _ in
                 self?.view.window?.endEditing(true)
+            }
+            
+            self.listNode.visibleContentOffsetChanged = { [weak self] _ in
+                self?.updateNavigation(transition: .immediate)
             }
         }
         
@@ -283,6 +306,11 @@ public final class MediaGroupsScreen: ViewController {
         
         func updatePresentationData(_ presentationData: PresentationData) {
             self.presentationData = presentationData
+            
+            if self.controller?.embedded == true {
+                self.containerNode.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            }
+            self.backgroundNode.updateColor(color: self.presentationData.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         }
         
         private func enqueueTransaction(_ transaction: MediaGroupsTransition) {
@@ -319,10 +347,19 @@ public final class MediaGroupsScreen: ViewController {
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+            guard let controller = self.controller else {
+                return
+            }
             let firstTime = self.validLayout == nil
             self.validLayout = (layout, navigationBarHeight)
             
-            transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 12.0), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - 12.0)))
+            let topInset: CGFloat = controller.embedded ? 12.0 : 0.0
+            
+            let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + topInset), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - topInset))
+            transition.updateFrame(node: self.containerNode, frame: containerFrame)
+            
+            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: layout.size))
+            self.backgroundNode.update(size: layout.size, transition: transition)
             
             let size = layout.size
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -331,6 +368,28 @@ public final class MediaGroupsScreen: ViewController {
             
             if firstTime {
                 self.dequeueTransaction()
+            }
+        }
+        
+        private var previousContentOffset: GridNodeVisibleContentOffset?
+        func updateNavigation(delayDisappear: Bool = false, transition: ContainedViewLayoutTransition) {
+            var previousContentOffsetValue: CGFloat?
+            if let previousContentOffset = self.previousContentOffset, case let .known(value) = previousContentOffset {
+                previousContentOffsetValue = value
+            }
+            
+            let offset = self.listNode.visibleContentOffset()
+            switch offset {
+            case let .known(value):
+                let transition: ContainedViewLayoutTransition
+                if let previousContentOffsetValue = previousContentOffsetValue, value <= 0.0, previousContentOffsetValue > 2.0 {
+                    transition = .animated(duration: 0.2, curve: .easeInOut)
+                } else {
+                    transition = .immediate
+                }
+                self.controller?.navigationBar?.updateBackgroundAlpha(min(2.0, value) / 2.0, transition: transition)
+            case .unknown, .none:
+                self.controller?.navigationBar?.updateBackgroundAlpha(1.0, transition: .immediate)
             }
         }
     }
@@ -346,13 +405,14 @@ public final class MediaGroupsScreen: ViewController {
         return self._ready
     }
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mediaAssetsContext: MediaAssetsContext, openGroup: @escaping (PHAssetCollection) -> Void) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mediaAssetsContext: MediaAssetsContext, embedded: Bool = false, openGroup: @escaping (PHAssetCollection) -> Void) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.mediaAssetsContext = mediaAssetsContext
+        self.embedded = embedded
         self.openGroup = openGroup
         
-        super.init(navigationBarPresentationData: nil)
+        super.init(navigationBarPresentationData: !embedded ? NavigationBarPresentationData(presentationData: presentationData) : nil)
                 
         self.statusBar.statusBarStyle = .Ignore
         
@@ -375,6 +435,12 @@ public final class MediaGroupsScreen: ViewController {
                 strongSelf.controllerNode.scrollToTop()
             }
         }
+        
+        if !embedded {
+            self.title = "Albums"
+            
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(backButtonAppearanceWithTitle: self.presentationData.strings.Common_Back, target: self, action: #selector(self.backPressed))
+        }
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -391,6 +457,20 @@ public final class MediaGroupsScreen: ViewController {
         self._ready.set(self.controllerNode.ready.get())
         
         super.displayNodeDidLoad()
+    }
+    
+    @objc private func backPressed() {
+        if let _ = self.navigationController {
+            self.dismiss()
+        } else {
+            self.updateNavigationStack { current in
+                var mediaPickerContext: AttachmentMediaPickerContext?
+                if let first = current.first as? MediaPickerScreen {
+                    mediaPickerContext = first.webSearchController?.mediaPickerContext ?? first.mediaPickerContext
+                }
+                return (current.filter { $0 !== self }, mediaPickerContext)
+            }
+        }
     }
             
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

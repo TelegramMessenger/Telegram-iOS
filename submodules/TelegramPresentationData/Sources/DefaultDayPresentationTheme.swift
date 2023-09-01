@@ -191,7 +191,7 @@ public func customizeDefaultDayTheme(theme: PresentationTheme, editing: Bool, ti
                 outgoingLinkTextColor = outgoingAccent
                 outgoingScamColor = UIColor(rgb: 0xff3b30)
                 outgoingControlColor = outgoingAccent
-                outgoingInactiveControlColor = outgoingAccent
+                outgoingInactiveControlColor = outgoingAccent.withMultipliedAlpha(0.5)
                 outgoingFileTitleColor = outgoingAccent
                 outgoingPollsProgressColor = outgoingControlColor
                 outgoingSelectionColor = outgoingAccent.withAlphaComponent(0.2)
@@ -569,7 +569,10 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         secretIconColor: UIColor(rgb: 0x00b12c),
         pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x72d5fd), bottomColor: UIColor(rgb: 0x2a9ef1)), foregroundColor: UIColor(rgb: 0xffffff)),
         unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors(backgroundColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0xdedee5), bottomColor: UIColor(rgb: 0xc5c6cc)), foregroundColor: UIColor(rgb: 0xffffff)),
-        onlineDotColor: UIColor(rgb: 0x4cc91f)
+        onlineDotColor: UIColor(rgb: 0x4cc91f),
+        storyUnseenColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x34C76F), bottomColor: UIColor(rgb: 0x3DA1FD)),
+        storyUnseenPrivateColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0x7CD636), bottomColor: UIColor(rgb: 0x26B470)),
+        storySeenColors: PresentationThemeGradientColors(topColor: UIColor(rgb: 0xD8D8E1), bottomColor: UIColor(rgb: 0xD8D8E1))
     )
     
     let bubbleStrokeColor: UIColor

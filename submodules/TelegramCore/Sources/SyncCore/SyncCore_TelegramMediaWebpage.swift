@@ -85,10 +85,11 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     
     public let image: TelegramMediaImage?
     public let file: TelegramMediaFile?
+    public let story: TelegramMediaStory?
     public let attributes: [TelegramMediaWebpageAttribute]
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, attributes: [TelegramMediaWebpageAttribute], instantPage: InstantPage?) {
+    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, story: TelegramMediaStory?, attributes: [TelegramMediaWebpageAttribute], instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
         self.hash = hash
@@ -103,6 +104,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.author = author
         self.image = image
         self.file = file
+        self.story = story
         self.attributes = attributes
         self.instantPage = instantPage
     }
@@ -139,6 +141,12 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
             self.file = file
         } else {
             self.file = nil
+        }
+        
+        if let story = decoder.decodeObjectForKey("stry") as? TelegramMediaStory {
+            self.story = story
+        } else {
+            self.story = nil
         }
         
         var effectiveAttributes: [TelegramMediaWebpageAttribute] = []
@@ -218,6 +226,11 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "fi")
         }
+        if let story = self.story {
+            encoder.encodeObject(story, forKey: "stry")
+        } else {
+            encoder.encodeNil(forKey: "stry")
+        }
         
         encoder.encodeObjectArray(self.attributes, forKey: "attr")
         
@@ -261,6 +274,14 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
         return false
     }
     
+    if let lhsStory = lhs.story, let rhsStory = rhs.story {
+        if !lhsStory.isEqual(to: rhsStory) {
+            return false
+        }
+    } else if (lhs.story == nil) != (rhs.story == nil) {
+        return false
+    }
+    
     if lhs.attributes.count != rhs.attributes.count {
         return false
     } else {
@@ -287,7 +308,23 @@ public final class TelegramMediaWebpage: Media, Equatable {
     public var id: MediaId? {
         return self.webpageId
     }
-    public let peerIds: [PeerId] = []
+    public var peerIds: [PeerId] {
+        var result: [PeerId] = []
+        for storyId in self.storyIds {
+            if !result.contains(storyId.peerId) {
+                result.append(storyId.peerId)
+            }
+        }
+        return result
+    }
+    
+    public var storyIds: [StoryId] {
+        if case let .Loaded(content) = self.content, let story = content.story {
+            return story.storyIds
+        } else {
+            return []
+        }
+    }
     
     public let webpageId: MediaId
     public let content: TelegramMediaWebpageContent

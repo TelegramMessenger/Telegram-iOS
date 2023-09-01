@@ -13,75 +13,10 @@ import EntityKeyboard
 import PagerComponent
 import MultilineTextComponent
 import EmojiStatusComponent
-import Postbox
 import PremiumUI
 import ProgressNavigationButtonNode
-
-private final class SwitchComponent: Component {
-    typealias EnvironmentType = Empty
-    
-    let value: Bool
-    let valueUpdated: (Bool) -> Void
-    
-    init(
-        value: Bool,
-        valueUpdated: @escaping (Bool) -> Void
-    ) {
-        self.value = value
-        self.valueUpdated = valueUpdated
-    }
-    
-    static func ==(lhs: SwitchComponent, rhs: SwitchComponent) -> Bool {
-        if lhs.value != rhs.value {
-            return false
-        }
-        return true
-    }
-    
-    final class View: UIView {
-        private let switchView: UISwitch
-    
-        private var component: SwitchComponent?
-        
-        override init(frame: CGRect) {
-            self.switchView = UISwitch()
-            
-            super.init(frame: frame)
-            
-            self.addSubview(self.switchView)
-            
-            self.switchView.addTarget(self, action: #selector(self.valueChanged(_:)), for: .valueChanged)
-        }
-        
-        required init?(coder: NSCoder) {
-            fatalError("init(coder:) has not been implemented")
-        }
-        
-        @objc func valueChanged(_ sender: Any) {
-            self.component?.valueUpdated(self.switchView.isOn)
-        }
-        
-        func update(component: SwitchComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            self.component = component
-          
-            self.switchView.setOn(component.value, animated: !transition.animation.isImmediate)
-            
-            self.switchView.sizeToFit()
-            self.switchView.frame = CGRect(origin: .zero, size: self.switchView.frame.size)
-                        
-            return self.switchView.frame.size
-        }
-    }
-
-    public func makeView() -> View {
-        return View(frame: CGRect())
-    }
-    
-    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
-    }
-}
-
+import Postbox
+import SwitchComponent
 
 private final class TitleFieldComponent: Component {
     typealias EnvironmentType = Empty
@@ -417,6 +352,7 @@ private final class TopicIconSelectionComponent: Component {
                     externalBottomPanelContainer: nil,
                     displayTopPanelBackground: .blur,
                     topPanelExtensionUpdated: { _, _ in },
+                    topPanelScrollingOffset: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { _, _ in },
                     switchToTextInput: {},
@@ -429,7 +365,8 @@ private final class TopicIconSelectionComponent: Component {
                     inputHeight: 0.0,
                     displayBottomPanel: false,
                     isExpanded: true,
-                    clipContentToTopPanel: false
+                    clipContentToTopPanel: false,
+                    useExternalSearchContainer: false
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -654,7 +591,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     areUnicodeEmojiEnabled: false,
                     areCustomEmojiEnabled: true,
                     chatPeerId: self.context.account.peerId,
-                    selectedItems: Set([MediaId(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
+                    selectedItems: Set([EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
                     topicTitle: self.title,
                     topicColor: self.iconColor
                 )
@@ -1012,8 +949,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         customLayout: nil,
                         externalBackground: nil,
                         externalExpansionView: nil,
+                        customContentView: nil,
                         useOpaqueTheme: true,
-                        hideBackground: false
+                        hideBackground: false,
+                        stateContext: nil,
+                        addImage: nil
                     )
                 }
             }

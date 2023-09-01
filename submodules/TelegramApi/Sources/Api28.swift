@@ -1,4 +1,228 @@
 public extension Api.messages {
+    enum SentEncryptedMessage: TypeConstructorDescription {
+        case sentEncryptedFile(date: Int32, file: Api.EncryptedFile)
+        case sentEncryptedMessage(date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .sentEncryptedFile(let date, let file):
+                    if boxed {
+                        buffer.appendInt32(-1802240206)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    file.serialize(buffer, true)
+                    break
+                case .sentEncryptedMessage(let date):
+                    if boxed {
+                        buffer.appendInt32(1443858741)
+                    }
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sentEncryptedFile(let date, let file):
+                return ("sentEncryptedFile", [("date", date as Any), ("file", file as Any)])
+                case .sentEncryptedMessage(let date):
+                return ("sentEncryptedMessage", [("date", date as Any)])
+    }
+    }
+    
+        public static func parse_sentEncryptedFile(_ reader: BufferReader) -> SentEncryptedMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.EncryptedFile?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.EncryptedFile
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.messages.SentEncryptedMessage.sentEncryptedFile(date: _1!, file: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sentEncryptedMessage(_ reader: BufferReader) -> SentEncryptedMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.messages.SentEncryptedMessage.sentEncryptedMessage(date: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum SponsoredMessages: TypeConstructorDescription {
+        case sponsoredMessages(flags: Int32, postsBetween: Int32?, messages: [Api.SponsoredMessage], chats: [Api.Chat], users: [Api.User])
+        case sponsoredMessagesEmpty
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
+                    if boxed {
+                        buffer.appendInt32(-907141753)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(postsBetween!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(messages.count))
+                    for item in messages {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .sponsoredMessagesEmpty:
+                    if boxed {
+                        buffer.appendInt32(406407439)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sponsoredMessages(let flags, let postsBetween, let messages, let chats, let users):
+                return ("sponsoredMessages", [("flags", flags as Any), ("postsBetween", postsBetween as Any), ("messages", messages as Any), ("chats", chats as Any), ("users", users as Any)])
+                case .sponsoredMessagesEmpty:
+                return ("sponsoredMessagesEmpty", [])
+    }
+    }
+    
+        public static func parse_sponsoredMessages(_ reader: BufferReader) -> SponsoredMessages? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: [Api.SponsoredMessage]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SponsoredMessage.self)
+            }
+            var _4: [Api.Chat]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
+            }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.messages.SponsoredMessages.sponsoredMessages(flags: _1!, postsBetween: _2, messages: _3!, chats: _4!, users: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_sponsoredMessagesEmpty(_ reader: BufferReader) -> SponsoredMessages? {
+            return Api.messages.SponsoredMessages.sponsoredMessagesEmpty
+        }
+    
+    }
+}
+public extension Api.messages {
+    enum StickerSet: TypeConstructorDescription {
+        case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], keywords: [Api.StickerKeyword], documents: [Api.Document])
+        case stickerSetNotModified
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .stickerSet(let set, let packs, let keywords, let documents):
+                    if boxed {
+                        buffer.appendInt32(1846886166)
+                    }
+                    set.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(packs.count))
+                    for item in packs {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keywords.count))
+                    for item in keywords {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(documents.count))
+                    for item in documents {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .stickerSetNotModified:
+                    if boxed {
+                        buffer.appendInt32(-738646805)
+                    }
+                    
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerSet(let set, let packs, let keywords, let documents):
+                return ("stickerSet", [("set", set as Any), ("packs", packs as Any), ("keywords", keywords as Any), ("documents", documents as Any)])
+                case .stickerSetNotModified:
+                return ("stickerSetNotModified", [])
+    }
+    }
+    
+        public static func parse_stickerSet(_ reader: BufferReader) -> StickerSet? {
+            var _1: Api.StickerSet?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StickerSet
+            }
+            var _2: [Api.StickerPack]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
+            }
+            var _3: [Api.StickerKeyword]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerKeyword.self)
+            }
+            var _4: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.StickerSet.stickerSet(set: _1!, packs: _2!, keywords: _3!, documents: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_stickerSetNotModified(_ reader: BufferReader) -> StickerSet? {
+            return Api.messages.StickerSet.stickerSetNotModified
+        }
+    
+    }
+}
+public extension Api.messages {
     enum StickerSetInstallResult: TypeConstructorDescription {
         case stickerSetInstallResultArchive(sets: [Api.StickerSetCovered])
         case stickerSetInstallResultSuccess
@@ -198,19 +422,24 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum VotesList: TypeConstructorDescription {
-        case votesList(flags: Int32, count: Int32, votes: [Api.MessageUserVote], users: [Api.User], nextOffset: String?)
+        case votesList(flags: Int32, count: Int32, votes: [Api.MessagePeerVote], chats: [Api.Chat], users: [Api.User], nextOffset: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .votesList(let flags, let count, let votes, let users, let nextOffset):
+                case .votesList(let flags, let count, let votes, let chats, let users, let nextOffset):
                     if boxed {
-                        buffer.appendInt32(136574537)
+                        buffer.appendInt32(1218005070)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(count, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(votes.count))
                     for item in votes {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(chats.count))
+                    for item in chats {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -225,8 +454,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .votesList(let flags, let count, let votes, let users, let nextOffset):
-                return ("votesList", [("flags", flags as Any), ("count", count as Any), ("votes", votes as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
+                case .votesList(let flags, let count, let votes, let chats, let users, let nextOffset):
+                return ("votesList", [("flags", flags as Any), ("count", count as Any), ("votes", votes as Any), ("chats", chats as Any), ("users", users as Any), ("nextOffset", nextOffset as Any)])
     }
     }
     
@@ -235,23 +464,28 @@ public extension Api.messages {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Api.MessageUserVote]?
+            var _3: [Api.MessagePeerVote]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageUserVote.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessagePeerVote.self)
             }
-            var _4: [Api.User]?
+            var _4: [Api.Chat]?
             if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
             }
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, users: _4!, nextOffset: _5)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.messages.VotesList.votesList(flags: _1!, count: _2!, votes: _3!, chats: _4!, users: _5!, nextOffset: _6)
             }
             else {
                 return nil
@@ -1352,366 +1586,6 @@ public extension Api.stats {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api.stats {
-    enum MegagroupStats: TypeConstructorDescription {
-        case megagroupStats(period: Api.StatsDateRangeDays, members: Api.StatsAbsValueAndPrev, messages: Api.StatsAbsValueAndPrev, viewers: Api.StatsAbsValueAndPrev, posters: Api.StatsAbsValueAndPrev, growthGraph: Api.StatsGraph, membersGraph: Api.StatsGraph, newMembersBySourceGraph: Api.StatsGraph, languagesGraph: Api.StatsGraph, messagesGraph: Api.StatsGraph, actionsGraph: Api.StatsGraph, topHoursGraph: Api.StatsGraph, weekdaysGraph: Api.StatsGraph, topPosters: [Api.StatsGroupTopPoster], topAdmins: [Api.StatsGroupTopAdmin], topInviters: [Api.StatsGroupTopInviter], users: [Api.User])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
-                    if boxed {
-                        buffer.appendInt32(-276825834)
-                    }
-                    period.serialize(buffer, true)
-                    members.serialize(buffer, true)
-                    messages.serialize(buffer, true)
-                    viewers.serialize(buffer, true)
-                    posters.serialize(buffer, true)
-                    growthGraph.serialize(buffer, true)
-                    membersGraph.serialize(buffer, true)
-                    newMembersBySourceGraph.serialize(buffer, true)
-                    languagesGraph.serialize(buffer, true)
-                    messagesGraph.serialize(buffer, true)
-                    actionsGraph.serialize(buffer, true)
-                    topHoursGraph.serialize(buffer, true)
-                    weekdaysGraph.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topPosters.count))
-                    for item in topPosters {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topAdmins.count))
-                    for item in topAdmins {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(topInviters.count))
-                    for item in topInviters {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .megagroupStats(let period, let members, let messages, let viewers, let posters, let growthGraph, let membersGraph, let newMembersBySourceGraph, let languagesGraph, let messagesGraph, let actionsGraph, let topHoursGraph, let weekdaysGraph, let topPosters, let topAdmins, let topInviters, let users):
-                return ("megagroupStats", [("period", period as Any), ("members", members as Any), ("messages", messages as Any), ("viewers", viewers as Any), ("posters", posters as Any), ("growthGraph", growthGraph as Any), ("membersGraph", membersGraph as Any), ("newMembersBySourceGraph", newMembersBySourceGraph as Any), ("languagesGraph", languagesGraph as Any), ("messagesGraph", messagesGraph as Any), ("actionsGraph", actionsGraph as Any), ("topHoursGraph", topHoursGraph as Any), ("weekdaysGraph", weekdaysGraph as Any), ("topPosters", topPosters as Any), ("topAdmins", topAdmins as Any), ("topInviters", topInviters as Any), ("users", users as Any)])
-    }
-    }
-    
-        public static func parse_megagroupStats(_ reader: BufferReader) -> MegagroupStats? {
-            var _1: Api.StatsDateRangeDays?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StatsDateRangeDays
-            }
-            var _2: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _3: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _4: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _4 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _5: Api.StatsAbsValueAndPrev?
-            if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.StatsAbsValueAndPrev
-            }
-            var _6: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _7: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _8: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _8 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _9: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _9 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _10: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _11: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _12: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _12 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _13: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _13 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            var _14: [Api.StatsGroupTopPoster]?
-            if let _ = reader.readInt32() {
-                _14 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopPoster.self)
-            }
-            var _15: [Api.StatsGroupTopAdmin]?
-            if let _ = reader.readInt32() {
-                _15 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopAdmin.self)
-            }
-            var _16: [Api.StatsGroupTopInviter]?
-            if let _ = reader.readInt32() {
-                _16 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StatsGroupTopInviter.self)
-            }
-            var _17: [Api.User]?
-            if let _ = reader.readInt32() {
-                _17 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = _8 != nil
-            let _c9 = _9 != nil
-            let _c10 = _10 != nil
-            let _c11 = _11 != nil
-            let _c12 = _12 != nil
-            let _c13 = _13 != nil
-            let _c14 = _14 != nil
-            let _c15 = _15 != nil
-            let _c16 = _16 != nil
-            let _c17 = _17 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.stats.MegagroupStats.megagroupStats(period: _1!, members: _2!, messages: _3!, viewers: _4!, posters: _5!, growthGraph: _6!, membersGraph: _7!, newMembersBySourceGraph: _8!, languagesGraph: _9!, messagesGraph: _10!, actionsGraph: _11!, topHoursGraph: _12!, weekdaysGraph: _13!, topPosters: _14!, topAdmins: _15!, topInviters: _16!, users: _17!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.stats {
-    enum MessageStats: TypeConstructorDescription {
-        case messageStats(viewsGraph: Api.StatsGraph)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .messageStats(let viewsGraph):
-                    if boxed {
-                        buffer.appendInt32(-1986399595)
-                    }
-                    viewsGraph.serialize(buffer, true)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .messageStats(let viewsGraph):
-                return ("messageStats", [("viewsGraph", viewsGraph as Any)])
-    }
-    }
-    
-        public static func parse_messageStats(_ reader: BufferReader) -> MessageStats? {
-            var _1: Api.StatsGraph?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.StatsGraph
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.stats.MessageStats.messageStats(viewsGraph: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.stickers {
-    enum SuggestedShortName: TypeConstructorDescription {
-        case suggestedShortName(shortName: String)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .suggestedShortName(let shortName):
-                    if boxed {
-                        buffer.appendInt32(-2046910401)
-                    }
-                    serializeString(shortName, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .suggestedShortName(let shortName):
-                return ("suggestedShortName", [("shortName", shortName as Any)])
-    }
-    }
-    
-        public static func parse_suggestedShortName(_ reader: BufferReader) -> SuggestedShortName? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.stickers.SuggestedShortName.suggestedShortName(shortName: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.storage {
-    enum FileType: TypeConstructorDescription {
-        case fileGif
-        case fileJpeg
-        case fileMov
-        case fileMp3
-        case fileMp4
-        case filePartial
-        case filePdf
-        case filePng
-        case fileUnknown
-        case fileWebp
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .fileGif:
-                    if boxed {
-                        buffer.appendInt32(-891180321)
-                    }
-                    
-                    break
-                case .fileJpeg:
-                    if boxed {
-                        buffer.appendInt32(8322574)
-                    }
-                    
-                    break
-                case .fileMov:
-                    if boxed {
-                        buffer.appendInt32(1258941372)
-                    }
-                    
-                    break
-                case .fileMp3:
-                    if boxed {
-                        buffer.appendInt32(1384777335)
-                    }
-                    
-                    break
-                case .fileMp4:
-                    if boxed {
-                        buffer.appendInt32(-1278304028)
-                    }
-                    
-                    break
-                case .filePartial:
-                    if boxed {
-                        buffer.appendInt32(1086091090)
-                    }
-                    
-                    break
-                case .filePdf:
-                    if boxed {
-                        buffer.appendInt32(-1373745011)
-                    }
-                    
-                    break
-                case .filePng:
-                    if boxed {
-                        buffer.appendInt32(172975040)
-                    }
-                    
-                    break
-                case .fileUnknown:
-                    if boxed {
-                        buffer.appendInt32(-1432995067)
-                    }
-                    
-                    break
-                case .fileWebp:
-                    if boxed {
-                        buffer.appendInt32(276907596)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .fileGif:
-                return ("fileGif", [])
-                case .fileJpeg:
-                return ("fileJpeg", [])
-                case .fileMov:
-                return ("fileMov", [])
-                case .fileMp3:
-                return ("fileMp3", [])
-                case .fileMp4:
-                return ("fileMp4", [])
-                case .filePartial:
-                return ("filePartial", [])
-                case .filePdf:
-                return ("filePdf", [])
-                case .filePng:
-                return ("filePng", [])
-                case .fileUnknown:
-                return ("fileUnknown", [])
-                case .fileWebp:
-                return ("fileWebp", [])
-    }
-    }
-    
-        public static func parse_fileGif(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileGif
-        }
-        public static func parse_fileJpeg(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileJpeg
-        }
-        public static func parse_fileMov(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileMov
-        }
-        public static func parse_fileMp3(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileMp3
-        }
-        public static func parse_fileMp4(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileMp4
-        }
-        public static func parse_filePartial(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.filePartial
-        }
-        public static func parse_filePdf(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.filePdf
-        }
-        public static func parse_filePng(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.filePng
-        }
-        public static func parse_fileUnknown(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileUnknown
-        }
-        public static func parse_fileWebp(_ reader: BufferReader) -> FileType? {
-            return Api.storage.FileType.fileWebp
         }
     
     }

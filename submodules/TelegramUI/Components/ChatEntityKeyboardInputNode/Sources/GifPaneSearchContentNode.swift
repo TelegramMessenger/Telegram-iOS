@@ -11,10 +11,11 @@ import AppBundle
 import ChatControllerInteraction
 import MultiplexedVideoNode
 import ChatPresentationInterfaceState
+import EntityKeyboardGifContent
 
 final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     private let context: AccountContext
-    private let controllerInteraction: ChatControllerInteraction
+    private let interaction: ChatEntityKeyboardInputNode.Interaction
     private let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     private var theme: PresentationTheme
@@ -44,9 +45,9 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
     
     private var hasInitialText = false
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, interaction: ChatEntityKeyboardInputNode.Interaction, inputNodeInteraction: ChatMediaInputNodeInteraction, trendingPromise: Promise<ChatMediaInputGifPaneTrendingState?>) {
         self.context = context
-        self.controllerInteraction = controllerInteraction
+        self.interaction = interaction
         self.inputNodeInteraction = inputNodeInteraction
         self.trendingPromise = trendingPromise
         
@@ -226,9 +227,9 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             
             multiplexedNode.fileSelected = { [weak self] file, sourceNode, sourceRect in
                 if let (collection, result) = file.contextResult {
-                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, false, false)
+                    let _ = self?.interaction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, false, false)
                 } else {
-                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, false, false)
+                    let _ = self?.interaction.sendGif(file.file, sourceNode.view, sourceRect, false, false)
                 }
             }
             

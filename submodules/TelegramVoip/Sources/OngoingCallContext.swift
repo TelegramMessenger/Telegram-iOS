@@ -791,7 +791,7 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    private let tempStatsLogFile: EngineTempBoxFile
+    private let tempStatsLogFile: EngineTempBox.File
     
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     
@@ -1423,7 +1423,7 @@ private final class CallDirectConnectionImpl: NSObject, OngoingCallDirectConnect
             self.connection?.receiveMessage(completion: { [weak self] data, _, _, error in
                 assert(queue.isCurrent())
                 
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
                 

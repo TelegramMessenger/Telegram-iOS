@@ -1,4 +1,226 @@
 public extension Api {
+    enum MaskCoords: TypeConstructorDescription {
+        case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .maskCoords(let n, let x, let y, let zoom):
+                    if boxed {
+                        buffer.appendInt32(-1361650766)
+                    }
+                    serializeInt32(n, buffer: buffer, boxed: false)
+                    serializeDouble(x, buffer: buffer, boxed: false)
+                    serializeDouble(y, buffer: buffer, boxed: false)
+                    serializeDouble(zoom, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .maskCoords(let n, let x, let y, let zoom):
+                return ("maskCoords", [("n", n as Any), ("x", x as Any), ("y", y as Any), ("zoom", zoom as Any)])
+    }
+    }
+    
+        public static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Double?
+            _2 = reader.readDouble()
+            var _3: Double?
+            _3 = reader.readDouble()
+            var _4: Double?
+            _4 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MaskCoords.maskCoords(n: _1!, x: _2!, y: _3!, zoom: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum MediaArea: TypeConstructorDescription {
+        case inputMediaAreaVenue(coordinates: Api.MediaAreaCoordinates, queryId: Int64, resultId: String)
+        case mediaAreaGeoPoint(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint)
+        case mediaAreaVenue(coordinates: Api.MediaAreaCoordinates, geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputMediaAreaVenue(let coordinates, let queryId, let resultId):
+                    if boxed {
+                        buffer.appendInt32(-1300094593)
+                    }
+                    coordinates.serialize(buffer, true)
+                    serializeInt64(queryId, buffer: buffer, boxed: false)
+                    serializeString(resultId, buffer: buffer, boxed: false)
+                    break
+                case .mediaAreaGeoPoint(let coordinates, let geo):
+                    if boxed {
+                        buffer.appendInt32(-544523486)
+                    }
+                    coordinates.serialize(buffer, true)
+                    geo.serialize(buffer, true)
+                    break
+                case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
+                    if boxed {
+                        buffer.appendInt32(-1098720356)
+                    }
+                    coordinates.serialize(buffer, true)
+                    geo.serialize(buffer, true)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeString(address, buffer: buffer, boxed: false)
+                    serializeString(provider, buffer: buffer, boxed: false)
+                    serializeString(venueId, buffer: buffer, boxed: false)
+                    serializeString(venueType, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputMediaAreaVenue(let coordinates, let queryId, let resultId):
+                return ("inputMediaAreaVenue", [("coordinates", coordinates as Any), ("queryId", queryId as Any), ("resultId", resultId as Any)])
+                case .mediaAreaGeoPoint(let coordinates, let geo):
+                return ("mediaAreaGeoPoint", [("coordinates", coordinates as Any), ("geo", geo as Any)])
+                case .mediaAreaVenue(let coordinates, let geo, let title, let address, let provider, let venueId, let venueType):
+                return ("mediaAreaVenue", [("coordinates", coordinates as Any), ("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
+    }
+    }
+    
+        public static func parse_inputMediaAreaVenue(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            _3 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MediaArea.inputMediaAreaVenue(coordinates: _1!, queryId: _2!, resultId: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaGeoPoint(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MediaArea.mediaAreaGeoPoint(coordinates: _1!, geo: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_mediaAreaVenue(_ reader: BufferReader) -> MediaArea? {
+            var _1: Api.MediaAreaCoordinates?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.MediaAreaCoordinates
+            }
+            var _2: Api.GeoPoint?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.GeoPoint
+            }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: String?
+            _6 = parseString(reader)
+            var _7: String?
+            _7 = parseString(reader)
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.MediaArea.mediaAreaVenue(coordinates: _1!, geo: _2!, title: _3!, address: _4!, provider: _5!, venueId: _6!, venueType: _7!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum MediaAreaCoordinates: TypeConstructorDescription {
+        case mediaAreaCoordinates(x: Double, y: Double, w: Double, h: Double, rotation: Double)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .mediaAreaCoordinates(let x, let y, let w, let h, let rotation):
+                    if boxed {
+                        buffer.appendInt32(64088654)
+                    }
+                    serializeDouble(x, buffer: buffer, boxed: false)
+                    serializeDouble(y, buffer: buffer, boxed: false)
+                    serializeDouble(w, buffer: buffer, boxed: false)
+                    serializeDouble(h, buffer: buffer, boxed: false)
+                    serializeDouble(rotation, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .mediaAreaCoordinates(let x, let y, let w, let h, let rotation):
+                return ("mediaAreaCoordinates", [("x", x as Any), ("y", y as Any), ("w", w as Any), ("h", h as Any), ("rotation", rotation as Any)])
+    }
+    }
+    
+        public static func parse_mediaAreaCoordinates(_ reader: BufferReader) -> MediaAreaCoordinates? {
+            var _1: Double?
+            _1 = reader.readDouble()
+            var _2: Double?
+            _2 = reader.readDouble()
+            var _3: Double?
+            _3 = reader.readDouble()
+            var _4: Double?
+            _4 = reader.readDouble()
+            var _5: Double?
+            _5 = reader.readDouble()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MediaAreaCoordinates.mediaAreaCoordinates(x: _1!, y: _2!, w: _3!, h: _4!, rotation: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum Message: TypeConstructorDescription {
         case message(flags: Int32, id: Int32, fromId: Api.Peer?, peerId: Api.Peer, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, replyTo: Api.MessageReplyHeader?, date: Int32, message: String, media: Api.MessageMedia?, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, views: Int32?, forwards: Int32?, replies: Api.MessageReplies?, editDate: Int32?, postAuthor: String?, groupedId: Int64?, reactions: Api.MessageReactions?, restrictionReason: [Api.RestrictionReason]?, ttlPeriod: Int32?)
         case messageEmpty(flags: Int32, id: Int32, peerId: Api.Peer?)

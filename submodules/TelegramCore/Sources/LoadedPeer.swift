@@ -3,7 +3,7 @@ import TelegramApi
 import SwiftSignalKit
 
 
-public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Signal<Peer, NoError> {
+public func actualizedPeer(accountPeerId: PeerId, postbox: Postbox, network: Network, peer: Peer) -> Signal<Peer, NoError> {
     return postbox.transaction { transaction -> Signal<Peer, NoError> in
         var signal: Signal<Peer, NoError>
         var actualizeChannel: Api.InputChannel?
@@ -30,31 +30,30 @@ public func actualizedPeer(postbox: Postbox, network: Network, peer: Peer) -> Si
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Peer, NoError> in
-                    var remotePeer: Peer?
-                    if let result = result {
-                        let chats: [Api.Chat]
-                        switch result {
+                    return postbox.transaction { transaction -> Signal<Peer, NoError> in
+                        var parsedPeers: AccumulatedPeers?
+                        if let result = result {
+                            let chats: [Api.Chat]
+                            switch result {
                             case let .chats(apiChats):
                                 chats = apiChats
                             case let .chatsSlice(_, apiChats):
                                 chats = apiChats
-                        }
-                        for chat in chats {
-                            if let parsedPeer = parseTelegramGroupOrChannel(chat: chat), parsedPeer.id == peer.id {
-                                remotePeer = parsedPeer
+                            }
+                            let parsedPeersValue = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                            if parsedPeersValue.allIds.contains(peer.id) {
+                                parsedPeers = parsedPeersValue
                             }
                         }
-                    }
-                    if let remotePeer = remotePeer {
-                        return postbox.transaction { transaction -> Peer in
-                            updatePeers(transaction: transaction, peers: [remotePeer], update: { _, updated in
-                                return updated
-                            })
-                            return remotePeer
+                        if let parsedPeers = parsedPeers {
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                            if let peer = transaction.getPeer(peer.id) {
+                                return .single(peer)
+                            }
                         }
-                    } else {
                         return .complete()
                     }
+                    |> switchToLatest
                 }
             signal = signal |> then(remote)
         }

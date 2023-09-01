@@ -212,12 +212,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     //self?.chatDisplayNode.dismissInput()
                 }, present: { c, a in
                     self?.presentController(c, .window(.root), a)
-                }, transitionNode: { messageId, media in
+                }, transitionNode: { messageId, media, adjustRect in
                     var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if let strongSelf = self {
                         strongSelf.listNode.forEachItemNode { itemNode in
                             if let itemNode = itemNode as? ChatMessageItemView {
-                                if let result = itemNode.transitionNode(id: messageId, media: media) {
+                                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: adjustRect) {
                                     selectedNode = result
                                 }
                             }
@@ -560,6 +560,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
+        }, navigateToStory: { _, _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
@@ -977,6 +978,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .gameStart:
                         break
+                    case .story:
+                        break
                     case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
@@ -1088,7 +1091,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     text = strongSelf.presentationData.strings.Conversation_AutoremoveOff
                 }
                 if let text = text {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                 }
             })
         })

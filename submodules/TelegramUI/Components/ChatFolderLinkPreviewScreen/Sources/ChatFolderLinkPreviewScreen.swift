@@ -10,7 +10,6 @@ import TelegramPresentationData
 import AccountContext
 import TelegramCore
 import MultilineTextComponent
-import Postbox
 import SolidRoundedButtonComponent
 import PresentationDataUtils
 import Markdown
@@ -1409,7 +1408,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case .generic:
                                 text = presentationData.strings.ChatListFilter_CreateLinkUnknownError
                             case let .sharedFolderLimitExceeded(limit, _):
-                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, action: {  [weak navigationController] in
+                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, forceDark: false, cancel: {}, action: {  [weak navigationController] in
                                     guard let navigationController else {
                                         return
                                     }
@@ -1420,7 +1419,7 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                 
                                 return
                             case let .limitExceeded(limit, _):
-                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .linksPerSharedFolder, count: limit, action: {  [weak navigationController] in
+                                let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {  [weak navigationController] in
                                     guard let navigationController else {
                                         return
                                     }

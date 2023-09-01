@@ -1,5 +1,7 @@
 import Foundation
 import UIKit
+import AsyncDisplayKit
+import AVFoundation
 import Display
 import SwiftSignalKit
 import TelegramCore
@@ -7,130 +9,25 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import StickerResources
 import AccountContext
+import MediaEditor
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
 
-public final class DrawingStickerEntity: DrawingEntity, Codable {
-    public enum Content {
-        case file(TelegramMediaFile)
-        case image(UIImage)
-    }
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case file
-        case image
-        case referenceDrawingSize
-        case position
-        case scale
-        case rotation
-        case mirrored
-    }
-    
-    public let uuid: UUID
-    public let content: Content
-    
-    public var referenceDrawingSize: CGSize
-    public var position: CGPoint
-    public var scale: CGFloat
-    public var rotation: CGFloat
-    public var mirrored: Bool
-    
-    public var color: DrawingColor = DrawingColor.clear
-    public var lineWidth: CGFloat = 0.0
-    
-    public var center: CGPoint {
-        return self.position
-    }
-    
-    public var baseSize: CGSize {
-        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.2)
-        return CGSize(width: size, height: size)
-    }
-    
-    public var isAnimated: Bool {
-        switch self.content {
-        case let .file(file):
-            return file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm"
-        case .image:
-            return false
-        }
-    }
-    
-    public init(content: Content) {
-        self.uuid = UUID()
-        self.content = content
-        
-        self.referenceDrawingSize = .zero
-        self.position = CGPoint()
-        self.scale = 1.0
-        self.rotation = 0.0
-        self.mirrored = false
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        if let file = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .file) {
-            self.content = .file(file)
-        } else if let imageData = try container.decodeIfPresent(Data.self, forKey: .image), let image = UIImage(data: imageData) {
-            self.content = .image(image)
-        } else {
-            fatalError()
-        }
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.position = try container.decode(CGPoint.self, forKey: .position)
-        self.scale = try container.decode(CGFloat.self, forKey: .scale)
-        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
-        self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        switch self.content {
-        case let .file(file):
-            try container.encode(file, forKey: .file)
-        case let .image(image):
-            try container.encodeIfPresent(image.pngData(), forKey: .image)
-        }
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.position, forKey: .position)
-        try container.encode(self.scale, forKey: .scale)
-        try container.encode(self.rotation, forKey: .rotation)
-        try container.encode(self.mirrored, forKey: .mirrored)
-    }
-        
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingStickerEntity(content: self.content)
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.position = self.position
-        newEntity.scale = self.scale
-        newEntity.rotation = self.rotation
-        newEntity.mirrored = self.mirrored
-        return newEntity
-    }
-    
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingStickerEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-    }
-}
-
-final class DrawingStickerEntityView: DrawingEntityView {
+public final class DrawingStickerEntityView: DrawingEntityView {    
     private var stickerEntity: DrawingStickerEntity {
         return self.entity as! DrawingStickerEntity
     }
     
     var started: ((Double) -> Void)?
     
+    public var updated: () -> Void = {}
+    
     private var currentSize: CGSize?
     
     private let imageNode: TransformImageNode
     private var animationNode: AnimatedStickerNode?
-    
+    private var videoNode: UniversalVideoNode?
+        
     private var didSetUpAnimationNode = false
     private let stickerFetchedDisposable = MetaDisposable()
     private let cachedDisposable = MetaDisposable()
@@ -166,8 +63,16 @@ final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var image: UIImage? {
-        if case let .image(image) = self.stickerEntity.content {
+        if case let .image(image, _) = self.stickerEntity.content {
             return image
+        } else {
+            return nil
+        }
+    }
+    
+    private var video: TelegramMediaFile? {
+        if case let .video(file) = self.stickerEntity.content {
+            return file
         } else {
             return nil
         }
@@ -175,10 +80,14 @@ final class DrawingStickerEntityView: DrawingEntityView {
     
     private var dimensions: CGSize {
         switch self.stickerEntity.content {
-            case let .file(file):
-                return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
-            case let .image(image):
-                return image.size
+        case let .file(file):
+            return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        case let .image(image, _):
+            return image.size
+        case let .video(file):
+            return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
+        case .dualVideoReference:
+            return CGSize(width: 512.0, height: 512.0)
         }
     }
     
@@ -192,8 +101,11 @@ final class DrawingStickerEntityView: DrawingEntityView {
                         self.animationNode = animationNode
                         animationNode.started = { [weak self, weak animationNode] in
                             self?.imageNode.isHidden = true
-                            
+                                                        
                             if let animationNode = animationNode {
+                                if animationNode.currentFrameCount == 1 {
+                                    self?.stickerEntity.isExplicitlyStatic = true
+                                }
                                 let _ = (animationNode.status
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -202,6 +114,10 @@ final class DrawingStickerEntityView: DrawingEntityView {
                             }
                         }
                         self.addSubnode(animationNode)
+                        
+                        if file.isCustomTemplateEmoji {
+                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
+                        }
                     }
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: file.resource).start())
@@ -219,33 +135,110 @@ final class DrawingStickerEntityView: DrawingEntityView {
                 self.setNeedsLayout()
             }
         } else if let image = self.image {
+            func drawImageWithOrientation(_ image: UIImage, size: CGSize, in context: CGContext) {
+                let imageSize: CGSize
+                
+                switch image.imageOrientation {
+                case .left, .leftMirrored, .right, .rightMirrored:
+                    imageSize = CGSize(width: size.height, height: size.width)
+                default:
+                    imageSize = size
+                }
+                
+                let imageRect = CGRect(origin: .zero, size: imageSize)
+                                
+                switch image.imageOrientation {
+                case .down, .downMirrored:
+                    context.translateBy(x: imageSize.width, y: imageSize.height)
+                    context.rotate(by: CGFloat.pi)
+                case .left, .leftMirrored:
+                    context.translateBy(x: imageSize.width, y: 0)
+                    context.rotate(by: CGFloat.pi / 2)
+                case .right, .rightMirrored:
+                    context.translateBy(x: 0, y: imageSize.height)
+                    context.rotate(by: -CGFloat.pi / 2)
+                default:
+                    break
+                }
+                
+                context.draw(image.cgImage!, in: imageRect)
+            }
+            
+            var synchronous = false
+            if case let .image(_, type) = self.stickerEntity.content {
+                synchronous = type == .dualPhoto
+            }
             self.imageNode.setSignal(.single({ arguments -> DrawingContext? in
                 let context = DrawingContext(size: arguments.drawingSize, opaque: false, clear: true)
                 context?.withFlippedContext({ ctx in
-                    if let cgImage = image.cgImage {
-                        ctx.draw(cgImage, in: CGRect(origin: .zero, size: arguments.drawingSize))
-                    }
+                    drawImageWithOrientation(image, size: arguments.drawingSize, in: ctx)
                 })
                 return context
-            }))
+            }), attemptSynchronously: synchronous)
             self.setNeedsLayout()
+        } else if case let .video(file) = self.stickerEntity.content {
+            let videoNode = UniversalVideoNode(
+                postbox: self.context.account.postbox,
+                audioSession: self.context.sharedContext.mediaManager.audioSession,
+                manager: self.context.sharedContext.mediaManager.universalVideoManager,
+                decoration: StickerVideoDecoration(),
+                content: NativeVideoContent(
+                    id: .contextResult(0, "\(UInt64.random(in: 0 ... UInt64.max))"),
+                    userLocation: .other,
+                    fileReference: .standalone(media: file),
+                    imageReference: nil,
+                    streamVideo: .story,
+                    loopVideo: true,
+                    enableSound: false,
+                    soundMuted: true,
+                    beginWithAmbientSound: false,
+                    mixWithOthers: true,
+                    useLargeThumbnail: false,
+                    autoFetchFullSizeThumbnail: false,
+                    tempFilePath: nil,
+                    captureProtected: false,
+                    hintDimensions: file.dimensions?.cgSize,
+                    storeAfterDownload: nil,
+                    displayImage: false,
+                    hasSentFramesToDisplay: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.videoNode?.isHidden = false
+                    }
+                ),
+                priority: .gallery
+            )
+            videoNode.canAttachContent = true
+            videoNode.isUserInteractionEnabled = false
+            videoNode.clipsToBounds = true
+            self.addSubnode(videoNode)
+            self.videoNode = videoNode
+            self.setNeedsLayout()
+            videoNode.play()
         }
     }
     
-    override func play() {
+    public override func play() {
         self.isVisible = true
         self.applyVisibility()
+        
+        self.videoNode?.play()
     }
     
-    override func pause() {
+    public override func pause() {
         self.isVisible = false
         self.applyVisibility()
+        
+        self.videoNode?.pause()
     }
     
-    override func seek(to timestamp: Double) {
+    public override func seek(to timestamp: Double) {
         self.isVisible = false
         self.isPlaying = false
         self.animationNode?.seekTo(.timestamp(timestamp))
+        
+        self.videoNode?.seek(timestamp)
     }
     
     override func resetToStart() {
@@ -270,7 +263,8 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
-                    self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
+                    let pathPrefix = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
+                    self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
                     
                     self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                     |> deliverOn(Queue.concurrentDefaultQueue())).start())
@@ -281,7 +275,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var didApplyVisibility = false
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         let size = self.bounds.size
@@ -289,14 +283,15 @@ final class DrawingStickerEntityView: DrawingEntityView {
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
             
-            let sideSize: CGFloat = size.width
+            let sideSize: CGFloat = max(size.width, size.height)
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
             let imageSize = self.dimensions.aspectFitted(boundingSize)
+            let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
-            self.imageNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+            self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
-                animationNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+                animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)
                 
                 if !self.didApplyVisibility {
@@ -304,11 +299,19 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     self.applyVisibility()
                 }
             }
+            
+            if let videoNode = self.videoNode {
+                let videoSize = self.dimensions.aspectFitted(boundingSize)
+                videoNode.cornerRadius = floor(videoSize.width * 0.03)
+                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - videoSize.width) * 0.5), y: floor((size.height - videoSize.height) * 0.5)), size: videoSize)
+                videoNode.updateLayout(size: videoSize, transition: .immediate)
+            }
+            
             self.update(animated: false)
         }
     }
         
-    override func update(animated: Bool) {
+    public override func update(animated: Bool) {
         self.center = self.stickerEntity.position
         
         let size = self.stickerEntity.baseSize
@@ -335,14 +338,22 @@ final class DrawingStickerEntityView: DrawingEntityView {
             UIView.animate(withDuration: 0.25, animations: {
                 self.imageNode.transform = animationTargetTransform
                 self.animationNode?.transform = animationTargetTransform
+                self.videoNode?.transform = animationTargetTransform
             }, completion: { finished in
                 self.imageNode.transform = staticTransform
                 self.animationNode?.transform = staticTransform
+                self.videoNode?.transform = staticTransform
             })
         } else {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
             self.imageNode.transform = staticTransform
             self.animationNode?.transform = staticTransform
+            self.videoNode?.transform = staticTransform
+            CATransaction.commit()
         }
+        
+        self.updated()
     
         super.update(animated: animated)
     }
@@ -366,7 +377,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
         self.popIdentityTransformForMeasurement()
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }
@@ -376,12 +387,10 @@ final class DrawingStickerEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     private let border = SimpleShapeLayer()
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
     
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
@@ -413,27 +422,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             
             self.layer.addSublayer(handle)
         }
-        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+                
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -452,14 +444,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         return 18.0
     }
     
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
-    
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
@@ -474,12 +462,18 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
                         self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let parentLocation = gestureRecognizer.location(in: self.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)
@@ -487,7 +481,11 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             var updatedPosition = entity.position
             var updatedScale = entity.scale
             var updatedRotation = entity.rotation
+            
             if self.currentHandle === self.leftHandle || self.currentHandle === self.rightHandle {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
                 var deltaX = gestureRecognizer.translation(in: self).x
                 if self.currentHandle === self.leftHandle {
                     deltaX *= -1.0
@@ -501,14 +499,17 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
                 } else {
                     newAngle = atan2(parentLocation.y - self.center.y, parentLocation.x - self.center.x)
                 }
-                
-             //   let delta = newAngle - updatedRotation
-                updatedRotation = newAngle// self.snapTool.update(entityView: entityView, velocity: 0.0, delta: delta, updatedRotation: newAngle)
+                var delta = newAngle - updatedRotation
+                if delta < -.pi {
+                    delta = 2.0 * .pi + delta
+                }
+                let velocityValue = sqrt(velocity.x * velocity.x + velocity.y * velocity.y) / 1000.0
+                updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocityValue, delta: delta, updatedRotation: newAngle, skipMultiplier: 1.0)
             } else if self.currentHandle === self.layer {
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.position = updatedPosition
@@ -522,6 +523,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             if self.currentHandle != nil {
                 self.snapTool.rotationReset()
             }
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -533,14 +535,23 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
+        
+        if self.currentHandle != nil && self.currentHandle !== self.layer {
+            return
+        }
 
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.scale = entity.scale * scale
             entityView.update()
 
             gestureRecognizer.scale = 1.0
+        case .cancelled, .ended:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -551,6 +562,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             return
         }
         
+        if self.currentHandle != nil && self.currentHandle !== self.layer {
+            return
+        }
+        
         let velocity = gestureRecognizer.velocity
         var updatedRotation = entity.rotation
         var rotation: CGFloat = 0.0
@@ -558,21 +573,23 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
+        
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
-        
+                
         entityView.onPositionUpdated(entity.position)
     }
     
@@ -581,13 +598,57 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
     }
     
     override func layoutSubviews() {
+        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+            return
+        }
+        
         let inset = self.selectionInset - 10.0
 
         let bounds = CGRect(origin: .zero, size: CGSize(width: entitySelectionViewHandleSize.width / self.scale, height: entitySelectionViewHandleSize.height / self.scale))
         let handleSize = CGSize(width: 9.0 / self.scale, height: 9.0 / self.scale)
         let handlePath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: (bounds.width - handleSize.width) / 2.0, y: (bounds.height - handleSize.height) / 2.0), size: handleSize), transform: nil)
         let lineWidth = (1.0 + UIScreenPixel) / self.scale
-
+                
+        let radius = (self.bounds.width - inset * 2.0) / 2.0
+        let circumference: CGFloat = 2.0 * .pi * radius
+        let relativeDashLength: CGFloat = 0.25
+        
+        self.border.lineWidth = 2.0 / self.scale
+        
+        let actualInset: CGFloat
+        if entity.isRectangle {
+            let aspectRatio = entity.baseSize.width / entity.baseSize.height
+            
+            let width: CGFloat
+            let height: CGFloat
+            
+            if entity.baseSize.width > entity.baseSize.height {
+                width = self.bounds.width - inset * 2.0
+                height = self.bounds.height / aspectRatio - inset * 2.0
+            } else {
+                width = self.bounds.width * aspectRatio - inset * 2.0
+                height = self.bounds.height - inset * 2.0
+            }
+            
+            actualInset = floorToScreenPixels((self.bounds.width - width) / 2.0)
+            
+            let cornerRadius: CGFloat = 12.0 - self.scale
+            let perimeter: CGFloat = 2.0 * (width + height - cornerRadius * (4.0 - .pi))
+            let count = 12
+            let dashLength = perimeter / CGFloat(count)
+            self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+            
+            self.border.path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: floorToScreenPixels((self.bounds.width - width) / 2.0), y: floorToScreenPixels((self.bounds.height - height) / 2.0)), size: CGSize(width: width, height: height)), cornerRadius: cornerRadius).cgPath
+        } else {
+            actualInset = inset
+            
+            let count = 10
+            let dashLength = circumference / CGFloat(count)
+            self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
+            
+            self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+        }
+        
         let handles = [
             self.leftHandle,
             self.rightHandle
@@ -599,218 +660,122 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView, UIG
             handle.lineWidth = lineWidth
         }
         
-        self.leftHandle.position = CGPoint(x: inset, y: self.bounds.midY)
-        self.rightHandle.position = CGPoint(x: self.bounds.maxX - inset, y: self.bounds.midY)
         
-
-        let radius = (self.bounds.width - inset * 2.0) / 2.0
-        let circumference: CGFloat = 2.0 * .pi * radius
-        let count = 10
-        let relativeDashLength: CGFloat = 0.25
-        let dashLength = circumference / CGFloat(count)
-        self.border.lineDashPattern = [dashLength * relativeDashLength, dashLength * relativeDashLength] as [NSNumber]
-        
-        self.border.lineWidth = 2.0 / self.scale
-        self.border.path = UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: inset, y: inset), size: CGSize(width: self.bounds.width - inset * 2.0, height: self.bounds.height - inset * 2.0))).cgPath
+        self.leftHandle.position = CGPoint(x: actualInset, y: self.bounds.midY)
+        self.rightHandle.position = CGPoint(x: self.bounds.maxX - actualInset, y: self.bounds.midY)
     }
 }
 
-private let snapTimeout = 1.0
-
-class DrawingEntitySnapTool {
-    private var xState: (skipped: CGFloat, waitForLeave: Bool)?
-    private var yState: (skipped: CGFloat, waitForLeave: Bool)?
-    private var rotationState: (angle: CGFloat, skipped: CGFloat, waitForLeave: Bool)?
+private final class StickerVideoDecoration: UniversalVideoDecoration {
+    public let backgroundNode: ASDisplayNode? = nil
+    public let contentContainerNode: ASDisplayNode
+    public let foregroundNode: ASDisplayNode? = nil
     
-    var onSnapXUpdated: (Bool) -> Void = { _ in }
-    var onSnapYUpdated: (Bool) -> Void = { _ in }
-    var onSnapRotationUpdated: (CGFloat?) -> Void = { _ in }
+    private var contentNode: (ASDisplayNode & UniversalVideoContentNode)?
     
-    var previousXSnapTimestamp: Double?
-    var previousYSnapTimestamp: Double?
-    var previousRotationSnapTimestamp: Double?
+    private var validLayoutSize: CGSize?
     
-    func reset() {
-        self.xState = nil
-        self.yState = nil
-    
-        self.onSnapXUpdated(false)
-        self.onSnapYUpdated(false)
+    public init() {
+        self.contentContainerNode = ASDisplayNode()
     }
     
-    func rotationReset() {
-        self.rotationState = nil
-        self.onSnapRotationUpdated(nil)
-    }
-    
-    func maybeSkipFromStart(entityView: DrawingEntityView, position: CGPoint) {
-        self.xState = nil
-        self.yState = nil
-        
-        let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        
-        if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
-            if position.x > snapLocation.x - snapXDelta && position.x < snapLocation.x + snapXDelta {
-                self.xState = (0.0, true)
+    public func updateContentNode(_ contentNode: (UniversalVideoContentNode & ASDisplayNode)?) {
+        if self.contentNode !== contentNode {
+            let previous = self.contentNode
+            self.contentNode = contentNode
+            
+            if let previous = previous {
+                if previous.supernode === self.contentContainerNode {
+                    previous.removeFromSupernode()
+                }
             }
             
-            if position.y > snapLocation.y - snapYDelta && position.y < snapLocation.y + snapYDelta {
-                self.yState = (0.0, true)
-            }
-        }
-    }
-        
-    func update(entityView: DrawingEntityView, velocity: CGPoint, delta: CGPoint, updatedPosition: CGPoint) -> CGPoint {
-        var updatedPosition = updatedPosition
-        
-        let currentTimestamp = CACurrentMediaTime()
-        
-        let snapXDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapXVelocity: CGFloat = snapXDelta * 12.0
-        let snapXSkipTranslation: CGFloat = snapXDelta * 2.0
-        
-        if abs(velocity.x) < snapXVelocity || self.xState?.waitForLeave == true {
-            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
-                if let (skipped, waitForLeave) = self.xState {
-                    if waitForLeave {
-                        if updatedPosition.x > snapLocation.x - snapXDelta * 2.0 && updatedPosition.x < snapLocation.x + snapXDelta * 2.0  {
-                            
-                        } else {
-                            self.xState = nil
-                        }
-                    } else if abs(skipped) < snapXSkipTranslation {
-                        self.xState = (skipped + delta.x, false)
-                        updatedPosition.x = snapLocation.x
-                    } else {
-                        self.xState = (snapXSkipTranslation, true)
-                        self.onSnapXUpdated(false)
-                    }
-                } else {
-                    if updatedPosition.x > snapLocation.x - snapXDelta && updatedPosition.x < snapLocation.x + snapXDelta {
-                        if let previousXSnapTimestamp, currentTimestamp - previousXSnapTimestamp < snapTimeout {
-                            
-                        } else {
-                            self.previousXSnapTimestamp = currentTimestamp
-                            self.xState = (0.0, false)
-                            updatedPosition.x = snapLocation.x
-                            self.onSnapXUpdated(true)
-                        }
+            if let contentNode = contentNode {
+                if contentNode.supernode !== self.contentContainerNode {
+                    self.contentContainerNode.addSubnode(contentNode)
+                    if let validLayoutSize = self.validLayoutSize {
+                        contentNode.frame = CGRect(origin: CGPoint(), size: validLayoutSize)
+                        contentNode.updateLayout(size: validLayoutSize, transition: .immediate)
                     }
                 }
-            }
-        } else {
-            self.xState = nil
-            self.onSnapXUpdated(false)
-        }
-        
-        let snapYDelta: CGFloat = (entityView.superview?.frame.width ?? 0.0) * 0.02
-        let snapYVelocity: CGFloat = snapYDelta * 12.0
-        let snapYSkipTranslation: CGFloat = snapYDelta * 2.0
-        
-        if abs(velocity.y) < snapYVelocity || self.yState?.waitForLeave == true {
-            if let snapLocation = (entityView.superview as? DrawingEntitiesView)?.getEntityCenterPosition() {
-                if let (skipped, waitForLeave) = self.yState {
-                    if waitForLeave {
-                        if updatedPosition.y > snapLocation.y - snapYDelta * 2.0 && updatedPosition.y < snapLocation.y + snapYDelta * 2.0 {
-                            
-                        } else {
-                            self.yState = nil
-                        }
-                    } else if abs(skipped) < snapYSkipTranslation {
-                        self.yState = (skipped + delta.y, false)
-                        updatedPosition.y = snapLocation.y
-                    } else {
-                        self.yState = (snapYSkipTranslation, true)
-                        self.onSnapYUpdated(false)
-                    }
-                } else {
-                    if updatedPosition.y > snapLocation.y - snapYDelta && updatedPosition.y < snapLocation.y + snapYDelta {
-                        if let previousYSnapTimestamp, currentTimestamp - previousYSnapTimestamp < snapTimeout {
-                            
-                        } else {
-                            self.previousYSnapTimestamp = currentTimestamp
-                            self.yState = (0.0, false)
-                            updatedPosition.y = snapLocation.y
-                            self.onSnapYUpdated(true)
-                        }
-                    }
-                }
-            }
-        } else {
-            self.yState = nil
-            self.onSnapYUpdated(false)
-        }
-        
-        return updatedPosition
-    }
-    
-    private let snapRotations: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-    func maybeSkipFromStart(entityView: DrawingEntityView, rotation: CGFloat) {
-        self.rotationState = nil
-        
-        let snapDelta: CGFloat = 0.25
-        for snapRotation in self.snapRotations {
-            let snapRotation = snapRotation * .pi
-            if rotation > snapRotation - snapDelta && rotation < snapRotation + snapDelta {
-                self.rotationState = (snapRotation, 0.0, true)
-                break
             }
         }
     }
     
-    func update(entityView: DrawingEntityView, velocity: CGFloat, delta: CGFloat, updatedRotation: CGFloat) -> CGFloat {
-        var updatedRotation = updatedRotation
-        if updatedRotation < 0.0 {
-            updatedRotation = 2.0 * .pi + updatedRotation
-        } else if updatedRotation > 2.0 * .pi {
-            while updatedRotation > 2.0 * .pi {
-                updatedRotation -= 2.0 * .pi
-            }
-        }
-        
-        let currentTimestamp = CACurrentMediaTime()
-        
-        let snapDelta: CGFloat = 0.1
-        let snapVelocity: CGFloat = snapDelta * 5.0
-        let snapSkipRotation: CGFloat = snapDelta * 2.0
-        
-        if abs(velocity) < snapVelocity || self.rotationState?.waitForLeave == true {
-            if let (snapRotation, skipped, waitForLeave) = self.rotationState {
-                if waitForLeave {
-                    if updatedRotation > snapRotation - snapDelta * 2.0 && updatedRotation < snapRotation + snapDelta {
-                        
-                    } else {
-                        self.rotationState = nil
-                    }
-                } else if abs(skipped) < snapSkipRotation {
-                    self.rotationState = (snapRotation, skipped + delta, false)
-                    updatedRotation = snapRotation
-                } else {
-                    self.rotationState = (snapRotation, snapSkipRotation, true)
-                    self.onSnapRotationUpdated(nil)
-                }
-            } else {
-                for snapRotation in self.snapRotations {
-                    let snapRotation = snapRotation * .pi
-                    if updatedRotation > snapRotation - snapDelta && updatedRotation < snapRotation + snapDelta {
-                        if let previousRotationSnapTimestamp, currentTimestamp - previousRotationSnapTimestamp < snapTimeout {
-                            
-                        } else {
-                            self.previousRotationSnapTimestamp = currentTimestamp
-                            self.rotationState = (snapRotation, 0.0, false)
-                            updatedRotation = snapRotation
-                            self.onSnapRotationUpdated(snapRotation)
-                        }
-                        break
-                    }
-                }
-            }
+    public func updateCorners(_ corners: ImageCorners) {
+        self.contentContainerNode.clipsToBounds = true
+        if isRoundEqualCorners(corners) {
+            self.contentContainerNode.cornerRadius = corners.topLeft.radius
         } else {
-            self.rotationState = nil
-            self.onSnapRotationUpdated(nil)
+            let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
+            let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
+            let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
+            guard let context = DrawingContext(size: size, clear: true) else {
+                return
+            }
+            context.withContext { ctx in
+                ctx.setFillColor(UIColor.black.cgColor)
+                ctx.fill(arguments.drawingRect)
+            }
+            addCorners(context, arguments: arguments)
+            
+            if let maskImage = context.generateImage() {
+                let mask = CALayer()
+                mask.contents = maskImage.cgImage
+                mask.contentsScale = maskImage.scale
+                mask.contentsCenter = CGRect(x: max(corners.topLeft.radius, corners.bottomLeft.radius) / maskImage.size.width, y: max(corners.topLeft.radius, corners.topRight.radius) / maskImage.size.height, width: (maskImage.size.width - max(corners.topLeft.radius, corners.bottomLeft.radius) - max(corners.topRight.radius, corners.bottomRight.radius)) / maskImage.size.width, height: (maskImage.size.height - max(corners.topLeft.radius, corners.topRight.radius) - max(corners.bottomLeft.radius, corners.bottomRight.radius)) / maskImage.size.height)
+                
+                self.contentContainerNode.layer.mask = mask
+                self.contentContainerNode.layer.mask?.frame = self.contentContainerNode.bounds
+            }
+        }
+    }
+    
+    public func updateClippingFrame(_ frame: CGRect, completion: (() -> Void)?) {
+        self.contentContainerNode.layer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+        })
+
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            maskLayer.animate(from: NSValue(cgRect: self.contentContainerNode.bounds), to: NSValue(cgRect: frame), keyPath: "bounds", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
+            
+            maskLayer.animate(from: NSValue(cgPoint: maskLayer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            })
         }
         
-        return updatedRotation
+        if let contentNode = self.contentNode {
+            contentNode.layer.animate(from: NSValue(cgPoint: contentNode.layer.position), to: NSValue(cgPoint: frame.center), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25, removeOnCompletion: false, completion: { _ in
+                completion?()
+            })
+        }
+    }
+    
+    public func updateContentNodeSnapshot(_ snapshot: UIView?) {
+    }
+    
+    public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.validLayoutSize = size
+        
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        if let backgroundNode = self.backgroundNode {
+            transition.updateFrame(node: backgroundNode, frame: bounds)
+        }
+        if let foregroundNode = self.foregroundNode {
+            transition.updateFrame(node: foregroundNode, frame: bounds)
+        }
+        transition.updateFrame(node: self.contentContainerNode, frame: bounds)
+        if let maskLayer = self.contentContainerNode.layer.mask {
+            transition.updateFrame(layer: maskLayer, frame: bounds)
+        }
+        if let contentNode = self.contentNode {
+            transition.updateFrame(node: contentNode, frame: CGRect(origin: CGPoint(), size: size))
+            contentNode.updateLayout(size: size, transition: transition)
+        }
+    }
+    
+    public func setStatus(_ status: Signal<MediaPlayerStatus?, NoError>) {
+    }
+    
+    public func tap() {
     }
 }

@@ -162,6 +162,9 @@ verify_beta_testflight:
 submit_appstore:
   tags:
     - deploy
+  only:
+    - beta
+    - hotfix
   stage: submit
   needs: []
   when: manual

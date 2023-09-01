@@ -92,7 +92,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.fetchDisposable.dispose()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId {
             return (self.imageNode, self.imageNode.bounds, { [weak self] in
                 guard let strongSelf = self else {
@@ -215,7 +215,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                             }
                                                         
                             if let photo = photo, let video = photo.videoRepresentations.last, let id = photo.id?.id {
-                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [], preloadSize: nil)]))
                                 let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), userLocation: .peer(item.message.id.peerId), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, storeAfterDownload: nil)
                                 if videoContent.id != strongSelf.videoContent?.id {
                                     let mediaManager = item.context.sharedContext.mediaManager

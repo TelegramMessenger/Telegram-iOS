@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -52,8 +51,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
     private let context: AccountContext
     private var presentationData: PresentationData
     private var stickerPack: ImportStickerPack?
-    var stickerResources: [UUID: MediaResource] = [:]
-    private var uploadedStickerResources: [UUID: MediaResource] = [:]
+    var stickerResources: [UUID: EngineMediaResource] = [:]
+    private var uploadedStickerResources: [UUID: EngineMediaResource] = [:]
     private var stickerPackReady = true
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
@@ -623,11 +622,11 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             }
             if let resource = self.uploadedStickerResources[item.stickerItem.uuid] {
                 if let localResource = item.stickerItem.resource {
-                    self.context.account.postbox.mediaBox.copyResourceData(from: localResource.id, to: resource.id)
+                    self.context.account.postbox.mediaBox.copyResourceData(from: localResource._asResource().id, to: resource._asResource().id)
                 }
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
+                stickers.append(ImportSticker(resource: resource._asResource(), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             } else if let resource = item.stickerItem.resource {
-                stickers.append(ImportSticker(resource: resource, emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
+                stickers.append(ImportSticker(resource: resource._asResource(), emojis: item.stickerItem.emojis, dimensions: dimensions, mimeType: item.stickerItem.mimeType, keywords: item.stickerItem.keywords))
             }
         }
         var thumbnailSticker: ImportSticker?
@@ -695,23 +694,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
                     let context = strongSelf.context
                     
                     Queue.mainQueue().after(1.0) {
-                        var firstItem: StickerPackItem?
-                        if let firstStickerItem = firstStickerItem, let resource = firstStickerItem.resource as? TelegramMediaResource {
-                            var fileAttributes: [TelegramMediaFileAttribute] = []
-                            if firstStickerItem.mimeType == "video/webm" {
-                                fileAttributes.append(.FileName(fileName: "sticker.webm"))
-                                fileAttributes.append(.Animated)
-                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-                            } else if firstStickerItem.mimeType == "application/x-tgsticker" {
-                                fileAttributes.append(.FileName(fileName: "sticker.tgs"))
-                                fileAttributes.append(.Animated)
-                                fileAttributes.append(.Sticker(displayText: "", packReference: nil, maskData: nil))
-                            } else {
-                                fileAttributes.append(.FileName(fileName: "sticker.webp"))
-                            }
-                            fileAttributes.append(.ImageSize(size: firstStickerItem.dimensions))
-                            firstItem = StickerPackItem(index: ItemCollectionItemIndex(index: 0, id: 0), file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: firstStickerItem.mimeType, size: nil, attributes: fileAttributes), indexKeys: [])
-                        }
+                        let firstItem: StickerPackItem? = firstStickerItem?.stickerPackItem
                         strongSelf.presentInGlobalOverlay?(UndoOverlayController(presentationData: strongSelf.presentationData, content: .stickersModified(title: strongSelf.presentationData.strings.StickerPackActionInfo_AddedTitle, text: strongSelf.presentationData.strings.StickerPackActionInfo_AddedText(info.title).string, undo: false, info: info, topItem: firstItem ?? items.first, context: strongSelf.context), elevatedLayout: false, action: { action in
                             if case .info = action {
                                 (navigationController?.viewControllers.last as? ViewController)?.present(StickerPackScreen(context: context, mode: .settings, mainStickerPack: .id(id: info.id.id, accessHash: info.accessHash), stickerPacks: [], parentNavigationController: navigationController, actionPerformed: { _ in
@@ -800,7 +783,7 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
         })
     }
     
-    func updateStickerPack(_ stickerPack: ImportStickerPack, verifiedStickers: Set<UUID>, declinedStickers: Set<UUID>, uploadedStickerResources: [UUID: MediaResource]) {
+    func updateStickerPack(_ stickerPack: ImportStickerPack, verifiedStickers: Set<UUID>, declinedStickers: Set<UUID>, uploadedStickerResources: [UUID: EngineMediaResource]) {
         self.stickerPack = stickerPack
         self.uploadedStickerResources = uploadedStickerResources
         var updatedItems: [StickerPackPreviewGridEntry] = []
@@ -813,8 +796,8 @@ final class ImportStickerPackControllerNode: ViewControllerTracingNode, UIScroll
             } else {
                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                 self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: item.data)
-                item.resource = resource
-                self.stickerResources[item.uuid] = resource
+                item.resource = EngineMediaResource(resource)
+                self.stickerResources[item.uuid] = EngineMediaResource(resource)
             }
             var isInitiallyVerified = false
             if case .image = item.content {

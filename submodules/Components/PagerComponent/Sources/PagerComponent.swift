@@ -14,7 +14,7 @@ open class PagerExternalTopPanelContainer: SparseContainerView {
 }
 
 public protocol PagerContentViewWithBackground: UIView {
-    func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition)
+    func pagerUpdateBackground(backgroundFrame: CGRect, topPanelHeight: CGFloat, transition: Transition)
 }
 
 public final class PagerComponentChildEnvironment: Equatable {
@@ -137,9 +137,11 @@ public final class PagerComponentPanelEnvironment<TopPanelEnvironment>: Equatabl
 
 public struct PagerComponentPanelState {
     public var topPanelHeight: CGFloat
+    public var scrollingPanelOffsetToTopEdge: CGFloat
     
-    public init(topPanelHeight: CGFloat) {
+    public init(topPanelHeight: CGFloat, scrollingPanelOffsetToTopEdge: CGFloat) {
         self.topPanelHeight = topPanelHeight
+        self.scrollingPanelOffsetToTopEdge = scrollingPanelOffsetToTopEdge
     }
 }
 
@@ -205,6 +207,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let contentIdUpdated: (AnyHashable) -> Void
     public let panelHideBehavior: PagerComponentPanelHideBehavior
     public let clipContentToTopPanel: Bool
+    public let isExpanded: Bool
     
     public init(
         isContentInFocus: Bool,
@@ -225,7 +228,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
         contentIdUpdated: @escaping (AnyHashable) -> Void,
         panelHideBehavior: PagerComponentPanelHideBehavior,
-        clipContentToTopPanel: Bool
+        clipContentToTopPanel: Bool,
+        isExpanded: Bool
     ) {
         self.isContentInFocus = isContentInFocus
         self.contentInsets = contentInsets
@@ -246,6 +250,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.contentIdUpdated = contentIdUpdated
         self.panelHideBehavior = panelHideBehavior
         self.clipContentToTopPanel = clipContentToTopPanel
+        self.isExpanded = isExpanded
     }
     
     public static func ==(lhs: PagerComponent, rhs: PagerComponent) -> Bool {
@@ -288,7 +293,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         if lhs.clipContentToTopPanel != rhs.clipContentToTopPanel {
             return false
         }
-        
+        if lhs.isExpanded != rhs.isExpanded {
+            return false
+        }
         return true
     }
     
@@ -534,6 +541,11 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 scrollingPanelOffsetFraction = 0.0
             }
             
+            var scrollingPanelOffsetToTopEdge: CGFloat = 0.0
+            if let centralId = centralId, let centralContentView = self.contentViews[centralId] {
+                scrollingPanelOffsetToTopEdge = centralContentView.scrollingPanelOffsetToTopEdge
+            }
+            
             var topPanelVisibility: CGFloat = 1.0
             if let centralId = centralId, let index = component.contents.firstIndex(where: { $0.id == centralId }) {
                 if let paneTransitionGestureState = self.paneTransitionGestureState {
@@ -745,7 +757,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 effectiveTopPanelHeight = 0.0
             case .show, .hideOnScroll:
                 if component.externalTopPanelContainer != nil {
-                    effectiveTopPanelHeight = topPanelHeight
+                    effectiveTopPanelHeight = component.isExpanded ? 0.0 : topPanelHeight
                 } else {
                     effectiveTopPanelHeight = 0.0
                 }
@@ -904,7 +916,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         }
                         
                         if let contentViewWithBackground = contentView.view.componentView as? PagerContentViewWithBackground {
-                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: backgroundFrame, transition: contentTransition)
+                            contentViewWithBackground.pagerUpdateBackground(backgroundFrame: backgroundFrame, topPanelHeight: topPanelHeight, transition: contentTransition)
                         }
                     }
                 }
@@ -923,7 +935,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             if let panelStateUpdated = component.panelStateUpdated {
                 panelStateUpdated(
                     PagerComponentPanelState(
-                        topPanelHeight: topPanelHeight
+                        topPanelHeight: topPanelHeight,
+                        scrollingPanelOffsetToTopEdge: scrollingPanelOffsetToTopEdge
                     ),
                     panelStateTransition
                 )

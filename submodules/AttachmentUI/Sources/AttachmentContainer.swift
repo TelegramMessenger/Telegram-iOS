@@ -80,6 +80,7 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         })
         self.container.clipsToBounds = true
         self.container.overflowInset = overflowInset
+        self.container.shouldAnimateDisappearance = true
         
         super.init()
         
@@ -539,7 +540,15 @@ final class AttachmentContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     controller.setIgnoreAppearanceMethodInvocations(false)
                     controller.viewDidDisappear(transition.isAnimated)
                 }
+                if let (layout, _, coveredByModalTransition) = self.validLayout {
+                    self.update(layout: layout, controllers: [], coveredByModalTransition: coveredByModalTransition, transition: .immediate)
+                }
                 completion()
+                
+                var bounds = self.bounds
+                bounds.origin.y = 0.0
+                self.bounds = bounds
+                
                 return transition
             }
         }

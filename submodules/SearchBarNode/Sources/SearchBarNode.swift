@@ -1012,7 +1012,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func animateIn(from node: SearchBarPlaceholderNode, duration: Double, timingFunction: String) {
-        let initialTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+        let initialTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
         
         let initialBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: self.bounds.size.width, height: max(0.0, initialTextBackgroundFrame.maxY + 8.0)))
         if let fromBackgroundColor = node.backgroundColor, let toBackgroundColor = self.backgroundNode.backgroundColor {
@@ -1060,7 +1060,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     public func transitionOut(to node: SearchBarPlaceholderNode, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
-        let targetTextBackgroundFrame = node.convert(node.backgroundNode.frame, to: self)
+        let targetTextBackgroundFrame = node.view.convert(node.backgroundNode.frame, to: self.view)
         
         let duration: Double = transition.isAnimated ? 0.5 : 0.0
         let timingFunction = kCAMediaTimingFunctionSpring
@@ -1148,7 +1148,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
 
         self.textBackgroundNode.isHidden = true
         
-        if let accessoryComponentView = node.accessoryComponentView {
+        /*if let accessoryComponentView = node.accessoryComponentView {
             let tempContainer = UIView()
             
             let accessorySize = accessoryComponentView.bounds.size
@@ -1161,14 +1161,15 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             accessoryComponentView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             tempContainer.addSubview(accessoryComponentView)
             self.view.addSubview(tempContainer)
-        }
+        }*/
 
         self.textBackgroundNode.layer.animateFrame(from: self.textBackgroundNode.frame, to: targetTextBackgroundFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false, completion: { [weak node] _ in
             textBackgroundCompleted = true
             intermediateCompletion()
             
-            if let node = node, let accessoryComponentContainer = node.accessoryComponentContainer, let accessoryComponentView = node.accessoryComponentView {
-                accessoryComponentContainer.addSubview(accessoryComponentView)
+            if let node = node, let accessoryComponentView = node.accessoryComponentView {
+                //accessoryComponentContainer.addSubview(accessoryComponentView)
+                accessoryComponentView.layer.animateAlpha(from: 0.0, to: accessoryComponentView.alpha, duration: 0.2)
             }
         })
         

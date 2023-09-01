@@ -36,7 +36,7 @@ extension TelegramPeerUsername {
 extension TelegramUser {
     convenience init(user: Api.User) {
         switch user {
-        case let .user(flags, flags2, id, accessHash, firstName, lastName, username, phone, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, usernames):
+        case let .user(flags, flags2, id, accessHash, firstName, lastName, username, phone, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, usernames, _):
             let representations: [TelegramMediaImageRepresentation] = photo.flatMap(parsedTelegramProfilePhoto) ?? []
             
             let isMin = (flags & (1 << 20)) != 0
@@ -64,6 +64,14 @@ extension TelegramUser {
             if (flags & (1 << 28)) != 0 {
                 userFlags.insert(.isPremium)
             }
+            if (flags2 & (1 << 2)) != 0 {
+                userFlags.insert(.isCloseFriend)
+            }
+            
+            var storiesHidden: Bool?
+            if !isMin {
+                storiesHidden = (flags2 & (1 << 3)) != 0
+            }
             
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
@@ -88,15 +96,15 @@ extension TelegramUser {
             
             let restrictionInfo: PeerAccessRestrictionInfo? = restrictionReason.flatMap(PeerAccessRestrictionInfo.init(apiReasons:))
             
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: accessHashValue, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [])
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: accessHashValue, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [], storiesHidden: storiesHidden)
         case let .userEmpty(id):
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil)
         }
     }
     
     static func merge(_ lhs: TelegramUser?, rhs: Api.User) -> TelegramUser? {
         switch rhs {
-            case let .user(flags, _, _, rhsAccessHash, _, _, _, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, _):
+            case let .user(flags, _, _, rhsAccessHash, _, _, _, _, photo, _, _, restrictionReason, botInlinePlaceholder, _, emojiStatus, _, _):
                 let isMin = (flags & (1 << 20)) != 0
                 if !isMin {
                     return TelegramUser(user: rhs)
@@ -128,6 +136,10 @@ extension TelegramUser {
                         }
                         if (flags & (1 << 28)) != 0 {
                             userFlags.insert(.isPremium)
+                        }
+                        
+                        if lhs.flags.contains(.isCloseFriend) {
+                            userFlags.insert(.isCloseFriend)
                         }
                         
                         var botInfo: BotUserInfo?
@@ -168,7 +180,7 @@ extension TelegramUser {
                             accessHash = lhs.accessHash ?? rhsAccessHashValue
                         }
                         
-                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: lhs.usernames)
+                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: lhs.usernames, storiesHidden: lhs.storiesHidden)
                     } else {
                         return TelegramUser(user: rhs)
                     }
@@ -222,7 +234,14 @@ extension TelegramUser {
                 photo = rhs.photo
             }
             
-            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: lhs.usernames)
+            var storiesHidden: Bool?
+            if let value = rhs.storiesHidden {
+                storiesHidden = value
+            } else {
+                storiesHidden = lhs.storiesHidden
+            }
+            
+            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: lhs.usernames, storiesHidden: storiesHidden)
         }
     }
 }

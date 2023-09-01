@@ -111,7 +111,8 @@ public extension TelegramChannel {
                         .banSendStickers,
                         .banSendPolls,
                         .banSendFiles,
-                        .banSendInline
+                        .banSendInline,
+                        .banSendMusic
                     ]
                     
                     if let bannedRights = self.bannedRights, bannedRights.flags.intersection(flags) == flags {

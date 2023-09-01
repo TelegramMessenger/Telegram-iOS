@@ -34,6 +34,7 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
     init(parentController: ViewController?, theme: PresentationTheme?) {
         self.parentController = parentController
         self.controller = LegacyController(presentation: .custom, theme: theme)
+        self.controller?.hasSparseContainerView = (parentController as? LegacyController)?.hasSparseContainerView ?? false
         
         super.init()
         
@@ -429,6 +430,14 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     }
     private var enableContainerLayoutUpdates = false
     
+    public var hasSparseContainerView = false {
+        didSet {
+            if self.isNodeLoaded {
+                self.controllerNode.hasSparseContainerView = self.hasSparseContainerView
+            }
+        }
+    }
+    
     public var disposables = DisposableSet()
     
     open var requestAttachmentMenuExpansion: () -> Void = {}
@@ -437,6 +446,10 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     open var cancelPanGesture: () -> Void = { }
     open var isContainerPanning: () -> Bool = { return false }
     open var isContainerExpanded: () -> Bool = { return false }
+    
+    public var mediaPickerContext: AttachmentMediaPickerContext? {
+        return nil
+    }
     
     public init(presentation: LegacyControllerPresentation, theme: PresentationTheme? = nil, strings: PresentationStrings? = nil, initialLayout: ContainerViewLayout? = nil) {
         self.sizeClass.set(SSignal.single(UIUserInterfaceSizeClass.compact.rawValue as NSNumber))
@@ -479,6 +492,8 @@ open class LegacyController: ViewController, PresentableController, AttachmentCo
     override open func loadDisplayNode() {
         self.displayNode = LegacyControllerNode()
         self.displayNodeDidLoad()
+        
+        self.controllerNode.hasSparseContainerView = self.hasSparseContainerView
     }
     
     override open func viewWillAppear(_ animated: Bool) {

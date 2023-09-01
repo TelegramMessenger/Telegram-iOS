@@ -2272,7 +2272,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                     mediaSize = dimensions.aspectFitted(mediaFitSize)
                     mediaFrame = CGRect(origin: CGPoint(x: 3.0, y: 63.0), size: mediaSize)
                     
-                    mediaDuration = video.duration ?? 0
+                    mediaDuration = video.duration.flatMap(Int32.init) ?? 0
                     
                     if !wasInitialized {
                         if self.isStatic {

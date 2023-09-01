@@ -12,6 +12,7 @@ import ItemListPeerItem
 import MergeLists
 import ItemListUI
 import ChatControllerInteraction
+import PeerInfoVisualMediaPaneNode
 
 private struct GroupsInCommonListTransaction {
     let deletions: [ListViewDeleteItem]

@@ -107,7 +107,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         let saveFilePart: (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>)
         if asBigPart {
             let totalParts: Int32
-            if let bigTotalParts = bigTotalParts {
+            if let bigTotalParts = bigTotalParts, bigTotalParts > 0 && bigTotalParts < Int32.max {
                 totalParts = Int32(bigTotalParts)
             } else {
                 totalParts = -1
@@ -117,7 +117,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             saveFilePart = Api.functions.upload.saveFilePart(fileId: fileId, filePart: Int32(index), bytes: Buffer(data: data))
         }
         
-        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true)
+        return multiplexedManager.request(to: .main(datacenterId), consumerId: consumerId, resourceId: nil, data: wrapMethodBody(saveFilePart, useCompression: useCompression), tag: tag, continueInBackground: true, expectedResponseSize: nil)
         |> mapError { error -> UploadPartError in
             if error.errorCode == 400 {
                 return .invalidMedia
@@ -189,6 +189,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     func webFilePart(location: Api.InputWebFileLocation, offset: Int, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = Int32(length)
             
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
@@ -241,6 +242,7 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
     func part(location: Api.InputFileLocation, offset: Int64, length: Int) -> Signal<Data, NoError> {
         return Signal<Data, MTRpcError> { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = Int32(length)
             
             var updatedLength = roundUp(length, to: 4096)
             while updatedLength % 4096 != 0 || 1048576 % updatedLength != 0 {
@@ -293,9 +295,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         |> retryRequest
     }
     
-    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>)) -> Signal<T, MTRpcError> {
+    func request<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), expectedResponseSize: Int32? = nil, automaticFloodWait: Bool = true) -> Signal<T, MTRpcError> {
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
@@ -308,6 +311,12 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
             request.needsTimeoutTimer = self.useRequestTimeoutTimers
             
             request.shouldContinueExecutionWithErrorContext = { errorContext in
+                guard let errorContext = errorContext else {
+                    return true
+                }
+                if errorContext.floodWaitSeconds > 0 && !automaticFloodWait {
+                    return false
+                }
                 return true
             }
             
@@ -335,9 +344,10 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false) -> Signal<(T, Double), (MTRpcError, Double)> {
+    func requestWithAdditionalData<T>(_ data: (FunctionDescription, Buffer, DeserializeFunctionResponse<T>), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, expectedResponseSize: Int32? = nil) -> Signal<(T, Double), (MTRpcError, Double)> {
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2.parse(Buffer(data: response)) {
@@ -386,10 +396,11 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         }
     }
     
-    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "") -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
+    func rawRequest(_ data: (FunctionDescription, Buffer, (Buffer) -> Any?), automaticFloodWait: Bool = true, failOnServerErrors: Bool = false, logPrefix: String = "", expectedResponseSize: Int32? = nil) -> Signal<(Any, NetworkResponseInfo), (MTRpcError, Double)> {
         let requestService = self.requestService
         return Signal { subscriber in
             let request = MTRequest()
+            request.expectedResponseSize = expectedResponseSize ?? 0
             
             request.setPayload(data.1.makeData() as Data, metadata: WrappedRequestMetadata(metadata: WrappedFunctionDescription(data.0), tag: nil), shortMetadata: WrappedRequestShortMetadata(shortMetadata: WrappedShortFunctionDescription(data.0)), responseParser: { response in
                 if let result = data.2(Buffer(data: response)) {

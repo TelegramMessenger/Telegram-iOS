@@ -103,7 +103,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        self.tooltipContainerNode = ContextMenuContainerNode()
+        self.tooltipContainerNode = ContextMenuContainerNode(blurred: false)
         self.tooltipContainerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
         self.textNode = ImmediateTextNode()
@@ -145,11 +145,11 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             var peers = SimpleDictionary<PeerId, Peer>()
             let messages = SimpleDictionary<MessageId, Message>()
             
-            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: item.peerName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
+            peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: item.peerName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil)
             
             let forwardInfo = MessageForwardInfo(author: item.linkEnabled ? peers[peerId] : nil, source: nil, sourceMessageId: nil, date: 0, authorSignature: item.linkEnabled ? nil : item.peerName, psaType: nil, flags: [])
             
-            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: forwardInfo, author: nil, text: item.strings.Privacy_Forwards_PreviewMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, isCentered: false)
+            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: forwardInfo, author: nil, text: item.strings.Privacy_Forwards_PreviewMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: nil, isCentered: false)
             
             var node: ListViewItemNode?
             if let current = currentNode {

@@ -22,8 +22,110 @@ import ShareController
 import UndoUI
 import WebsiteType
 import GalleryData
+import StoryContainerScreen
 
 func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
+    var story: TelegramMediaStory?
+    for media in params.message.media {
+        if let media = media as? TelegramMediaStory {
+            story = media
+        } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.story != nil {
+            story = content.story
+        }
+    }
+    
+    if let story {
+        let navigationController = params.navigationController
+        let context = params.context
+        let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: story.storyId, readGlobally: true)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+            var transitionIn: StoryContainerScreen.TransitionIn? = nil
+            
+            var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+            selectedTransitionNode = params.transitionNode(params.message.id, story, true)
+            
+            if let selectedTransitionNode {
+                var cornerRadius: CGFloat = 0.0
+                if let imageNode = selectedTransitionNode.0 as? TransformImageNode, let currentArguments = imageNode.currentArguments {
+                    cornerRadius = currentArguments.corners.topLeft.radius
+                }
+                transitionIn = StoryContainerScreen.TransitionIn(
+                    sourceView: selectedTransitionNode.0.view,
+                    sourceRect: selectedTransitionNode.1,
+                    sourceCornerRadius: cornerRadius,
+                    sourceIsAvatar: false
+                )
+            }
+            
+            let hiddenMediaSource = params.context.sharedContext.mediaManager.galleryHiddenMediaManager.addSource(.single(GalleryHiddenMediaId.chat(params.context.account.id, params.message.id, story)))
+            
+            let storyContainerScreen = StoryContainerScreen(
+                context: context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { _, _ in
+                    var transitionOut: StoryContainerScreen.TransitionOut? = nil
+                    
+                    var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                    selectedTransitionNode = params.transitionNode(params.message.id, story, true)
+                    if let selectedTransitionNode {
+                        var cornerRadius: CGFloat = 0.0
+                        if let imageNode = selectedTransitionNode.0 as? TransformImageNode, let currentArguments = imageNode.currentArguments {
+                            cornerRadius = currentArguments.corners.topLeft.radius
+                        }
+                        
+                        transitionOut = StoryContainerScreen.TransitionOut(
+                            destinationView: selectedTransitionNode.0.view,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: {
+                                    let view = UIView()
+                                    if let transitionView = selectedTransitionNode.2().0 {
+                                        transitionView.layer.anchorPoint = CGPoint()
+                                        view.addSubview(transitionView)
+                                    }
+                                    return view
+                                },
+                                updateView: { view, state, transition in
+                                    guard let view = view.subviews.first else {
+                                        return
+                                    }
+                                    if state.progress == 0.0 {
+                                        view.frame = CGRect(origin: CGPoint(), size: state.destinationSize)
+                                    }
+                                    
+                                    let toScaleX = state.sourceSize.width / state.destinationSize.width
+                                    let toScaleY = state.sourceSize.height / state.destinationSize.height
+                                    let fromScaleX: CGFloat = 1.0
+                                    let fromScaleY: CGFloat = 1.0
+                                    let scaleX = toScaleX.interpolate(to: fromScaleX, amount: state.progress)
+                                    let scaleY = toScaleY.interpolate(to: fromScaleY, amount: state.progress)
+                                    transition.setTransform(view: view, transform: CATransform3DMakeScale(scaleX, scaleY, 1.0))
+                                },
+                                insertCloneTransitionView: { view in
+                                    params.addToTransitionSurface(view)
+                                }
+                            ),
+                            destinationRect: selectedTransitionNode.1,
+                            destinationCornerRadius: cornerRadius,
+                            destinationIsAvatar: false,
+                            completed: {
+                                params.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaSource)
+                            }
+                        )
+                    } else {
+                        params.context.sharedContext.mediaManager.galleryHiddenMediaManager.removeSource(hiddenMediaSource)
+                    }
+                    
+                    return transitionOut
+                }
+            )
+            navigationController?.pushViewController(storyContainerScreen)
+        })
+        return true
+    }
+    
     if let mediaData = chatMessageGalleryControllerData(context: params.context, chatLocation: params.chatLocation, chatLocationContextHolder: params.chatLocationContextHolder, message: params.message, navigationController: params.navigationController, standalone: params.standalone, reverseMessageGalleryOrder: params.reverseMessageGalleryOrder, mode: params.mode, source: params.gallerySource, synchronousLoad: false, actionInteraction: params.actionInteraction) {
         switch mediaData {
             case let .url(url):
@@ -54,7 +156,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.present(gallery, InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry in
                     var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
                     if entry.index == centralIndex {
-                        selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia)
+                        selectedTransitionNode = params.transitionNode(params.message.id, galleryMedia, false)
                     }
                     if let selectedTransitionNode = selectedTransitionNode {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
@@ -66,14 +168,14 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 
                 let controllerParams = LocationViewParams(sendLiveLocation: { location in
-                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: location), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                    let outMessage: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: location), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                     params.enqueueMessage(outMessage)
                 }, stopLiveLocation: { messageId in
                     params.context.liveLocationManager?.cancelLiveLocation(peerId: messageId?.peerId ?? params.message.id.peerId)
                 }, openUrl: params.openUrl, openPeer: { peer in
-                    params.openPeer(peer, .info)
+                    params.openPeer(peer._asPeer(), .info)
                 }, showAll: params.modal)
-                let controller = LocationViewController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: params.message, params: controllerParams)
+                let controller = LocationViewController(context: params.context, updatedPresentationData: params.updatedPresentationData, subject: EngineMessage(params.message), params: controllerParams)
                 controller.navigationPresentation = .modal
                 params.navigationController?.pushViewController(controller)
                 return true
@@ -172,6 +274,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }
                 params.context.sharedContext.mediaManager.setPlaylist((params.context.account, PeerMessagesMediaPlaylist(context: params.context, location: location, chatLocationContextHolder: params.chatLocationContextHolder)), type: playerType, control: control)
                 return true
+            case let .story(storyController):
+                params.dismissInput()
+                let _ = (storyController
+                |> deliverOnMainQueue).start(next: { storyController in
+                    params.navigationController?.pushViewController(storyController)
+                })
             case let .gallery(gallery):
                 params.dismissInput()
                 let _ = (gallery
@@ -180,7 +288,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         params.centralItemUpdated?(messageId)
                     }
                     params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                        let selectedTransitionNode = params.transitionNode(messageId, media)
+                        let selectedTransitionNode = params.transitionNode(messageId, media, false)
                         if let selectedTransitionNode = selectedTransitionNode {
                             return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                         }
@@ -191,7 +299,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .secretGallery(gallery):
                 params.dismissInput()
                 params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                    let selectedTransitionNode = params.transitionNode(messageId, media)
+                    let selectedTransitionNode = params.transitionNode(messageId, media, false)
                     if let selectedTransitionNode = selectedTransitionNode {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
@@ -235,7 +343,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }, media)
                 
                 params.present(controller, AvatarGalleryControllerPresentationArguments(transitionArguments: { entry in
-                    if let selectedTransitionNode = params.transitionNode(params.message.id, media) {
+                    if let selectedTransitionNode = params.transitionNode(params.message.id, media, false) {
                         return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
                     }
                     return nil

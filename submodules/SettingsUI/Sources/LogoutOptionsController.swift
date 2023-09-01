@@ -4,7 +4,6 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
@@ -195,7 +194,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
         pushControllerImpl?(introController)
         dismissImpl?()
     }, contactSupport: { [weak navigationController] in
-        let supportPeer = Promise<PeerId?>()
+        let supportPeer = Promise<EnginePeer.Id?>()
         supportPeer.set(context.engine.peers.supportPeerId())
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

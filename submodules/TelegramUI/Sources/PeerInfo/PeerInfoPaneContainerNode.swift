@@ -9,27 +9,7 @@ import TelegramCore
 import AccountContext
 import ContextUI
 import ChatControllerInteraction
-
-protocol PeerInfoPaneNode: ASDisplayNode {
-    var isReady: Signal<Bool, NoError> { get }
-    
-    var parentController: ViewController? { get set }
-
-    var status: Signal<PeerInfoStatusData?, NoError> { get }
-    var tabBarOffsetUpdated: ((ContainedViewLayoutTransition) -> Void)? { get set }
-    var tabBarOffset: CGFloat { get }
-    
-    func update(size: CGSize, topInset: CGFloat, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, isScrollingLockedAtTop: Bool, expandProgress: CGFloat, presentationData: PresentationData, synchronous: Bool, transition: ContainedViewLayoutTransition)
-    func scrollToTop() -> Bool
-    func transferVelocity(_ velocity: CGFloat)
-    func cancelPreviewGestures()
-    func findLoadedMessage(id: MessageId) -> Message?
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
-    func addToTransitionSurface(view: UIView)
-    func updateHiddenMedia()
-    func updateSelectedMessages(animated: Bool)
-    func ensureMessageIsVisible(id: MessageId)
-}
+import PeerInfoVisualMediaPaneNode
 
 final class PeerInfoPaneWrapper {
     let key: PeerInfoPaneKey
@@ -51,17 +31,6 @@ final class PeerInfoPaneWrapper {
         self.appliedParams = (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData)
         self.node.update(size: size, topInset: topInset, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expandProgress, presentationData: presentationData, synchronous: synchronous, transition: transition)
     }
-}
-
-enum PeerInfoPaneKey: Int32 {
-    case members
-    case media
-    case files
-    case music
-    case voice
-    case links
-    case gifs
-    case groupsInCommon
 }
 
 final class PeerInfoPaneTabsContainerPaneNode: ASDisplayNode {
@@ -398,6 +367,15 @@ private final class PeerInfoPendingPane {
         let captureProtected = data.peer?.isCopyProtectionEnabled ?? false
         let paneNode: PeerInfoPaneNode
         switch key {
+        case .stories:
+            let visualPaneNode = PeerInfoStoryPaneNode(context: context, peerId: peerId, chatLocation: chatLocation, contentType: .photoOrVideo, captureProtected: captureProtected, isSaved: false, isArchive: false, navigationController: chatControllerInteraction.navigationController, listContext: data.storyListContext)
+            paneNode = visualPaneNode
+            visualPaneNode.openCurrentDate = {
+                openMediaCalendar()
+            }
+            visualPaneNode.paneDidScroll = {
+                paneDidScroll()
+            }
         case .media:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected)
             paneNode = visualPaneNode
@@ -977,6 +955,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         self.tabsContainerNode.update(size: CGSize(width: size.width, height: tabsHeight), presentationData: presentationData, paneList: availablePanes.map { key in
             let title: String
             switch key {
+            case .stories:
+                title = presentationData.strings.PeerInfo_PaneStories
             case .media:
                 title = presentationData.strings.PeerInfo_PaneMedia
             case .files:

@@ -20,6 +20,15 @@ public enum UpdateMessageReaction {
 
 public func updateMessageReactionsInteractively(account: Account, messageId: MessageId, reactions: [UpdateMessageReaction], isLarge: Bool, storeAsRecentlyUsed: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
+        var sendAsPeerId = account.peerId
+        if let cachedData = transaction.getPeerCachedData(peerId: messageId.peerId) {
+            if let cachedData = cachedData as? CachedChannelData {
+                if let sendAsPeerIdValue = cachedData.sendAsPeerId {
+                    sendAsPeerId = sendAsPeerIdValue
+                }
+            }
+        }
+        
         let isPremium = (transaction.getPeer(account.peerId) as? TelegramUser)?.isPremium ?? false
         let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
         let maxCount: Int
@@ -34,12 +43,12 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
         for reaction in reactions {
             switch reaction {
             case let .custom(fileId, file):
-                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .custom(fileId)))
+                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .custom(fileId), sendAsPeerId: sendAsPeerId))
                 if let file = file {
                     transaction.storeMediaIfNotPresent(media: file)
                 }
             case let .builtin(value):
-                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .builtin(value)))
+                mappedReactions.append(PendingReactionsMessageAttribute.PendingReaction(value: .builtin(value), sendAsPeerId: sendAsPeerId))
             }
         }
         
@@ -88,7 +97,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
             if updatedOutgoingReactions.count > maxCount {
                 let sortedOutgoingReactions = updatedOutgoingReactions.sorted(by: { $0.chosenOrder! < $1.chosenOrder! })
                 mappedReactions = Array(sortedOutgoingReactions.suffix(maxCount).map { reaction -> PendingReactionsMessageAttribute.PendingReaction in
-                    return PendingReactionsMessageAttribute.PendingReaction(value: reaction.value)
+                    return PendingReactionsMessageAttribute.PendingReaction(value: reaction.value, sendAsPeerId: sendAsPeerId)
                 })
             }
             
@@ -461,6 +470,7 @@ public final class EngineMessageReactionListContext {
             self.isLoadingMore = true
             
             let account = self.account
+            let accountPeerId = account.peerId
             let message = self.message
             let reaction = self.reaction
             let currentOffset = self.state.nextOffset
@@ -491,24 +501,9 @@ public final class EngineMessageReactionListContext {
                     return account.postbox.transaction { transaction -> InternalState in
                         switch result {
                         case let .messageReactionsList(_, count, reactions, chats, users, nextOffset):
-                            var peers: [Peer] = []
-                            var peerPresences: [PeerId: Api.User] = [:]
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             
-                            for user in users {
-                                let telegramUser = TelegramUser(user: user)
-                                peers.append(telegramUser)
-                                peerPresences[telegramUser.id] = user
-                            }
-                            for chat in chats {
-                                if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                                    peers.append(peer)
-                                }
-                            }
-                            
-                            updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
-                                return updated
-                            })
-                            updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                             
                             var items: [EngineMessageReactionListContext.Item] = []
                             for reaction in reactions {

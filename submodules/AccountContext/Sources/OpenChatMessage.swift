@@ -31,7 +31,7 @@ public final class OpenChatMessageParams {
     public let modal: Bool
     public let dismissInput: () -> Void
     public let present: (ViewController, Any?) -> Void
-    public let transitionNode: (MessageId, Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+    public let transitionNode: (MessageId, Media, Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
     public let addToTransitionSurface: (UIView) -> Void
     public let openUrl: (String) -> Void
     public let openPeer: (Peer, ChatControllerInteractionNavigateToPeer) -> Void
@@ -60,7 +60,7 @@ public final class OpenChatMessageParams {
         modal: Bool = false,
         dismissInput: @escaping () -> Void,
         present: @escaping (ViewController, Any?) -> Void,
-        transitionNode: @escaping (MessageId, Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?,
+        transitionNode: @escaping (MessageId, Media, Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?,
         addToTransitionSurface: @escaping (UIView) -> Void,
         openUrl: @escaping (String) -> Void,
         openPeer: @escaping (Peer, ChatControllerInteractionNavigateToPeer) -> Void,

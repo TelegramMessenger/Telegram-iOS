@@ -6,7 +6,7 @@ public enum TelegramMediaExpiredContentData: Int32 {
     case file
 }
 
-public final class TelegramMediaExpiredContent: Media {
+public final class TelegramMediaExpiredContent: Media, Equatable {
     public let data: TelegramMediaExpiredContentData
     
     public let id: MediaId? = nil
@@ -22,6 +22,10 @@ public final class TelegramMediaExpiredContent: Media {
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.data.rawValue, forKey: "d")
+    }
+    
+    public static func ==(lhs: TelegramMediaExpiredContent, rhs: TelegramMediaExpiredContent) -> Bool {
+        return lhs.isEqual(to: rhs)
     }
     
     public func isEqual(to other: Media) -> Bool {

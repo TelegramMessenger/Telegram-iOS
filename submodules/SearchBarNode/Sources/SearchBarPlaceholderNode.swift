@@ -210,29 +210,45 @@ public class SearchBarPlaceholderNode: ASDisplayNode {
                     } else if innerAlpha < 0.0001 {
                         innerAlpha = 0.0
                     }
-                    if !transition.isAnimated {
-                        strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
-                        strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
-                    }
                     if strongSelf.labelNode.alpha != innerAlpha {
+                        if !transition.isAnimated {
+                            strongSelf.labelNode.layer.removeAnimation(forKey: "opacity")
+                            strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
+                        }
+                        
                         transition.updateAlpha(node: strongSelf.labelNode, alpha: innerAlpha)
                         transition.updateAlpha(node: strongSelf.iconNode, alpha: innerAlpha)
                     }
                     
                     let outerAlpha = min(0.3, expansionProgress) / 0.3
                     let cornerRadius = min(strongSelf.fieldStyle.cornerDiameter / 2.0, height / 2.0)
-                    if !transition.isAnimated {
-                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "cornerRadius")
-                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "position")
-                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "bounds")
-                        strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                    
+                    if strongSelf.backgroundNode.cornerRadius != cornerRadius {
+                        if !transition.isAnimated {
+                            strongSelf.backgroundNode.layer.removeAnimation(forKey: "cornerRadius")
+                        }
+                        transition.updateCornerRadius(node: strongSelf.backgroundNode, cornerRadius: cornerRadius)
                     }
-                    transition.updateCornerRadius(node: strongSelf.backgroundNode, cornerRadius: cornerRadius)
-                    transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
-                    transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
+                    
+                    if strongSelf.backgroundNode.alpha != outerAlpha {
+                        if !transition.isAnimated {
+                            strongSelf.backgroundNode.layer.removeAnimation(forKey: "opacity")
+                        }
+                        transition.updateAlpha(node: strongSelf.backgroundNode, alpha: outerAlpha)
+                    }
+                    
+                    if strongSelf.backgroundNode.frame != CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)) {
+                        if !transition.isAnimated {
+                            strongSelf.backgroundNode.layer.removeAnimation(forKey: "position")
+                            strongSelf.backgroundNode.layer.removeAnimation(forKey: "bounds")
+                        }
+                        transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: constrainedSize.width, height: height)))
+                    }
                     
                     if let accessoryComponentContainer = strongSelf.accessoryComponentContainer {
-                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
+                        accessoryComponentContainer.frame = CGRect(origin: CGPoint(x: constrainedSize.width - accessoryComponentContainer.bounds.width - 4.0, y: floor((constrainedSize.height * expansionProgress - accessoryComponentContainer.bounds.height) / 2.0)), size: accessoryComponentContainer.bounds.size)
+                        transition.updateAlpha(layer: accessoryComponentContainer.layer, alpha: innerAlpha)
+                        
                     }
                 }
             })

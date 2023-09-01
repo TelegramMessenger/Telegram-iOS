@@ -200,3 +200,13 @@ UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition) {
         return nil;
     }
 }
+
+@protocol GraphicsFilterProtocol <NSObject>
+    
+- (NSObject * _Nullable)filterWithName:(NSString * _Nonnull)name;
+
+@end
+
+NSObject * _Nullable makeBlurFilter() {
+    return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"gaussianBlur"];
+}

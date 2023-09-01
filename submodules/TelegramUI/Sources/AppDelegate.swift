@@ -44,6 +44,7 @@ import PhoneNumberFormat
 import AuthorizationUI
 import ManagedFile
 import DeviceProximity
+import MediaEditor
 
 #if canImport(AppCenter)
 import AppCenter
@@ -273,7 +274,7 @@ extension UserDefaults {
     private let voipTokenPromise = Promise<Data>()
     
     private var reindexCacheDisposable: Disposable?
-    
+
     private var firebaseSecrets: [String: String] = [:] {
         didSet {
             if self.firebaseSecrets != oldValue {
@@ -503,7 +504,7 @@ extension UserDefaults {
             self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
             return true
         }
-        
+
         let rootPath = rootPathForBasePath(appGroupUrl.path)
         performAppGroupUpgrades(appGroupPath: appGroupUrl.path, rootPath: rootPath)
         
@@ -885,7 +886,7 @@ extension UserDefaults {
             |> filter { $0 }
             |> take(1)
         }
-        
+
         let checkTimeoutInPtgSecretPasscodes: Signal<Void, NoError>
         if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: rootPath))), let state = try? JSONDecoder().decode(LockState.self, from: data) {
             checkTimeoutInPtgSecretPasscodes = updatePtgSecretPasscodes(accountManager, { current in
@@ -896,12 +897,12 @@ extension UserDefaults {
         } else {
             checkTimeoutInPtgSecretPasscodes = .complete()
         }
-        
+
         let initialPresentationDataAndSettingsPromise = Promise<InitialPresentationDataAndSettings>()
         let _ = checkTimeoutInPtgSecretPasscodes.start(completed: {
             initialPresentationDataAndSettingsPromise.set(currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle))
         })
-        
+
         let sharedContextSignal = initialPresentationDataAndSettingsPromise.get()
         |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
             return (accountManager, initialPresentationDataAndSettings)
@@ -921,7 +922,7 @@ extension UserDefaults {
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), firebaseSecretStream: self.firebaseSecretStream.get(), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
-                self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: nil, messageId: messageId)
+                self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: nil, messageId: messageId, storyId: nil)
             }, displayUpgradeProgress: { progress in
                 if let progress = progress {
                     if self.dataImportSplash == nil {
@@ -941,7 +942,7 @@ extension UserDefaults {
             }, appDelegate: self)
             
             appLockContext.sharedAccountContext = sharedContext
-            
+
             presentationDataPromise.set(sharedContext.presentationData)
             
             sharedContext.presentGlobalController = { [weak self] c, a in
@@ -1204,7 +1205,7 @@ extension UserDefaults {
                             }
                         }
                     }
-                    
+
                     self.mainWindow.debugAction = nil
                     if let previousViewController = self.mainWindow.viewController {
                         previousViewController.view.endEditingWithoutAnimation()
@@ -1212,7 +1213,7 @@ extension UserDefaults {
                     self.mainWindow.viewController = context.rootController
                     
                     context.isReadyAndPresented.set(context.isReady.get())
-                    
+
                     if firstTime {
                         let layer = context.rootController.view.layer
                         layer.allowsGroupOpacity = true
@@ -1343,6 +1344,7 @@ extension UserDefaults {
             let _ = (updateIntentsSettingsInteractively(accountManager: accountManager) { current in
                 var updated = current
                 for peerId in loggedOutAccountPeerIds {
+                    deleteAllStoryDrafts(peerId: peerId)
                     if peerId == updated.account {
                         deleteAllSendMessageIntents()
                         updated = updated.withUpdatedAccount(nil)
@@ -1482,18 +1484,18 @@ extension UserDefaults {
             let taskId = "\(baseAppBundleId).cleanup"
             
             var scheduleCleanupTask: (() -> Void)?
-            
+
             BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
                 Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
                 
                 let disposable = MetaDisposable()
-                
+
                 let _ = (self.sharedContextPromise.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { sharedApplicationContext in
                     // ensure wakeupManager does not suspend postbox transactions by calling postbox.setCanBeginTransactions(false)
                     sharedApplicationContext.wakeupManager.bgTaskSchedulerTaskBegan(taskId)
-                    
+
                     disposable.set(self.runCacheReindexTasks(lowImpact: false, completion: {
                         Logger.shared.log("App \(self.episodeId)", "Completed cleanup task")
                         sharedApplicationContext.wakeupManager.bgTaskSchedulerTaskEnded(taskId)
@@ -1505,7 +1507,7 @@ extension UserDefaults {
                 task.expirationHandler = {
                     Logger.shared.log("App \(self.episodeId)", "Cleanup task expired")
                     disposable.dispose()
-                    
+
                     let _ = (self.sharedContextPromise.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -1525,13 +1527,13 @@ extension UserDefaults {
                     let request = BGProcessingTaskRequest(identifier: taskId)
                     request.requiresExternalPower = true
                     request.requiresNetworkConnectivity = false
-                    
+
                     let timestamp = Int(CFAbsoluteTimeGetCurrent())
                     let minInterval = 18 * 60 * 60
                     if let indexTimestamp = UserDefaults.standard.object(forKey: "TelegramCacheIndexTimestamp") as? NSNumber, indexTimestamp.intValue >= timestamp - minInterval {
                         request.earliestBeginDate = Date(timeIntervalSinceNow: Double(min(minInterval, indexTimestamp.intValue - (timestamp - minInterval))))
                     }
-                    
+
                     do {
                         try BGTaskScheduler.shared.submit(request)
                     } catch let e {
@@ -1539,7 +1541,7 @@ extension UserDefaults {
                     }
                 })
             }
-            
+
             scheduleCleanupTask?()
         }
         
@@ -1557,7 +1559,7 @@ extension UserDefaults {
                 })
             }
         }
-        
+
         let reindexCacheFirstTime = reindexCacheOnce
         |> delay(20.0, queue: Queue.concurrentDefaultQueue())
         let reindexCacheRepeatedly = (
@@ -1567,9 +1569,9 @@ extension UserDefaults {
         |> restart
         let reindexCache = reindexCacheFirstTime
         |> then(reindexCacheRepeatedly)
-        
+
         self.reindexCacheDisposable = reindexCache.start()
-        
+
         if #available(iOS 12.0, *) {
             UIApplication.shared.registerForRemoteNotifications()
         }
@@ -1578,9 +1580,9 @@ extension UserDefaults {
         
         if let appGroupUserDefaults = UserDefaults(suiteName: appGroupName) {
             appGroupUserDefaults.removeObject(forKey: "suppressedNotificationForAccounId")
-            
+
             var suppressedNotificationForAccounIdObserver: NSKeyValueObservation?
-            
+
             let _ = self.isInForegroundPromise.get().start(next: { isInForeground in
                 if isInForeground {
                     // using UserDefaults KVO to be notified by Notification Service Extension about suppressed notifications in hidable accounts and secret chats
@@ -1592,7 +1594,7 @@ extension UserDefaults {
                             appGroupUserDefaults.removeObject(forKey: "suppressedNotificationForAccounId")
                         }
                     })
-                    
+
                     let _ = (self.sharedContextPromise.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -1612,40 +1614,40 @@ extension UserDefaults {
                 }
             })
         }
-        
+
         // handle incoming calls and update unread counter badge right after previously hidden account is revealed
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
             var lastInactiveAccountIds = Set<AccountRecordId>()
-            
+
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> deliverOnMainQueue).start(next: { activeAccounts in
                 let inactiveAccountsIds = Set(activeAccounts.inactiveAccounts.map({ $0.0 }))
                 let newlyRevealedAccountIds = lastInactiveAccountIds.subtracting(inactiveAccountsIds)
                 lastInactiveAccountIds = inactiveAccountsIds
-                
+
                 if !newlyRevealedAccountIds.isEmpty && sharedApplicationContext.sharedContext.currentInAppNotificationSettings.with({ $0.displayNotificationsFromAllAccounts }) {
                     self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(newlyRevealedAccountIds)
                 }
             })
         })
-        
+
         // exclude from backup folders that may reveal hidden secrets
         let libraryPath = NSSearchPathForDirectoriesInDomains(.libraryDirectory, .userDomainMask, true)[0]
         excludePathFromBackup(libraryPath + "/Cookies")
         excludePathFromBackup(libraryPath + "/WebKit")
-        
+
         Queue.concurrentBackgroundQueue().async { [weak self] in
             let _ = self?.cleanTmpFolderRecursively(path: NSTemporaryDirectory())
         }
-        
+
         return true
     }
     
     private func cleanTmpFolderRecursively(path: String) -> Bool {
         var folderIsEmpty = true
-        
+
         if let contents = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.isDirectoryKey, .creationDateKey], options: []) {
             for url in contents {
                 var createdRecently = true
@@ -1654,7 +1656,7 @@ extension UserDefaults {
                         createdRecently = false
                     }
                 }
-                
+
                 if (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory ?? false {
                     if cleanTmpFolderRecursively(path: url.path) && !createdRecently {
                         try? FileManager.default.removeItem(at: url)
@@ -1670,10 +1672,10 @@ extension UserDefaults {
                 }
             }
         }
-        
+
         return folderIsEmpty
     }
-    
+
     private var backgroundSessionSourceDataDisposables: [String: Disposable] = [:]
     private var backgroundUploadResultSubscribers: [String: Bag<(String?) -> Void>] = [:]
     
@@ -1833,12 +1835,12 @@ extension UserDefaults {
                 for (_, context, _) in activeAccounts.accounts + activeAccounts.inactiveAccounts {
                     signals = signals |> then(context.account.cleanupTasks(lowImpact: lowImpact))
                 }
-                
+
                 signals = signals |> then (
                     sharedApplicationContext.sharedContext.accountManager.optimizeAllStorages(minFreePagesFraction: 0.2)
                     |> (lowImpact ? runOn(.concurrentBackgroundQueue()) : identity)
                 )
-                
+
                 // not touching inactive accounts
                 for (_, context, _) in activeAccounts.accounts {
                     signals = signals |> then (
@@ -1880,7 +1882,7 @@ extension UserDefaults {
     }
 
     private var lastResignActiveUptime: Int32?
-    
+
     func applicationWillResignActive(_ application: UIApplication) {
         self.isActiveValue = false
         self.isActivePromise.set(false)
@@ -1906,7 +1908,7 @@ extension UserDefaults {
             }
             return true
         })
-        
+
         self.lastResignActiveUptime = getDeviceUptimeSeconds(nil)
     }
 
@@ -1942,7 +1944,7 @@ extension UserDefaults {
                 UIApplication.shared.endBackgroundTask(taskId)
             }
         })
-        
+
         self.mainWindow.dismissSensitiveViewControllers()
         self.lastResignActiveUptime = nil
     }
@@ -1986,7 +1988,7 @@ extension UserDefaults {
         if let lastResignActiveUptime = self.lastResignActiveUptime, getDeviceUptimeSeconds(nil) - lastResignActiveUptime >= 10 {
             self.mainWindow.dismissSensitiveViewControllers()
         }
-        
+
         self.isInForegroundValue = true
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
@@ -1998,7 +2000,7 @@ extension UserDefaults {
         #if canImport(AppCenter)
         self.maybeCheckForUpdates()
         #endif
-        
+
         SharedDisplayLinkDriver.shared.updateForegroundState(self.isActiveValue)
     }
     
@@ -2173,7 +2175,7 @@ extension UserDefaults {
         if !Logger.shared.redactSensitiveData {
             Logger.shared.log("App \(self.episodeId) PushRegistry", "decrypted payload: \(payloadJson)")
         }
-        
+
         guard var updateString = payloadJson["updates"] as? String else {
             Logger.shared.log("App \(self.episodeId) PushRegistry", "updates is nil")
             completion()
@@ -2195,7 +2197,7 @@ extension UserDefaults {
             completion()
             return
         }
-        
+
         let useCallKitIntegration: Signal<Bool, NoError>
         if #available(iOS 13.0, *) {
             useCallKitIntegration = .single(true)
@@ -2209,7 +2211,7 @@ extension UserDefaults {
                 return voiceCallSettings.enableSystemIntegration
             }
         }
-        
+
         let _ = (combineLatest(self.sharedContextPromise.get(), useCallKitIntegration)
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext, useCallKitIntegration in
@@ -2224,13 +2226,13 @@ extension UserDefaults {
                 completion()
                 return
             }
-            
+
             guard let callKitIntegration = CallKitIntegration.shared else {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "CallKitIntegration is not available")
                 completion()
                 return
             }
-            
+
             let phoneNumber = payloadJson["phoneNumber"] as? String
 
             callKitIntegration.reportIncomingCall(
@@ -2255,7 +2257,7 @@ extension UserDefaults {
                     }
                 }
             )
-            
+
             let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
             |> take(1)
             |> deliverOnMainQueue).start(next: { activeAccounts in
@@ -2296,9 +2298,9 @@ extension UserDefaults {
                 Logger.shared.log("App \(self.episodeId) PushRegistry", "pushRegistry payload: \(payload.dictionaryPayload)")
                 sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
             }
-            
+
             Logger.shared.log("App \(self.episodeId) PushRegistry", "Invoking completion handler")
-            
+
             completion()
         })
     }
@@ -2423,7 +2425,7 @@ extension UserDefaults {
                     |> take(1)
                     |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
                     |> deliverOnMainQueue).start(next: { _ in
-                    
+
                     let contactByIdentifier: Signal<EnginePeer?, NoError>
                     if let context = self.contextValue?.context, let contactIdentifier = contact.contactIdentifier {
                         contactByIdentifier = context.engine.contacts.findPeerByLocalContactIdentifier(identifier: contactIdentifier)
@@ -2483,7 +2485,7 @@ extension UserDefaults {
                     })
                     
                     })
-                    
+
                     return true
                 }
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
@@ -2494,13 +2496,13 @@ extension UserDefaults {
                         |> take(1)
                         |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
                         |> deliverOnMainQueue).start(next: { _ in
-                        
+
                         guard PeerId(value).namespace == Namespaces.Peer.CloudUser else {
                             return
                         }
-                        
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(value), threadId: nil, activateInput: true)
-                        
+
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(value), threadId: nil, activateInput: true, storyId: nil)
+
                         })
                     }
                 }
@@ -2518,7 +2520,7 @@ extension UserDefaults {
                     guard peerId.namespace == Namespaces.Peer.CloudUser else {
                         return true
                     }
-                
+
                     let signal = self.sharedContextPromise.get()
                     |> take(1)
                     |> delay(0.1, queue: Queue.mainQueue()) // allow possible secret passcodes deactivations to be applied
@@ -2546,7 +2548,7 @@ extension UserDefaults {
                         if let primary = primary {
                             for context in contexts {
                                 if let context = context, context.account.id == primary {
-                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil)
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil, storyId: nil)
                                     return
                                 }
                             }
@@ -2554,7 +2556,7 @@ extension UserDefaults {
                         
                         for context in contexts {
                             if let context = context {
-                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil)
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil, storyId: nil)
                                 return
                             }
                         }
@@ -2587,7 +2589,7 @@ extension UserDefaults {
                                 case .camera:
                                     context.openRootCamera()
                                 case .savedMessages:
-                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil)
+                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil, storyId: nil)
                                 case .account:
                                     context.switchAccount()
                                 case .hideAllSecrets:
@@ -2641,7 +2643,7 @@ extension UserDefaults {
         }))
     }
     
-    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false, storyId: StoryId?) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue
@@ -2660,7 +2662,7 @@ extension UserDefaults {
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput)
+            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput, storyId: storyId)
         }))
     }
     
@@ -2678,8 +2680,7 @@ extension UserDefaults {
             })
         }))
     }
-    
-    @available(iOS 10.0, *)
+
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
@@ -2690,10 +2691,11 @@ extension UserDefaults {
                     self.checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts([accountId])
                 } else if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
-                    if response.notification.request.content.categoryIdentifier == "c" {
+                    if response.notification.request.content.categoryIdentifier == "c" || response.notification.request.content.categoryIdentifier == "t" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId)
+                    let storyId = storyIdFromNotification(peerId: peerId, notification: response.notification)
+                    self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId, storyId: storyId)
                 }
                 completionHandler()
             } else if response.actionIdentifier == "reply", let (peerId, threadId) = peerIdFromNotification(response.notification), let accountId = accountId {
@@ -2726,7 +2728,7 @@ extension UserDefaults {
                         if let threadId {
                             replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil
@@ -2783,11 +2785,11 @@ extension UserDefaults {
             return settings.displayNameOnLockscreen
         }
         |> deliverOnMainQueue).start(next: { displayNames in
-            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, includeNames: displayNames, authorize: authorize, completion: completion)
+            self.registerForNotifications(replyString: presentationData.strings.Notification_Reply, messagePlaceholderString: presentationData.strings.Conversation_InputTextPlaceholder, hiddenContentString: presentationData.strings.Watch_MessageView_Title, hiddenReactionContentString: presentationData.strings.Notification_LockScreenReactionPlaceholder, hiddenStoryContentString: presentationData.strings.Notification_LockScreenStoryPlaceholder, includeNames: displayNames, authorize: authorize, completion: completion)
         })
     }
 
-    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
+    private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, hiddenReactionContentString: String, hiddenStoryContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         let notificationCenter = UNUserNotificationCenter.current()
         Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
         notificationCenter.getNotificationSettings(completionHandler: { settings in
@@ -2816,43 +2818,38 @@ extension UserDefaults {
                                 let groupRepliableMessageCategory: UNNotificationCategory
                                 let groupRepliableMediaMessageCategory: UNNotificationCategory
                                 let channelMessageCategory: UNNotificationCategory
-                                
-                                if #available(iOS 11.0, *) {
-                                    var options: UNNotificationCategoryOptions = []
-                                    if includeNames {
-                                        options.insert(.hiddenPreviewsShowTitle)
-                                    }
-                                    
-                                    var carPlayOptions = options
-                                    carPlayOptions.insert(.allowInCarPlay)
-                                    if #available(iOS 13.2, *) {
-                                        carPlayOptions.insert(.allowAnnouncement)
-                                    }
-                                    
-                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
-                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
-                                } else {
-                                    let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
-                                
-                                    unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
-                                    repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)
-                                    repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], options: [])
-                                    groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: [])
-                                    groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], options: [])
-                                    channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], options: [])
+                                let reactionMessageCategory: UNNotificationCategory
+                                let storyCategory: UNNotificationCategory
+
+                                var options: UNNotificationCategoryOptions = []
+                                if includeNames {
+                                    options.insert(.hiddenPreviewsShowTitle)
                                 }
+
+                                var carPlayOptions = options
+                                carPlayOptions.insert(.allowInCarPlay)
+                                if #available(iOS 13.2, *) {
+                                    carPlayOptions.insert(.allowAnnouncement)
+                                }
+
+                                unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                repliableMessageCategory = UNNotificationCategory(identifier: "r", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                repliableMediaMessageCategory = UNNotificationCategory(identifier: "m", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
+                                groupRepliableMessageCategory = UNNotificationCategory(identifier: "gr", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                groupRepliableMediaMessageCategory = UNNotificationCategory(identifier: "gm", actions: [reply], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                channelMessageCategory = UNNotificationCategory(identifier: "c", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
+                                reactionMessageCategory = UNNotificationCategory(identifier: "t", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenReactionContentString, options: options)
+                                storyCategory = UNNotificationCategory(identifier: "st", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenStoryContentString, options: options)
                                 
                                 UNUserNotificationCenter.current().setNotificationCategories([
                                     unknownMessageCategory,
                                     repliableMessageCategory,
                                     repliableMediaMessageCategory,
                                     channelMessageCategory,
+                                    reactionMessageCategory,
                                     groupRepliableMessageCategory,
-                                    groupRepliableMediaMessageCategory
+                                    groupRepliableMediaMessageCategory,
+                                    storyCategory
                                 ])
                                 
                                 Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")
@@ -2900,7 +2897,7 @@ extension UserDefaults {
     
     private func checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts(_ accountIds: Set<AccountRecordId>?) {
         Logger.shared.log("App \(self.episodeId)", "checkIncomingCallAndRefreshUnreadCountOfNonCurrentAccounts: \(accountIds ?? [])")
-        
+
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -2915,7 +2912,7 @@ extension UserDefaults {
             })
         })
     }
-    
+
     private var lastCheckForUpdatesTimestamp: Double?
     private let currentCheckForUpdatesDisposable = MetaDisposable()
     
@@ -2970,7 +2967,7 @@ extension UserDefaults {
         #endif
     }
     #endif
-    
+
     override var next: UIResponder? {
         if let context = self.contextValue, let controller = context.context.keyShortcutsController {
             return controller
@@ -3113,7 +3110,6 @@ private func peerIdFromNotification(_ notification: UNNotification) -> (peerId: 
     }
 }
 
-@available(iOS 10.0, *)
 private func messageIdFromNotification(peerId: PeerId, notification: UNNotification) -> MessageId? {
     let payload = notification.request.content.userInfo
     if let messageIdNamespace = payload["messageId.namespace"] as? Int32, let messageIdId = payload["messageId.id"] as? Int32 {
@@ -3123,6 +3119,15 @@ private func messageIdFromNotification(peerId: PeerId, notification: UNNotificat
     if let msgId = payload["msg_id"] {
         let msgIdValue = msgId as! NSString
         return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(msgIdValue.intValue))
+    }
+    return nil
+}
+
+private func storyIdFromNotification(peerId: PeerId, notification: UNNotification) -> StoryId? {
+    let payload = notification.request.content.userInfo
+    if let storyId = payload["story_id"] {
+        let storyIdValue = storyId as! NSString
+        return StoryId(peerId: peerId, id: Int32(storyIdValue.intValue))
     }
     return nil
 }

@@ -221,7 +221,7 @@ public extension UIView {
 }
 
 private func layoutMetricsForScreenSize(_ size: CGSize) -> LayoutMetrics {
-    if size.width > 690.0 && size.height > 690.0 {
+    if size.width > 690.0 && size.height > 650.0 {
         return LayoutMetrics(widthClass: .regular, heightClass: .regular)
     } else {
         return LayoutMetrics(widthClass: .compact, heightClass: .compact)

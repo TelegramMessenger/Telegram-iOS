@@ -18,7 +18,6 @@ import PagerComponent
 import SoftwareVideo
 import AVFoundation
 import PhotoResources
-//import ContextUI
 import ShimmerEffect
 
 private class GifVideoLayer: AVSampleBufferDisplayLayer {
@@ -148,19 +147,25 @@ public final class GifPagerContentComponent: Component {
         public let loadMore: (String) -> Void
         public let openSearch: () -> Void
         public let updateSearchQuery: ([String]?) -> Void
+        public let hideBackground: Bool
+        public let hasSearch: Bool
         
         public init(
             performItemAction: @escaping (Item, UIView, CGRect) -> Void,
             openGifContextMenu: @escaping (Item, UIView, CGRect, ContextGesture, Bool) -> Void,
             loadMore: @escaping (String) -> Void,
             openSearch: @escaping () -> Void,
-            updateSearchQuery: @escaping ([String]?) -> Void
+            updateSearchQuery: @escaping ([String]?) -> Void,
+            hideBackground: Bool,
+            hasSearch: Bool
         ) {
             self.performItemAction = performItemAction
             self.openGifContextMenu = openGifContextMenu
             self.loadMore = loadMore
             self.openSearch = openSearch
             self.updateSearchQuery = updateSearchQuery
+            self.hideBackground = hideBackground
+            self.hasSearch = hasSearch
         }
     }
     
@@ -198,6 +203,7 @@ public final class GifPagerContentComponent: Component {
     public let searchCategories: EmojiSearchCategories?
     public let searchInitiallyHidden: Bool
     public let searchState: EmojiPagerContentComponent.SearchState
+    public let hideBackground: Bool
     
     public init(
         context: AccountContext,
@@ -209,7 +215,8 @@ public final class GifPagerContentComponent: Component {
         displaySearchWithPlaceholder: String?,
         searchCategories: EmojiSearchCategories?,
         searchInitiallyHidden: Bool,
-        searchState: EmojiPagerContentComponent.SearchState
+        searchState: EmojiPagerContentComponent.SearchState,
+        hideBackground: Bool
     ) {
         self.context = context
         self.inputInteraction = inputInteraction
@@ -221,6 +228,7 @@ public final class GifPagerContentComponent: Component {
         self.searchCategories = searchCategories
         self.searchInitiallyHidden = searchInitiallyHidden
         self.searchState = searchState
+        self.hideBackground = hideBackground
     }
     
     public static func ==(lhs: GifPagerContentComponent, rhs: GifPagerContentComponent) -> Bool {
@@ -254,8 +262,12 @@ public final class GifPagerContentComponent: Component {
         if lhs.searchState != rhs.searchState {
             return false
         }
+        if lhs.hideBackground != rhs.hideBackground {
+            return false
+        }
         return true
     }
+    
     
     public final class View: ContextControllerSourceView, PagerContentViewWithBackground, UIScrollViewDelegate {
         private struct ItemGroupDescription: Equatable {
@@ -960,7 +972,7 @@ public final class GifPagerContentComponent: Component {
             }
         }
         
-        public func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition) {
+        public func pagerUpdateBackground(backgroundFrame: CGRect, topPanelHeight: CGFloat, transition: Transition) {
             guard let theme = self.theme else {
                 return
             }
@@ -982,7 +994,13 @@ public final class GifPagerContentComponent: Component {
                     vibrancyEffectView.contentView.addSubview(self.mirrorSearchHeaderContainer)
                 }
             }
-            self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            
+            let hideBackground = self.component?.hideBackground ?? false
+            var backgroundColor = theme.chat.inputMediaPanel.backgroundColor
+            if hideBackground {
+                backgroundColor = backgroundColor.withAlphaComponent(0.01)
+            }
+            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             

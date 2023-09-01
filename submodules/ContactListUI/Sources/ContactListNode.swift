@@ -22,6 +22,7 @@ import TelegramPermissionsUI
 import AppBundle
 import ContextUI
 import PhoneNumberFormat
+import LocalizedPeerData
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -37,61 +38,18 @@ private let dropDownIcon = { () -> UIImage in
     return image
 }()
 
+private enum ContactListNodeEntrySection: Int {
+    case stories = 0
+    case contacts = 1
+}
+
 private enum ContactListNodeEntryId: Hashable {
     case search
     case sort
     case permission(action: Bool)
     case option(index: Int)
-    case peerId(Int64)
+    case peerId(peerId: Int64, section: ContactListNodeEntrySection)
     case deviceContact(DeviceContactStableId)
-    
-    static func <(lhs: ContactListNodeEntryId, rhs: ContactListNodeEntryId) -> Bool {
-        return lhs.hashValue < rhs.hashValue
-    }
-
-    static func ==(lhs: ContactListNodeEntryId, rhs: ContactListNodeEntryId) -> Bool {
-        switch lhs {
-            case .search:
-                switch rhs {
-                    case .search:
-                        return true
-                    default:
-                        return false
-                }
-            case .sort:
-                switch rhs {
-                    case .sort:
-                        return true
-                    default:
-                        return false
-                }
-            case let .permission(action):
-                if case .permission(action) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .option(index):
-                if case .option(index) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .peerId(lhsId):
-                switch rhs {
-                    case let .peerId(rhsId):
-                        return lhsId == rhsId
-                    default:
-                        return false
-                }
-            case let .deviceContact(id):
-                if case .deviceContact(id) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 private final class ContactListNodeInteraction {
@@ -99,16 +57,18 @@ private final class ContactListNodeInteraction {
     fileprivate let authorize: () -> Void
     fileprivate let suppressWarning: () -> Void
     fileprivate let openPeer: (ContactListPeer, ContactListAction) -> Void
-    fileprivate let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+    fileprivate let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
+    fileprivate let openStories: (EnginePeer, ASDisplayNode) -> Void
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) {
+    init(activateSearch: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer, ContactListAction) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?, openStories: @escaping (EnginePeer, ASDisplayNode) -> Void) {
         self.activateSearch = activateSearch
         self.authorize = authorize
         self.suppressWarning = suppressWarning
         self.openPeer = openPeer
         self.contextAction = contextAction
+        self.openStories = openStories
     }
 }
 
@@ -119,12 +79,18 @@ enum ContactListAnimation {
 }
 
 private enum ContactListNodeEntry: Comparable, Identifiable {
+    struct StoryData: Equatable {
+        var count: Int
+        var unseenCount: Int
+        var hasUnseenCloseFriends: Bool
+    }
+    
     case search(PresentationTheme, PresentationStrings)
     case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
     case permissionInfo(PresentationTheme, String, String, Bool)
     case permissionEnable(PresentationTheme, String)
     case option(Int, ContactListAdditionalOption, ListViewItemHeader?, PresentationTheme, PresentationStrings)
-    case peer(Int, ContactListPeer, EnginePeer.Presence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool, Bool)
+    case peer(Int, ContactListPeer, EnginePeer.Presence?, ListViewItemHeader?, ContactsPeerItemSelection, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, PresentationPersonNameOrder, Bool, Bool, StoryData?)
     
     var stableId: ContactListNodeEntryId {
         switch self {
@@ -138,10 +104,10 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 return .permission(action: true)
             case let .option(index, _, _, _, _):
                 return .option(index: index)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, storyData):
                 switch peer {
                     case let .peer(peer, _, _):
-                        return .peerId(peer.id.toInt64())
+                        return .peerId(peerId: peer.id.toInt64(), section: storyData != nil ? .stories : .contacts)
                     case let .deviceContact(id, _):
                         return .deviceContact(id)
                 }
@@ -171,7 +137,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 })
             case let .option(_, option, header, _, _):
                 return ContactListActionItem(presentationData: ItemListPresentationData(presentationData), title: option.title, icon: option.icon, clearHighlightAutomatically: option.clearHighlightAutomatically, header: header, action: option.action)
-            case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, enabled):
+            case let .peer(_, peer, presence, header, selection, _, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, displayCallIcons, enabled, storyData):
                 var status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
                 var isContextActionEnabled = false
@@ -217,7 +183,7 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         switch itemPeer {
                         case let .peer(peer, _):
                             if let peer = peer {
-                                contextAction(peer, node, gesture, location)
+                                contextAction(peer, node, gesture, location, storyData != nil)
                             }
                         case .deviceContact:
                             break
@@ -236,9 +202,22 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                     })]
                 }
                 
+                var storyStats: (total: Int, unseen: Int, hasUnseenCloseFriends: Bool)?
+                if let storyData = storyData {
+                    storyStats = (storyData.count, storyData.unseenCount, storyData.hasUnseenCloseFriends)
+                    
+                    let text: String
+                    text = presentationData.strings.ChatList_ArchiveStoryCount(Int32(storyData.count))
+                    status = .custom(string: text, multiline: false, isActive: false, icon: nil)
+                }
+                
                 return ContactsPeerItem(presentationData: ItemListPresentationData(presentationData), sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, context: context, peerMode: isSearch ? .generalSearch : .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, selectionPosition: .left, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), additionalActions: additionalActions, index: nil, header: header, action: { _ in
                     interaction.openPeer(peer, .generic)
-                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction)
+                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction, storyStats: storyStats, openStories: { peer, sourceNode in
+                    if case let .peer(peerValue, _) = peer, let peerValue {
+                        interaction.openStories(peerValue, sourceNode)
+                    }
+                })
         }
     }
 
@@ -274,9 +253,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                 } else {
                     return false
                 }
-            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsDisplayCallIcons, lhsEnabled):
+            case let .peer(lhsIndex, lhsPeer, lhsPresence, lhsHeader, lhsSelection, lhsTheme, lhsStrings, lhsTimeFormat, lhsSortOrder, lhsDisplayOrder, lhsDisplayCallIcons, lhsEnabled, lhsStoryData):
                 switch rhs {
-                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsDisplayCallIcons, rhsEnabled):
+                    case let .peer(rhsIndex, rhsPeer, rhsPresence, rhsHeader, rhsSelection, rhsTheme, rhsStrings, rhsTimeFormat, rhsSortOrder, rhsDisplayOrder, rhsDisplayCallIcons, rhsEnabled, rhsStoryData):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -315,6 +294,9 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             return false
                         }
                         if lhsEnabled != rhsEnabled {
+                            return false
+                        }
+                        if lhsStoryData != rhsStoryData {
                             return false
                         }
                         return true
@@ -358,84 +340,25 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         case .peer:
                             return true
                 }
-            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(lhsIndex, _, _, _, _, _, _, _, _, _, _, _, lhsStoryData):
                 switch rhs {
                     case .search, .sort, .permissionInfo, .permissionEnable, .option:
                         return false
-                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .peer(rhsIndex, _, _, _, _, _, _, _, _, _, _, _, rhsStoryData):
+                        if (lhsStoryData == nil) != (rhsStoryData == nil) {
+                            if lhsStoryData != nil {
+                                return true
+                            } else {
+                                return false
+                            }
+                        }
                         return lhsIndex < rhsIndex
                 }
         }
     }
 }
 
-private extension EnginePeer.IndexName {
-    func isLessThan(other: EnginePeer.IndexName, ordering: PresentationPersonNameOrder) -> ComparisonResult {
-        switch self {
-        case let .title(lhsTitle, _):
-            let rhsString: String
-            switch other {
-            case let .title(title, _):
-                rhsString = title
-            case let .personName(first, last, _, _):
-                switch ordering {
-                case .firstLast:
-                    if first.isEmpty {
-                        rhsString = last
-                    } else {
-                        rhsString = first + last
-                    }
-                case .lastFirst:
-                    if last.isEmpty {
-                        rhsString = first
-                    } else {
-                        rhsString = last + first
-                    }
-                }
-            }
-            return lhsTitle.caseInsensitiveCompare(rhsString)
-        case let .personName(lhsFirst, lhsLast, _, _):
-            let lhsString: String
-            switch ordering {
-            case .firstLast:
-                if lhsFirst.isEmpty {
-                    lhsString = lhsLast
-                } else {
-                    lhsString = lhsFirst + lhsLast
-                }
-            case .lastFirst:
-                if lhsLast.isEmpty {
-                    lhsString = lhsFirst
-                } else {
-                    lhsString = lhsLast + lhsFirst
-                }
-            }
-            let rhsString: String
-            switch other {
-            case let .title(title, _):
-                rhsString = title
-            case let .personName(first, last, _, _):
-                switch ordering {
-                case .firstLast:
-                    if first.isEmpty {
-                        rhsString = last
-                    } else {
-                        rhsString = first + last
-                    }
-                case .lastFirst:
-                    if last.isEmpty {
-                        rhsString = first
-                    } else {
-                        rhsString = last + first
-                    }
-                }
-            }
-            return lhsString.caseInsensitiveCompare(rhsString)
-        }
-    }
-}
-
-private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactListPeer], presences: [EnginePeer.Id: EnginePeer.Presence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds: Set<EnginePeer.Id>, authorizationStatus: AccessType, warningSuppressed: (Bool, Bool), displaySortOptions: Bool, displayCallIcons: Bool) -> [ContactListNodeEntry] {
+private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactListPeer], presences: [EnginePeer.Id: EnginePeer.Presence], presentation: ContactListPresentation, selectionState: ContactListNodeGroupSelectionState?, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, disabledPeerIds: Set<EnginePeer.Id>, authorizationStatus: AccessType, warningSuppressed: (Bool, Bool), displaySortOptions: Bool, displayCallIcons: Bool, storySubscriptions: EngineStorySubscriptions?) -> [ContactListNodeEntry] {
     var entries: [ContactListNodeEntry] = []
     
     var commonHeader: ListViewItemHeader?
@@ -463,8 +386,12 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
         }
     }
     
+    if let storySubscriptions, !storySubscriptions.items.isEmpty {
+        addHeader = true
+    }
+    
     if addHeader {
-        commonHeader = ChatListSearchItemHeader(type: .contacts, theme: theme, strings: strings, actionTitle: nil, action: nil)
+        commonHeader = ChatListSearchItemHeader(type: .text(strings.Contacts_SortedByPresence.uppercased(), AnyHashable(1)), theme: theme, strings: strings, actionTitle: nil, action: nil)
     }
     
     switch presentation {
@@ -587,6 +514,18 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
     }
     
     
+    if let storySubscriptions {
+        let _ = storySubscriptions
+        /*var index: Int = 0
+        
+        let header: ListViewItemHeader? = ChatListSearchItemHeader(type: .text("HIDDEN STORIES", AnyHashable(0)), theme: theme, strings: strings)
+        
+        for item in storySubscriptions.items {
+            entries.append(.peer(index, .peer(peer: item.peer._asPeer(), isGlobal: false, participantCount: nil), nil, header, .none, theme, strings, dateTimeFormat, sortOrder, displayOrder, false, true, ContactListNodeEntry.StoryData(count: item.storyCount, unseenCount: item.unseenCount, hasUnseenCloseFriends: item.hasUnseenCloseFriends)))
+            index += 1
+        }*/
+    }
+    
     var index: Int = 0
     
     var existingPeerIds = Set<ContactListPeerId>()
@@ -611,7 +550,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
                     enabled = true
             }
             
-            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled))
+            entries.append(.peer(index, peer, presence, nil, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled, nil))
             index += 1
         }
     }
@@ -647,7 +586,7 @@ private func contactListNodeEntries(accountPeer: EnginePeer?, peers: [ContactLis
             default:
                 enabled = true
         }
-        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled))
+        entries.append(.peer(index, peer, presence, header, selection, theme, strings, dateTimeFormat, sortOrder, displayOrder, displayCallIcons, enabled, nil))
         index += 1
     }
     return entries
@@ -671,7 +610,7 @@ private func preparedContactListNodeTransition(context: AccountContext, presenta
                 case .search:
                     //indexSections.apend(CollectionIndexNode.searchIndex)
                     break
-                case let .peer(_, _, _, header, _, _, _, _, _, _, _, _):
+                case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _):
                     if let header = header as? ContactListNameIndexHeader {
                         if !existingSections.contains(header.letter) {
                             existingSections.insert(header.letter)
@@ -783,7 +722,7 @@ public final class ContactListNode: ASDisplayNode {
     private var indexSections: [String]?
     
     private var queuedTransitions: [ContactsListNodeTransition] = []
-    private var validLayout: (ContainerViewLayout, UIEdgeInsets)?
+    private var validLayout: (ContainerViewLayout, UIEdgeInsets, CGFloat)?
     
     private var _ready = ValuePromise<Bool>()
     public var ready: Signal<Bool, NoError> {
@@ -792,6 +731,7 @@ public final class ContactListNode: ASDisplayNode {
     private var didSetReady = false
     
     private let contactPeersViewPromise = Promise<(EngineContactList, EnginePeer?)>()
+    let storySubscriptions = Promise<EngineStorySubscriptions?>(nil)
     
     private let selectionStatePromise = Promise<ContactListNodeGroupSelectionState?>(nil)
     private var selectionStateValue: ContactListNodeGroupSelectionState? {
@@ -868,7 +808,8 @@ public final class ContactListNode: ASDisplayNode {
     public var openPeer: ((ContactListPeer, ContactListAction) -> Void)?
     public var openPrivacyPolicy: (() -> Void)?
     public var suppressPermissionWarning: (() -> Void)?
-    private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+    private let contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)?
+    public var openStories: ((EnginePeer, ASDisplayNode) -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -884,7 +825,7 @@ public final class ContactListNode: ASDisplayNode {
     
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?, Bool) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
@@ -980,7 +921,12 @@ public final class ContactListNode: ASDisplayNode {
                     strongSelf.openPeer?(peer, action)
                 }
             }
-        }, contextAction: contextAction)
+        }, contextAction: contextAction, openStories: { [weak self] peer, sourceNode in
+            guard let self else {
+                return
+            }
+            self.openStories?(peer, sourceNode)
+        })
         
         self.indexNode.indexSelected = { [weak self] section in
             guard let strongSelf = self, let layout = strongSelf.validLayout, let entries = previousEntries.with({ $0 }) else {
@@ -1007,7 +953,7 @@ public final class ContactListNode: ASDisplayNode {
                             strongSelf.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.PreferSynchronousDrawing, .PreferSynchronousResourceLoading], scrollToItem: ListViewScrollToItem(index: index, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: nil), directionHint: .Down), additionalScrollDistance: 0.0, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                             break loop
                         }
-                    case let .peer(_, _, _, header, _, _, _, _, _, _, _, _):
+                    case let .peer(_, _, _, header, _, _, _, _, _, _, _, _, _):
                         if let header = header as? ContactListNameIndexHeader {
                             if let scalar = UnicodeScalar(header.letter) {
                                 let title = "\(Character(scalar))"
@@ -1255,7 +1201,7 @@ public final class ContactListNode: ASDisplayNode {
                                 peers.append(.deviceContact(stableId, contact.0))
                             }
                             
-                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false, displayCallIcons: displayCallIcons)
+                            let entries = contactListNodeEntries(accountPeer: nil, peers: peers, presences: localPeersAndStatuses.1, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, authorizationStatus: .allowed, warningSuppressed: (true, true), displaySortOptions: false, displayCallIcons: displayCallIcons, storySubscriptions: nil)
                             let previous = previousEntries.swap(entries)
                             return .single(preparedContactListNodeTransition(context: context, presentationData: presentationData, from: previous ?? [], to: entries, interaction: interaction, firstTime: previous == nil, isEmpty: false, generateIndexSections: generateSections, animation: .none, isSearch: isSearch))
                         }
@@ -1276,8 +1222,8 @@ public final class ContactListNode: ASDisplayNode {
                         return context.engine.data.get(EngineDataMap(
                             view.entries.compactMap { entry -> EnginePeer.Id? in
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _, _, _):
-                                    if let peer = renderedPeer.peer {
+                                case let .MessageEntry(entryData):
+                                    if let peer = entryData.renderedPeer.peer {
                                         if let channel = peer as? TelegramChannel, case .group = channel.info {
                                             return peer.id
                                         }
@@ -1292,8 +1238,8 @@ public final class ContactListNode: ASDisplayNode {
                             var peers: [(EnginePeer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _, _, _):
-                                    if let peer = renderedPeer.peer {
+                                case let .MessageEntry(entryData):
+                                    if let peer = entryData.renderedPeer.peer {
                                         if peer is TelegramGroup {
                                             peers.append((EnginePeer(peer), 0))
                                         } else if let channel = peer as? TelegramChannel, case .group = channel.info {
@@ -1315,8 +1261,8 @@ public final class ContactListNode: ASDisplayNode {
                     chatListSignal = .single([])
                 }
                 
-                return (combineLatest(self.contactPeersViewPromise.get(), chatListSignal, selectionStateSignal, presentationDataPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get())
-                |> mapToQueue { view, chatListPeers, selectionState, presentationData, authorizationStatus, warningSuppressed -> Signal<ContactsListNodeTransition, NoError> in
+                return (combineLatest(self.contactPeersViewPromise.get(), chatListSignal, selectionStateSignal, presentationDataPromise.get(), contactsAuthorization.get(), contactsWarningSuppressed.get(), self.storySubscriptions.get())
+                |> mapToQueue { view, chatListPeers, selectionState, presentationData, authorizationStatus, warningSuppressed, storySubscriptions -> Signal<ContactsListNodeTransition, NoError> in
                     let signal = deferred { () -> Signal<ContactsListNodeTransition, NoError> in
                         var peers = view.0.peers.map({ ContactListPeer.peer(peer: $0._asPeer(), isGlobal: false, participantCount: nil) })
                         for (peer, memberCount) in chatListPeers {
@@ -1348,7 +1294,7 @@ public final class ContactListNode: ASDisplayNode {
                         if (authorizationStatus == .notDetermined || authorizationStatus == .denied) && peers.isEmpty {
                             isEmpty = true
                         }
-                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: view.0.presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons)
+                        let entries = contactListNodeEntries(accountPeer: view.1, peers: peers, presences: view.0.presences, presentation: presentation, selectionState: selectionState, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, sortOrder: presentationData.nameSortOrder, displayOrder: presentationData.nameDisplayOrder, disabledPeerIds: disabledPeerIds, authorizationStatus: authorizationStatus, warningSuppressed: warningSuppressed, displaySortOptions: displaySortOptions, displayCallIcons: displayCallIcons, storySubscriptions: storySubscriptions)
                         let previous = previousEntries.swap(entries)
                         let previousSelection = previousSelectionState.swap(selectionState)
                         
@@ -1434,8 +1380,8 @@ public final class ContactListNode: ASDisplayNode {
                         }
                     })
                     
-                    if let (validLayout, headerInsets) = strongSelf.validLayout {
-                        strongSelf.containerLayoutUpdated(validLayout, headerInsets: headerInsets, transition: .immediate)
+                    if let (validLayout, headerInsets, storiesInset) = strongSelf.validLayout {
+                        strongSelf.containerLayoutUpdated(validLayout, headerInsets: headerInsets, storiesInset: storiesInset, transition: .immediate)
                     }
                 }
             }
@@ -1498,9 +1444,12 @@ public final class ContactListNode: ASDisplayNode {
         }
     }
     
-    public func containerLayoutUpdated(_ layout: ContainerViewLayout, headerInsets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    private var previousStoriesInset: CGFloat?
+    public var ignoreStoryInsetAdjustment: Bool = false
+    
+    public func containerLayoutUpdated(_ layout: ContainerViewLayout, headerInsets: UIEdgeInsets, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (layout, headerInsets)
+        self.validLayout = (layout, headerInsets, storiesInset)
         
         var insets = layout.insets(options: [.input])
         insets.left = layout.safeInsets.left
@@ -1511,12 +1460,22 @@ public final class ContactListNode: ASDisplayNode {
             headerInsets.top -= navigationBarSearchContentHeight
         }
         
+        var additionalScrollDistance: CGFloat = 0.0
+        
+        if let previousStoriesInset = self.previousStoriesInset {
+            if self.ignoreStoryInsetAdjustment {
+            } else {
+                additionalScrollDistance += previousStoriesInset - storiesInset
+            }
+        }
+        self.previousStoriesInset = storiesInset
+        
         transition.updateFrame(node: self.listNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         if let indexSections = self.indexSections {
             var insets = layout.insets(options: [.input])
             if let inputHeight = layout.inputHeight {
@@ -1571,7 +1530,7 @@ public final class ContactListNode: ASDisplayNode {
                         options.insert(.AnimateCrossfade)
                     }
                 }
-                if let (layout, _) = self.validLayout {
+                if let (layout, _, _) = self.validLayout {
                     self.indexSections = transition.indexSections
                     
                     var insets = layout.insets(options: [.input])

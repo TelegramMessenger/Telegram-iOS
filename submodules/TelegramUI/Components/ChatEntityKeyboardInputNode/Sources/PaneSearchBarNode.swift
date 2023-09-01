@@ -135,7 +135,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
     private let iconNode: ASImageNode
     private let textField: PaneSearchBarTextField
     private let clearButton: HighlightableButtonNode
-    private let cancelButton: ASButtonNode
+    private let cancelButton: HighlightableButtonNode
     
     var placeholderString: NSAttributedString? {
         get {
@@ -228,7 +228,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.clearButton.displaysAsynchronously = false
         self.clearButton.isHidden = true
         
-        self.cancelButton = ASButtonNode()
+        self.cancelButton = HighlightableButtonNode()
         self.cancelButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.cancelButton.displaysAsynchronously = false
         
@@ -285,7 +285,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         let contentFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: boundingSize.width - leftInset - rightInset, height: boundingSize.height))
         
         let cancelButtonSize = self.cancelButton.measure(CGSize(width: 100.0, height: CGFloat.infinity))
-        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + 34.0), size: cancelButtonSize))
+        transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: contentFrame.maxX - 8.0 - cancelButtonSize.width, y: verticalOffset + 36.0), size: cancelButtonSize))
         
         let textBackgroundFrame = CGRect(origin: CGPoint(x: contentFrame.minX + 8.0, y: verticalOffset + 28.0), size: CGSize(width: contentFrame.width - 16.0 - cancelButtonSize.width - 11.0, height: 36.0))
         transition.updateFrame(node: self.textBackgroundNode, frame: textBackgroundFrame)
@@ -446,7 +446,7 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.layer.animateFrame(from: self.iconNode.frame, to: targetIconFrame, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
         
         let cancelButtonFrame = self.cancelButton.frame
-        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.minY + 2.0 + cancelButtonFrame.size.height / 2.0), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
+        self.cancelButton.layer.animatePosition(from: self.cancelButton.layer.position, to: CGPoint(x: self.bounds.size.width + cancelButtonFrame.size.width / 2.0, y: targetTextBackgroundFrame.minY + 4.0 + cancelButtonFrame.size.height / 2.0), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {

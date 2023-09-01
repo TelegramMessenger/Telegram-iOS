@@ -60,7 +60,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.displayCallIcons = displayCallIcons
         
         var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _ in
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
             contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         
@@ -144,7 +144,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
-        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, transition: transition)
+        self.contactListNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), headerInsets: headerInsets, storiesInset: 0.0, transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
         

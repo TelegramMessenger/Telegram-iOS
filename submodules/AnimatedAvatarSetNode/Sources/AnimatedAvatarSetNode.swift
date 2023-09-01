@@ -277,10 +277,14 @@ public final class AnimatedAvatarSetNode: ASDisplayNode {
             guard let itemNode = self.contentNodes.removeValue(forKey: key) else {
                 continue
             }
-            itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemNode] _ in
-                itemNode?.removeFromSupernode()
-            })
-            itemNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+            if animated {
+                itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak itemNode] _ in
+                    itemNode?.removeFromSupernode()
+                })
+                itemNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
+            } else {
+                itemNode.removeFromSupernode()
+            }
         }
         
         return CGSize(width: contentWidth, height: contentHeight)

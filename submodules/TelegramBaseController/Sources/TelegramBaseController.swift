@@ -33,7 +33,7 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
                 controller?.view.endEditing(true)
             }, present: { c, a in
                 controller?.present(c, in: .window(.root), with: a, blockInteraction: true)
-            }, transitionNode: { _, _ in
+            }, transitionNode: { _, _, _ in
                 return nil
             }, addToTransitionSurface: { _ in
             }, openUrl: { _ in
@@ -61,6 +61,9 @@ private func presentLiveLocationController(context: AccountContext, peerId: Peer
 open class TelegramBaseController: ViewController, KeyShortcutResponder {
     private let context: AccountContext
     
+    public var accessoryPanelContainer: ASDisplayNode?
+    public private(set) var accessoryPanelContainerHeight: CGFloat = 0.0
+    
     public let mediaAccessoryPanelVisibility: MediaAccessoryPanelVisibility
     public let locationBroadcastPanelSource: LocationBroadcastPanelSource
     public let groupCallPanelSource: GroupCallPanelSource
@@ -76,7 +79,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     public var tempVoicePlaylistItemChanged: ((SharedMediaPlaylistItem?, SharedMediaPlaylistItem?) -> Void)?
     public var tempVoicePlaylistCurrentItem: SharedMediaPlaylistItem?
     
-    public var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
+    public private(set) var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     
     private var locationBroadcastMode: LocationBroadcastNavigationAccessoryPanelMode?
     private var locationBroadcastPeers: [EnginePeer]?
@@ -84,7 +87,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     private var locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel?
     
     private var groupCallPanelData: GroupCallPanelData?
-    private var groupCallAccessoryPanel: GroupCallNavigationAccessoryPanel?
+    public private(set) var groupCallAccessoryPanel: GroupCallNavigationAccessoryPanel?
     
     private var dismissingPanel: ASDisplayNode?
     
@@ -96,14 +99,16 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
     
     override open var additionalNavigationBarHeight: CGFloat {
         var height: CGFloat = 0.0
-        if let _ = self.groupCallAccessoryPanel {
-            height += 50.0
-        }
-        if let _ = self.mediaAccessoryPanel {
-            height += MediaNavigationAccessoryHeaderNode.minimizedHeight
-        }
-        if let _ = self.locationBroadcastAccessoryPanel {
-            height += MediaNavigationAccessoryHeaderNode.minimizedHeight
+        if self.accessoryPanelContainer == nil {
+            if let _ = self.groupCallAccessoryPanel {
+                height += 50.0
+            }
+            if let _ = self.mediaAccessoryPanel {
+                height += MediaNavigationAccessoryHeaderNode.minimizedHeight
+            }
+            if let _ = self.locationBroadcastAccessoryPanel {
+                height += MediaNavigationAccessoryHeaderNode.minimizedHeight
+            }
         }
         return height
     }
@@ -401,16 +406,38 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         super.containerLayoutUpdated(layout, transition: transition)
         
         let navigationHeight = super.navigationLayout(layout: layout).navigationFrame.height - self.additionalNavigationBarHeight
-//        if !self.displayNavigationBar {
-//            navigationHeight = 0.0
-//        }
+        
+        let mediaAccessoryPanelHidden: Bool
+        switch self.mediaAccessoryPanelVisibility {
+        case .always:
+            mediaAccessoryPanelHidden = false
+        case .none:
+            mediaAccessoryPanelHidden = true
+        case let .specific(size):
+            mediaAccessoryPanelHidden = size != layout.metrics.widthClass
+        }
         
         var additionalHeight: CGFloat = 0.0
+        var panelStartY: CGFloat = 0.0
+        if self.accessoryPanelContainer == nil {
+            var negativeHeight: CGFloat = 0.0
+            if let _ = self.groupCallPanelData {
+                negativeHeight += 50.0
+            }
+            if let _ = self.locationBroadcastPeers, let _ = self.locationBroadcastMode {
+                negativeHeight += MediaNavigationAccessoryHeaderNode.minimizedHeight
+            }
+            if let _ = self.playlistStateAndType, !mediaAccessoryPanelHidden {
+                negativeHeight += MediaNavigationAccessoryHeaderNode.minimizedHeight
+            }
+            panelStartY = navigationHeight.isZero ? (-negativeHeight) : (navigationHeight + additionalHeight + UIScreenPixel)
+        }
         
         if let groupCallPanelData = self.groupCallPanelData {
             let panelHeight: CGFloat = 50.0
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelStartY), size: CGSize(width: layout.size.width, height: panelHeight))
             additionalHeight += panelHeight
+            panelStartY += panelHeight
             
             let groupCallAccessoryPanel: GroupCallNavigationAccessoryPanel
             if let current = self.groupCallAccessoryPanel {
@@ -429,7 +456,11 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         activeCall: EngineGroupCallDescription(id: groupCallPanelData.info.id, accessHash: groupCallPanelData.info.accessHash, title: groupCallPanelData.info.title, scheduleTimestamp: groupCallPanelData.info.scheduleTimestamp, subscribedToScheduled: groupCallPanelData.info.subscribedToScheduled, isStream: groupCallPanelData.info.isStream)
                     )
                 })
-                self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)
+                if let accessoryPanelContainer = self.accessoryPanelContainer {
+                    accessoryPanelContainer.addSubnode(groupCallAccessoryPanel)
+                } else {
+                    self.navigationBar?.additionalContentNode.addSubnode(groupCallAccessoryPanel)
+                }
                 self.groupCallAccessoryPanel = groupCallAccessoryPanel
                 groupCallAccessoryPanel.frame = panelFrame
                 
@@ -452,8 +483,9 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         if let locationBroadcastPeers = self.locationBroadcastPeers, let locationBroadcastMode = self.locationBroadcastMode {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelStartY), size: CGSize(width: layout.size.width, height: panelHeight))
             additionalHeight += panelHeight
+            panelStartY += panelHeight
             
             let locationBroadcastAccessoryPanel: LocationBroadcastNavigationAccessoryPanel
             if let current = self.locationBroadcastAccessoryPanel {
@@ -576,7 +608,11 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                         strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 })
-                self.navigationBar?.additionalContentNode.addSubnode(locationBroadcastAccessoryPanel)
+                if let accessoryPanelContainer = self.accessoryPanelContainer {
+                    accessoryPanelContainer.addSubnode(locationBroadcastAccessoryPanel)
+                } else {
+                    self.navigationBar?.additionalContentNode.addSubnode(locationBroadcastAccessoryPanel)
+                }
                 self.locationBroadcastAccessoryPanel = locationBroadcastAccessoryPanel
                 locationBroadcastAccessoryPanel.frame = panelFrame
                 
@@ -607,19 +643,12 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             }
         }
         
-        let mediaAccessoryPanelHidden: Bool
-        switch self.mediaAccessoryPanelVisibility {
-            case .always:
-                mediaAccessoryPanelHidden = false
-            case .none:
-                mediaAccessoryPanelHidden = true
-            case let .specific(size):
-                mediaAccessoryPanelHidden = size != layout.metrics.widthClass
-        }
-        
         if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight)), size: CGSize(width: layout.size.width, height: panelHeight))
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: panelStartY), size: CGSize(width: layout.size.width, height: panelHeight))
+            additionalHeight += panelHeight
+            panelStartY += panelHeight
+            
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: transition)
@@ -848,9 +877,17 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 }
                 mediaAccessoryPanel.frame = panelFrame
                 if let dismissingPanel = self.dismissingPanel {
-                    self.navigationBar?.additionalContentNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
+                    if let accessoryPanelContainer = self.accessoryPanelContainer {
+                        accessoryPanelContainer.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
+                    } else {
+                        self.navigationBar?.additionalContentNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
+                    }
                 } else {
-                    self.navigationBar?.additionalContentNode.addSubnode(mediaAccessoryPanel)
+                    if let accessoryPanelContainer = self.accessoryPanelContainer {
+                        accessoryPanelContainer.addSubnode(mediaAccessoryPanel)
+                    } else {
+                        self.navigationBar?.additionalContentNode.addSubnode(mediaAccessoryPanel)
+                    }
                 }
                 self.mediaAccessoryPanel = (mediaAccessoryPanel, type)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, isHidden: !self.displayNavigationBar, transition: .immediate)
@@ -889,6 +926,8 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
             self.suspendedNavigationBarLayout = suspendedNavigationBarLayout
             self.applyNavigationBarLayout(suspendedNavigationBarLayout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
         }
+        
+        self.accessoryPanelContainerHeight = additionalHeight
     }
     
     open var keyShortcuts: [KeyShortcut] {
@@ -965,7 +1004,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                                 }
                             }
                             
-                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: peer.peer, title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
+                            items.append(VoiceChatPeerActionSheetItem(context: context, peer: EnginePeer(peer.peer), title: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), subtitle: subtitle ?? "", action: {
                                 dismissAction()
                                 completion(peer.peer.id)
                             }))

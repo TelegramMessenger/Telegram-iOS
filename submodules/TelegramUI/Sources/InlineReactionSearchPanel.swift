@@ -145,7 +145,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                         |> deliverOnMainQueue).start(next: { result in
                                             switch result {
                                                 case .generic:
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -154,7 +154,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                     } else {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                     }
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                         if let strongSelf = self {
                                                             if case .info = action {
                                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)

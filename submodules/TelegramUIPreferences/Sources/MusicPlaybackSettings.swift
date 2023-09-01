@@ -1,5 +1,4 @@
 import Foundation
-import Postbox
 import TelegramCore
 import SwiftSignalKit
 
@@ -150,7 +149,7 @@ public func updateMusicPlaybackSettingsInteractively(accountManager: AccountMana
             } else {
                 currentSettings = MusicPlaybackSettings.defaultSettings
             }
-            return PreferencesEntry(f(currentSettings))
+            return SharedPreferencesEntry(f(currentSettings))
         })
     }
 }

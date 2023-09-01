@@ -186,9 +186,9 @@ private final class InstantPageSlideshowPagerNode: ASDisplayNode, UIScrollViewDe
     private func makeNodeForItem(at index: Int) -> InstantPageSlideshowItemNode {
         let media = self.items[index]
         let contentNode: ASDisplayNode
-        if let _ = media.media as? TelegramMediaImage {
+        if case .image = media.media {
             contentNode = InstantPageImageNode(context: self.context, sourceLocation: self.sourceLocation, theme: self.theme, webPage: self.webPage, media: media, attributes: [], interactive: true, roundCorners: false, fit: false, openMedia: self.openMedia, longPressMedia: self.longPressMedia, activatePinchPreview: self.activatePinchPreview, pinchPreviewFinished: self.pinchPreviewFinished)
-        } else if let _ = media.media as? TelegramMediaFile {
+        } else if case .file = media.media {
             contentNode = ASDisplayNode()
         } else {
             contentNode = ASDisplayNode()

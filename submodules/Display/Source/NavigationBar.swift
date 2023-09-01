@@ -9,13 +9,14 @@ open class SparseNode: ASDisplayNode {
         if self.alpha.isZero {
             return nil
         }
-        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
-            return nil
-        }
         for view in self.view.subviews.reversed() {
             if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
             }
+        }
+        
+        if !self.bounds.inset(by: self.hitTestSlop).contains(point) {
+            return nil
         }
         
         let result = super.hitTest(point, with: event)
@@ -297,7 +298,7 @@ open class BlurredBackgroundView: UIView {
 
     private var enableBlur: Bool
 
-    private var effectView: UIVisualEffectView?
+    public private(set) var effectView: UIVisualEffectView?
     private let backgroundView: UIView
 
     private var validLayout: (CGSize, CGFloat)?
@@ -1066,6 +1067,8 @@ open class NavigationBar: ASDisplayNode {
     private var transitionBackArrowNode: ASDisplayNode?
     private var transitionBadgeNode: ASDisplayNode?
     
+    public var secondaryContentHeight: CGFloat
+    
     public init(presentationData: NavigationBarPresentationData) {
         self.presentationData = presentationData
         self.stripeNode = ASDisplayNode()
@@ -1110,6 +1113,8 @@ open class NavigationBar: ASDisplayNode {
 
         self.backgroundNode = NavigationBackgroundNode(color: self.presentationData.theme.backgroundColor, enableBlur: self.presentationData.theme.enableBackgroundBlur)
         self.additionalContentNode = SparseNode()
+        
+        self.secondaryContentHeight = NavigationBar.defaultSecondaryContentHeight
         
         super.init()
 
@@ -1235,7 +1240,7 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -1253,11 +1258,11 @@ open class NavigationBar: ASDisplayNode {
             case .expansion:
                 expansionHeight = contentNode.height
                 
-                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
+                        contentNodeFrame.origin.y += self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction
                     }
                 }
             }
@@ -1391,8 +1396,11 @@ open class NavigationBar: ASDisplayNode {
         
         if let customHeaderContentView = self.customHeaderContentView {
             let headerSize = CGSize(width: size.width, height: nominalHeight)
-            //customHeaderContentView.update(size: headerSize, transition: transition)
-            transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
+            var customHeaderFrame = CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize)
+            if appearsHidden {
+                customHeaderFrame.origin.y = -customHeaderFrame.height
+            }
+            transition.updateFrame(view: customHeaderContentView, frame: customHeaderFrame)
         }
         
         if self.titleNode.supernode != nil {
@@ -1443,7 +1451,7 @@ open class NavigationBar: ASDisplayNode {
             if let titleView = titleView as? NavigationBarTitleView {
                 let titleWidth = size.width - (leftTitleInset > 0.0 ? leftTitleInset : rightTitleInset) - (rightTitleInset > 0.0 ? rightTitleInset : leftTitleInset)
                 
-                titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: titleViewTransition)
+                let _ = titleView.updateLayout(size: titleFrame.size, clearBounds: CGRect(origin: CGPoint(x: leftTitleInset - titleFrame.minX, y: 0.0), size: CGSize(width: titleWidth, height: titleFrame.height)), transition: titleViewTransition)
             }
             
             if let transitionState = self.transitionState, let otherNavigationBar = transitionState.navigationBar {
@@ -1619,7 +1627,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
+            result += self.secondaryContentHeight * self.secondaryContentNodeDisplayFraction
         }
         
         return result
@@ -1728,11 +1736,14 @@ open class NavigationBar: ASDisplayNode {
         if let result = self.additionalContentNode.view.hitTest(self.view.convert(point, to: self.additionalContentNode.view), with: event) {
             return result
         }
+        
+        if self.frame.minY > -10.0, let customHeaderContentView = self.customHeaderContentView, let result = customHeaderContentView.hitTest(self.view.convert(point, to: customHeaderContentView), with: event) {
+            return result
+        }
 
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
-        
         
         if self.passthroughTouches && (result == self.view || result == self.buttonsContainerNode.view) {
             return nil

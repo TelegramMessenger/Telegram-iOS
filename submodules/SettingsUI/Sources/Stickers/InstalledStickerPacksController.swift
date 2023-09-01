@@ -519,7 +519,9 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
         if let archived = archived, !archived.isEmpty  {
             entries.append(.archived(presentationData.theme, presentationData.strings.StickerPacksSettings_ArchivedPacks, Int32(archived.count), archived))
         }
-        entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
+        if emojiCount != 0 {
+            entries.append(.emoji(presentationData.theme, presentationData.strings.StickerPacksSettings_Emoji, emojiCount))
+        }
         if let quickReaction = quickReaction, let availableReactions = availableReactions {
             entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_NavigationTitle, quickReaction, availableReactions))
         }
@@ -614,12 +616,17 @@ private func installedStickerPacksControllerEntries(context: AccountContext, pre
     return entries
 }
 
-public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
+public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil, forceTheme: PresentationTheme? = nil) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal).withUpdatedSelectedPackIds(mode == .modal ? Set() : nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((InstalledStickerPacksControllerState) -> InstalledStickerPacksControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    if let forceTheme {
+        presentationData = presentationData.withUpdated(theme: forceTheme)
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
@@ -648,7 +655,6 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             }
         }
     }, removePack: { archivedItem in
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -732,15 +738,15 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             }
         }))
     }, openMasks: {
-        pushControllerImpl?(installedStickerPacksController(context: context, mode: .masks, archivedPacks: archivedPacks, updatedPacks: { _ in}))
+        pushControllerImpl?(installedStickerPacksController(context: context, mode: .masks, archivedPacks: archivedPacks, updatedPacks: { _ in }, forceTheme: forceTheme))
     }, openEmoji: {
-        pushControllerImpl?(installedStickerPacksController(context: context, mode: .emoji, archivedPacks: archivedPacks, updatedPacks: { _ in}))
+        pushControllerImpl?(installedStickerPacksController(context: context, mode: .emoji, archivedPacks: archivedPacks, updatedPacks: { _ in }, forceTheme: forceTheme))
     }, openQuickReaction: {
         pushControllerImpl?(quickReactionSetupController(
             context: context
         ))
     }, openFeatured: {
-        pushControllerImpl?(FeaturedStickersScreen(context: context, highlightedPackId: nil))
+        pushControllerImpl?(FeaturedStickersScreen(context: context, highlightedPackId: nil, forceTheme: forceTheme))
     }, openArchived: { archived in
         let archivedMode: ArchivedStickerPacksControllerMode
         switch mode {
@@ -751,12 +757,11 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
             default:
                 archivedMode = .stickers
         }
-        pushControllerImpl?(archivedStickerPacksController(context: context, mode: archivedMode, archived: archived, updatedPacks: { packs in
+        pushControllerImpl?(archivedStickerPacksController(context: context, mode: archivedMode, archived: archived, forceTheme: forceTheme, updatedPacks: { packs in
             archivedPromise.set(.single(packs))
             updatedPacks(packs)
         }))
     }, openSuggestOptions: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = ActionSheetController(presentationData: presentationData)
         let dismissAction: () -> Void = { [weak controller] in
             controller?.dismissAnimated()
@@ -887,6 +892,11 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, view, temporaryPackOrder, featuredAndArchived, sharedData, quickReaction, availableReactions, emojiCount -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        var presentationData = presentationData
+        if let forceTheme {
+            presentationData = presentationData.withUpdated(theme: forceTheme)
+        }
+        
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings]?.get(StickerSettings.self) {
            stickerSettings = value

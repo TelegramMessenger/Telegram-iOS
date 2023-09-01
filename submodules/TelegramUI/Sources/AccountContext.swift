@@ -18,7 +18,6 @@ import TelegramCallsUI
 import TelegramBaseController
 import AsyncDisplayKit
 import PresentationDataUtils
-import MeshAnimationCache
 import FetchManagerImpl
 import InAppPurchaseManager
 import AnimationCache
@@ -170,7 +169,6 @@ public final class AccountContextImpl: AccountContext {
     private var experimentalUISettingsDisposable: Disposable?
     
     public let cachedGroupCallContexts: AccountGroupCallContextCache
-    public let meshAnimationCache: MeshAnimationCache
     
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
@@ -250,7 +248,7 @@ public final class AccountContextImpl: AccountContext {
     public let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
     public let currentInactiveSecretChatPeerIds: Atomic<Set<PeerId>>
     private var inactiveSecretChatPeerIdsDisposable: Disposable?
-    
+
     public var isHidable: Signal<Bool, NoError> {
         let accountId = self.account.id
         return self.sharedContext.allHidableAccountIds
@@ -259,12 +257,12 @@ public final class AccountContextImpl: AccountContext {
         }
         |> distinctUntilChanged
     }
-    
+
     public var immediateIsHidable: Bool {
         let accountId = self.account.id
         return self.sharedContext.currentPtgSecretPasscodes.with { $0.allHidableAccountIds().contains(accountId) }
     }
-    
+
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
@@ -274,7 +272,7 @@ public final class AccountContextImpl: AccountContext {
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager, mediaStoreAllowed: sharedContext.allHidableAccountIds |> map { !$0.contains(account.id) })
-        
+
         self.inactiveSecretChatPeerIds = sharedContext.ptgSecretPasscodes
         |> map { secretPasscodes in
             return secretPasscodes.inactiveSecretChatPeerIds(accountId: account.id)
@@ -311,7 +309,6 @@ public final class AccountContextImpl: AccountContext {
         }
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
-        self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
         
         let cacheStorageBox = self.account.postbox.mediaBox.cacheStorageBox
         self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
@@ -342,7 +339,7 @@ public final class AccountContextImpl: AccountContext {
             let ptgAccountSettings = PtgAccountSettings(view.values[ApplicationSpecificPreferencesKeys.ptgAccountSettings])
             return ptgAccountSettings.ignoreAllContentRestrictions
         }
-        
+
         let updatedContentSettings = getContentSettings(postbox: account.postbox, ignoreAllContentRestrictions: ignoreAllContentRestrictions)
         self.currentContentSettings = Atomic(value: contentSettings)
         self._contentSettings.set(.single(contentSettings) |> then(updatedContentSettings))
@@ -364,11 +361,13 @@ public final class AccountContextImpl: AccountContext {
         })
         
         self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
-        let currentCountriesConfiguration = self.currentCountriesConfiguration
-        self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
-        |> deliverOnMainQueue).start(next: { value in
-            let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
-        })
+        if !temp {
+            let currentCountriesConfiguration = self.currentCountriesConfiguration
+            self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+                                                     |> deliverOnMainQueue).start(next: { value in
+                let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
+            })
+        }
         
         let queue = Queue()
         self.deviceSpecificContactImportContexts = QueueLocalObject(queue: queue, generate: {
@@ -392,20 +391,20 @@ public final class AccountContextImpl: AccountContext {
         })
         
         self.currentInactiveSecretChatPeerIds = Atomic(value: sharedContext.currentPtgSecretPasscodes.with { $0.inactiveSecretChatPeerIds(accountId: account.id) })
-        
+
         self.inactiveSecretChatPeerIdsDisposable = (self.inactiveSecretChatPeerIds
         |> deliverOnMainQueue).start(next: { [weak self] next in
             guard let strongSelf = self else {
                 return
             }
-            
+
             let _ = strongSelf.currentInactiveSecretChatPeerIds.swap(next)
-            
+
             let _ = (strongSelf.account.postbox.transaction { transaction in
                 transaction.updatePeerIdsExcludedFromUnreadCounters(next)
             }).start()
         })
-        
+
         if !temp {
             self.animatedEmojiStickersDisposable = (self.engine.stickers.loadedStickerPack(reference: .animatedEmoji, forceActualized: false)
             |> map { animatedEmoji -> [String: [StickerPackItem]] in
@@ -435,13 +434,9 @@ public final class AccountContextImpl: AccountContext {
             })
         }
         
-        self.userLimitsConfigurationDisposable = (self.account.postbox.peerView(id: self.account.peerId)
-        |> mapToSignal { [weak self] peerView -> Signal<EngineConfiguration.UserLimits, NoError> in
-            if let peer = peerView.peers[peerView.peerId], let strongSelf = self {
-                return strongSelf.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer.isPremium))
-            } else {
-                return .complete()
-            }
+        self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
+        |> mapToSignal { peer -> Signal<EngineConfiguration.UserLimits, NoError> in
+            return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer?.isPremium ?? false))
         }
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
@@ -575,11 +570,11 @@ public final class AccountContextImpl: AccountContext {
     public func shouldSuppressForeignAgentNotice(in message: Message) -> Bool {
         return message.isPeerOrForwardSourceBroadcastChannel && self.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
     }
-    
+
     public func shouldHideChannelSignature(in message: Message) -> Bool {
         return message.isPeerBroadcastChannel && self.sharedContext.currentPtgSettings.with { $0.hideSignatureInChannels }
     }
-    
+
     public func scheduleGroupCall(peerId: PeerId) {
         let _ = self.sharedContext.callManager?.scheduleGroupCall(context: self, peerId: peerId, endCurrentIfAny: true)
     }

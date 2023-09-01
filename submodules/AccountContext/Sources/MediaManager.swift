@@ -95,8 +95,8 @@ public enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation
     }
 }
 
-public func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayerType? {
-    func extractFileMedia(_ message: Message) -> TelegramMediaFile? {
+public func peerMessageMediaPlayerType(_ message: EngineMessage) -> MediaManagerPlayerType? {
+    func extractFileMedia(_ message: EngineMessage) -> TelegramMediaFile? {
         var file: TelegramMediaFile?
         for media in message.media {
             if let media = media as? TelegramMediaFile {
@@ -120,7 +120,7 @@ public func peerMessageMediaPlayerType(_ message: Message) -> MediaManagerPlayer
     return nil
 }
     
-public func peerMessagesMediaPlaylistAndItemId(_ message: Message, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
+public func peerMessagesMediaPlaylistAndItemId(_ message: EngineMessage, isRecentActions: Bool, isGlobalSearch: Bool, isDownloadList: Bool) -> (SharedMediaPlaylistId, SharedMediaPlaylistItemId)? {
     if isGlobalSearch && !isDownloadList {
         return (PeerMessagesMediaPlaylistId.custom, PeerMessagesMediaPlaylistItemId(messageId: message.id, messageIndex: message.index))
     } else if isRecentActions && !isDownloadList {

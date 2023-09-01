@@ -77,7 +77,7 @@ func _internal_cachedPeerSendAsAvailablePeers(account: Account, peerId: PeerId) 
             initialSignal = .complete()
         }
         return initialSignal
-        |> then(_internal_peerSendAsAvailablePeers(network: account.network, postbox: account.postbox, peerId: peerId)
+        |> then(_internal_peerSendAsAvailablePeers(accountPeerId: account.peerId, network: account.network, postbox: account.postbox, peerId: peerId)
         |> mapToSignal { peers -> Signal<[SendAsPeer], NoError> in
             return account.postbox.transaction { transaction -> [SendAsPeer] in
                 let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
@@ -97,7 +97,7 @@ func _internal_cachedPeerSendAsAvailablePeers(account: Account, peerId: PeerId) 
 }
 
 
-func _internal_peerSendAsAvailablePeers(network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
+func _internal_peerSendAsAvailablePeers(accountPeerId: PeerId, network: Network, postbox: Postbox, peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
@@ -119,40 +119,44 @@ func _internal_peerSendAsAvailablePeers(network: Network, postbox: Postbox, peer
         |> `catch` { _ -> Signal<Api.channels.SendAsPeers?, NoError> in
             return .single(nil)
         }
-        |> mapToSignal { result in
+        |> mapToSignal { result -> Signal<[SendAsPeer], NoError> in
             guard let result = result else {
                 return .single([])
             }
             switch result {
             case let .sendAsPeers(sendAsPeers, chats, _):
-                var subscribers: [PeerId: Int32] = [:]
-                let peers = chats.compactMap(parseTelegramGroupOrChannel)
-                var premiumRequiredPeerIds = Set<PeerId>()
-                for sendAsPeer in sendAsPeers {
-                    if case let .sendAsPeer(flags, peer) = sendAsPeer, (flags & (1 << 0)) != 0 {
-                        premiumRequiredPeerIds.insert(peer.peerId)
-                    }
-                }
-                for chat in chats {
-                    if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
-                        switch chat {
-                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
-                            if let participantsCount = participantsCount {
-                                subscribers[groupOrChannel.id] = participantsCount
-                            }
-                        case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
-                            subscribers[groupOrChannel.id] = participantsCount
-                        default:
-                            break
+                return postbox.transaction { transaction -> [SendAsPeer] in
+                    var subscribers: [PeerId: Int32] = [:]
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+                    
+                    var premiumRequiredPeerIds = Set<PeerId>()
+                    for sendAsPeer in sendAsPeers {
+                        if case let .sendAsPeer(flags, peer) = sendAsPeer, (flags & (1 << 0)) != 0 {
+                            premiumRequiredPeerIds.insert(peer.peerId)
                         }
                     }
-                }
-                return postbox.transaction { transaction -> [Peer] in
-                    updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                        return updated
-                    })
-                    return peers
-                } |> map { peers -> [SendAsPeer] in
+                    for chat in chats {
+                        if let groupOrChannel = parsedPeers.get(chat.peerId) {
+                            switch chat {
+                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
+                                if let participantsCount = participantsCount {
+                                    subscribers[groupOrChannel.id] = participantsCount
+                                }
+                            case let .chat(_, _, _, _, participantsCount, _, _, _, _, _):
+                                subscribers[groupOrChannel.id] = participantsCount
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    updatePeers(transaction: transaction,  accountPeerId: accountPeerId,peers: parsedPeers)
+                    
+                    var peers: [Peer] = []
+                    for chat in chats {
+                        if let peer = transaction.getPeer(chat.peerId) {
+                            peers.append(peer)
+                        }
+                    }
                     return peers.map { SendAsPeer(peer: $0, subscribers: subscribers[$0.id], isPremiumRequired: premiumRequiredPeerIds.contains($0.id)) }
                 }
             }

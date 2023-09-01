@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import AccountContext
 
@@ -15,7 +14,7 @@ struct ChatListSelectionOptions: Equatable {
     let delete: Bool
 }
 
-func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, filterId: Int32?) -> Signal<ChatListSelectionOptions, NoError> {
+func chatListSelectionOptions(context: AccountContext, peerIds: Set<EnginePeer.Id>, filterId: Int32?) -> Signal<ChatListSelectionOptions, NoError> {
     if peerIds.isEmpty {
         if let filterId = filterId {
             return chatListFilterItems(context: context)
@@ -58,7 +57,7 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
 }
 
 
-func forumSelectionOptions(context: AccountContext, peerId: PeerId, threadIds: Set<Int64>) -> Signal<ChatListSelectionOptions, NoError> {
+func forumSelectionOptions(context: AccountContext, peerId: EnginePeer.Id, threadIds: Set<Int64>) -> Signal<ChatListSelectionOptions, NoError> {
     return context.engine.data.get(
         TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
         EngineDataList(threadIds.map { TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: $0) })

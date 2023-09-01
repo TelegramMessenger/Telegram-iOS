@@ -136,6 +136,7 @@ public enum UpdateAddressNameError {
 }
 
 func _internal_updateAddressName(account: Account, domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
+    let accountPeerId = account.peerId
     return account.postbox.transaction { transaction -> Signal<Void, UpdateAddressNameError> in
         switch domain {
             case .account:
@@ -145,10 +146,7 @@ func _internal_updateAddressName(account: Account, domain: AddressNameDomain, na
                 }
                 |> mapToSignal { result -> Signal<Void, UpdateAddressNameError> in
                     return account.postbox.transaction { transaction -> Void in
-                        let user = TelegramUser(user: result)
-                        updatePeers(transaction: transaction, peers: [user], update: { _, updated in
-                            return updated
-                        })
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: [result]))
                     } |> mapError { _ -> UpdateAddressNameError in }
                 }
             case let .peer(peerId):
@@ -165,8 +163,8 @@ func _internal_updateAddressName(account: Account, domain: AddressNameDomain, na
                                         if name != nil, let defaultBannedRights = updatedPeer.defaultBannedRights {
                                             updatedPeer = updatedPeer.withUpdatedDefaultBannedRights(TelegramChatBannedRights(flags: defaultBannedRights.flags.union([.banPinMessages, .banChangeInfo]), untilDate: Int32.max))
                                         }
-                                        updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
-                                            return updated
+                                        updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                            updated
                                         })
                                     }
                                 }
@@ -211,7 +209,7 @@ func _internal_deactivateAllAddressNames(account: Account, peerId: EnginePeer.Id
                             updatedNames.append(TelegramPeerUsername(flags: updatedFlags, username: username.username))
                         }
                         let updatedUser = peer.withUpdatedAddressNames(updatedNames)
-                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [updatedUser], update: { _, updated in
                             return updated
                         })
                     }
@@ -289,7 +287,7 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
                             updatedNames.insert(updatedName, at: updatedIndex)
                         }
                         let updatedUser = peer.withUpdatedUsernames(updatedNames)
-                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [updatedUser], update: { _, updated in
                             return updated
                         })
                     }
@@ -347,7 +345,7 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
                                     updatedNames.insert(updatedName, at: updatedIndex)
                                 }
                                 let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
-                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
                             }
@@ -408,7 +406,7 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
                                     updatedNames.insert(updatedName, at: updatedIndex)
                                 }
                                 let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
-                                updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                                updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                     return updated
                                 })
                             }
@@ -439,7 +437,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
                 return account.postbox.transaction { transaction -> Void in
                     if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramUser {
                         let updatedUser = peer.withUpdatedUsernames(names)
-                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                        updatePeersCustom(transaction: transaction, peers: [updatedUser], update: { _, updated in
                             return updated
                         })
                     }
@@ -455,7 +453,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
                     return account.postbox.transaction { transaction -> Void in
                         if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
                             let updatedPeer = peer.withUpdatedAddressNames(names)
-                            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                            updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                 return updated
                             })
                         }
@@ -474,7 +472,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
                     return account.postbox.transaction { transaction -> Void in
                         if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
                             let updatedPeer = peer.withUpdatedAddressNames(names)
-                            updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
+                            updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { _, updated in
                                 return updated
                             })
                         }
@@ -521,28 +519,28 @@ func _internal_adminedPublicChannels(account: Account, scope: AdminedPublicChann
         flags |= (1 << 2)
     }
     
+    let accountPeerId = account.peerId
+    
     return account.network.request(Api.functions.channels.getAdminedPublicChannels(flags: flags))
     |> retryRequest
     |> mapToSignal { result -> Signal<[Peer], NoError> in
-        var peers: [Peer] = []
-        switch result {
-            case let .chats(apiChats):
-                for chat in apiChats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(peer)
-                    }
-                }
-            case let .chatsSlice(_, apiChats):
-                for chat in apiChats {
-                    if let peer = parseTelegramGroupOrChannel(chat: chat) {
-                        peers.append(peer)
-                    }
-                }
-        }
         return account.postbox.transaction { transaction -> [Peer] in
-            updatePeers(transaction: transaction, peers: peers, update: { _, updated in
-                return updated
-            })
+            let chats: [Api.Chat]
+            let parsedPeers: AccumulatedPeers
+            switch result {
+            case let .chats(apiChats):
+                chats = apiChats
+            case let .chatsSlice(_, apiChats):
+                chats = apiChats
+            }
+            parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: [])
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+            var peers: [Peer] = []
+            for chat in chats {
+                if let peer = transaction.getPeer(chat.peerId) {
+                    peers.append(peer)
+                }
+            }
             return peers
         }
     }

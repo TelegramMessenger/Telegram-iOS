@@ -64,6 +64,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private let additionalIconNode: ASImageNode
     private var badgeIconNode: ASImageNode?
     private var animationNode: AnimationNode?
     
@@ -99,6 +100,10 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.iconNode = ASImageNode()
         self.iconNode.isAccessibilityElement = false
         self.iconNode.isUserInteractionEnabled = false
+        
+        self.additionalIconNode = ASImageNode()
+        self.additionalIconNode.isAccessibilityElement = false
+        self.additionalIconNode.isUserInteractionEnabled = false
                 
         super.init()
         
@@ -110,6 +115,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.addSubnode(self.titleLabelNode)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.additionalIconNode)
         
         self.isEnabled = self.canBeHighlighted()
         
@@ -281,6 +287,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         let iconSize: CGSize?
         if let iconSource = self.item.iconSource {
             iconSize = iconSource.size
+            self.iconNode.cornerRadius = iconSource.cornerRadius
+            self.iconNode.contentMode = iconSource.contentMode
+            self.iconNode.clipsToBounds = true
             if self.iconDisposable == nil {
                 self.iconDisposable = (iconSource.signal |> deliverOnMainQueue).start(next: { [weak self] image in
                     guard let strongSelf = self else {
@@ -303,6 +312,14 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             let iconImage = self.item.icon(presentationData.theme)
             self.iconNode.image = iconImage
             iconSize = iconImage?.size
+        }
+        
+        let additionalIcon = self.item.additionalLeftIcon?(presentationData.theme)
+        var additionalIconSize: CGSize?
+        self.additionalIconNode.image = additionalIcon
+        
+        if let additionalIcon {
+            additionalIconSize = additionalIcon.size
         }
         
         let badgeSize: CGSize?
@@ -422,7 +439,10 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 titleFrame = titleFrame.offsetBy(dx: 0.0, dy: titleVerticalOffset)
             }
             var subtitleFrame = CGRect(origin: CGPoint(x: sideInset, y: titleFrame.maxY + titleSubtitleSpacing), size: subtitleSize)
-            if self.item.iconPosition == .left {
+            if self.item.additionalLeftIcon != nil {
+                titleFrame = titleFrame.offsetBy(dx: 26.0, dy: 0.0)
+                subtitleFrame = subtitleFrame.offsetBy(dx: 26.0, dy: 0.0)
+            } else if self.item.iconPosition == .left {
                 titleFrame = titleFrame.offsetBy(dx: 36.0, dy: 0.0)
                 subtitleFrame = subtitleFrame.offsetBy(dx: 36.0, dy: 0.0)
             }
@@ -444,11 +464,23 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                         x: self.item.iconPosition == .left ? iconSideInset : size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0),
                         y: floor((size.height - iconSize.height) / 2.0)
                     ),
-                    size: iconSize)
+                    size: iconSize
+                )
                 transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
                 if let animationNode = self.animationNode {
                     transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)
                 }
+            }
+            
+            if let additionalIconSize {
+                let iconFrame = CGRect(
+                    origin: CGPoint(
+                        x: 10.0,
+                        y: floor((size.height - additionalIconSize.height) / 2.0)
+                    ),
+                    size: additionalIconSize
+                )
+                transition.updateFrame(node: self.additionalIconNode, frame: iconFrame, beginWithCurrentState: true)
             }
         })
     }
@@ -499,16 +531,19 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
     
     private let getController: () -> ContextControllerProtocol?
     private let item: ContextMenuCustomItem
+    private let requestDismiss: (ContextMenuActionResult) -> Void
     
     private var presentationData: PresentationData?
     private var itemNode: ContextMenuCustomNode?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
-        item: ContextMenuCustomItem
+        item: ContextMenuCustomItem,
+        requestDismiss: @escaping (ContextMenuActionResult) -> Void
     ) {
         self.getController = getController
         self.item = item
+        self.requestDismiss = requestDismiss
         
         super.init()
     }
@@ -529,7 +564,12 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
                 presentationData: presentationData,
                 getController: self.getController,
                 actionSelected: { result in
-                    let _ = result
+                    switch result {
+                    case .dismissWithoutContent/* where ContextMenuActionResult.safeStreamRecordingDismissWithoutContent == .dismissWithoutContent*/:
+                        self.requestDismiss(result)
+                        
+                    default: break
+                    }
                 }
             )
             self.itemNode = itemNode
@@ -602,7 +642,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                     return Item(
                         node: ContextControllerActionsListCustomItemNode(
                             getController: getController,
-                            item: customItem
+                            item: customItem,
+                            requestDismiss: requestDismiss
                         ),
                         separatorNode: ASDisplayNode()
                     )

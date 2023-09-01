@@ -14,13 +14,13 @@ func _internal_setSecretChatMessageAutoremoveTimeoutInteractively(transaction: T
             let updatedPeer = peer.withUpdatedMessageAutoremoveTimeout(timeout)
             let updatedState = state.withUpdatedMessageAutoremoveTimeout(timeout)
             if !updatedPeer.isEqual(peer) {
-                updatePeers(transaction: transaction, peers: [updatedPeer], update: { $1 })
+                updatePeersCustom(transaction: transaction, peers: [updatedPeer], update: { $1 })
             }
             if updatedState != state {
                 transaction.setPeerChatState(peerId, state: updatedState)
             }
             
-            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(period: timeout == nil ? 0 : timeout!, autoSettingSource: nil))), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))])
+            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.messageAutoremoveTimeoutUpdated(period: timeout == nil ? 0 : timeout!, autoSettingSource: nil))), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))])
         }
     }
 }
@@ -34,7 +34,7 @@ func _internal_addSecretChatMessageScreenshot(account: Account, peerId: PeerId) 
             default:
                 break
             }
-            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))])
+            let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))])
         }
     }
 }

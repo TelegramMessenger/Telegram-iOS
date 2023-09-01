@@ -97,6 +97,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         private var effectView: UIVisualEffectView?
         private let contentView: ComponentHostView<ChildEnvironmentType>
         
+        private var isAnimatingOut: Bool = false
         private var previousIsDisplaying: Bool = false
         private var dismiss: ((Bool) -> Void)?
         
@@ -218,6 +219,12 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         }
         
         private func animateOut(initialVelocity: CGFloat? = nil, completion: @escaping () -> Void) {
+            if self.isAnimatingOut {
+                completion()
+                return
+            }
+            self.isAnimatingOut = true
+            
             self.isUserInteractionEnabled = false
             self.dimView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
             

@@ -2,115 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AccountContext
-
-public final class DrawingBubbleEntity: DrawingEntity, Codable {
-    private enum CodingKeys: String, CodingKey {
-        case uuid
-        case drawType
-        case color
-        case lineWidth
-        case referenceDrawingSize
-        case position
-        case size
-        case rotation
-        case tailPosition
-        case renderImage
-    }
-    
-    enum DrawType: Codable {
-        case fill
-        case stroke
-    }
-    
-    public let uuid: UUID
-    public let isAnimated: Bool
-    
-    var drawType: DrawType
-    public var color: DrawingColor
-    public var lineWidth: CGFloat
-    
-    var referenceDrawingSize: CGSize
-    public var position: CGPoint
-    public var size: CGSize
-    public var rotation: CGFloat
-    var tailPosition: CGPoint
-    
-    public var center: CGPoint {
-        return self.position
-    }
-    
-    public var scale: CGFloat = 1.0
-    
-    public var renderImage: UIImage?
-    
-    init(drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
-        self.uuid = UUID()
-        self.isAnimated = false
-                
-        self.drawType = drawType
-        self.color = color
-        self.lineWidth = lineWidth
-        
-        self.referenceDrawingSize = .zero
-        self.position = .zero
-        self.size = CGSize(width: 1.0, height: 1.0)
-        self.rotation = 0.0
-        self.tailPosition = CGPoint(x: 0.16, y: 0.18)
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.uuid = try container.decode(UUID.self, forKey: .uuid)
-        self.isAnimated = false
-        self.drawType = try container.decode(DrawType.self, forKey: .drawType)
-        self.color = try container.decode(DrawingColor.self, forKey: .color)
-        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
-        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
-        self.position = try container.decode(CGPoint.self, forKey: .position)
-        self.size = try container.decode(CGSize.self, forKey: .size)
-        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
-        self.tailPosition = try container.decode(CGPoint.self, forKey: .tailPosition)
-        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
-            self.renderImage = UIImage(data: renderImageData)
-        }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(self.uuid, forKey: .uuid)
-        try container.encode(self.drawType, forKey: .drawType)
-        try container.encode(self.color, forKey: .color)
-        try container.encode(self.lineWidth, forKey: .lineWidth)
-        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
-        try container.encode(self.position, forKey: .position)
-        try container.encode(self.size, forKey: .size)
-        try container.encode(self.rotation, forKey: .rotation)
-        try container.encode(self.tailPosition, forKey: .tailPosition)
-        if let renderImage, let data = renderImage.pngData() {
-            try container.encode(data, forKey: .renderImage)
-        }
-    }
-        
-    public func duplicate() -> DrawingEntity {
-        let newEntity = DrawingBubbleEntity(drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
-        newEntity.referenceDrawingSize = self.referenceDrawingSize
-        newEntity.position = self.position
-        newEntity.size = self.size
-        newEntity.rotation = self.rotation
-        return newEntity
-    }
-     
-    public weak var currentEntityView: DrawingEntityView?
-    public func makeView(context: AccountContext) -> DrawingEntityView {
-        let entityView = DrawingBubbleEntityView(context: context, entity: self)
-        self.currentEntityView = entityView
-        return entityView
-    }
-    
-    public func prepareForRender() {
-        self.renderImage = (self.currentEntityView as? DrawingBubbleEntityView)?.getRenderImage()
-    }
-}
+import MediaEditor
 
 final class DrawingBubbleEntityView: DrawingEntityView {
     private var bubbleEntity: DrawingBubbleEntity {
@@ -206,7 +98,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
     override func updateSelectionView() {
         super.updateSelectionView()
         
-        guard let selectionView = self.selectionView as? DrawingBubbleEntititySelectionView else {
+        guard let selectionView = self.selectionView as? DrawingBubbleEntitySelectionView else {
             return
         }
         
@@ -214,11 +106,11 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         selectionView.setNeedsLayout()
     }
         
-    override func makeSelectionView() -> DrawingEntitySelectionView {
+    override func makeSelectionView() -> DrawingEntitySelectionView? {
         if let selectionView = self.selectionView {
             return selectionView
         }
-        let selectionView = DrawingBubbleEntititySelectionView()
+        let selectionView = DrawingBubbleEntitySelectionView()
         selectionView.entityView = self
         return selectionView
     }
@@ -233,7 +125,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
     }
 }
 
-final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGestureRecognizerDelegate {
+final class DrawingBubbleEntitySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let topLeftHandle = SimpleShapeLayer()
     private let topHandle = SimpleShapeLayer()
@@ -243,9 +135,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
     private let bottomHandle = SimpleShapeLayer()
     private let bottomRightHandle = SimpleShapeLayer()
     private let tailHandle = SimpleShapeLayer()
-    
-    private var panGestureRecognizer: UIPanGestureRecognizer!
-  
+      
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -278,27 +168,10 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             
             self.layer.addSublayer(handle)
         }
-                        
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-        panGestureRecognizer.delegate = self
-        self.addGestureRecognizer(panGestureRecognizer)
-        self.panGestureRecognizer = panGestureRecognizer
-        
-        self.snapTool.onSnapXUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToXAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapYUpdated = { [weak self] snapped in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToYAxis(snapped)
-            }
-        }
-        
-        self.snapTool.onSnapRotationUpdated = { [weak self] snappedAngle in
-            if let strongSelf = self, let entityView = strongSelf.entityView {
-                entityView.onSnapToAngle(snappedAngle)
+                                
+        self.snapTool.onSnapUpdated = { [weak self] type, snapped in
+            if let self, let entityView = self.entityView {
+                entityView.onSnapUpdated(type, snapped)
             }
         }
     }
@@ -316,15 +189,11 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
     override var selectionInset: CGFloat {
         return 5.5
     }
-        
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        return true
-    }
 
     private let snapTool = DrawingEntitySnapTool()
     
     private var currentHandle: CALayer?
-    @objc private func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
+    override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
         guard let entityView = self.entityView as? DrawingBubbleEntityView, let entity = entityView.entity as? DrawingBubbleEntity else {
             return
         }
@@ -338,12 +207,18 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
                 for layer in sublayers {
                     if layer.frame.contains(location) {
                         self.currentHandle = layer
+                        entityView.onInteractionUpdated(true)
                         return
                     }
                 }
             }
             self.currentHandle = self.layer
+            entityView.onInteractionUpdated(true)
         case .changed:
+            if self.currentHandle == nil {
+                self.currentHandle = self.layer
+            }
+            
             let delta = gestureRecognizer.translation(in: entityView.superview)
             let velocity = gestureRecognizer.velocity(in: entityView.superview)
             
@@ -352,6 +227,12 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             var updatedTailPosition = entity.tailPosition
             
             let minimumSize = entityView.minimumSize
+            
+            if self.currentHandle != nil && self.currentHandle !== self.layer {
+                if gestureRecognizer.numberOfTouches > 1 {
+                    return
+                }
+            }
             
             if self.currentHandle === self.leftHandle {
                 updatedSize.width = max(minimumSize.width, updatedSize.width - delta.x)
@@ -391,7 +272,7 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
                 updatedPosition.x += delta.x
                 updatedPosition.y += delta.y
                 
-                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition)
+                updatedPosition = self.snapTool.update(entityView: entityView, velocity: velocity, delta: delta, updatedPosition: updatedPosition, size: entityView.frame.size)
             }
             
             entity.size = updatedSize
@@ -400,10 +281,9 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
             entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
-        case .ended:
+        case .ended, .cancelled:
             self.snapTool.reset()
-        case .cancelled:
-            self.snapTool.reset()
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -418,11 +298,16 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         
         switch gestureRecognizer.state {
         case .began, .changed:
+            if case .began = gestureRecognizer.state {
+                entityView.onInteractionUpdated(true)
+            }
             let scale = gestureRecognizer.scale
             entity.size = CGSize(width: entity.size.width * scale, height: entity.size.height * scale)
             entityView.update()
             
             gestureRecognizer.scale = 1.0
+        case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
         default:
             break
         }
@@ -440,21 +325,23 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         switch gestureRecognizer.state {
         case .began:
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
+            entityView.onInteractionUpdated(true)
         case .changed:
             rotation = gestureRecognizer.rotation
             updatedRotation += rotation
+        
+            updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
+            entity.rotation = updatedRotation
+            entityView.update()
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
+            entityView.onInteractionUpdated(false)
             self.snapTool.rotationReset()
         default:
             break
         }
-        
-        updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
-        entity.rotation = updatedRotation
-        entityView.update()
-        
+                
         entityView.onPositionUpdated(entity.position)
     }
 
@@ -503,9 +390,5 @@ final class DrawingBubbleEntititySelectionView: DrawingEntitySelectionView, UIGe
         
         let selectionScale = (self.bounds.width - inset * 2.0) / (max(0.001, entity.size.width))
         self.tailHandle.position = CGPoint(x: inset + (self.bounds.width - inset * 2.0) * entity.tailPosition.x, y: self.bounds.height - inset + entity.tailPosition.y * selectionScale)
-    }
-    
-    var isTracking: Bool {
-        return gestureIsTracking(self.panGestureRecognizer)
     }
 }

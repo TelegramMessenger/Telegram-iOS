@@ -7,19 +7,23 @@ public final class PlainButtonComponent: Component {
     public enum EffectAlignment {
         case left
         case right
+        case center
     }
     
     public let content: AnyComponent<Empty>
     public let effectAlignment: EffectAlignment
+    public let minSize: CGSize?
     public let action: () -> Void
     
     public init(
         content: AnyComponent<Empty>,
         effectAlignment: EffectAlignment,
+        minSize: CGSize? = nil,
         action: @escaping () -> Void
     ) {
         self.content = content
         self.effectAlignment = effectAlignment
+        self.minSize = minSize
         self.action = action
     }
 
@@ -28,6 +32,9 @@ public final class PlainButtonComponent: Component {
             return false
         }
         if lhs.effectAlignment != rhs.effectAlignment {
+            return false
+        }
+        if lhs.minSize != rhs.minSize {
             return false
         }
         return true
@@ -39,6 +46,10 @@ public final class PlainButtonComponent: Component {
 
         private let contentContainer = UIView()
         private let content = ComponentView<Empty>()
+        
+        public var contentView: UIView? {
+            return self.content.view
+        }
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -121,7 +132,11 @@ public final class PlainButtonComponent: Component {
                 containerSize: availableSize
             )
 
-            let size = contentSize
+            var size = contentSize
+            if let minSize = component.minSize {
+                size.width = max(size.width, minSize.width)
+                size.height = max(size.height, minSize.height)
+            }
 
             if let contentView = self.content.view {
                 var contentTransition = transition
@@ -136,9 +151,18 @@ public final class PlainButtonComponent: Component {
                 contentTransition.setAlpha(view: contentView, alpha: contentAlpha)
             }
             
-            self.contentContainer.layer.anchorPoint = CGPoint(x: component.effectAlignment == .left ? 0.0 : 1.0, y: 0.5)
+            let anchorX: CGFloat
+            switch component.effectAlignment {
+            case .left:
+                anchorX = 0.0
+            case .center:
+                anchorX = 0.5
+            case .right:
+                anchorX = 1.0
+            }
+            self.contentContainer.layer.anchorPoint = CGPoint(x: anchorX, y: 0.5)
             transition.setBounds(view: self.contentContainer, bounds: CGRect(origin: CGPoint(), size: size))
-            transition.setPosition(view: self.contentContainer, position: CGPoint(x: component.effectAlignment == .left ? 0.0 : size.width, y: size.height * 0.5))
+            transition.setPosition(view: self.contentContainer, position: CGPoint(x: size.width * anchorX, y: size.height * 0.5))
             
             return size
         }

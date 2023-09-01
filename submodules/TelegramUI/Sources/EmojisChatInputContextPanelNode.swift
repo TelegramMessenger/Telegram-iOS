@@ -20,6 +20,7 @@ import PremiumUI
 import StickerPeekUI
 import UndoUI
 import Pasteboard
+import ChatContextQuery
 
 private enum EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     case symbol(String)
@@ -342,7 +343,7 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
                                                 
                     let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                     
-                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
+                    let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: self.context, file: file, loop: true, title: nil, text: presentationData.strings.EmojiStatus_AppliedText, undoText: nil, customAction: nil), elevatedLayout: false, animateInAsReplacement: animateInAsReplacement, action: { _ in return false })
                     //strongSelf.currentUndoOverlayController = controller
                     controller.controllerInteraction?.presentController(undoController, nil)
                 }

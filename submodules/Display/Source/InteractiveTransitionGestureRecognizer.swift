@@ -49,6 +49,7 @@ public struct InteractiveTransitionGestureRecognizerDirections: OptionSet {
     public static let rightEdge = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 3)
     public static let leftCenter = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 0)
     public static let rightCenter = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 1)
+    public static let down = InteractiveTransitionGestureRecognizerDirections(rawValue: 1 << 4)
     
     public static let left: InteractiveTransitionGestureRecognizerDirections = [.leftEdge, .leftCenter]
     public static let right: InteractiveTransitionGestureRecognizerDirections = [.rightEdge, .rightCenter]
@@ -74,6 +75,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1
+        self.delaysTouchesBegan = false
     }
     
     override public func reset() {
@@ -105,11 +107,14 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
             let horizontalGestures = hasHorizontalGestures(target, point: self.view?.convert(self.firstLocation, to: target))
             switch horizontalGestures {
             case .some, .strict:
-                if case .strict = horizontalGestures {
-                    allowedDirections = []
-                } else if allowedDirections.contains(.leftEdge) || allowedDirections.contains(.rightEdge) {
-                    allowedDirections.remove(.leftCenter)
-                    allowedDirections.remove(.rightCenter)
+                if allowedDirections.contains(.down) {
+                } else {
+                    if case .strict = horizontalGestures {
+                        allowedDirections = []
+                    } else if allowedDirections.contains(.leftEdge) || allowedDirections.contains(.rightEdge) {
+                        allowedDirections.remove(.leftCenter)
+                        allowedDirections.remove(.rightCenter)
+                    }
                 }
             case .none:
                 break
@@ -132,41 +137,61 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         
         let size = self.view?.bounds.size ?? CGSize()
         
-        let edgeWidth: CGFloat
-        switch self.edgeWidth {
-        case let .constant(value):
-            edgeWidth = value
-        case let .widthMultiplier(factor, minValue, maxValue):
-            edgeWidth = max(minValue, min(size.width * factor, maxValue))
-        }
+        //print("moved: \(CFAbsoluteTimeGetCurrent()) absTranslationX: \(absTranslationX) absTranslationY: \(absTranslationY)")
         
-        if !self.validatedGesture {
-            if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
-                self.state = .failed
-                return
+        var fireBegan = false
+        
+        if self.currentAllowedDirections.contains(.down) {
+            if !self.validatedGesture {
+                if absTranslationX > 2.0 && absTranslationX > absTranslationY * 2.0 {
+                    self.state = .failed
+                } else if absTranslationY > 2.0 && absTranslationX * 2.0 < absTranslationY {
+                    self.validatedGesture = true
+                }
             }
-            if self.firstLocation.x > size.width - edgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
-                self.state = .failed
-                return
+        } else {
+            let edgeWidth: CGFloat
+            switch self.edgeWidth {
+            case let .constant(value):
+                edgeWidth = value
+            case let .widthMultiplier(factor, minValue, maxValue):
+                edgeWidth = max(minValue, min(size.width * factor, maxValue))
             }
             
-            if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < edgeWidth {
-                self.validatedGesture = true
-            } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - edgeWidth {
-                self.validatedGesture = true
-            } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
-                self.state = .failed
-            } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
-                self.state = .failed
-            } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
-                self.state = .failed
-            } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
-                self.validatedGesture = true
+            if !self.validatedGesture {
+                if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
+                    self.state = .failed
+                    return
+                }
+                if self.firstLocation.x > size.width - edgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
+                    self.state = .failed
+                    return
+                }
+                
+                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < edgeWidth {
+                    self.validatedGesture = true
+                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - edgeWidth {
+                    self.validatedGesture = true
+                } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
+                    self.state = .failed
+                } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
+                    self.state = .failed
+                } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
+                    self.state = .failed
+                } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                    self.validatedGesture = true
+                    fireBegan = true
+                }
             }
         }
         
         if self.validatedGesture {
             super.touchesMoved(touches, with: event)
+            if fireBegan {
+                if self.state == .possible {
+                    self.state = .began
+                }
+            }
         }
     }
 }

@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import SwiftSignalKit
-import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import PersistentStringHash
@@ -33,7 +32,7 @@ public final class CachedGeocode: Codable {
 }
 
 private func cachedGeocode(engine: TelegramEngine, address: DeviceContactAddressData) -> Signal<CachedGeocode?, NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
     
     return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, id: key))
@@ -43,7 +42,7 @@ private func cachedGeocode(engine: TelegramEngine, address: DeviceContactAddress
 }
 
 private func updateCachedGeocode(engine: TelegramEngine, address: DeviceContactAddressData, latitude: Double, longitude: Double) -> Signal<(Double, Double), NoError> {
-    let key = ValueBoxKey(length: 8)
+    let key = EngineDataBuffer(length: 8)
     key.setInt64(0, value: Int64(bitPattern: address.string.persistentHashValue))
     
     return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.cachedGeocodes, id: key, item: CachedGeocode(latitude: latitude, longitude: longitude))

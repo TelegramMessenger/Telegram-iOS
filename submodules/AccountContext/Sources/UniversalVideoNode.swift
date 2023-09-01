@@ -23,6 +23,8 @@ public protocol UniversalVideoContentNode: AnyObject {
     func setSoundEnabled(_ value: Bool)
     func seek(_ timestamp: Double)
     func playOnceWithSound(playAndRecord: Bool, seek: MediaPlayerSeek, actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
+    func setSoundMuted(soundMuted: Bool)
+    func continueWithOverridingAmbientMode(isAmbient: Bool)
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool)
     func continuePlayingWithoutSound(actionAtEnd: MediaPlayerPlayOnceWithSoundActionAtEnd)
     func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool)
@@ -37,7 +39,7 @@ public protocol UniversalVideoContentNode: AnyObject {
 public protocol UniversalVideoContent {
     var id: AnyHashable { get }
     var dimensions: CGSize { get }
-    var duration: Int32 { get }
+    var duration: Double { get }
     var userLocation: MediaResourceUserLocation { get }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode
@@ -149,7 +151,7 @@ public final class UniversalVideoNode: ASDisplayNode {
     }
     
     public let sourceAccountId: AccountRecordId
-    
+
     public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false, sourceAccountId: AccountRecordId) {
         self.postbox = postbox
         self.audioSession = audioSession
@@ -161,7 +163,7 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.snapshotContentWhenGone = snapshotContentWhenGone
         
         self.sourceAccountId = sourceAccountId
-        
+
         super.init()
         
         self.playbackCompletedIndex = self.manager.addPlaybackCompleted(id: self.content.id, { [weak self] in
@@ -288,6 +290,22 @@ public final class UniversalVideoNode: ASDisplayNode {
         })
     }
     
+    public func setSoundMuted(soundMuted: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.setSoundMuted(soundMuted: soundMuted)
+            }
+        })
+    }
+
+    public func continueWithOverridingAmbientMode(isAmbient: Bool) {
+        self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
+            if let contentNode = contentNode {
+                contentNode.continueWithOverridingAmbientMode(isAmbient: isAmbient)
+            }
+        })
+    }
+
     public func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
