@@ -42,19 +42,25 @@ public enum Stories {
             private enum CodingKeys: String, CodingKey {
                 case seenCount = "seenCount"
                 case reactedCount = "reactedCount"
+                case forwardCount = "forwardCount"
                 case seenPeerIds = "seenPeerIds"
+                case reactions = "reactions"
                 case hasList = "hasList"
             }
             
             public var seenCount: Int
             public var reactedCount: Int
+            public var forwardCount: Int
             public var seenPeerIds: [PeerId]
+            public var reactions: [MessageReaction]
             public var hasList: Bool
             
-            public init(seenCount: Int, reactedCount: Int, seenPeerIds: [PeerId], hasList: Bool) {
+            public init(seenCount: Int, reactedCount: Int, forwardCount: Int, seenPeerIds: [PeerId], reactions: [MessageReaction], hasList: Bool) {
                 self.seenCount = seenCount
                 self.reactedCount = reactedCount
+                self.forwardCount = forwardCount
                 self.seenPeerIds = seenPeerIds
+                self.reactions = reactions
                 self.hasList = hasList
             }
             
@@ -63,7 +69,9 @@ public enum Stories {
                 
                 self.seenCount = Int(try container.decode(Int32.self, forKey: .seenCount))
                 self.reactedCount = Int(try container.decodeIfPresent(Int32.self, forKey: .reactedCount) ?? 0)
+                self.forwardCount = Int(try container.decodeIfPresent(Int32.self, forKey: .forwardCount) ?? 0)
                 self.seenPeerIds = try container.decode([Int64].self, forKey: .seenPeerIds).map(PeerId.init)
+                self.reactions = try container.decodeIfPresent([MessageReaction].self, forKey: .reactions) ?? []
                 self.hasList = try container.decodeIfPresent(Bool.self, forKey: .hasList) ?? true
             }
             
@@ -72,7 +80,9 @@ public enum Stories {
                 
                 try container.encode(Int32(clamping: self.seenCount), forKey: .seenCount)
                 try container.encode(Int32(clamping: self.reactedCount), forKey: .reactedCount)
+                try container.encode(Int32(clamping: self.forwardCount), forKey: .forwardCount)
                 try container.encode(self.seenPeerIds.map { $0.toInt64() }, forKey: .seenPeerIds)
+                try container.encode(self.reactions, forKey: .reactions)
                 try container.encode(self.hasList, forKey: .hasList)
             }
         }
@@ -1445,13 +1455,32 @@ extension Api.StoryItem {
 extension Stories.Item.Views {
     init(apiViews: Api.StoryViews) {
         switch apiViews {
-        case let .storyViews(flags, viewsCount, reactionsCount, recentViewers):
+        case let .storyViews(flags, viewsCount, forwardsCount, reactions, reactionsCount, recentViewers):
+            //storyViews#8d595cd6 flags:# has_viewers:flags.1?true views_count:int forwards_count:flags.2?int reactions:flags.3?Vector<ReactionCount> reactions_count:flags.4?int recent_viewers:flags.0?Vector<long> = StoryViews;
             let hasList = (flags & (1 << 1)) != 0
             var seenPeerIds: [PeerId] = []
             if let recentViewers = recentViewers {
                 seenPeerIds = recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
             }
-            self.init(seenCount: Int(viewsCount), reactedCount: Int(reactionsCount), seenPeerIds: seenPeerIds, hasList: hasList)
+            var mappedReactions: [MessageReaction] = []
+            if let reactions = reactions {
+                for result in reactions {
+                    switch result {
+                    case let .reactionCount(_, chosenOrder, reaction, count):
+                        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                            mappedReactions.append(MessageReaction(value: reaction, count: count, chosenOrder: chosenOrder.flatMap(Int.init)))
+                        }
+                    }
+                }
+            }
+            self.init(
+                seenCount: Int(viewsCount),
+                reactedCount: Int(reactionsCount ?? 0),
+                forwardCount: Int(forwardsCount ?? 0),
+                seenPeerIds: seenPeerIds,
+                reactions: mappedReactions,
+                hasList: hasList
+            )
         }
     }
 }

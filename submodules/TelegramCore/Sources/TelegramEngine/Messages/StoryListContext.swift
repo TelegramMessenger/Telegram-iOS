@@ -14,13 +14,17 @@ public final class EngineStoryItem: Equatable {
     public final class Views: Equatable {
         public let seenCount: Int
         public let reactedCount: Int
+        public var forwardCount: Int
         public let seenPeers: [EnginePeer]
+        public let reactions: [MessageReaction]
         public let hasList: Bool
         
-        public init(seenCount: Int, reactedCount: Int, seenPeers: [EnginePeer], hasList: Bool) {
+        public init(seenCount: Int, reactedCount: Int, forwardCount: Int, seenPeers: [EnginePeer], reactions: [MessageReaction], hasList: Bool) {
             self.seenCount = seenCount
             self.reactedCount = reactedCount
+            self.forwardCount = forwardCount
             self.seenPeers = seenPeers
+            self.reactions = reactions
             self.hasList = hasList
         }
         
@@ -31,7 +35,13 @@ public final class EngineStoryItem: Equatable {
             if lhs.reactedCount != rhs.reactedCount {
                 return false
             }
+            if lhs.forwardCount != rhs.forwardCount {
+                return false
+            }
             if lhs.seenPeers != rhs.seenPeers {
+                return false
+            }
+            if lhs.reactions != rhs.reactions {
                 return false
             }
             if lhs.hasList != rhs.hasList {
@@ -159,7 +169,9 @@ extension EngineStoryItem {
                 return Stories.Item.Views(
                     seenCount: views.seenCount,
                     reactedCount: views.reactedCount,
+                    forwardCount: views.forwardCount,
                     seenPeerIds: views.seenPeers.map(\.id),
+                    reactions: views.reactions,
                     hasList: views.hasList
                 )
             },
@@ -533,9 +545,11 @@ public final class PeerStoryListContext {
                                 return EngineStoryItem.Views(
                                     seenCount: views.seenCount,
                                     reactedCount: views.reactedCount,
+                                    forwardCount: views.forwardCount,
                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
                                     },
+                                    reactions: views.reactions,
                                     hasList: views.hasList
                                 )
                             },
@@ -661,9 +675,11 @@ public final class PeerStoryListContext {
                                                 return EngineStoryItem.Views(
                                                     seenCount: views.seenCount,
                                                     reactedCount: views.reactedCount,
+                                                    forwardCount: views.forwardCount,
                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
                                                     },
+                                                    reactions: views.reactions,
                                                     hasList: views.hasList
                                                 )
                                             },
@@ -813,9 +829,11 @@ public final class PeerStoryListContext {
                                                                     return EngineStoryItem.Views(
                                                                         seenCount: views.seenCount,
                                                                         reactedCount: views.reactedCount,
+                                                                        forwardCount: views.forwardCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
                                                                         },
+                                                                        reactions: views.reactions,
                                                                         hasList: views.hasList
                                                                     )
                                                                 },
@@ -856,9 +874,11 @@ public final class PeerStoryListContext {
                                                                 return EngineStoryItem.Views(
                                                                     seenCount: views.seenCount,
                                                                     reactedCount: views.reactedCount,
+                                                                    forwardCount: views.forwardCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
                                                                     },
+                                                                    reactions: views.reactions,
                                                                     hasList: views.hasList
                                                                 )
                                                             },
@@ -901,9 +921,11 @@ public final class PeerStoryListContext {
                                                                     return EngineStoryItem.Views(
                                                                         seenCount: views.seenCount,
                                                                         reactedCount: views.reactedCount,
+                                                                        forwardCount: views.forwardCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
                                                                         },
+                                                                        reactions: views.reactions,
                                                                         hasList: views.hasList
                                                                     )
                                                                 },
@@ -942,9 +964,11 @@ public final class PeerStoryListContext {
                                                                 return EngineStoryItem.Views(
                                                                     seenCount: views.seenCount,
                                                                     reactedCount: views.reactedCount,
+                                                                    forwardCount: views.forwardCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
                                                                     },
+                                                                    reactions: views.reactions,
                                                                     hasList: views.hasList
                                                                 )
                                                             },
@@ -1107,9 +1131,11 @@ public final class PeerExpiringStoryListContext {
                                             return EngineStoryItem.Views(
                                                 seenCount: views.seenCount,
                                                 reactedCount: views.reactedCount,
+                                                forwardCount: views.forwardCount,
                                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                     return transaction.getPeer(id).flatMap(EnginePeer.init)
                                                 },
+                                                reactions: views.reactions,
                                                 hasList: views.hasList
                                             )
                                         },
