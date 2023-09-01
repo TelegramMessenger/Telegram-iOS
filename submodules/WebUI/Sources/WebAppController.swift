@@ -1121,7 +1121,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         }
         
         fileprivate func shareAccountContact() {
-            guard let controller = self.controller else {
+            guard let controller = self.controller, let botId = self.controller?.botId else {
                 return
             }
             
@@ -1135,28 +1135,68 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self.webView?.sendEvent(name: "phone_requested", data: paramsString)
             }
             
-            let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                sendEvent(false)
-            }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
-                guard let self else {
+            let context = self.context
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: self.context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.IsBlocked(id: botId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self, weak controller] accountPeer, isBlocked in
+                guard let self, let controller, let accountPeer else {
                     return
                 }
-                let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    if let self, let botId = self.controller?.botId, let peer = peer as? TelegramUser, let phone = peer.phone, !phone.isEmpty {
-                        let _ = enqueueMessages(account: self.context.account, peerId: botId, messages: [
-                            .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: peer.firstName ?? "", lastName: peer.lastName ?? "", phoneNumber: phone, peerId: peer.id, vCardData: nil)), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-                        ]).start()
-                        sendEvent(true)
-                    }
-                })
-            })])
-            alertController.dismissed = { byOutsideTap in
-                if byOutsideTap {
-                    sendEvent(false)
+                var requiresUnblock = false
+                if case let .known(value) = isBlocked, value {
+                    requiresUnblock = true
                 }
-            }
-            controller.present(alertController, in: .window(.root))
+                
+                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                    sendEvent(false)
+                }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
+                    guard let self, case let .user(user) = accountPeer, let phone = user.phone, !phone.isEmpty else {
+                        return
+                    }
+                    
+                    let sendMessageSignal = enqueueMessages(account: self.context.account, peerId: botId, messages: [
+                        .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaContact(firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: phone, peerId: user.id, vCardData: nil)), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                    ])
+                    |> mapToSignal { messageIds in
+                        if let maybeMessageId = messageIds.first, let messageId = maybeMessageId {
+                            return context.account.pendingMessageManager.pendingMessageStatus(messageId)
+                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                if status != nil {
+                                    return .never()
+                                } else {
+                                    return .single(true)
+                                }
+                            }
+                            |> take(1)
+                        } else {
+                            return .complete()
+                        }
+                    }
+                    
+                    let sendMessage = {
+                        let _ = sendMessageSignal.start(completed: {
+                            sendEvent(true)
+                        })
+                    }
+                    
+                    if requiresUnblock {
+                        let _ = (context.engine.privacy.requestUpdatePeerIsBlocked(peerId: botId, isBlocked: false)
+                        |> deliverOnMainQueue).start(completed: {
+                            sendMessage()
+                        })
+                    } else {
+                        sendMessage()
+                    }
+                })])
+                alertController.dismissed = { byOutsideTap in
+                    if byOutsideTap {
+                        sendEvent(false)
+                    }
+                }
+                controller.present(alertController, in: .window(.root))
+            })
         }
         
         fileprivate func invokeCustomMethod(requestId: String, method: String, params: String) {
