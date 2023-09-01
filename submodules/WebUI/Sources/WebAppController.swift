@@ -1104,7 +1104,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if result {
                     sendEvent(true)
                 } else {
-                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: "Allow Sending Messages?", text: "Allow \(controller.botName) to send messages?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                    controller.present(textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_AllowWriteTitle, text: self.presentationData.strings.WebApp_AllowWriteConfirmation(controller.botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                         sendEvent(false)
                     }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                         guard let self else {
@@ -1115,15 +1115,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         |> deliverOnMainQueue).start(completed: {
                             sendEvent(true)
                         })
-                    })]), in: .window(.root))
+                    })], parseMarkdown: true), in: .window(.root))
                 }
             })
         }
         
         fileprivate func shareAccountContact() {
-            guard let controller = self.controller, let botId = self.controller?.botId else {
+            guard let controller = self.controller, let botId = self.controller?.botId, let botName = self.controller?.botName else {
                 return
             }
+            
             
             let sendEvent: (Bool) -> Void = { success in
                 var paramsString: String
@@ -1149,7 +1150,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     requiresUnblock = true
                 }
                 
-                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.Conversation_ShareBotContactConfirmationTitle, text: self.presentationData.strings.Conversation_ShareBotContactConfirmation, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_SharePhoneTitle, text: self.presentationData.strings.WebApp_SharePhoneConfirmation(botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                     sendEvent(false)
                 }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                     guard let self, case let .user(user) = accountPeer, let phone = user.phone, !phone.isEmpty else {
@@ -1190,7 +1191,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     } else {
                         sendMessage()
                     }
-                })])
+                })], parseMarkdown: true)
                 alertController.dismissed = { byOutsideTap in
                     if byOutsideTap {
                         sendEvent(false)

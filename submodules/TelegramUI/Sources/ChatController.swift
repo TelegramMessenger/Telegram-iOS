@@ -13213,7 +13213,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         let buttons: Signal<([AttachmentButtonType], [AttachmentButtonType], AttachmentButtonType?), NoError>
-        if !isScheduledMessages {
+        if !isScheduledMessages && !peer.isDeleted {
             buttons = self.context.engine.messages.attachMenuBots()
             |> map { attachMenuBots in
                 var buttons = availableButtons

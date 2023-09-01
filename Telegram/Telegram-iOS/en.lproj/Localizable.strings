@@ -9863,6 +9863,8 @@ Sorry for the inconvenience.";
 "Story.ViewList.ViewerCount_any" = "%d Viewers";
 
 "AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
+"Notification.BotWriteAllowedMenu" = "You allowed this bot to message you when you added it to your attachment menu.";
+"Notification.BotWriteAllowedRequest" = "You allowed this bot to message you in the app.";
 
 "Story.Privacy.PostStoryAs" = "Post Story As";
 "Story.Privacy.PostStoryAsHeader" = "POST STORY AS";
@@ -9892,3 +9894,9 @@ Sorry for the inconvenience.";
 "MediaPicker.Timer.Video.ViewOnceTooltip" = "Video set to view once.";
 "MediaPicker.Timer.Video.TimerTooltip" = "Video will be deleted in\n%@ seconds after opening.";
 "MediaPicker.Timer.Video.KeepTooltip" = "Video will be kept in chat.";
+
+"WebApp.AllowWriteTitle" = "Allow Sending Messages?";
+"WebApp.AllowWriteConfirmation" = "This will allow the bot **%@** to message you on Telegram.";
+
+"WebApp.SharePhoneTitle" = "Share Phone Number?";
+"WebApp.SharePhoneConfirmation" = "**%@** will know your phone number. This can be useful for integration with other services.";
