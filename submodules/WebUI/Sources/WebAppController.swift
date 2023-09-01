@@ -1176,7 +1176,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                     
                     let sendMessage = {
-                        let _ = sendMessageSignal.start(completed: {
+                        let _ = (sendMessageSignal
+                        |> deliverOnMainQueue).start(completed: {
                             sendEvent(true)
                         })
                     }
