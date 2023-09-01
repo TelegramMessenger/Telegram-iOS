@@ -337,6 +337,13 @@ private final class TimeBasedCleanupImpl {
     }
     
     private func resetScan(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
+        let shortLived = gigabytesLimit == Int32.max ? Int32.max : shortLived
+        
+        if general == Int32.max && shortLived == Int32.max && gigabytesLimit == Int32.max {
+            self.scheduledScanDisposable.set(nil)
+            return
+        }
+        
         let generalPaths = self.generalPaths
         let totalSizeBasedPath = self.totalSizeBasedPath
         let shortLivedPaths = self.shortLivedPaths
@@ -478,13 +485,8 @@ private final class TimeBasedCleanupImpl {
         }
         let scanFirstTime = scanOnce
         |> delay(10.0, queue: Queue.concurrentDefaultQueue())
-        let scanRepeatedly = (
-            scanOnce
-            |> suspendAwareDelay(60.0 * 60.0, granularity: 10.0, queue: Queue.concurrentDefaultQueue())
-        )
-        |> restart
+        
         let scan = scanFirstTime
-        |> then(scanRepeatedly)
         self.scheduledScanDisposable.set((scan
         |> deliverOn(self.queue)).start())
     }

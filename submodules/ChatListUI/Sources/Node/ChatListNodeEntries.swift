@@ -85,7 +85,7 @@ enum ChatListNotice: Equatable {
     case premiumUpgrade(discount: Int32)
     case premiumAnnualDiscount(discount: Int32)
     case premiumRestore(discount: Int32)
-    case reviewLogin(device: String, location: String)
+    case reviewLogin(newSessionReview: NewSessionReview)
 }
 
 enum ChatListNodeEntry: Comparable, Identifiable {

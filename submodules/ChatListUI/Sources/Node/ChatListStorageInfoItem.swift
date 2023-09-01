@@ -92,6 +92,13 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     
     private var item: ChatListStorageInfoItem?
     
+    override var apparentHeight: CGFloat {
+        didSet {
+            self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.width, height: self.apparentHeight))
+            self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentContainer.bounds.height - UIScreenPixel), size: CGSize(width: self.contentContainer.bounds.width, height: UIScreenPixel))
+        }
+    }
+    
     required init() {
         self.contentContainer = ASDisplayNode()
         
@@ -102,6 +109,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.contentContainer.clipsToBounds = true
         self.clipsToBounds = true
         
         self.addSubnode(self.separatorNode)
@@ -195,7 +203,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
-            case let .reviewLogin(device, location):
+            case let .reviewLogin(newSessionReview):
                 spacing = 2.0
                 alignment = .center
                 
@@ -203,7 +211,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: "Someone just got acess to your messages!", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
                 titleString = titleStringValue
                 
-                textString = NSAttributedString(string: "We detected a new login to your account from \(device), \(location). Is it you?", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                textString = NSAttributedString(string: "We detected a new login to your account from \(newSessionReview.device), \(newSessionReview.location). Is it you?", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
                 
                 okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Yes, it's me", font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "No, it's not me!", font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
@@ -225,12 +233,10 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.item = item
                     
                     if themeUpdated {
-                        strongSelf.backgroundColor = item.theme.chatList.pinnedItemBackgroundColor
+                        strongSelf.contentContainer.backgroundColor = item.theme.chatList.pinnedItemBackgroundColor
                         strongSelf.separatorNode.backgroundColor = item.theme.chatList.itemSeparatorColor
                         strongSelf.arrowNode.image = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                     }
-                    
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel))
                     
                     let _ = titleLayout.1()
                     if case .center = alignment {
@@ -260,7 +266,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             okButton = HighlightableButtonNode()
                             strongSelf.okButton = okButton
-                            strongSelf.addSubnode(okButton)
+                            strongSelf.contentContainer.addSubnode(okButton)
                             okButton.addTarget(strongSelf, action: #selector(strongSelf.okButtonPressed), forControlEvents: .touchUpInside)
                         }
                         
@@ -270,7 +276,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             cancelButton = HighlightableButtonNode()
                             strongSelf.cancelButton = cancelButton
-                            strongSelf.addSubnode(cancelButton)
+                            strongSelf.contentContainer.addSubnode(cancelButton)
                             cancelButton.addTarget(strongSelf, action: #selector(strongSelf.cancelButtonPressed), forControlEvents: .touchUpInside)
                         }
                         
@@ -326,7 +332,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    //strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     switch item.notice {
                     default:
@@ -348,7 +354,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
-        //self.transitionOffset = self.bounds.size.height * 1.6
+        //self.transitionOffset = self.bounds.size.height
         //self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
     }
     

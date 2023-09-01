@@ -84,7 +84,7 @@ public struct MessageReaction: Equatable, PostboxCoding, Codable {
             self.value = .custom(try container.decode(Int64.self, forKey: "cfid"))
         }
         self.count = try container.decode(Int32.self, forKey: "c")
-        if let chosenOrder = try container.decodeIfPresent(Int32.self, forKey: "s") {
+        if let chosenOrder = try container.decodeIfPresent(Int32.self, forKey: "cord") {
             self.chosenOrder = Int(chosenOrder)
         } else if let isSelected = try container.decodeIfPresent(Int32.self, forKey: "s"), isSelected != 0 {
             self.chosenOrder = 0

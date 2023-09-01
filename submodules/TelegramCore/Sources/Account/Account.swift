@@ -1161,21 +1161,47 @@ public class Account {
         self.managedOperationsDisposable.add(managedSynchronizePeerStoriesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedLocalTypingActivities(activities: self.localInputActivityManager.allActivities(), postbox: self.stateManager.postbox, network: self.stateManager.network, accountPeerId: self.stateManager.accountPeerId).start())
         
-        let extractedExpr: [Signal<AccountRunningImportantTasks, NoError>] = [
-            managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
-            self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
-            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map {
-                hasPending in hasPending ? AccountRunningImportantTasks.pendingMessages : []
+        let extractedExpr1 = [
+            managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { inputStates in
+                if inputStates {
+                    print("inputStates: true")
+                }
+                return inputStates ? AccountRunningImportantTasks.other : []
             },
-            self.pendingUpdateMessageManager.updatingMessageMedia |> map {
-                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            self.pendingMessageManager.hasPendingMessages |> map { hasPendingMessages in
+                if !hasPendingMessages.isEmpty {
+                    print("hasPendingMessages: true")
+                }
+                return !hasPendingMessages.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
             },
-            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map {
-                !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            (self.pendingStoryManager?.hasPending ?? .single(false)) |> map { hasPending in
+                if hasPending {
+                    print("hasPending: true")
+                }
+                return hasPending ? AccountRunningImportantTasks.pendingMessages : []
             },
-            self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
+            self.pendingUpdateMessageManager.updatingMessageMedia |> map { updatingMessageMedia in
+                if !updatingMessageMedia.isEmpty {
+                    print("updatingMessageMedia: true")
+                }
+                return !updatingMessageMedia.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { uploadingPeerMedia in
+                if !uploadingPeerMedia.isEmpty {
+                    print("updatingMessageMedia: true")
+                }
+                return !uploadingPeerMedia.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
+            },
+            self.accountPresenceManager.isPerformingUpdate() |> map { presenceUpdate in
+                if presenceUpdate {
+                    print("updatingMessageMedia: true")
+                    return []
+                }
+                return presenceUpdate ? AccountRunningImportantTasks.other : []
+            },
             //self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
+        let extractedExpr: [Signal<AccountRunningImportantTasks, NoError>] = extractedExpr1
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = extractedExpr
         let importantBackgroundOperationsRunning = combineLatest(queue: Queue(), importantBackgroundOperations)
         |> map { values -> AccountRunningImportantTasks in

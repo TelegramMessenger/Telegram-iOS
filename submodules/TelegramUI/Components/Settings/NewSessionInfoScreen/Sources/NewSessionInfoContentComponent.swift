@@ -3,6 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 import MultilineTextComponent
+import BalancedTextComponent
 import TelegramPresentationData
 import AppBundle
 import BundleIconComponent
@@ -12,19 +13,16 @@ import TelegramCore
 public final class NewSessionInfoContentComponent: Component {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
-    public let settings: GlobalPrivacySettings
-    public let openSettings: () -> Void
+    public let newSessionReview: NewSessionReview
     
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
-        settings: GlobalPrivacySettings,
-        openSettings: @escaping () -> Void
+        newSessionReview: NewSessionReview
     ) {
         self.theme = theme
         self.strings = strings
-        self.settings = settings
-        self.openSettings = openSettings
+        self.newSessionReview = newSessionReview
     }
     
     public static func ==(lhs: NewSessionInfoContentComponent, rhs: NewSessionInfoContentComponent) -> Bool {
@@ -34,19 +32,10 @@ public final class NewSessionInfoContentComponent: Component {
         if lhs.strings !== rhs.strings {
             return false
         }
-        if lhs.settings != rhs.settings {
+        if lhs.newSessionReview != rhs.newSessionReview {
             return false
         }
         return true
-    }
-    
-    private final class Item {
-        let icon = ComponentView<Empty>()
-        let title = ComponentView<Empty>()
-        let text = ComponentView<Empty>()
-        
-        init() {
-        }
     }
     
     public final class View: UIView {
@@ -54,17 +43,19 @@ public final class NewSessionInfoContentComponent: Component {
         private let iconBackground: UIImageView
         private let iconForeground: UIImageView
         
+        private let notice = ComponentView<Empty>()
+        private let noticeBackground: SimpleLayer
+        
         private let title = ComponentView<Empty>()
         private let mainText = ComponentView<Empty>()
-        
-        private var chevronImage: UIImage?
-        
-        private var items: [Item] = []
         
         private var component: NewSessionInfoContentComponent?
         
         public override init(frame: CGRect) {
             self.scrollView = UIScrollView()
+            
+            self.noticeBackground = SimpleLayer()
+            self.noticeBackground.cornerRadius = 10.0
             
             self.iconBackground = UIImageView()
             self.iconForeground = UIImageView()
@@ -84,6 +75,7 @@ public final class NewSessionInfoContentComponent: Component {
             self.scrollView.scrollsToTop = false
             self.scrollView.clipsToBounds = false
             
+            self.scrollView.layer.addSublayer(self.noticeBackground)
             self.scrollView.addSubview(self.iconBackground)
             self.scrollView.addSubview(self.iconForeground)
         }
@@ -104,14 +96,41 @@ public final class NewSessionInfoContentComponent: Component {
             self.component = component
             
             let sideInset: CGFloat = 16.0
-            let sideIconInset: CGFloat = 40.0
+            let noticeInsetX: CGFloat = 16.0
+            let noticeInsetY: CGFloat = 12.0
             
             var contentHeight: CGFloat = 0.0
             
+            contentHeight += -14.0
+            
+            //TODO:localize
+            let noticeSize = self.notice.update(
+                transition: .immediate,
+                component: AnyComponent(BalancedTextComponent(
+                    text: .plain(NSAttributedString(string: "Never send your login code to anyone or you can lose your Telegram account!", font: Font.semibold(15.0), textColor: component.theme.list.itemDestructiveColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 0,
+                    lineSpacing: 0.2
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - noticeInsetX * 2.0, height: 1000.0)
+            )
+            let noticeBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: availableSize.width, height: noticeSize.height + noticeInsetY * 2.0))
+            transition.setFrame(layer: self.noticeBackground, frame: noticeBackgroundFrame)
+            self.noticeBackground.backgroundColor = component.theme.list.itemDestructiveColor.withMultipliedAlpha(0.1).cgColor
+            
+            if let noticeView = self.notice.view {
+                if noticeView.superview == nil {
+                    self.scrollView.addSubview(noticeView)
+                }
+                transition.setFrame(view: noticeView, frame: CGRect(origin: CGPoint(x: noticeBackgroundFrame.minX + floor((noticeBackgroundFrame.width - noticeSize.width) * 0.5), y: noticeBackgroundFrame.minY + floor((noticeBackgroundFrame.height - noticeSize.height) * 0.5)), size: noticeSize))
+            }
+            contentHeight += noticeBackgroundFrame.height
+            contentHeight += 24.0
+            
             let iconSize: CGFloat = 90.0
             if self.iconBackground.image == nil {
-                let backgroundColors = component.theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-                let colors: NSArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
+                let colors: NSArray = [component.theme.list.itemAccentColor.cgColor, component.theme.list.itemAccentColor.cgColor]
                 self.iconBackground.image = generateGradientFilledCircleImage(diameter: iconSize, colors: colors)
             }
             let iconBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize) * 0.5), y: contentHeight), size: CGSize(width: iconSize, height: iconSize))
@@ -125,10 +144,11 @@ public final class NewSessionInfoContentComponent: Component {
             }
             
             contentHeight += iconSize
-            contentHeight += 15.0
+            contentHeight += 16.0
             
+            //TODO:localize
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: component.strings.NewSessionInfo_Title, font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: "New Login Prevented", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
             let imageAttachment = NSTextAttachment()
             imageAttachment.image = self.iconBackground.image
             titleString.append(NSAttributedString(attachment: imageAttachment))
@@ -151,22 +171,18 @@ public final class NewSessionInfoContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 16.0
             
-            let text: String
-            if component.settings.keepArchivedUnmuted {
-                text = component.strings.NewSessionInfo_TextKeepArchivedUnmuted
-            } else {
-                text = component.strings.NewSessionInfo_TextKeepArchivedDefault
-            }
+            //TODO:localize
+            let text: String = "We have terminated the login attempt from **\(component.newSessionReview.device), \(component.newSessionReview.location)**"
             
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
                 body: MarkdownAttributeSet(
                     font: Font.regular(15.0),
-                    textColor: component.theme.list.itemSecondaryTextColor
+                    textColor: component.theme.list.itemPrimaryTextColor
                 ),
                 bold: MarkdownAttributeSet(
                     font: Font.semibold(15.0),
-                    textColor: component.theme.list.itemSecondaryTextColor
+                    textColor: component.theme.list.itemPrimaryTextColor
                 ),
                 link: MarkdownAttributeSet(
                     font: Font.regular(15.0),
@@ -177,34 +193,14 @@ public final class NewSessionInfoContentComponent: Component {
                     return ("URL", "")
                 }
             )))
-            if self.chevronImage == nil {
-                self.chevronImage = UIImage(bundleImageName: "Settings/TextArrowRight")
-            }
-            if let range = mainText.string.range(of: ">"), let chevronImage = self.chevronImage {
-                mainText.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: mainText.string))
-            }
             
             let mainTextSize = self.mainText.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(
+                component: AnyComponent(BalancedTextComponent(
                     text: .plain(mainText),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.2,
-                    highlightColor: component.theme.list.itemAccentColor.withMultipliedAlpha(0.1),
-                    highlightAction: { attributes in
-                        if let _ = attributes[NSAttributedString.Key(rawValue: "URL")] {
-                            return NSAttributedString.Key(rawValue: "URL")
-                        } else {
-                            return nil
-                        }
-                    },
-                    tapAction: { [weak self] _, _ in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.openSettings()
-                    }
+                    lineSpacing: 0.2
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0)
@@ -217,99 +213,7 @@ public final class NewSessionInfoContentComponent: Component {
             }
             contentHeight += mainTextSize.height
             
-            contentHeight += 24.0
-            
-            struct ItemDesc {
-                var icon: String
-                var title: String
-                var text: String
-            }
-            let itemDescs: [ItemDesc] = [
-                ItemDesc(
-                    icon: "Chat List/Archive/IconArchived",
-                    title: component.strings.NewSessionInfo_ChatsTitle,
-                    text: component.strings.NewSessionInfo_ChatsText
-                ),
-                ItemDesc(
-                    icon: "Chat List/Archive/IconHide",
-                    title: component.strings.NewSessionInfo_HideTitle,
-                    text: component.strings.NewSessionInfo_HideText
-                ),
-                ItemDesc(
-                    icon: "Chat List/Archive/IconStories",
-                    title: component.strings.NewSessionInfo_StoriesTitle,
-                    text: component.strings.NewSessionInfo_StoriesText
-                )
-            ]
-            for i in 0 ..< itemDescs.count {
-                if i != 0 {
-                    contentHeight += 24.0
-                }
-                
-                let item: Item
-                if self.items.count > i {
-                    item = self.items[i]
-                } else {
-                    item = Item()
-                    self.items.append(item)
-                }
-                
-                let itemDesc = itemDescs[i]
-                
-                let iconSize = item.icon.update(
-                    transition: .immediate,
-                    component: AnyComponent(BundleIconComponent(
-                        name: itemDesc.icon,
-                        tintColor: component.theme.list.itemAccentColor
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: 100.0, height: 100.0)
-                )
-                let titleSize = item.title.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: itemDesc.title, font: Font.semibold(15.0), textColor: component.theme.list.itemPrimaryTextColor)),
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.2
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sideIconInset, height: 1000.0)
-                )
-                let textSize = item.text.update(
-                    transition: .immediate,
-                    component: AnyComponent(MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: itemDesc.text, font: Font.regular(15.0), textColor: component.theme.list.itemSecondaryTextColor)),
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.18
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - sideIconInset, height: 1000.0)
-                )
-                
-                if let iconView = item.icon.view {
-                    if iconView.superview == nil {
-                        self.scrollView.addSubview(iconView)
-                    }
-                    transition.setFrame(view: iconView, frame: CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 4.0), size: iconSize))
-                }
-                
-                if let titleView = item.title.view {
-                    if titleView.superview == nil {
-                        self.scrollView.addSubview(titleView)
-                    }
-                    transition.setFrame(view: titleView, frame: CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: titleSize))
-                }
-                contentHeight += titleSize.height
-                contentHeight += 2.0
-                
-                if let textView = item.text.view {
-                    if textView.superview == nil {
-                        self.scrollView.addSubview(textView)
-                    }
-                    transition.setFrame(view: textView, frame: CGRect(origin: CGPoint(x: sideInset + sideIconInset, y: contentHeight), size: textSize))
-                }
-                contentHeight += textSize.height
-            }
+            contentHeight += 1.0
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
             let size = CGSize(width: availableSize.width, height: min(availableSize.height, contentSize.height))
