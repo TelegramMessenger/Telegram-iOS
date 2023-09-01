@@ -12,31 +12,59 @@ public struct ArchiveAnimationParams: Equatable {
     public let scrollOffset: CGFloat
     public let storiesFraction: CGFloat
     public private(set)var expandedHeight: CGFloat
+    public private(set)var isRevealed: Bool = false
     public let finalizeAnimation: Bool
+    public private(set)var isHiddenByDefault: Bool
     
-    public static var empty: ArchiveAnimationParams {
-        return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: false)
+    public static var emptyVisibleParams: ArchiveAnimationParams {
+        return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: false, isHiddenByDefault: false)
     }
+    
+    public static var emptyDefaultHiddenParams: ArchiveAnimationParams {
+        return ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: false, isHiddenByDefault: true)
+    }
+    
+//    public init(scrollOffset: CGFloat, storiesFraction: CGFloat, expandedHeight: CGFloat, finalizeAnimation: Bool, isHiddenByDefault: Bool) {
+//
+//    }
     
     public func withUpdatedFinalizeAnimation(_ finalizeAnimation: Bool) -> ArchiveAnimationParams {
         var newParams = ArchiveAnimationParams(
             scrollOffset: self.scrollOffset,
             storiesFraction: self.storiesFraction,
             expandedHeight: self.expandedHeight,
-            finalizeAnimation: finalizeAnimation
+            finalizeAnimation: finalizeAnimation,
+            isHiddenByDefault: self.isHiddenByDefault
         )
         if finalizeAnimation {
             if newParams.isArchiveGroupVisible {
                 newParams.expandedHeight /= 1.2
+                newParams.isRevealed = true
             } else {
-                newParams = ArchiveAnimationParams(scrollOffset: .zero, storiesFraction: .zero, expandedHeight: .zero, finalizeAnimation: finalizeAnimation)
+                newParams = ArchiveAnimationParams(
+                    scrollOffset: .zero,
+                    storiesFraction: .zero,
+                    expandedHeight: .zero,
+                    finalizeAnimation: finalizeAnimation,
+                    isHiddenByDefault: self.isHiddenByDefault
+                )
+                newParams.isRevealed = false
             }
         }
         return newParams
     }
     
+    public mutating func updateVisibility(isRevealed: Bool? = nil, isHiddenByDefault: Bool? = nil) {
+        if let isRevealed {
+            self.isRevealed = isRevealed
+        }
+        if let isHiddenByDefault {
+            self.isHiddenByDefault = isHiddenByDefault
+        }
+    }
+    
     var isArchiveGroupVisible: Bool {
-        return storiesFraction >= 0.85 && finalizeAnimation
+        return (storiesFraction >= 0.85 && finalizeAnimation) || !isHiddenByDefault
     }
     
 }
@@ -65,7 +93,7 @@ class ChatListArchiveTransitionNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = .clear
         self.backgroundNode.isLayerBacked = true
         
-        self.animation = .init(state: .swipeDownInit, params: .empty)
+        self.animation = .init(state: .swipeDownInit, params: .emptyDefaultHiddenParams)
         self.titleNode = ASTextNode()
         self.titleNode.isLayerBacked = true
 

@@ -854,6 +854,11 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 if let archiveStoryState = state.archiveStoryState {
                     mappedStoryState = archiveStoryState
                 }
+                var params = state.archiveParams
+                if params.isHiddenByDefault != hideArchivedFolderByDefault {
+                    params.updateVisibility(isRevealed: state.hiddenItemShouldBeTemporaryRevealed, isHiddenByDefault: hideArchivedFolderByDefault)
+                }
+                
                 result.append(.GroupReferenceEntry(ChatListNodeEntry.GroupReferenceEntryData(
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: messageIndex)),
                     presentationData: state.presentationData,
@@ -864,7 +869,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                     unreadCount: groupReference.unreadCount,
                     revealed: state.hiddenItemShouldBeTemporaryRevealed,
                     hiddenByDefault: hideArchivedFolderByDefault,
-                    archiveParams: state.archiveParams,
+                    archiveParams: params,
                     storyState: mappedStoryState
                 )))
                 if pinningIndex != 0 {

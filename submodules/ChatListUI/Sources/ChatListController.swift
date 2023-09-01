@@ -1098,10 +1098,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if !didDisplayTip {
-                    #if DEBUG
-                    #else
+//                    #if DEBUG
+//                    #else
                     let _ = ApplicationSpecificNotice.setDisplayChatListArchiveTooltip(accountManager: self.context.sharedContext.accountManager).start()
-                    #endif
+//                    #endif
                     
                     self.push(ArchiveInfoScreen(context: self.context, settings: settings))
                 }
@@ -4648,6 +4648,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if updatedValue {
                     state.hiddenItemShouldBeTemporaryRevealed = false
                 }
+                state.archiveParams.updateVisibility(isRevealed: state.hiddenItemShouldBeTemporaryRevealed,
+                                                     isHiddenByDefault: updatedValue)
                 state.peerIdWithRevealedOptions = nil
                 return state
             }
@@ -5117,6 +5119,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.chatListDisplayNode.effectiveContainerNode.updateState { state in
                     var state = state
                     state.hiddenItemShouldBeTemporaryRevealed = false
+                    state.archiveParams.updateVisibility(isRevealed: false)
                     return state
                 }
                 
