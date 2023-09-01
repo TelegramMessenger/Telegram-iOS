@@ -18,6 +18,9 @@ import AudioToolbox
 import AnimatedTextComponent
 import AnimatedCountLabelNode
 import MessageInputActionButtonComponent
+import ContextReferenceButtonComponent
+
+private let timeoutButtonTag = GenericComponentViewTag()
 
 public final class MessageInputPanelComponent: Component {
     public struct ContextQueryTypes: OptionSet {
@@ -120,7 +123,7 @@ public final class MessageInputPanelComponent: Component {
     public let likeAction: (() -> Void)?
     public let likeOptionsAction: ((UIView, ContextGesture?) -> Void)?
     public let inputModeAction: (() -> Void)?
-    public let timeoutAction: ((UIView) -> Void)?
+    public let timeoutAction: ((UIView, ContextGesture?) -> Void)?
     public let forwardAction: (() -> Void)?
     public let moreAction: ((UIView, ContextGesture?) -> Void)?
     public let presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?
@@ -172,7 +175,7 @@ public final class MessageInputPanelComponent: Component {
         likeAction: (() -> Void)?,
         likeOptionsAction: ((UIView, ContextGesture?) -> Void)?,
         inputModeAction: (() -> Void)?,
-        timeoutAction: ((UIView) -> Void)?,
+        timeoutAction: ((UIView, ContextGesture?) -> Void)?,
         forwardAction: (() -> Void)?,
         moreAction: ((UIView, ContextGesture?) -> Void)?,
         presentVoiceMessagesUnavailableTooltip: ((UIView) -> Void)?,
@@ -1456,49 +1459,23 @@ public final class MessageInputPanelComponent: Component {
             
             let accentColor = component.theme.chat.inputPanel.panelControlAccentColor
             if let timeoutAction = component.timeoutAction, let timeoutValue = component.timeoutValue {
-                func generateIcon(value: String, selected: Bool) -> UIImage? {
-                    let image = UIImage(bundleImageName: "Media Editor/Timeout")!
-                    let valueString = NSAttributedString(string: value, font: Font.with(size: value.count == 1 ? 12.0 : 10.0, design: .round, weight: .semibold), textColor: .white, paragraphAlignment: .center)
-                   
-                    return generateImage(image.size, contextGenerator: { size, context in
-                        let bounds = CGRect(origin: CGPoint(), size: size)
-                        context.clear(bounds)
-                        
-                        if selected {
-                            context.setFillColor(accentColor.cgColor)
-                            context.fillEllipse(in: CGRect(origin: .zero, size: size))
-                        } else {
-                            if let cgImage = image.cgImage {
-                                context.draw(cgImage, in: CGRect(origin: .zero, size: size))
-                            }
-                        }
-                        
-                        var offset: CGPoint = CGPoint(x: 0.0, y: -3.0 - UIScreenPixel)
-                        if value == "∞" {
-                            offset.x += UIScreenPixel
-                            offset.y += 1.0 - UIScreenPixel
-                        }
-                        
-                        let valuePath = CGMutablePath()
-                        valuePath.addRect(bounds.offsetBy(dx: offset.x, dy: offset.y))
-                        let valueFramesetter = CTFramesetterCreateWithAttributedString(valueString as CFAttributedString)
-                        let valyeFrame = CTFramesetterCreateFrame(valueFramesetter, CFRangeMake(0, valueString.length), valuePath, nil)
-                        CTFrameDraw(valyeFrame, context)
-                    })
-                }
-                
-                let icon = generateIcon(value: timeoutValue, selected: component.timeoutSelected)
                 let timeoutButtonSize = self.timeoutButton.update(
                     transition: transition,
-                    component: AnyComponent(Button(
-                        content: AnyComponent(Image(image: icon, size: CGSize(width: 20.0, height: 20.0))),
-                        action: { [weak self] in
-                            guard let self, let timeoutButtonView = self.timeoutButton.view else {
-                                return
-                            }
-                            timeoutAction(timeoutButtonView)
+                    component: AnyComponent(ContextReferenceButtonComponent(
+                        content: AnyComponent(
+                            TimeoutContentComponent(
+                                color: .white,
+                                accentColor: accentColor,
+                                isSelected: component.timeoutSelected,
+                                value: timeoutValue
+                            )
+                        ),
+                        tag: timeoutButtonTag,
+                        minSize: CGSize(width: 32.0, height: 32.0),
+                        action: { view, gesture in
+                            timeoutAction(view, gesture)
                         }
-                    ).minSize(CGSize(width: 32.0, height: 32.0))),
+                    )),
                     environment: {},
                     containerSize: CGSize(width: 32.0, height: 32.0)
                 )

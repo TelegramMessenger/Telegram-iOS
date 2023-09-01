@@ -53,16 +53,19 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
     case let .messageActionBotAllowed(flags, domain, app):
         if let domain = domain {
             return TelegramMediaAction(action: .botDomainAccessGranted(domain: domain))
-        } else if case let .botApp(_, _, _, _, appName, _, _, _, _) = app {
+        } else {
+            var appName: String?
+            if case let .botApp(_, _, _, _, appNameValue, _, _, _, _) = app {
+                appName = appNameValue
+            }
             var type: BotSendMessageAccessGrantedType?
-            if (flags & (1 << 3)) != 0 {
-                type = .request
-            } else if (flags & (1 << 1)) != 0 {
+            if (flags & (1 << 1)) != 0 {
                 type = .attachMenu
             }
+            if (flags & (1 << 3)) != 0 {
+                type = .request
+            }
             return TelegramMediaAction(action: .botAppAccessGranted(appName: appName, type: type))
-        } else {
-            return nil
         }
     case .messageActionSecureValuesSentMe:
         return nil

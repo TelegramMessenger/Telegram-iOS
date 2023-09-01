@@ -392,11 +392,15 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     override func onSelection() {
-        self.presentReactionSelection()
+        if self.isReaction {
+            self.presentReactionSelection()
+        }
     }
     
     func onDeselection() {
-        let _ = self.dismissReactionSelection()
+        if self.isReaction {
+            let _ = self.dismissReactionSelection()
+        }
     }
     
     private weak var reactionContextNode: ReactionContextNode?
