@@ -20,6 +20,7 @@ import Postbox
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import ChatListHeaderComponent
+import UndoUI
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -98,6 +99,8 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
+    let openActiveSessions: () -> Void
+    let performActiveSessionAction: (Bool) -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -146,6 +149,8 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
+        openActiveSessions: @escaping () -> Void,
+        performActiveSessionAction: @escaping (Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -181,6 +186,8 @@ public final class ChatListNodeInteraction {
         self.openStorageManagement = openStorageManagement
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
+        self.openActiveSessions = openActiveSessions
+        self.performActiveSessionAction = performActiveSessionAction
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
@@ -700,9 +707,18 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .reviewLogin:
+                            nodeInteraction?.openActiveSessions()
                         }
                     case .hide:
                         switch notice {
+                        default:
+                            break
+                        }
+                    case let .buttonChoice(isPositive):
+                        switch notice {
+                        case .reviewLogin:
+                            nodeInteraction?.performActiveSessionAction(isPositive)
                         default:
                             break
                         }
@@ -1011,9 +1027,18 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .reviewLogin:
+                            nodeInteraction?.openActiveSessions()
                         }
                     case .hide:
                         switch notice {
+                        default:
+                            break
+                        }
+                    case let .buttonChoice(isPositive):
+                        switch notice {
+                        case .reviewLogin:
+                            nodeInteraction?.performActiveSessionAction(isPositive)
                         default:
                             break
                         }
@@ -1564,6 +1589,53 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
+        }, openActiveSessions: { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            let activeSessionsContext = self.context.engine.privacy.activeSessions()
+            let _ = (activeSessionsContext.state
+            |> filter { state in
+                return !state.sessions.isEmpty
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let self else {
+                    return
+                }
+                
+                let recentSessionsController = self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext)
+                self.push?(recentSessionsController)
+            })
+        }, performActiveSessionAction: { [weak self] isPositive in
+            guard let self else {
+                return
+            }
+            
+            if isPositive {
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                
+                let animationBackgroundColor: UIColor
+                if presentationData.theme.overallDarkAppearance {
+                    animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                } else {
+                    animationBackgroundColor = UIColor(rgb: 0x474747)
+                }
+                //TODO:localize
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "New Login Allowed", text: "You can check the list of your active logins in [Settings > Devices]().", customUndoText: nil, timeout: 5), elevatedLayout: true, action: { [weak self] action in
+                    switch action {
+                    case .info:
+                        self?.interaction?.openActiveSessions()
+                    default:
+                        break
+                    }
+                    
+                    return true
+                }))
+            } else {
+                
+            }
         }, openChatFolderUpdates: { [weak self] in
             guard let self else {
                 return
@@ -1718,6 +1790,11 @@ public final class ChatListNode: ListView {
                             }
                         }
                     } else {
+                        #if DEBUG
+                        if "".isEmpty {
+                            return .single(.reviewLogin(device: "Macbook M2", location: "Stockholm, Sweden"))
+                        }
+                        #endif
                         return .single(nil)
                     }
                 }
