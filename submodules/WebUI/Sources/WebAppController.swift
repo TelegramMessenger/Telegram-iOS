@@ -1150,7 +1150,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     requiresUnblock = true
                 }
                 
-                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_SharePhoneTitle, text: self.presentationData.strings.WebApp_SharePhoneConfirmation(botName).string, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                let text: String
+                if requiresUnblock {
+                    text = self.presentationData.strings.WebApp_SharePhoneConfirmationUnblock(botName).string
+                } else {
+                    text = self.presentationData.strings.WebApp_SharePhoneConfirmation(botName).string
+                }
+                
+                let alertController = textAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, title: self.presentationData.strings.WebApp_SharePhoneTitle, text: text, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
                     sendEvent(false)
                 }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: { [weak self] in
                     guard let self, case let .user(user) = accountPeer, let phone = user.phone, !phone.isEmpty else {
