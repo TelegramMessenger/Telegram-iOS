@@ -221,10 +221,22 @@ public final class MediaEditorVideoExport {
         }
         
         var audioTimeRange: CMTimeRange? {
-            if let audioTrimRange = self.values.audioTrackTrimRange {
-                return CMTimeRange(start: CMTime(seconds: audioTrimRange.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: audioTrimRange.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+            let offset = self.values.audioTrackOffset ?? 0.0
+            if let range = self.values.audioTrackTrimRange {
+                return CMTimeRange(
+                    start: CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
+                    end: CMTime(seconds: offset + range.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                )
             } else {
                 return nil
+            }
+        }
+        
+        var audioStartTime: CMTime {
+            if let range = self.values.audioTrackTrimRange {
+                return CMTime(seconds: range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            } else {
+                return .zero
             }
         }
         
@@ -372,7 +384,8 @@ public final class MediaEditorVideoExport {
         var inputAsset = asset
         if let audioData = self.configuration.values.audioTrack {
             let mixComposition = AVMutableComposition()
-            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioData.path))
+            let audioPath = fullDraftPath(peerId: self.configuration.values.peerId, path: audioData.path)
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioPath))
             
             guard
                 let videoTrack = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
@@ -397,7 +410,7 @@ public final class MediaEditorVideoExport {
             if let audioTrackRange = self.configuration.audioTimeRange {
                 musicRange = audioTrackRange
             }
-            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: CMTime(seconds: self.configuration.values.audioTrackStart ?? 0.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: self.configuration.audioStartTime)
             
             inputAsset = mixComposition
         }

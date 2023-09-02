@@ -69,6 +69,7 @@ final class VideoScrubberComponent: Component {
     let videoTrimUpdated: (Double, Double, Bool, Bool) -> Void
     let positionUpdated: (Double, Bool) -> Void
     let audioTrimUpdated: (Double, Double, Bool, Bool) -> Void
+    let audioOffsetUpdated: (Double, Bool) -> Void
     let audioLongPressed: ((UIView) -> Void)?
     
     init(
@@ -88,6 +89,7 @@ final class VideoScrubberComponent: Component {
         videoTrimUpdated: @escaping (Double, Double, Bool, Bool) -> Void,
         positionUpdated: @escaping (Double, Bool) -> Void,
         audioTrimUpdated: @escaping (Double, Double, Bool, Bool) -> Void,
+        audioOffsetUpdated: @escaping (Double, Bool) -> Void,
         audioLongPressed: ((UIView) -> Void)?
     ) {
         self.context = context
@@ -106,6 +108,7 @@ final class VideoScrubberComponent: Component {
         self.videoTrimUpdated = videoTrimUpdated
         self.positionUpdated = positionUpdated
         self.audioTrimUpdated = audioTrimUpdated
+        self.audioOffsetUpdated = audioOffsetUpdated
         self.audioLongPressed = audioLongPressed
     }
     
@@ -149,7 +152,7 @@ final class VideoScrubberComponent: Component {
         return true
     }
     
-    final class View: UIView, UIGestureRecognizerDelegate{
+    final class View: UIView, UIGestureRecognizerDelegate, UIScrollViewDelegate {
         private let audioClippingView: UIView
         private let audioScrollView: UIScrollView
         private let audioContainerView: UIView
@@ -187,6 +190,7 @@ final class VideoScrubberComponent: Component {
         
         override init(frame: CGRect) {
             self.audioScrollView = UIScrollView()
+            self.audioScrollView.bounces = false
             self.audioScrollView.decelerationRate = .fast
             self.audioScrollView.clipsToBounds = false
             self.audioScrollView.showsHorizontalScrollIndicator = false
@@ -222,6 +226,8 @@ final class VideoScrubberComponent: Component {
             super.init(frame: frame)
             
             self.clipsToBounds = false
+            
+            self.audioScrollView.delegate = self
             
             self.disablesInteractiveModalDismiss = true
             self.disablesInteractiveKeyboardGestureRecognizer = true
@@ -326,6 +332,29 @@ final class VideoScrubberComponent: Component {
             return self.audioContainerView.bounds.contains(location)
         }
                 
+        private func updateAudioOffset(done: Bool) {
+            guard self.audioScrollView.contentSize.width > 0.0, let component = self.component, let duration = self.component?.audioData?.duration else {
+                return
+            }
+            let totalWidth = self.audioScrollView.contentSize.width
+            let offset = self.audioScrollView.contentOffset.x * duration / totalWidth
+            component.audioOffsetUpdated(offset, done)
+        }
+        
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            self.updateAudioOffset(done: false)
+        }
+        
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate {
+                self.updateAudioOffset(done: true)
+            }
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            self.updateAudioOffset(done: true)
+        }
+        
         @objc private func longPressed(_ gestureRecognizer: UILongPressGestureRecognizer) {
             guard let component = self.component, component.audioData != nil, case .began = gestureRecognizer.state else {
                 return
