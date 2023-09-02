@@ -3086,10 +3086,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
                 
-                let duration = audioAsset.duration.seconds
-                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: duration))
-                if !mediaEditor.sourceIsVideo {
-                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, duration), apply: true)
+                let audioDuration = audioAsset.duration.seconds
+                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
+                if mediaEditor.sourceIsVideo {
+                    if let videoDuration = mediaEditor.duration {
+                        mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
+                    }
+                } else {
+                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
                 }
                 
                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
