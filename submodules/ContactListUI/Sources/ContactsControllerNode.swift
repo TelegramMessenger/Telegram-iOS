@@ -53,12 +53,12 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var searchDisplayController: SearchDisplayController?
     private var isSearchDisplayControllerActive: Bool = false
     private var storiesUnlocked: Bool = false
-
+    
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     var navigationBar: NavigationBar?
     let navigationBarView = ComponentView<Empty>()
-
+    
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((ContactListPeer) -> Void)?
     var requestAddContact: ((String) -> Void)?
@@ -66,11 +66,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var openInvite: (() -> Void)?
     var openQrScan: (() -> Void)?
     var openStories: ((EnginePeer, ASDisplayNode) -> Void)?
-
+    
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let stringsPromise = Promise<PresentationStrings>()
-
+        
     weak var controller: ContactsController?
     
     private var initialScrollingOffset: CGFloat?
@@ -79,14 +79,14 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var contentOffset: ListViewVisibleContentOffset?
     private var ignoreStoryInsetAdjustment: Bool = false
     var didAppear: Bool = false
-
+    
     private(set) var storySubscriptions: EngineStorySubscriptions?
     private var storySubscriptionsDisposable: Disposable?
-
+    
     let storiesReady = Promise<Bool>()
-
+    
     private var panRecognizer: InteractiveTransitionGestureRecognizer?
-
+    
     init(context: AccountContext, sortOrder: Signal<ContactsSortOrder, NoError>, present: @escaping (ViewController, Any?) -> Void, controller: ContactsController) {
         self.context = context
         self.controller = controller
@@ -97,7 +97,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         var addNearbyImpl: (() -> Void)?
         var inviteImpl: (() -> Void)?
         var unavailableImpl: (() -> Void)?
-
+        
         let presentation = combineLatest(sortOrder, self.stringsPromise.get())
         |> map { sortOrder, strings -> ContactListPresentation in
             // these options are shown anyway, so it can not be peeped that account is hidable
@@ -168,11 +168,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 strongSelf.controller?.present(controller, in: .current)
             }
         }
-
+        
         contextAction = { [weak self] peer, node, gesture, location, isStories in
             self?.contextAction(peer: peer, node: node, gesture: gesture, location: location, isStories: isStories)
         }
-
+        
         self.contactListNode.contentOffsetChanged = { [weak self] offset in
             guard let self else {
                 return
@@ -180,24 +180,24 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if self.isSettingUpContentOffset {
                 return
             }
-
+            
             if !self.didSetupContentOffset, let initialScrollingOffset = self.initialScrollingOffset {
                 self.initialScrollingOffset = nil
                 self.didSetupContentOffset = true
                 self.isSettingUpContentOffset = true
-
+                
                 let _ = self.contactListNode.listNode.scrollToOffsetFromTop(initialScrollingOffset, animated: false)
-
+                
                 let offset = self.contactListNode.listNode.visibleContentOffset()
                 self.contentOffset = offset
                 self.contentOffsetChanged(offset: offset)
-
+                
                 self.isSettingUpContentOffset = false
                 return
             }
             self.contentOffset = offset
             self.contentOffsetChanged(offset: offset)
-
+            
             /*if self.contactListNode.listNode.isTracking {
                 if case let .known(value) = offset {
                     if !self.storiesUnlocked {
@@ -207,9 +207,9 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 guard let self else {
                                     return
                                 }
-
+                                
                                 HapticFeedback().impact()
-
+                                
                                 self.contactListNode.ignoreStoryInsetAdjustment = true
                                 self.contactListNode.listNode.allowInsetFixWhileTracking = true
                                 self.onStoriesLockedUpdated(isLocked: true)
@@ -224,7 +224,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 case let .known(value):
                     if value >= ChatListNavigationBar.storiesScrollHeight {
                         self.storiesUnlocked = false
-
+                        
                         DispatchQueue.main.async { [weak self] in
                             self?.onStoriesLockedUpdated(isLocked: false)
                         }
@@ -234,26 +234,26 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             }*/
         }
-
+        
         self.contactListNode.contentScrollingEnded = { [weak self] listView in
             guard let self else {
                 return false
             }
             return self.contentScrollingEnded(listView: listView)
         }
-
+        
         self.contactListNode.storySubscriptions.set(.single(nil))
         self.storiesReady.set(.single(true))
-
+        
         /*self.storySubscriptionsDisposable = (self.context.engine.messages.storySubscriptions(isHidden: true)
         |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
             guard let self else {
                 return
             }
-
+            
             self.storySubscriptions = storySubscriptions
             self.contactListNode.storySubscriptions.set(.single(storySubscriptions))
-
+            
             self.storiesReady.set(.single(true))
         })*/
 
@@ -286,11 +286,11 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private func onStoriesLockedUpdated(isLocked: Bool) {
         self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
     }
-
+    
     private func contentOffsetChanged(offset: ListViewVisibleContentOffset) {
         self.updateNavigationScrolling(transition: .immediate)
     }
-
+    
     private func contentScrollingEnded(listView: ListView) -> Bool {
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
@@ -304,14 +304,14 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             }
         }
-
+        
         return false
     }
-
+    
     private func updateNavigationBar(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
         let tabsNode: ASDisplayNode? = nil
         let tabsNodeIsSearch = false
-
+        
         let primaryContent = ChatListHeaderComponent.Content(
             title: self.presentationData.strings.Contacts_Title,
             navigationBackTitle: nil,
@@ -323,7 +323,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     guard let self else {
                         return
                     }
-
+                    
                     self.controller?.presentSortMenu(sourceView: sourceView, gesture: nil)
                 }
             ))),
@@ -339,7 +339,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             backTitle: nil,
             backPressed: nil
         )
-
+        
         let navigationBarSize = self.navigationBarView.update(
             transition: Transition(transition),
             component: AnyComponent(ChatListNavigationBar(
@@ -363,7 +363,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     guard let self else {
                         return
                     }
-
+                    
                     self.contactListNode.activateSearch?()
                 },
                 openStatusSetup: { _ in
@@ -376,18 +376,18 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         )
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.deferScrollApplication = true
-
+            
             if navigationBarComponentView.superview == nil {
                 self.view.addSubview(navigationBarComponentView)
             }
             transition.updateFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
-
+            
             return (navigationBarSize.height, 0.0)
         } else {
             return (0.0, 0.0)
         }
     }
-
+    
     private func getEffectiveNavigationScrollingOffset() -> CGFloat {
         let mainOffset: CGFloat
         if let contentOffset = self.contentOffset, case let .known(value) = contentOffset {
@@ -395,33 +395,33 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             mainOffset = 1000.0
         }
-
+        
         return mainOffset
     }
-
+    
     private func updateNavigationScrolling(transition: ContainedViewLayoutTransition) {
         var offset = self.getEffectiveNavigationScrollingOffset()
         if self.isSearchDisplayControllerActive {
             offset = 0.0
         }
-
+        
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: false, transition: Transition(transition))
         }
     }
-
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
         let navigationBarLayout = self.updateNavigationBar(layout: layout, transition: transition)
         self.initialScrollingOffset = 0.0//ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
-
+        
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarLayout.navigationHeight
     
         var headerInsets = layout.insets(options: [.input])
         headerInsets.top = navigationBarLayout.navigationHeight - navigationBarLayout.storiesInset - ChatListNavigationBar.searchScrollHeight
-
+        
         let innerLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: insets, safeInsets: layout.safeInsets, additionalInsets: layout.additionalInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
         
         if let searchDisplayController = self.searchDisplayController {
@@ -431,9 +431,9 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.contactListNode.containerLayoutUpdated(innerLayout, headerInsets: headerInsets, storiesInset: navigationBarLayout.storiesInset, transition: transition)
         
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-
+        
         self.updateNavigationScrolling(transition: transition)
-
+        
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.deferScrollApplication = false
             navigationBarComponentView.applyCurrentScroll(transition: Transition(transition))
@@ -444,9 +444,9 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let contactsController = self.controller else {
             return
         }
-
+        
         let items = contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController, isStories: isStories) |> map { ContextController.Items(content: .list($0)) }
-
+        
         if isStories, let node = node?.subnodes?.first(where: { $0 is ContextExtractedContentContainingNode }) as? ContextExtractedContentContainingNode {
             let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactContextExtractedContentSource(sourceNode: node, shouldBeDismissed: .single(false))), items: items, recognizer: nil, gesture: gesture)
             contactsController.presentInGlobalOverlay(controller)
@@ -465,7 +465,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         
         self.isSearchDisplayControllerActive = true
         self.storiesUnlocked = false
-
+        
         self.searchDisplayController = SearchDisplayController(presentationData: self.presentationData, mode: .list, contentNode: ContactsSearchContainerNode(context: self.context, onlyWriteable: false, categories: [.cloudContacts, .global, .deviceContacts], addContact: { [weak self] phoneNumber in
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
@@ -501,10 +501,10 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if let searchDisplayController = self.searchDisplayController {
             let previousFrame = placeholderNode.frame
             placeholderNode.frame = previousFrame.offsetBy(dx: 0.0, dy: 54.0)
-
+            
             searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
             self.searchDisplayController = nil
-
+            
             placeholderNode.frame = previousFrame
         }
     }
@@ -514,20 +514,20 @@ private final class ContactContextExtractedContentSource: ContextExtractedConten
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-
+    
     let shouldBeDismissed: Signal<Bool, NoError>
-
+    
     private let sourceNode: ContextExtractedContentContainingNode
-
+    
     init(sourceNode: ContextExtractedContentContainingNode, shouldBeDismissed: Signal<Bool, NoError>? = nil) {
         self.sourceNode = sourceNode
         self.shouldBeDismissed = shouldBeDismissed ?? .single(false)
     }
-
+    
     func takeView() -> ContextControllerTakeViewInfo? {
         return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
     }
-
+    
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
     }

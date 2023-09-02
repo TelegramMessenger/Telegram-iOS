@@ -31,7 +31,7 @@ public struct CacheStorageSettings: Codable, Equatable {
                 .privateChats: Int32(7 * 24 * 60 * 60),
                 .groups: Int32(7 * 24 * 60 * 60),
                 .channels: Int32(7 * 24 * 60 * 60),
-                .stories: Int32(2 * 24 * 60 * 60)
+                .stories: Int32(7 * 24 * 60 * 60)
             ]
         )
     }

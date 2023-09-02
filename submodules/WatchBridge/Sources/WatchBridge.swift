@@ -334,7 +334,7 @@ func makeBridgeChat(_ entry: ChatListEntry, strings: PresentationStrings, ptgSet
         let readState = entryData.readState
         let renderedPeer = entryData.renderedPeer
         let hasFailed = entryData.hasFailed
-
+        
         guard index.messageIndex.id.peerId.namespace != Namespaces.Peer.SecretChat else {
             return nil
         }

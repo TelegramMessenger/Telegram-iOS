@@ -207,7 +207,8 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         self.videoNode?.isHidden = false
                     }
                 ),
-                priority: .gallery
+                priority: .gallery,
+                sourceAccountId: self.context.account.id
             )
             videoNode.canAttachContent = true
             videoNode.isUserInteractionEnabled = false

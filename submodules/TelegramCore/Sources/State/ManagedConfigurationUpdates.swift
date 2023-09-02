@@ -36,7 +36,7 @@ func managedConfigurationUpdates(accountManager: AccountManager<TelegramAccountM
                     }
                     
                     network.setTrustedTimestamp(date)
-
+                    
                     let blockedMode = (flags & (1 << 8)) != 0
                     
                     updateNetworkSettingsInteractively(transaction: transaction, network: network, { settings in

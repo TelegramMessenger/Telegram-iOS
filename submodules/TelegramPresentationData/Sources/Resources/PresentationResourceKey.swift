@@ -108,7 +108,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatListForwardedIcon
     case chatListStoryReplyIcon
-
+    
     case chatListGeneralTopicIcon
     case chatListGeneralTopicSmallIcon
 
@@ -242,7 +242,7 @@ public enum PresentationResourceKey: Int32 {
     case chatMessageAttachedContentButtonIconLinkOutgoing
     case chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithWallpaper
     case chatMessageAttachedContentHighlightedButtonIconLinkOutgoingWithoutWallpaper
-
+    
     case chatCommandPanelArrowImage
     
     case sharedMediaFileDownloadStartIcon
@@ -295,8 +295,9 @@ public enum PresentationResourceKey: Int32 {
     case chatGeneralThreadFreeIcon
     
     case uploadToneIcon
-
+    
     case storyViewListLikeIcon
+    
     case enterSecretPasscodeIcon
     case manageSecretPasscodesIcon
 }
@@ -343,7 +344,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatInputMediaPanelGridDismissImage(color: UInt32)
     
     case statusAutoremoveIcon(isActive: Bool)
-
+    
     case chatExpiredStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
     case chatReplyStoryIndicatorIcon(type: ChatExpiredStoryIndicatorType)
 }

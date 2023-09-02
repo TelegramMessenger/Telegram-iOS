@@ -64,7 +64,7 @@ typedef enum
 @interface TGVideoMessageCaptureController () <TGVideoCameraPipelineDelegate, TGVideoMessageScrubberDataSource, TGVideoMessageScrubberDelegate, UIGestureRecognizerDelegate>
 {
     SQueue *_queue;
-
+        
     AVCaptureDevicePosition _preferredPosition;
     TGVideoCameraPipeline *_capturePipeline;
     NSURL *_url;
@@ -257,7 +257,7 @@ typedef enum
     [super loadView];
     
     self.view = [[TGPhotoEditorSparseView alloc] initWithFrame:self.view.frame];
-
+    
     self.view.backgroundColor = [UIColor clearColor];
     
     CGFloat bottomOffset = self.view.frame.size.height - CGRectGetMaxY(_controlsFrame);
@@ -760,7 +760,7 @@ typedef enum
     
     [_activityDisposable dispose];
     [self stopRecording:^{}];
-
+    
     if (self.didStop != nil) {
         self.didStop();
     }

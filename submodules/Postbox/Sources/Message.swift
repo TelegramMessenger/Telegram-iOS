@@ -583,25 +583,25 @@ public struct StoryId: Codable, Hashable {
         case peerId = "p"
         case id = "i"
     }
-
+    
     public var peerId: PeerId
     public let id: Int32
-
+    
     public init(peerId: PeerId, id: Int32) {
         self.peerId = peerId
         self.id = id
     }
-
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-
+        
         self.peerId = PeerId(try container.decode(Int64.self, forKey: .peerId))
         self.id = try container.decode(Int32.self, forKey: .id)
     }
-
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-
+        
         try container.encode(self.peerId.toInt64(), forKey: .peerId)
         try container.encode(self.id, forKey: .id)
     }
@@ -631,7 +631,7 @@ public extension MessageAttribute {
     var automaticTimestampBasedAttribute: (UInt16, Int32)? {
         return nil
     }
-
+    
     var associatedStoryIds: [StoryId] {
         return []
     }
@@ -694,7 +694,7 @@ public final class Message {
     public let associatedMedia: [MediaId: Media]
     public let associatedThreadInfo: AssociatedThreadInfo?
     public let associatedStories: [StoryId: CodableEntry]
-
+    
     public var index: MessageIndex {
         return MessageIndex(id: self.id, timestamp: self.timestamp)
     }

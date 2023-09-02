@@ -108,7 +108,7 @@ public struct Namespaces {
         public static let cachedEmojiQueryResults: Int8 = 26
         public static let cachedPeerStoryListHeads: Int8 = 27
         public static let displayedStoryNotifications: Int8 = 28
-
+        
         // 64 - ...: ApplicationSpecificItemCacheCollectionIdValues
         // 100: CachedChannelAdminRanks
         // 101: CachedRecentPeers
@@ -420,13 +420,13 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.chatListFilterUpdates.rawValue)
         return key
     }()
-
+    
     public static let globalPrivacySettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.globalPrivacySettings.rawValue)
         return key
     }()
-
+    
     public static let storiesConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.storiesConfiguration.rawValue)

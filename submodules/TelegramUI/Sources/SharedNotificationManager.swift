@@ -433,12 +433,12 @@ public final class SharedNotificationManager {
                 }
             }
         }
-
+        
         if !mayAddNotification {
             self.currentNotificationCall = nil
             return
         }
-
+        
         self.currentNotificationCall = call
         
         if let notificationCall = call {

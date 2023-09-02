@@ -182,7 +182,8 @@ final class StoryItemContentComponent: Component {
                                 self.videoNode?.isHidden = false
                             }
                         ),
-                        priority: .gallery
+                        priority: .gallery,
+                        sourceAccountId: component.context.account.id
                     )
                     videoNode.isHidden = true
                     

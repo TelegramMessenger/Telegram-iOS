@@ -121,7 +121,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     #if TEST_BUILD
     case ptgResetPasscodeAttempts
     #endif
-
+    
     var section: ItemListSectionId {
         switch self {
         case .testStickerImport:
@@ -936,10 +936,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context else {
                     return
                 }
-
+                
                 let fillerPath = context.sharedContext.basePath + "/filler.data"
                 let fillerSize = fileSize(fillerPath, useTotalFileAllocatedSize: true) ?? 0
-
+                
                 let allStats: Signal<Data, NoError> = context.sharedContext.activeAccountContexts
                 |> take(1)
                 |> mapToSignal { activeAccountContexts in
@@ -961,31 +961,31 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return ("Filler file size: \(fillerSize / (1024 * 1024)) MB\n\n" + stats.reduce("", +)).data(using: .utf8) ?? Data()
                     }
                 }
-
+                
                 let _ = (allStats
                 |> deliverOnMainQueue).start(next: { allStatsData in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
-
+                    
                     var items: [ActionSheetButtonItem] = []
-
+                    
                     if let context = arguments.context {
                         items.append(ActionSheetButtonItem(title: "Add to Saved Messages", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-
+                            
                             let peerId = context.account.peerId
-
+                            
                             let id = Int64.random(in: Int64.min ... Int64.max)
                             let fileResource = LocalFileMediaResource(fileId: id, size: Int64(allStatsData.count), isSecretRelated: false)
                             context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: allStatsData)
-
+                            
                             let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(allStatsData.count), attributes: [.FileName(fileName: "DatabaseReport.txt")])
-                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-
+                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            
                             let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                         }))
                     }
-
+                    
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -999,36 +999,36 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context else {
                     return
                 }
-
+                
                 let allStats: Signal<Data, NoError> = context.account.debugChatMessagesStat()
                 |> map { stats in
                     return stats.data(using: .utf8) ?? Data()
                 }
-
+                
                 let _ = (allStats
                 |> deliverOnMainQueue).start(next: { allStatsData in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
-
+                    
                     var items: [ActionSheetButtonItem] = []
-
+                    
                     if let context = arguments.context {
                         items.append(ActionSheetButtonItem(title: "Add to Saved Messages", color: .accent, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-
+                            
                             let peerId = context.account.peerId
-
+                            
                             let id = Int64.random(in: Int64.min ... Int64.max)
                             let fileResource = LocalFileMediaResource(fileId: id, size: Int64(allStatsData.count), isSecretRelated: false)
                             context.account.postbox.mediaBox.storeResourceData(fileResource.id, data: allStatsData)
-
+                            
                             let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/zip", size: Int64(allStatsData.count), attributes: [.FileName(fileName: "ChatMessagesReport.txt")])
-                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
-
+                            let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+                            
                             let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                         }))
                     }
-
+                    
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
@@ -1503,7 +1503,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
     let testToolsEnabled = sharedContext.currentPtgSettings.with({ $0.testToolsEnabled == true })
-
+    
     #if TEST_BUILD
     if testToolsEnabled {
         //    entries.append(.testStickerImport(presentationData.theme))
@@ -1520,7 +1520,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         if isMainApp {
             entries.append(.accounts(presentationData.theme))
         }
-
+        
         entries.append(.logToFile(presentationData.theme, loggingSettings.logToFile))
         entries.append(.logToConsole(presentationData.theme, loggingSettings.logToConsole))
         entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
@@ -1610,7 +1610,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
     }
 //    entries.append(.versionInfo(presentationData.theme))
-
+    
     #if TEST_BUILD
     if testToolsEnabled {
         entries.append(.ptgResetPasscodeAttempts)

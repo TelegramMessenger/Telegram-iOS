@@ -178,7 +178,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, inp
             |> castError(ChatContextQueryError.self)
             return signal |> then(peers)
         } else {
-            let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.contacts.searchLocalPeers(query: normalizedQuery)
+            let peers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.engine.contacts.searchLocalPeers(query: normalizedQuery, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
             |> map { peersAndPresences -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let peers = peersAndPresences.filter { peer in
                     if let peer = peer.peer, case .user = peer, peer.addressName != nil {

@@ -623,13 +623,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
                         media = fullMedia
                     }
-
+                    
                     if let storyMedia = media as? TelegramMediaStory, let storyItem = self.message?.associatedStories[storyMedia.storyId]?.get(Stories.StoredItem.self) {
                         if case let .item(item) = storyItem, let mediaValue = item.media {
                             media = mediaValue
                         }
                     }
-
+                    
                     videoContentMatch = self.message?.stableId == stableId && media?.id == mediaId
                 }
                 self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
@@ -700,9 +700,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             var isSticker = false
             var maxDimensions = layoutConstants.image.maxDimensions
             var maxHeight = layoutConstants.image.maxDimensions.height
-            var isStory = false
             var imageOriginalMaxDimensions: CGSize?
-
+            var isStory = false
+            
             var additionalWidthConstrainment = false
             var unboundSize: CGSize
             if let _ = media as? TelegramMediaStory {
@@ -714,7 +714,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 }
             } else if let image = media as? TelegramMediaImage, let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                 unboundSize = CGSize(width: max(10.0, floor(dimensions.cgSize.width * 0.5)), height: max(10.0, floor(dimensions.cgSize.height * 0.5)))
-
+                
                 if message.isPeerBroadcastChannel, context.sharedContext.currentPtgSettings.with({ $0.useFullWidthInChannels }) {
                     imageOriginalMaxDimensions = maxDimensions
                     switch sizeCalculation {
@@ -952,7 +952,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     var mediaUpdated = false
                     if let currentMedia = currentMedia {
                         mediaUpdated = !media.isSemanticallyEqual(to: currentMedia)
-
+                        
                         if !mediaUpdated, let media = media as? TelegramMediaStory {
                             if message.associatedStories[media.storyId] != currentMessage?.associatedStories[media.storyId] {
                                 mediaUpdated = true
@@ -1030,14 +1030,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         
                         if let story = media as? TelegramMediaStory {
                             isStory = true
-
+                            
                             if hasCurrentVideoNode {
                                 replaceVideoNode = true
                             }
                             if hasCurrentAnimatedStickerNode {
                                 replaceAnimatedStickerNode = true
                             }
-
+                            
                             if let storyItem = message.associatedStories[story.storyId]?.get(Stories.StoredItem.self), case let .item(item) = storyItem, let media = item.media {
                                 if let image = media as? TelegramMediaImage {
                                     if hasCurrentVideoNode {
@@ -1058,7 +1058,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true, synchronousLoad: true)
                                         }
                                     }
-
+                                    
                                     updatedFetchControls = FetchControls(fetch: { manual in
                                         if let strongSelf = self {
                                             if let representation = largestRepresentationForPhoto(image) {
@@ -1096,12 +1096,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             }
                                         }
                                     }
-
+                                    
                                     var uploading = false
                                     if file.resource is VideoLibraryMediaResource {
                                         uploading = true
                                     }
-
+                                    
                                     if file.isVideo && !file.isVideoSticker && !isSecretMedia && automaticPlayback && !isStory && !uploading {
                                         updateVideoFile = file
                                         if hasCurrentVideoNode {
@@ -1123,7 +1123,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         if hasCurrentVideoNode {
                                             replaceVideoNode = false
                                         }
-
+                                        
                                         if file.isAnimatedSticker || file.isVideoSticker {
                                             updateAnimatedStickerFile = file
                                             if hasCurrentAnimatedStickerNode {
@@ -1139,7 +1139,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                             }
                                         }
                                     }
-
+                                    
                                     updatedFetchControls = FetchControls(fetch: { manual in
                                         if let strongSelf = self {
                                             if file.isAnimated {
@@ -1353,7 +1353,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 media = mediaValue
                             }
                         }
-
+                        
                         if let image = media as? TelegramMediaImage {
                             if message.flags.isSending {
                                 updatedStatusSignal = combineLatest(chatMessagePhotoStatus(context: context, messageId: message.id, photoReference: .message(message: MessageReference(message), media: image)), context.account.pendingMessageManager.pendingMessageStatus(message.id) |> map { $0.0 })
@@ -1635,7 +1635,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         media = mediaValue
                                     }
                                 }
-
+                                
                                 if case .full = automaticDownload {
                                     if let _ = media as? TelegramMediaImage {
                                         updatedFetchControls.fetch(false)
@@ -1728,7 +1728,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
         
         var isStory: Bool = false
-
+        
         var game: TelegramMediaGame?
         var webpage: TelegramMediaWebpage?
         var invoice: TelegramMediaInvoice?
@@ -1891,7 +1891,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     media = mediaValue
                 }
             }
-
+            
             switch fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)

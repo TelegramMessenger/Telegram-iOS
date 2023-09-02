@@ -1,4 +1,3 @@
-/*
 import Foundation
 import UIKit
 import Display
@@ -147,4 +146,3 @@ public final class BottomButtonPanelComponent: Component {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }
-*/

@@ -260,7 +260,7 @@ final class StorageUsageScreenComponent: Component {
         }
     }
     */
-
+    
     enum Category: Hashable {
         case photos
         case videos
@@ -271,7 +271,7 @@ final class StorageUsageScreenComponent: Component {
         case avatars
         case misc
         case stories
-
+        
         var color: UIColor {
             switch self {
             case .photos:
@@ -352,7 +352,7 @@ final class StorageUsageScreenComponent: Component {
         var isSelectingPeers: Bool = false
         private(set) var selectionState: SelectionState
         */
-
+        
         let existingCategories: Set<Category>
         private(set) var selectedCategories: Set<Category>
         
@@ -367,7 +367,7 @@ final class StorageUsageScreenComponent: Component {
         private let allFiles: Set<EngineMessage.Id>
         private let allMusic: Set<EngineMessage.Id>
         */
-
+        
         private(set) var selectedSize: Int64 = 0
         private(set) var clearIncludeMessages: [Message] = []
         private(set) var clearExcludeMessages: [Message] = []
@@ -438,7 +438,7 @@ final class StorageUsageScreenComponent: Component {
             }
             self.allMusic = allMusic
             */
-
+            
             var existingCategories = Set<Category>()
             for (category, value) in self.contextStats.categories {
                 if value.size != 0 {
@@ -763,7 +763,7 @@ final class StorageUsageScreenComponent: Component {
         private let navigationEditButton = ComponentView<Empty>()
         private let navigationDoneButton = ComponentView<Empty>()
         */
-
+        
         private let headerView = ComponentView<Empty>()
         private let headerOffsetContainer: UIView
         private let headerDescriptionView = ComponentView<Empty>()
@@ -799,7 +799,7 @@ final class StorageUsageScreenComponent: Component {
         
         private var selectionPanel: ComponentView<Empty>?
         */
-
+        
         private var clearingNode: StorageUsageClearProgressOverlayNode?
         
         private var loadingView: UIActivityIndicatorView?
@@ -938,7 +938,7 @@ final class StorageUsageScreenComponent: Component {
             /*
             let isLockedAtPanels = scrollBounds.maxY == self.scrollView.contentSize.height
             */
-
+            
             if let headerView = self.headerView.view, let navigationMetrics = self.navigationMetrics {
                 var headerOffset: CGFloat = scrollBounds.minY
                 
@@ -975,7 +975,7 @@ final class StorageUsageScreenComponent: Component {
                     animatedTransition.setAlpha(view: navigationDoneButtonView, alpha: (isSelectingPeers ? 1.0 : 0.0) * buttonsMasterAlpha * navigationBackgroundAlpha)
                 }
                 */
-
+                
                 let expansionDistance: CGFloat = 32.0
                 var expansionDistanceFactor: CGFloat = abs(scrollBounds.maxY - self.scrollView.contentSize.height) / expansionDistance
                 expansionDistanceFactor = max(0.0, min(1.0, expansionDistanceFactor))
@@ -986,7 +986,7 @@ final class StorageUsageScreenComponent: Component {
                     panelContainerView.updateNavigationMergeFactor(value: 1.0 - expansionDistanceFactor, transition: transition)
                 }
                 */
-
+                
                 var offsetFraction: CGFloat = abs(headerOffset - minOffset) / 60.0
                 offsetFraction = min(1.0, max(0.0, offsetFraction))
                 transition.setScale(view: headerView, scale: 1.0 * offsetFraction + 0.8 * (1.0 - offsetFraction))
@@ -1128,7 +1128,7 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             */
-
+            
             let animationHint = transition.userData(AnimationHint.self)
             
             if let animationHint {
@@ -1223,7 +1223,7 @@ final class StorageUsageScreenComponent: Component {
             let navigationRightButtonMaxWidth: CGFloat = max(navigationEditButtonSize.width, navigationDoneButtonSize.width)
             */
             let navigationRightButtonMaxWidth: CGFloat = 0.0
-
+            
             self.backgroundColor = environment.theme.list.blocksBackgroundColor
             
             var contentHeight: CGFloat = 0.0
@@ -1293,7 +1293,7 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             */
-
+            
             contentHeight += environment.statusBarHeight + topInset
             
             let allCategories: [Category] = [
@@ -1384,7 +1384,7 @@ final class StorageUsageScreenComponent: Component {
                 chartItems.append(PieChartComponent.ChartData.Item(id: listCategory.key, displayValue: listCategory.sizeFraction, displaySize: listCategory.size, value: categoryChartFraction, color: listCategory.color, particle: listCategory.key.particle, title: listCategory.key.title(strings: environment.strings), mergeable: false, mergeFactor: 1.0))
             }
             */
-
+            
             var totalOtherSize: Int64 = 0
             for listCategory in otherListCategories {
                 totalOtherSize += listCategory.size
@@ -1517,7 +1517,7 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             */
-
+            
             contentHeight += 23.0
             
             let headerText: String
@@ -1712,7 +1712,7 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             */
-
+            
             if !listCategories.isEmpty {
                 self.categoriesView.parentState = state
                 let categoriesSize = self.categoriesView.update(
@@ -1833,7 +1833,7 @@ final class StorageUsageScreenComponent: Component {
                 contentHeight += 8.0
                 
                 var keepContentHeight: CGFloat = 0.0
-                for i in 0 ..< 4 {
+                for i in 0 ..< 1 {
                     let item: ComponentView<Empty>
                     if let current = self.keepDurationItems[i] {
                         item = current
@@ -1850,7 +1850,7 @@ final class StorageUsageScreenComponent: Component {
                     case 0:
                         iconName = "Settings/Menu/EditProfile"
 //                        title = environment.strings.Notifications_PrivateChats
-                        title = environment.strings.StorageKeepMedia_AllChatTypes
+                        title = environment.strings.StorageKeepMedia_AllChatTypesAndStories
                         mappedCategory = .privateChats
                     case 1:
                         iconName = "Settings/Menu/GroupChats"
@@ -1889,7 +1889,7 @@ final class StorageUsageScreenComponent: Component {
                             title: title,
                             subtitle: subtitle,
                             value: optionText,
-                            hasNext: i != 4 - 1,
+                            hasNext: i != 1 - 1,
                             action: { [weak self] sourceView in
                                 guard let self else {
                                     return
@@ -2242,7 +2242,7 @@ final class StorageUsageScreenComponent: Component {
                 self.panelContainer.view?.removeFromSuperview()
             }
             */
-
+            
             self.ignoreScrolling = true
             
             let contentOffset = self.scrollView.bounds.minY
@@ -2533,7 +2533,7 @@ final class StorageUsageScreenComponent: Component {
                 })
             })
             */
-
+            
             self.statsDisposable = (component.context.sharedContext.activeAccountContexts
             |> mapToSignal { activeAccountContexts in
                 let contexts = activeAccountContexts.accounts.map({ $0.1 }) + activeAccountContexts.inactiveAccounts.map({ $0.1 })
@@ -2556,39 +2556,39 @@ final class StorageUsageScreenComponent: Component {
                     completion()
                     return
                 }
-
+                
                 let total = StorageUsageStats(categories: totalStorageSize == 0 ? [:] : Dictionary(uniqueKeysWithValues: StorageUsageStats.CategoryKey.allCases.map({ ($0, StorageUsageStats.CategoryData(size: $0 == .misc ? max(1, totalStorageSize - Int64(StorageUsageStats.CategoryKey.allCases.count - 1)) : 1, messages: [:])) })))
-
+                
                 let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String)
                 let deviceAvailableSpace = (systemAttributes?[FileAttributeKey.systemSize] as? NSNumber)?.int64Value ?? 0
                 let deviceFreeSpace = (systemAttributes?[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-
+                
                 let stats = AllStorageUsageStats(
                     deviceAvailableSpace: deviceAvailableSpace,
                     deviceFreeSpace: deviceFreeSpace,
                     totalStats: total,
                     peers: [:]
                 )
-
+                
                 self.aggregatedData = AggregatedData(
                     peerId: nil,
                     stats: stats,
                     messages: [:]
                 )
-
+                
                 if firstTime {
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .firstStatsUpdate)))
                     self.component?.ready.set(.single(true))
                 }
-
+                
                 self.isClearing = false
-
+                
                 if !firstTime {
                     self.state?.updated(transition: Transition(animation: .none).withUserData(AnimationHint(value: .clearedItems)))
                 } else {
                     self.state?.updated(transition: Transition(animation: .none))
                 }
-
+                
                 completion()
             })
         }
@@ -2941,7 +2941,7 @@ final class StorageUsageScreenComponent: Component {
             ))
         }
         */
-
+        
         private func requestClear(fromCategories: Bool) {
             guard let component = self.component, let aggregatedData = self.aggregatedData else {
                 return
@@ -3278,7 +3278,7 @@ final class StorageUsageScreenComponent: Component {
                 }
             }
             */
-
+            
             let cacheSettings = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings])
             |> map { sharedData -> CacheStorageSettings in
                 let cacheSettings: CacheStorageSettings
@@ -3301,7 +3301,7 @@ final class StorageUsageScreenComponent: Component {
                 let applyValue: (Int32) -> Void = { value in
                     let _ = updateCacheStorageSettingsInteractively(accountManager: context.sharedContext.accountManager, { cacheSettings in
                         var cacheSettings = cacheSettings
-                        for key in cacheSettings.categoryStorageTimeout.keys {
+                        for key in CacheStorageSettings.PeerStorageCategory.allCases {
                             cacheSettings.categoryStorageTimeout[key] = value
                         }
                         return cacheSettings
@@ -3312,7 +3312,7 @@ final class StorageUsageScreenComponent: Component {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
                 var presetValues: [Int32]
-
+                
                 if case .stories = mappedCategory {
                     presetValues = [
                         7 * 24 * 60 * 60,
@@ -3327,7 +3327,7 @@ final class StorageUsageScreenComponent: Component {
                         1 * 24 * 60 * 60
                     ]
                 }
-
+                
                 if currentValue != 0 && !presetValues.contains(currentValue) {
                     presetValues.append(currentValue)
                     presetValues.sort(by: >)
@@ -3366,7 +3366,7 @@ final class StorageUsageScreenComponent: Component {
                             }
                         }, action: { _, f in
                             f(.default)
-
+                            
                             if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
                                 pushControllerImpl?(exceptionsController)
                             }
@@ -3374,7 +3374,7 @@ final class StorageUsageScreenComponent: Component {
                     } else {
                         subItems.append(.custom(MultiplePeerAvatarsContextItem(context: context, peers: peerExceptions.prefix(3).map { EnginePeer($0.peer.peer) }, totalCount: peerExceptions.count, action: { c, _ in
                             c.dismiss(completion: {
-
+                                
                             })
                             if let exceptionsController = makeStorageUsageExceptionsScreen(mappedCategory) {
                                 pushControllerImpl?(exceptionsController)
@@ -3383,7 +3383,7 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 */
-
+                
                 if let sourceLabelView = sourceView.labelView {
                     let items: Signal<ContextController.Items, NoError> = .single(ContextController.Items(content: .list(subItems)))
                     let source: ContextContentSource = .reference(StorageUsageContextReferenceContentSource(sourceView: sourceLabelView))

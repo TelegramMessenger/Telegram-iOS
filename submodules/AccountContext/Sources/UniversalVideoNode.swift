@@ -151,7 +151,7 @@ public final class UniversalVideoNode: ASDisplayNode {
     }
     
     public let sourceAccountId: AccountRecordId
-
+    
     public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, decoration: UniversalVideoDecoration, content: UniversalVideoContent, priority: UniversalVideoPriority, autoplay: Bool = false, snapshotContentWhenGone: Bool = false, sourceAccountId: AccountRecordId) {
         self.postbox = postbox
         self.audioSession = audioSession
@@ -163,7 +163,7 @@ public final class UniversalVideoNode: ASDisplayNode {
         self.snapshotContentWhenGone = snapshotContentWhenGone
         
         self.sourceAccountId = sourceAccountId
-
+        
         super.init()
         
         self.playbackCompletedIndex = self.manager.addPlaybackCompleted(id: self.content.id, { [weak self] in
@@ -297,7 +297,7 @@ public final class UniversalVideoNode: ASDisplayNode {
             }
         })
     }
-
+    
     public func continueWithOverridingAmbientMode(isAmbient: Bool) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {
@@ -305,7 +305,7 @@ public final class UniversalVideoNode: ASDisplayNode {
             }
         })
     }
-
+    
     public func setContinuePlayingWithoutSoundOnLostAudioSession(_ value: Bool) {
         self.manager.withUniversalVideoContent(id: self.content.id, { contentNode in
             if let contentNode = contentNode {

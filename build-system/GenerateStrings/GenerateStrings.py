@@ -391,6 +391,10 @@ static NSDictionary<NSString *, NSString *> * _Nonnull replaceAppName(NSDictiona
         @"StorageManagement.DescriptionChatUsage",
         @"StorageManagement.DescriptionAppUsage",
         @"PowerSavingScreen.OptionAutoplayEffectsText",
+        @"Login.ErrorAppOutdated",
+        @"Story.UnsupportedText",
+        @"Story.UnsupportedAction",
+        @"Story.Camera.AccessPlaceholderTitle",
     ];
     
     NSString *originalTitle = @"Telegram";

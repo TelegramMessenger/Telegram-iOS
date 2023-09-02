@@ -101,7 +101,7 @@ public final class ChatListNodeInteraction {
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
-
+    
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
@@ -221,13 +221,13 @@ public struct ChatListNodeState: Equatable {
     public struct StoryState: Equatable {
         public var stats: EngineChatList.StoryStats
         public var hasUnseenCloseFriends: Bool
-
+        
         public init(stats: EngineChatList.StoryStats, hasUnseenCloseFriends: Bool) {
             self.stats = stats
             self.hasUnseenCloseFriends = hasUnseenCloseFriends
         }
     }
-
+    
     public struct ItemId: Hashable {
         public var peerId: EnginePeer.Id
         public var threadId: Int64?
@@ -252,7 +252,7 @@ public struct ChatListNodeState: Equatable {
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
     public var archiveStoryState: StoryState?
-
+    
     public init(
         presentationData: ChatListPresentationData,
         editing: Bool,
@@ -1089,7 +1089,7 @@ public final class ChatListNode: ListView {
         case peer(EnginePeer.Id)
         case archive
     }
-
+    
     private let fillPreloadItems: Bool
     private let context: AccountContext
     private let location: ChatListControllerLocation
@@ -1128,7 +1128,7 @@ public final class ChatListNode: ListView {
     public var hidePsa: ((EnginePeer.Id) -> Void)?
     public var activateChatPreview: ((ChatListItem, Int64?, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     public var openStories: ((ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void)?
-
+    
     private var theme: PresentationTheme
     
     private let viewProcessingQueue = Queue()
@@ -1193,12 +1193,12 @@ public final class ChatListNode: ListView {
     public var contentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var didBeginInteractiveDragging: ((ListView) -> Void)?
-
+    
     public var isEmptyUpdated: ((ChatListNodeEmptyState, Bool, ContainedViewLayoutTransition) -> Void)?
     private var currentIsEmptyState: ChatListNodeEmptyState?
     
     public var canExpandHiddenItems: (() -> Bool)?
-
+    
     public var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     
     private let currentRemovingItemId = Atomic<ChatListNodeState.ItemId?>(value: nil)
@@ -1219,7 +1219,7 @@ public final class ChatListNode: ListView {
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
     private let inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>
-
+    
     private var visibleTopInset: CGFloat?
     private var originalTopInset: CGFloat?
     
@@ -1236,12 +1236,12 @@ public final class ChatListNode: ListView {
             self.keepMinimalScrollHeightWithTopInset = self.scrollHeightTopInset
         }
     }
-
+    
     public var startedScrollingAtUpperBound: Bool = false
-
+    
     private let autoSetReady: Bool
-
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool, autoSetReady: Bool) {
+    
+    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, isPeerEnabled: ((EnginePeer) -> Bool)? = nil, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool, autoSetReady: Bool, inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil) {
         self.context = context
         self.location = location
         self.chatListFilter = chatListFilter
@@ -1251,12 +1251,12 @@ public final class ChatListNode: ListView {
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.autoSetReady = autoSetReady
-
+        
         let isMainTab = chatListFilter == nil && location == .chatList(groupId: .root)
-
+        
         let inactiveSecretChatPeerIds = inactiveSecretChatPeerIds ?? context.inactiveSecretChatPeerIds
         self.inactiveSecretChatPeerIds = inactiveSecretChatPeerIds
-
+        
         var isSelecting = false
         if case .peers(_, true, _, _, _, _) = mode {
             isSelecting = true
@@ -1268,11 +1268,11 @@ public final class ChatListNode: ListView {
         self.theme = theme
         
         self.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight
-
+        
         super.init()
         
         //self.useMainQueueTransactions = true
-
+        
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
         self.verticalScrollIndicatorFollowsOverscroll = true
         
@@ -1921,7 +1921,7 @@ public final class ChatListNode: ListView {
         }
         
         let accountPeerId = context.account.peerId
-
+        
         let chatListNodeViewTransition = combineLatest(
             queue: viewProcessingQueue,
             hideArchivedFolderByDefault,
@@ -2443,11 +2443,11 @@ public final class ChatListNode: ListView {
                                 if let threadInfo, threadInfo.isHidden {
                                     isHiddenItemVisible = true
                                 }
-
+                            
                                 if let peer = peerEntry.peer.chatMainPeer, !peerEntry.isContact, case let .user(user) = peer {
                                     refreshStoryPeerIds.append(user.id)
                                 }
-
+                            
                                 break
                             case .GroupReferenceEntry:
                                 isHiddenItemVisible = true
@@ -2809,13 +2809,13 @@ public final class ChatListNode: ListView {
             case let .known(value):
                 strongSelf.startedScrollingAtUpperBound = value <= 0.001
             }
-
+            
             if let canExpandHiddenItems = strongSelf.canExpandHiddenItems {
                 startedScrollingWithCanExpandHiddenItems = canExpandHiddenItems()
             } else {
                 startedScrollingWithCanExpandHiddenItems = true
             }
-
+            
             if strongSelf.currentState.peerIdWithRevealedOptions != nil {
                 strongSelf.updateState { state in
                     var state = state
@@ -2823,7 +2823,7 @@ public final class ChatListNode: ListView {
                     return state
                 }
             }
-
+            
             strongSelf.didBeginInteractiveDragging?(strongSelf)
         }
         
@@ -2931,10 +2931,10 @@ public final class ChatListNode: ListView {
                 }
             }
         })
-
+        
         return isHiddenItemVisible
     }
-
+    
     func revealScrollHiddenItem() {
         var isHiddenItemVisible = false
         self.forEachItemNode({ itemNode in
@@ -2963,7 +2963,7 @@ public final class ChatListNode: ListView {
             }
         }
     }
-
+    
     private func pollFilterUpdates() {
         self.chatFolderUpdates.set(.single(nil))
         
@@ -3338,7 +3338,7 @@ public final class ChatListNode: ListView {
     
     public var ignoreStoryInsetAdjustment: Bool = false
     private var previousStoriesInset: CGFloat?
-
+    
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, storiesInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
         //print("inset: \(updateSizeAndInsets.insets.top)")
         
@@ -3393,7 +3393,7 @@ public final class ChatListNode: ListView {
         }
         self.previousStoriesInset = storiesInset
         //print("storiesInset: \(storiesInset), additionalScrollDistance: \(additionalScrollDistance)")
-
+        
         var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
         if navigationLocationUpdated {
             options.insert(.ForceUpdate)
@@ -3407,7 +3407,7 @@ public final class ChatListNode: ListView {
         self.ignoreStopScrolling = true
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         self.ignoreStopScrolling = false
-
+        
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true
             
@@ -3424,7 +3424,7 @@ public final class ChatListNode: ListView {
                 self.tempTopInset = ChatListNavigationBar.storiesScrollHeight
             }
         }
-
+        
         if let list = self.chatListView?.originalList {
             if !list.hasLater {
                 self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: ListViewScrollToItem(index: 0, position: .top(additionalDelta), animated: animated, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })

@@ -659,16 +659,16 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
         if string.length == 0 {
             return (nil, [], CGSize())
         }
-
+        
         string_ = removeForeignAgentNotice(attrString: string)
     } else {
         string_ = string
     }
-
+    
     return layoutTextItemWithString_(string_, boundingWidth: boundingWidth, horizontalInset: horizontalInset, alignment: alignment, offset: offset, media: media, webpage: webpage, minimizeWidth: minimizeWidth, maxNumberOfLines: maxNumberOfLines, opaqueBackground: opaqueBackground)
 }
 
-private func layoutTextItemWithString_(_ string: NSAttributedString, boundingWidth: CGFloat, horizontalInset: CGFloat = 0.0, alignment: NSTextAlignment = .natural, offset: CGPoint, media: [MediaId: Media] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0, opaqueBackground: Bool = false) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
+private func layoutTextItemWithString_(_ string: NSAttributedString, boundingWidth: CGFloat, horizontalInset: CGFloat = 0.0, alignment: NSTextAlignment = .natural, offset: CGPoint, media: [EngineMedia.Id: EngineMedia] = [:], webpage: TelegramMediaWebpage? = nil, minimizeWidth: Bool = false, maxNumberOfLines: Int = 0, opaqueBackground: Bool = false) -> (InstantPageTextItem?, [InstantPageItem], CGSize) {
     if string.length == 0 {
         return (nil, [], CGSize())
     }

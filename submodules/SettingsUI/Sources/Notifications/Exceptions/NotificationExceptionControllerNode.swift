@@ -65,15 +65,15 @@ private final class NotificationExceptionState : Equatable {
     func withUpdatedPeerStoriesMuted(_ peer: EnginePeer, _ mute: PeerStoryNotificationSettings.Mute) -> NotificationExceptionState {
         return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesMuted(peer, mute), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
-
+    
     func withUpdatedPeerStoriesHideSender(_ peer: EnginePeer, _ hideSender: PeerStoryNotificationSettings.HideSender) -> NotificationExceptionState {
         return NotificationExceptionState(mode: mode.withUpdatedPeerStoriesHideSender(peer, hideSender), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
-
+    
     func withUpdatedPeerStorySound(_ peer: EnginePeer, _ sound: PeerMessageSound) -> NotificationExceptionState {
         return NotificationExceptionState(mode: mode.withUpdatedPeerStorySound(peer, sound), isSearchMode: isSearchMode, revealedPeerId: self.revealedPeerId, editing: self.editing)
     }
-
+    
     static func == (lhs: NotificationExceptionState, rhs: NotificationExceptionState) -> Bool {
         return lhs.mode == rhs.mode && lhs.isSearchMode == rhs.isSearchMode && lhs.revealedPeerId == rhs.revealedPeerId && lhs.editing == rhs.editing
     }
@@ -596,16 +596,16 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
             peerId, mute in
             return context.engine.peers.updatePeerStoriesMutedSetting(peerId: peerId, mute: mute) |> deliverOnMainQueue
         }
-
+        
         let updatePeerStoriesHideSender: (PeerId, PeerStoryNotificationSettings.HideSender) -> Signal<Void, NoError> = {
             peerId, hideSender in
             return context.engine.peers.updatePeerStoriesHideSenderSetting(peerId: peerId, hideSender: hideSender) |> deliverOnMainQueue
         }
-
+        
         let updatePeerStorySound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
             return context.engine.peers.updatePeerStorySoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
         }
-
+        
         self.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.addSubnode(self.listNode)
         

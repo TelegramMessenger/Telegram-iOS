@@ -80,7 +80,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     private var imageNode: TransformImageNode?
     private var previousMediaReference: AnyMediaReference?
     private var expiredStoryIconView: UIImageView?
-
+    
     override public init() {
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
@@ -114,13 +114,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let textString: NSAttributedString
             let isMedia: Bool
             let isText: Bool
+            var message_: Message?
             var isExpiredStory: Bool = false
             var isStory: Bool = false
             
             if let message = arguments.message {
                 let author = message.effectiveAuthor
                 titleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder) ?? arguments.strings.User_DeletedAccount
-
+                
                 if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) || arguments.parentMessage.forwardInfo != nil {
                     if let author = forwardInfo.author {
                         titleString = EnginePeer(author).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
@@ -128,8 +129,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         titleString = authorSignature
                     }
                 }
-
-                let (textStringValue, isMediaValue, isTextValue) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
+                
+                message_ = arguments.context.shouldSuppressForeignAgentNotice(in: message) ? removeForeignAgentNotice(message: message) : message
+                
+                if arguments.context.shouldHideChannelSignature(in: message) {
+                    message_ = removeChannelSignature(message: message_!)
+                }
+                
+                let (textStringValue, isMediaValue, isTextValue) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_!), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
                 textString = textStringValue
                 isMedia = isMediaValue
                 isText = isTextValue
@@ -157,14 +164,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             let placeholderColor: UIColor = arguments.parentMessage.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
-            var message_ = arguments.context.shouldSuppressForeignAgentNotice(in: arguments.message) ? removeForeignAgentNotice(message: arguments.message) : arguments.message
-
-            if arguments.context.shouldHideChannelSignature(in: arguments.message) {
-                message_ = removeChannelSignature(message: message_)
-            }
-
-            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
-
+            
             let titleColor: UIColor
             let lineImage: UIImage?
             let textColor: UIColor
@@ -173,7 +173,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var authorNameColor: UIColor?
             
             let author = arguments.message?.effectiveAuthor
-
+            
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser {
                 authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
                 if let rawAuthorNameColor = authorNameColor {
@@ -218,9 +218,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             
             let messageText: NSAttributedString
-            if isText, let message = arguments.message {
-                var text = foldLineBreaks(message.text)
-                var messageEntities = message.textEntitiesAttribute?.entities ?? []
+            if isText, let message = arguments.message, let message_ {
+                var text = foldLineBreaks(message_.text)
+                var messageEntities = message_.textEntitiesAttribute?.entities ?? []
                 
                 if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {
                     for attribute in message.attributes {
@@ -289,7 +289,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         }
                     } else if let file = item.media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
                         updatedMediaReference = .story(peer: peerReference, id: story.id, media: file)
-
+                        
                         if let dimensions = file.dimensions {
                             imageDimensions = dimensions.cgSize
                         } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
@@ -350,12 +350,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
-
+            
             var mediaUserLocation: MediaResourceUserLocation = .other
             if let message = arguments.message {
                 mediaUserLocation = .peer(message.id.peerId)
             }
-
+            
             if let updatedMediaReference = updatedMediaReference, mediaUpdated && imageDimensions != nil {
                 if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
                     updateImageSignal = chatMessagePhotoThumbnail(account: arguments.context.account, userLocation: mediaUserLocation, photoReference: imageReference, blurred: hasSpoiler)
@@ -430,7 +430,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
                 textNode.textNode.frame = textFrame.offsetBy(dx: (isExpiredStory || isStory) ? 18.0 : 0.0, dy: 0.0)
-
+                
                 if isExpiredStory || isStory {
                     let expiredStoryIconView: UIImageView
                     if let current = node.expiredStoryIconView {
@@ -440,7 +440,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.expiredStoryIconView = expiredStoryIconView
                         node.view.addSubview(expiredStoryIconView)
                     }
-
+                    
                     let imageType: ChatExpiredStoryIndicatorType
                     switch arguments.type {
                     case .standalone:
@@ -448,7 +448,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     case let .bubble(incoming):
                         imageType = incoming ? .incoming : .outgoing
                     }
-
+                    
                     if isExpiredStory {
                         expiredStoryIconView.image = PresentationResourcesChat.chatExpiredStoryIndicatorIcon(arguments.presentationData.theme.theme, type: imageType)
                     } else {
@@ -605,7 +605,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             return offset
         }
     }
-
+    
     public func mediaTransitionView() -> UIView? {
         if let imageNode = self.imageNode {
             return imageNode.view

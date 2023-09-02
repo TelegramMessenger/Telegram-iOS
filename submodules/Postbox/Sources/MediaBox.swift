@@ -196,7 +196,7 @@ public final class MediaBox {
         self.cacheStorageBox = StorageBox(logger: StorageBox.Logger(impl: { string in
             postboxLog(string)
         }), basePath: basePath + "/cache-storage")
-
+        
         self.dataFileManager = MediaBoxFileManager(queue: self.dataQueue)
         
         let _ = self.ensureDirectoryCreated
@@ -255,7 +255,7 @@ public final class MediaBox {
         }
         #endif*/
     }
-
+    
     public static func idForFileName(name: String) -> String {
         if name.hasSuffix("_partial.meta") {
             return String(name[name.startIndex ..< name.index(name.endIndex, offsetBy: -13)])
@@ -340,7 +340,7 @@ public final class MediaBox {
         }
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id)):\(representationId)"
     }
-
+    
     public func shortLivedResourceCachePathPrefix(_ id: MediaResourceId) -> String {
         let cacheString = "short-cache"
         return "\(self.basePath)/\(cacheString)/\(fileNameForId(id))"
@@ -1397,7 +1397,7 @@ public final class MediaBox {
         }
     }
     */
-
+    
     private func updateGeneralResourceIndex(otherResourceContentType: UInt8, lowImpact: Bool, completion: @escaping () -> Void) -> Disposable {
         let basePath = self.basePath
         let storageBox = self.storageBox
@@ -1737,7 +1737,7 @@ public final class MediaBox {
         }
     }
     */
-
+    
     public func removeOtherCachedResources(paths: [String]) -> Signal<Float, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -1853,7 +1853,7 @@ public final class MediaBox {
                 if !pathsToDelete.isEmpty {
                     self.cacheStorageBox.remove(ids: pathsToDelete.compactMap { $0.data(using: .utf8) })
                 }
-
+                
                 if notify {
                     for id in ids {
                         if let context = self.statusContexts[id] {
@@ -1875,7 +1875,7 @@ public final class MediaBox {
             return EmptyDisposable
         }
     }
-
+    
     public func cleanAllCache() -> Signal<Never, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -1883,13 +1883,13 @@ public final class MediaBox {
                     "storage",
                     "cache-storage",
                 ]
-
+                
                 let additionalPaths: [String] = [
                     "cache",
                     "animation-cache",
                     "short-cache",
                 ]
-
+                
                 if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [.isDirectoryKey], options: .skipsSubdirectoryDescendants) {
                     for case let url as URL in enumerator {
                         if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false {
@@ -1906,22 +1906,22 @@ public final class MediaBox {
                         }
                     }
                 }
-
+                
                 self.storageBox.reset()
                 self.cacheStorageBox.reset()
-
+                
                 self.fileContexts.removeAll()
-
+                
                 self.dataQueue.justDispatch {
                     self.didRemoveResourcesPipe.putNext(Void())
                 }
-
+                
                 subscriber.putCompletion()
             }
             return EmptyDisposable
         }
     }
-
+    
     public func removeCachedResourcesWithResult(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<[MediaResourceId], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {

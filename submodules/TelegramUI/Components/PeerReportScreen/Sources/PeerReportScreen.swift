@@ -52,7 +52,7 @@ public func presentPeerReportOptions(
             presentationData = presentationData.withUpdated(theme: forceTheme)
         }
         var items: [ContextMenuItem] = []
-
+        
         if let _ = backAction {
             items.append(.action(ContextMenuActionItem(text: presentationData.strings.Common_Back, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.actionSheet.primaryTextColor)
@@ -61,7 +61,7 @@ public func presentPeerReportOptions(
             })))
             items.append(.separator)
         }
-
+        
         for option in options {
             let title: String
             let color: ContextMenuActionItemTextColor = .primary

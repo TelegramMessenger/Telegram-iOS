@@ -67,7 +67,7 @@ private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceh
 }
 
 public final class TelegramRootController: NavigationController, TelegramRootControllerInterface {
-    private let context: AccountContext
+    let context: AccountContext
     
     public var rootTabController: TabBarController?
     
@@ -84,7 +84,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     
     private var applicationInFocusDisposable: Disposable?
     private var storyUploadEventsDisposable: Disposable?
-
+        
     public init(context: AccountContext) {
         self.context = context
         
@@ -112,7 +112,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             |> deliverOn(Queue.mainQueue())).start(next: { value in
                 context.sharedContext.mainWindow?.setForceBadgeHidden(!value)
             })
-
+            
             self.storyUploadEventsDisposable = (context.engine.messages.allStoriesUploadEvents()
             |> deliverOnMainQueue).start(next: { [weak self] event in
                 guard let self else {
@@ -134,11 +134,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.applicationInFocusDisposable?.dispose()
         self.storyUploadEventsDisposable?.dispose()
     }
-
+    
     public func getContactsController() -> ViewController? {
         return self.contactsController
     }
-
+    
     public func getChatsController() -> ViewController? {
         return self.chatListController
     }
@@ -271,9 +271,9 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
             return nil
         }
         controller.view.endEditing(true)
-
+        
         let context = self.context
-
+        
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
         var dismissCameraImpl: (() -> Void)?
@@ -331,7 +331,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         return .draft(draft, nil)
                     }
                 }
-
+                
                 var transitionIn: MediaEditorScreen.TransitionIn?
                 if let resultTransition, let sourceView = resultTransition.sourceView {
                     transitionIn = .gallery(
@@ -344,7 +344,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 } else {
                     transitionIn = .camera
                 }
-
+                
                 let controller = MediaEditorScreen(
                     context: context,
                     subject: subject,
@@ -372,19 +372,19 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             commit({})
                             return
                         }
-
+                        
                         let context = self.context
                         if let rootTabController = self.rootTabController {
                             if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
                                 rootTabController.selectedIndex = index
                             }
                         }
-
+                        
                         let completionImpl: () -> Void = { [weak self] in
                             guard let self else {
                                 return
                             }
-
+                            
                             if let chatListController = self.chatListController as? ChatListControllerImpl {
                                 let _ = (chatListController.hasPendingStories
                                 |> filter { $0 }
@@ -402,7 +402,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                 }
                             }
                         }
-
+                        
                         if let _ = self.chatListController as? ChatListControllerImpl {
                             switch mediaResult {
                             case let .image(image, dimensions):
@@ -413,7 +413,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })
-
+                                    
                                     completionImpl()
                                 }
                             case let .video(content, firstFrameImage, values, duration, dimensions):
@@ -422,7 +422,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     let data = MemoryBuffer(data: valuesData)
                                     let digest = MemoryBuffer(data: data.md5Digest())
                                     adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
-
+                                    
                                     let resource: TelegramMediaResource
                                     switch content {
                                     case let .imageFile(path):
@@ -447,12 +447,12 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                     |> deliverOnMainQueue).start(next: { stableId in
                                         moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
                                     })
-
+                                    
                                     completionImpl()
                                 }
                             }
                         }
-
+                        
                         dismissCameraImpl?()
                     } as (Int64, MediaEditorScreen.Result?, [MediaArea], NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
@@ -508,7 +508,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
             })
     }
-
+    
     public func openSettings() {
         guard let rootTabController = self.rootTabController else {
             return

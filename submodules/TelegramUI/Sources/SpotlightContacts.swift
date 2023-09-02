@@ -262,7 +262,7 @@ private final class SpotlightDataContextImpl {
     deinit {
         self.listDisposable?.dispose()
     }
-
+    
     private func updateContacts(items: [EnginePeer.Id: SpotlightIndexStorageItem]) {
         self.indexStorage.update(items: items)
     }

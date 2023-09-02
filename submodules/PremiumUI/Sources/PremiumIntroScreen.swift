@@ -255,7 +255,7 @@ public enum PremiumSource: Equatable {
     case storiesPermanentViews
     case storiesFormatting
     case storiesExpirationDurations
-
+    
     var identifier: String? {
         switch self {
         case .settings:
@@ -344,7 +344,7 @@ public enum PremiumPerk: CaseIterable {
     case emojiStatus
     case translation
     case stories
-
+    
     public static var allCases: [PremiumPerk] {
         return [
             .doubleLimits,
@@ -1132,7 +1132,7 @@ final class PerkComponent: CombinedComponent {
     let arrowColor: UIColor
     let accentColor: UIColor
     let badge: String?
-
+    
     init(
         iconName: String,
         iconBackgroundColors: [UIColor],
@@ -1283,7 +1283,7 @@ final class PerkComponent: CombinedComponent {
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
-
+                
                 let badgeWidth = badgeText.size.width + 7.0
                 let badgeBackground = badgeBackground.update(
                     component: RoundedRectangle(
@@ -1293,16 +1293,16 @@ final class PerkComponent: CombinedComponent {
                     availableSize: CGSize(width: badgeWidth, height: 16.0),
                     transition: context.transition
                 )
-
+                
                 context.add(badgeBackground
                     .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
                 )
-
+                
                 context.add(badgeText
                     .position(CGPoint(x: iconBackground.size.width + sideInset + title.size.width + badgeWidth / 2.0 + 8.0, y: textTopInset + title.size.height / 2.0 - 1.0))
                 )
             }
-
+            
             context.add(subtitle
                 .position(CGPoint(x: iconBackground.size.width + sideInset + subtitle.size.width / 2.0, y: textTopInset + title.size.height + spacing + subtitle.size.height / 2.0))
             )
@@ -1761,7 +1761,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             }
-
+             
             let forceDark = context.component.forceDark
             let layoutPerks = {
                 var i = 0

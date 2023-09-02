@@ -1064,13 +1064,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     
                     // need to get file status first time (before self.resourceStatus is set), to know whether to show transcribe button; don't show button if local transcription to be used but file is not downloaded.
-                    let maybeFetchVoiceStatus: (@escaping (Bool, ListViewItemUpdateAnimation, ListViewItemApply?, MediaResourceStatus?) -> Void) -> ((Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void) = { f in
+                    let maybeFetchVoiceStatus: (@escaping (Bool, ListViewItemUpdateAnimation, ListViewItemApply?, EngineMediaResource.FetchStatus?) -> Void) -> ((Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void) = { f in
                         return { [weak self] synchronousLoads, animation, info in
                             if displayingTranscribeDueToLocalTranscription && !messageHasCompleteTransription(arguments.message) && self?.resourceStatus == nil && arguments.forcedResourceStatus == nil {
                                 let _ = (messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file)
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { fetchStatus in
-                                    f(synchronousLoads, animation, info, fetchStatus)
+                                    f(synchronousLoads, animation, info, EngineMediaResource.FetchStatus(fetchStatus))
                                 })
                             } else {
                                 f(synchronousLoads, animation, info, arguments.forcedResourceStatus?.fetchStatus)
@@ -1288,7 +1288,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 var scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 18.0))
                                 
                                 if displayingTranscribeDueToLocalTranscription {
-                                    displayTranscribe = messageHasCompleteTransription(arguments.message) || strongSelf.resourceStatus?.fetchStatus ?? voiceFetchStatusFirstTime == .Local
+                                    displayTranscribe = messageHasCompleteTransription(arguments.message) || (strongSelf.resourceStatus?.fetchStatus ?? voiceFetchStatusFirstTime) == .Local
                                 }
                                 
                                 if displayTranscribe {

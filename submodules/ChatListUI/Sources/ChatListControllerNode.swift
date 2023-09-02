@@ -356,14 +356,14 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private var pollFilterUpdatesDisposable: Disposable?
     private var chatFilterUpdatesDisposable: Disposable?
     private var peerDataDisposable: Disposable?
-
+    
     private var chatFolderUpdates: ChatFolderUpdates?
     
     private var canReportPeer: Bool = false
     
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
     private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
-
+    
     init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void, autoSetReady: Bool) {
         self.context = context
         self.controller = controller
@@ -378,7 +378,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.isInlineMode = isInlineMode
         
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady)
-
+        
         if let controller, case .chatList(groupId: .root) = controller.location {
             self.listNode.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight + ChatListNavigationBar.storiesScrollHeight
         }
@@ -458,7 +458,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
                         emptyNode.frame = emptyNodeFrame
                         emptyNode.updateLayout(size: size, insets: insets,  transition: .immediate)
-
+                        
                         if let scrollingOffset = strongSelf.scrollingOffset {
                             emptyNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
                         }
@@ -532,7 +532,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 }
             })
         }
-
+        
         if case let .forum(peerId) = location {
             self.peerDataDisposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.StatusSettings(id: peerId)
@@ -667,11 +667,11 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 topPanel = TopPanelItem()
                 self.topPanel = topPanel
             }
-
+            
             let title: String = self.presentationData.strings.Conversation_ReportSpamAndLeave
-
+            
             let topPanelHeight: CGFloat = 44.0
-
+            
             let _ = topPanel.view.update(
                 transition: topPanelTransition,
                 component: AnyComponent(ActionPanelComponent(
@@ -682,14 +682,14 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         guard let self, case let .forum(peerId) = self.location else {
                             return
                         }
-
+                        
                         let actionSheet = ActionSheetController(presentationData: self.presentationData)
                         actionSheet.setItemGroups([
                             ActionSheetItemGroup(items: [
                                 ActionSheetTextItem(title: self.presentationData.strings.Conversation_ReportSpamGroupConfirmation),
                                 ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ReportSpamAndLeave, color: .destructive, action: { [weak self, weak actionSheet] in
                                     actionSheet?.dismissAnimated()
-
+                                    
                                     if let self {
                                         self.controller?.setInlineChatList(location: nil)
                                         let _ = self.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: true).start()
@@ -719,7 +719,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     self.view.addSubview(topPanelView)
                 }
             }
-
+            
             topPanel.size = CGSize(width: size.width, height: topPanelHeight)
             listInsets.top += topPanelHeight
             additionalTopInset += topPanelHeight
@@ -744,7 +744,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
             transition.updateFrame(node: emptyNode, frame: emptyNodeFrame)
             emptyNode.updateLayout(size: emptyNodeFrame.size, insets: listInsets, transition: transition)
-
+            
             if let scrollingOffset = self.scrollingOffset {
                 emptyNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: transition)
             }
@@ -752,10 +752,10 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         
         self.layoutAdditionalPanels(transition: transition)
     }
-
+    
     func updateScrollingOffset(navigationHeight: CGFloat, offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.scrollingOffset = (navigationHeight, offset)
-
+        
         if let emptyNode = self.emptyNode {
             emptyNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: offset, transition: transition)
         }
@@ -774,9 +774,9 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     private let filterEmptyAction: (ChatListFilter?) -> Void
     private let secondaryEmptyAction: () -> Void
     private let openArchiveSettings: () -> Void
-
+    
     fileprivate var onStoriesLockedUpdated: ((Bool) -> Void)?
-
+    
     fileprivate var onFilterSwitch: (() -> Void)?
     
     private var presentationData: PresentationData
@@ -811,14 +811,14 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
         }
     }
-
+    
     var initialScrollingOffset: CGFloat?
-
+    
     public private(set) var transitionFraction: CGFloat = 0.0
     private var transitionFractionOffset: CGFloat = 0.0
     private var disableItemNodeOperationsWhileAnimating: Bool = false
     private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
-
+    
     private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
     
     private var enableAdjacentFilterLoading: Bool = false
@@ -854,7 +854,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
     
     private var didSetupContentOffset = false
     private var isSettingUpContentOffset = false
-
+    
     private func applyItemNodeAsCurrent(id: ChatListFilterTabEntryId, itemNode: ChatListContainerItemNode) {
         if let previousItemNode = self.currentItemNodeValue {
             previousItemNode.listNode.activateSearch = nil
@@ -881,7 +881,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             previousItemNode.listNode.addedVisibleChatsWithPeerIds = nil
             previousItemNode.listNode.didBeginSelectingChats = nil
             previousItemNode.listNode.canExpandHiddenItems = nil
-
+            
             previousItemNode.accessibilityElementsHidden = true
         }
         self.currentItemNodeValue = itemNode
@@ -936,22 +936,22 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             if self.isSettingUpContentOffset {
                 return
             }
-
+            
             if !self.didSetupContentOffset, let initialScrollingOffset = self.initialScrollingOffset {
                 self.initialScrollingOffset = nil
                 self.didSetupContentOffset = true
                 self.isSettingUpContentOffset = true
-
+                
                 let _ = itemNode.listNode.scrollToOffsetFromTop(initialScrollingOffset, animated: false)
-
+                
                 let offset = itemNode.listNode.visibleContentOffset()
                 self.contentOffset = offset
                 self.contentOffsetChanged?(offset, self.currentItemNode)
-
+                
                 self.isSettingUpContentOffset = false
                 return
             }
-
+            
             if !self.isInlineMode, itemNode.listNode.isTracking && !self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset == 0.0 {
                 if case let .known(value) = offset {
                     if value < -1.0 {
@@ -962,10 +962,10 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     }
                 }
             }
-
+            
             self.contentOffset = offset
             self.contentOffsetChanged?(offset, self.currentItemNode)
-
+            
             if !self.isInlineMode, self.currentItemNode.startedScrollingAtUpperBound && self.tempTopInset != 0.0 {
                 if case let .known(value) = offset {
                     if value > 4.0 {
@@ -984,17 +984,17 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             guard let self else {
                 return
             }
-
+            
             self.didBeginInteractiveDragging?(listView)
-
+            
             if self.isInlineMode {
                 return
             }
-
+            
             guard let validLayout = self.validLayout else {
                 return
             }
-
+            
             let tempTopInset: CGFloat
             if validLayout.inlineNavigationLocation != nil {
                 tempTopInset = 0.0
@@ -1030,12 +1030,12 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             guard let self else {
                 return false
             }
-
+            
             return self.contentScrollingEnded?(listView) ?? false
             //DispatchQueue.main.async { [weak self] in
             //    let _ = self?.contentScrollingEnded?(listView)
             //}
-
+            
             //return false
         }
         itemNode.listNode.activateChatPreview = { [weak self] item, threadId, sourceNode, gesture, location in
@@ -1056,7 +1056,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             }
             return canExpandHiddenItems()
         }
-
+        
         self.currentItemStateValue.set(itemNode.listNode.state |> map { state in
             let filterId: Int32?
             switch id {
@@ -1230,15 +1230,15 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 for (id, itemNode) in self.itemNodes {
                     if id != selectedId {
                         itemNode.emptyNode?.restartAnimation()
-
+                        
                         if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
                             let scrollOffset = clippedScrollOffset
-
+                            
                             let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
                         }
                     }
                 }
-
+                
                 if let presentationLayer = itemNode.layer.presentation() {
                     self.transitionFraction = presentationLayer.frame.minX / layout.size.width
                     self.transitionFractionOffset = self.transitionFraction
@@ -1264,7 +1264,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     let coefficient: CGFloat = 0.4
                     return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
                 }
-
+                     
                 if case .compact = layout.metrics.widthClass, self.controller?.isStoryPostingAvailable == true && !(self.context.sharedContext.callManager?.hasActiveCall ?? false) {
                     let cameraIsAlreadyOpened = self.controller?.hasStoryCameraTransition ?? false
                     if selectedIndex <= 0 && translation.x > 0.0 {
@@ -1273,7 +1273,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     } else if translation.x <= 0.0 && cameraIsAlreadyOpened {
                         self.controller?.storyCameraPanGestureChanged(transitionFraction: 0.0)
                     }
-
+                    
                     if cameraIsAlreadyOpened {
                         transitionFraction = 0.0
                         return
@@ -1335,13 +1335,13 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         directionIsToRight = translation.x > layout.size.width / 2.0
                     }
                 }
-
+                
                 let hasStoryCameraTransition = self.controller?.hasStoryCameraTransition ?? false
                 if hasStoryCameraTransition {
                     self.controller?.storyCameraPanGestureEnded(transitionFraction: translation.x / layout.size.width, velocity: velocity.x)
                 }
                 var applyNodeAsCurrent: ChatListFilterTabEntryId?
-
+                
                 if let directionIsToRight = directionIsToRight {
                     var updatedIndex = selectedIndex
                     if directionIsToRight {
@@ -1366,7 +1366,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
                     }
                 }
-
+                                    
                 if let switchToId = applyNodeAsCurrent, let itemNode = self.itemNodes[switchToId] {
                     self.applyItemNodeAsCurrent(id: switchToId, itemNode: itemNode)
                 }
@@ -1479,13 +1479,13 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout else {
                     return
                 }
-
+                
                 if let controller = self.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
                     let scrollOffset = clippedScrollOffset
-
+                    
                     let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
                 }
-
+                
                 self.selectedId = id
                 self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
@@ -1521,13 +1521,13 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     
                     strongSelf.pendingItemNode = nil
                     itemNode.listNode.tempTopInset = strongSelf.tempTopInset
-
+                    
                     if let controller = strongSelf.controller, let chatListDisplayNode = controller.displayNode as? ChatListControllerNode, let navigationBarComponentView = chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View, let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
                         let scrollOffset = clippedScrollOffset
-
+                        
                         let _ = itemNode.listNode.scrollToOffsetFromTop(scrollOffset, animated: false)
                     }
-
+                    
                     guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = strongSelf.validLayout else {
                         strongSelf.itemNodes[id] = itemNode
                         strongSelf.addSubnode(itemNode)
@@ -1595,10 +1595,10 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     
                     completion?()
                 }))
-
+                
                 if let (layout, _, visualNavigationHeight, originalNavigationHeight, _, insets, _, _, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset) = self.validLayout {
                     itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .immediate)
-
+                    
                     if let scrollingOffset = self.scrollingOffset {
                         itemNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: .immediate)
                     }
@@ -1614,7 +1614,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             itemNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: offset, transition: transition)
         }
     }
-
+    
     public func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction, storiesInset)
         
@@ -1757,15 +1757,15 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var tempAllowAvatarExpansion: Bool = false
     private var tempDisableStoriesAnimations: Bool = false
     private var tempNavigationScrollingTransition: ContainedViewLayoutTransition?
-
+    
     private var allowOverscrollStoryExpansion: Bool = false
     private var currentOverscrollStoryExpansionTimestamp: Double?
     
     private var allowOverscrollItemExpansion: Bool = false
     private var currentOverscrollItemExpansionTimestamp: Double?
-
+    
     private var containerLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat)?
-
+    
     var contentScrollingEnded: ((ListView) -> Bool)?
     
     var requestDeactivateSearch: (() -> Void)?
@@ -1829,7 +1829,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.mainContainerNode.shouldStopScrolling = { [weak self] listView, velocity in
             return self?.shouldStopScrolling(listView: listView, velocity: velocity, isPrimary: true) ?? false
         }
-
+        
         self.addSubnode(self.debugListView)
         
         filterBecameEmpty = { [weak self] _ in
@@ -1862,7 +1862,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             controller.push(self.context.sharedContext.makeArchiveSettingsController(context: self.context))
         }
-
+        
         self.mainContainerNode.onFilterSwitch = { [weak self] in
             if let strongSelf = self {
                 strongSelf.controller?.dismissAllUndoControllers()
@@ -1880,12 +1880,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 self.controller?.requestLayout(transition: .immediate)
             }
         }
-
+        
         self.mainContainerNode.canExpandHiddenItems = { [weak self] in
             guard let self, let controller = self.controller else {
                 return false
             }
-
+            
             if let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                 if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                     if navigationBarComponentView.storiesUnlocked {
@@ -1897,7 +1897,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return true
             }
         }
-
+        
         let inlineContentPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.inlineContentPanGesture(_:)), allowedDirections: { [weak self] _ in
             guard let strongSelf = self, strongSelf.inlineStackContainerNode != nil else {
                 return []
@@ -2006,17 +2006,17 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     
     private func updateNavigationBar(layout: ContainerViewLayout, deferScrollApplication: Bool, transition: Transition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
         let headerContent = self.controller?.updateHeaderContent()
-
+        
         var tabsNode: ASDisplayNode?
         var tabsNodeIsSearch = false
-
+        
         if let value = self.controller?.searchTabsNode {
             tabsNode = value
             tabsNodeIsSearch = true
         } else if let value = self.controller?.tabsNode, self.controller?.hasTabs == true {
             tabsNode = value
         }
-
+        
         var effectiveStorySubscriptions: EngineStorySubscriptions?
         if let controller = self.controller, case .forum = controller.location {
             effectiveStorySubscriptions = nil
@@ -2027,7 +2027,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 effectiveStorySubscriptions = EngineStorySubscriptions(accountItem: nil, items: [], hasMoreToken: nil)
             }
         }
-
+        
         let navigationBarSize = self.navigationBarView.update(
             transition: transition,
             component: AnyComponent(ChatListNavigationBar(
@@ -2051,14 +2051,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     guard let self, let controller = self.controller else {
                         return
                     }
-
+                    
                     var isForum = false
                     if case .forum = controller.location {
                         isForum = true
                     }
-
+                    
                     let filter: ChatListSearchFilter = isForum ? .topics : .chats
-
+                    
                     controller.activateSearch(
                         filter: filter,
                         query: nil,
@@ -2086,18 +2086,18 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if deferScrollApplication {
                 navigationBarComponentView.deferScrollApplication = true
             }
-
+            
             if navigationBarComponentView.superview == nil {
                 self.view.addSubview(navigationBarComponentView)
             }
             transition.setFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
-
+            
             return (navigationBarSize.height, 0.0)
         } else {
             return (0.0, 0.0)
         }
     }
-
+    
     private func updateNavigationScrolling(navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var mainOffset: CGFloat
         if let contentOffset = self.mainContainerNode.contentOffset, case let .known(value) = contentOffset {
@@ -2105,14 +2105,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             mainOffset = navigationHeight
         }
-
+        
         self.mainContainerNode.updateScrollingOffset(navigationHeight: navigationHeight, offset: mainOffset, transition: transition)
-
+        
         mainOffset = min(mainOffset, ChatListNavigationBar.searchScrollHeight)
         if abs(mainOffset) < 0.1 {
             mainOffset = 0.0
         }
-
+        
         let resultingOffset: CGFloat
         if let inlineStackContainerNode = self.inlineStackContainerNode {
             var inlineOffset: CGFloat
@@ -2125,17 +2125,17 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if abs(inlineOffset) < 0.1 {
                 inlineOffset = 0.0
             }
-
+            
             resultingOffset = mainOffset * (1.0 - self.inlineStackContainerTransitionFraction) + inlineOffset * self.inlineStackContainerTransitionFraction
         } else {
             resultingOffset = mainOffset
         }
-
+        
         var offset = resultingOffset
         if self.isSearchDisplayControllerActive {
             offset = 0.0
         }
-
+        
         var allowAvatarsExpansion: Bool = true
         if !self.mainContainerNode.currentItemNode.startedScrollingAtUpperBound && !self.tempAllowAvatarExpansion {
             if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
@@ -2144,14 +2144,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             }
         }
-
+        
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.applyScroll(offset: offset, allowAvatarsExpansion: allowAvatarsExpansion, forceUpdate: false, transition: Transition(transition).withUserData(ChatListNavigationBar.AnimationHint(
                 disableStoriesAnimations: self.tempDisableStoriesAnimations,
                 crossfadeStoryPeers: false
             )))
         }
-
+        
         let mainDelta: CGFloat
         if let _ = self.inlineStackContainerNode {
             mainDelta = resultingOffset - max(0.0, mainOffset)
@@ -2160,22 +2160,22 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         transition.updateSublayerTransformOffset(layer: self.mainContainerNode.layer, offset: CGPoint(x: 0.0, y: -mainDelta))
     }
-
+    
     func requestNavigationBarLayout(transition: Transition) {
         guard let (layout, _, _, _, _) = self.containerLayout else {
             return
         }
         let _ = self.updateNavigationBar(layout: layout, deferScrollApplication: false, transition: transition)
     }
-
+    
     func scrollToStories(animated: Bool) {
         if self.inlineStackContainerNode != nil {
             return
         }
-
+        
         if let controller = self.controller, let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
             let _ = storySubscriptions
-
+        
             self.tempAllowAvatarExpansion = true
             self.tempDisableStoriesAnimations = !animated
             self.tempNavigationScrollingTransition = animated ? .animated(duration: 0.3, curve: .custom(0.33, 0.52, 0.25, 0.99)) : .immediate
@@ -2185,21 +2185,21 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             tempNavigationScrollingTransition = nil
         }
     }
-
+    
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, storiesInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var navigationBarHeight = navigationBarHeight
         var visualNavigationHeight = visualNavigationHeight
         var cleanNavigationBarHeight = cleanNavigationBarHeight
         var storiesInset = storiesInset
-
+        
         let navigationBarLayout = self.updateNavigationBar(layout: layout, deferScrollApplication: true, transition: Transition(transition))
         self.mainContainerNode.initialScrollingOffset = ChatListNavigationBar.searchScrollHeight + navigationBarLayout.storiesInset
-
+        
         navigationBarHeight = navigationBarLayout.navigationHeight
         visualNavigationHeight = navigationBarLayout.navigationHeight
         cleanNavigationBarHeight = navigationBarLayout.navigationHeight
         storiesInset = navigationBarLayout.storiesInset
-
+        
         self.containerLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, storiesInset)
         
         var insets = layout.insets(options: [.input])
@@ -2294,7 +2294,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             inlineInsets.left = 0.0
             
             let inlineNavigationHeight: CGFloat = navigationBarLayout.navigationHeight - navigationBarLayout.storiesInset
-
+            
             inlineStackContainerNode.update(layout: inlineLayout, navigationBarHeight: inlineNavigationHeight, visualNavigationHeight: inlineNavigationHeight, originalNavigationHeight: inlineNavigationHeight, cleanNavigationBarHeight: inlineNavigationHeight, insets: inlineInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, storiesInset: storiesInset, transition: inlineStackContainerNodeTransition)
             
             if animateIn {
@@ -2309,9 +2309,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: transition)
             }
         }
-
+        
         self.updateNavigationScrolling(navigationHeight: navigationBarLayout.navigationHeight, transition: transition)
-
+        
         if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
             navigationBarComponentView.deferScrollApplication = false
             navigationBarComponentView.applyCurrentScroll(transition: Transition(transition))
@@ -2363,15 +2363,15 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let strongSelf = self else {
                 return
             }
-
+            
             strongSelf.isSearchDisplayControllerActive = true
-
+            
             strongSelf.searchDisplayController?.containerLayoutUpdated(containerLayout, navigationBarHeight: cleanNavigationBarHeight, transition: .immediate)
             strongSelf.searchDisplayController?.activate(insertSubnode: { [weak self] subnode, isSearchBar in
                 guard let self else {
                     return
                 }
-
+                
                 if isSearchBar {
                     if let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View {
                         navigationBarComponentView.addSubnode(subnode)
@@ -2380,13 +2380,15 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     self.insertSubnode(subnode, aboveSubnode: self.debugListView)
                 }
             }, placeholder: placeholderNode, focus: focus)
-
+            
             strongSelf.controller?.requestLayout(transition: .animated(duration: 0.5, curve: .spring))
         })
     }
     
     func deactivateSearch(placeholderNode: SearchBarPlaceholderNode, animated: Bool) -> (() -> Void)? {
         if let searchDisplayController = self.searchDisplayController {
+            // prevent redundant search pane creation which also makes useless network call
+            (searchDisplayController.contentNode as? ChatListSearchContainerNode)?.disableAdjacentLoading()
             self.isSearchDisplayControllerActive = false
             self.searchDisplayController = nil
             self.mainContainerNode.accessibilityElementsHidden = false
@@ -2395,9 +2397,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return { [weak self, weak placeholderNode] in
                 if let strongSelf = self, let placeholderNode, let (layout, _, _, cleanNavigationBarHeight, _) = strongSelf.containerLayout {
                     searchDisplayController.deactivate(placeholder: placeholderNode, animated: animated)
-
+                    
                     searchDisplayController.containerLayoutUpdated(layout, navigationBarHeight: cleanNavigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
-
+                    
                     strongSelf.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
@@ -2418,13 +2420,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             navigationBarComponentView.applyScroll(offset: 0.0, allowAvatarsExpansion: false, transition: Transition(animation: .curve(duration: 0.3, curve: .slide)))
         }
     }
-
+    
     private func contentOffsetChanged(offset: ListViewVisibleContentOffset, listView: ListView, isPrimary: Bool) {
         guard let containerLayout = self.containerLayout else {
             return
         }
         self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
-
+        
         if listView.isDragging {
             var overscrollSelectedId: EnginePeer.Id?
             var overscrollHiddenChatItemsAllowed = false
@@ -2432,13 +2434,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 overscrollSelectedId = storyPeerListView.overscrollSelectedId
                 overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
             }
-
+            
             if let chatListNode = listView as? ChatListNode {
                 if chatListNode.hasItemsToBeRevealed() {
                     overscrollSelectedId = nil
                 }
             }
-
+            
             if let controller = self.controller {
                 if let peerId = overscrollSelectedId {
                     if self.allowOverscrollStoryExpansion && self.inlineStackContainerNode == nil && isPrimary {
@@ -2447,21 +2449,21 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         } else {
                             self.currentOverscrollStoryExpansionTimestamp = timestamp
                         }
-
+                        
                         if let currentOverscrollStoryExpansionTimestamp = self.currentOverscrollStoryExpansionTimestamp, currentOverscrollStoryExpansionTimestamp <= timestamp - 0.0 {
                             self.allowOverscrollStoryExpansion = false
                             self.currentOverscrollStoryExpansionTimestamp = nil
                             self.allowOverscrollItemExpansion = false
                             self.currentOverscrollItemExpansionTimestamp = nil
                             HapticFeedback().tap()
-
+                            
                             controller.openStories(peerId: peerId)
                         }
                     }
                 } else {
                     if !overscrollHiddenChatItemsAllowed {
                         var manuallyAllow = false
-
+                        
                         if isPrimary {
                             if let storySubscriptions = controller.orderedStorySubscriptions, shouldDisplayStoriesInChatListHeader(storySubscriptions: storySubscriptions, isHidden: controller.location == .chatList(groupId: .archive)) {
                             } else {
@@ -2470,12 +2472,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         } else {
                             manuallyAllow = true
                         }
-
+                        
                         if manuallyAllow, case let .known(value) = offset, value + listView.tempTopInset <= -40.0 {
                             overscrollHiddenChatItemsAllowed = true
                         }
                     }
-
+                
                     if overscrollHiddenChatItemsAllowed {
                         if self.allowOverscrollItemExpansion {
                             let timestamp = CACurrentMediaTime()
@@ -2483,10 +2485,10 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             } else {
                                 self.currentOverscrollItemExpansionTimestamp = timestamp
                             }
-
+                            
                             if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
                                 self.allowOverscrollItemExpansion = false
-
+                                
                                 if isPrimary {
                                     self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
                                 } else {
@@ -2499,7 +2501,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         }
     }
-
+    
     private func shouldStopScrolling(listView: ListView, velocity: CGFloat, isPrimary: Bool) -> Bool {
         if abs(velocity) > 0.8 {
             return false
@@ -2509,11 +2511,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         } else {
             return false
         }
-
+        
         guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View else {
             return false
         }
-
+        
         if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
             let searchScrollOffset = clippedScrollOffset
             if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {
@@ -2522,10 +2524,10 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return true
             }
         }
-
+        
         return false
     }
-
+    
     private func didBeginInteractiveDragging(listView: ListView, isPrimary: Bool) {
         if isPrimary {
             if let chatListNode = listView as? ChatListNode, !chatListNode.hasItemsToBeRevealed() {
@@ -2536,7 +2538,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         self.allowOverscrollItemExpansion = true
     }
-
+    
     private func endedInteractiveDragging(listView: ListView, isPrimary: Bool) {
         if isPrimary {
             self.allowOverscrollStoryExpansion = false
@@ -2545,13 +2547,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.allowOverscrollItemExpansion = false
         self.currentOverscrollItemExpansionTimestamp = nil
     }
-
+    
     private func contentScrollingEnded(listView: ListView, isPrimary: Bool) -> Bool {
         if !isPrimary || self.inlineStackContainerNode == nil {
         } else {
             return false
         }
-
+        
         guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View else {
             return false
         }
@@ -2574,7 +2576,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 return true
             }
         }
-
+        
         return false
     }
     
@@ -2596,7 +2598,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         let _ = self.mainContainerNode.currentItemNode.scrollToOffsetFromTop(self.mainContainerNode.currentItemNode.tempTopInset, animated: true)
                     }
                 }
-
+                
                 inlineStackContainerNode.leftSeparatorLayer.isHidden = false
                 
                 inlineStackContainerNode.presentAlert = self.mainContainerNode.presentAlert
@@ -2639,7 +2641,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     let scrollOffset = max(0.0, clippedScrollOffset)
                     inlineStackContainerNode.initialScrollingOffset = scrollOffset
                 }
-
+                
                 self.inlineStackContainerNode = inlineStackContainerNode
                 self.inlineStackContainerTransitionFraction = 1.0
                 
@@ -2652,7 +2654,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
                         }
                     }
-
+                    
                     if let previousInlineStackContainerNode {
                         transition.updatePosition(node: previousInlineStackContainerNode, position: CGPoint(x: previousInlineStackContainerNode.position.x + previousInlineStackContainerNode.bounds.width + UIScreenPixel, y: previousInlineStackContainerNode.position.y), completion: { [weak previousInlineStackContainerNode] _ in
                             previousInlineStackContainerNode?.removeFromSupernode()
@@ -2668,7 +2670,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             if let inlineStackContainerNode = self.inlineStackContainerNode {
                 self.inlineStackContainerNode = nil
                 self.inlineStackContainerTransitionFraction = 0.0
-
+                
                 if let _ = self.containerLayout {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                     
@@ -2701,7 +2703,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)
         }
     }
-
+    
     func scrollToTopIfStoriesAreExpanded() {
         if let contentOffset = self.mainContainerNode.contentOffset, case let .known(offset) = contentOffset, offset < 0.0 {
             self.mainContainerNode.scrollToTop(animated: true, adjustForTempInset: false)

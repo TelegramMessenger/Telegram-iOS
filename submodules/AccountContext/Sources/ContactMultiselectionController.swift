@@ -47,9 +47,9 @@ public enum ContactMultiselectionControllerMode {
         public var chatListNodeFilter: ChatListFilter?
         public var chatListNodePeersFilter: ChatListNodePeersFilter?
         public var omitTokenList: Bool
-        public var inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>?
+        public var inactiveSecretChatPeerIds: Signal<Set<EnginePeer.Id>, NoError>?
         public var displayPresence: Bool
-
+        
         public init(
             title: String,
             searchPlaceholder: String,
@@ -60,8 +60,7 @@ public enum ContactMultiselectionControllerMode {
             chatListNodeFilter: ChatListFilter? = nil,
             chatListNodePeersFilter: ChatListNodePeersFilter? = nil,
             omitTokenList: Bool = false,
-            inactiveSecretChatPeerIds: Signal<Set<PeerId>, NoError>? = nil
-            displayAutoremoveTimeout: Bool = false,
+            inactiveSecretChatPeerIds: Signal<Set<EnginePeer.Id>, NoError>? = nil,
             displayPresence: Bool = false
         ) {
             self.title = title

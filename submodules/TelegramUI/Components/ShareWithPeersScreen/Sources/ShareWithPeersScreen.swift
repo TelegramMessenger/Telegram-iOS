@@ -2417,7 +2417,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 })
             case let .chats(isGrayList):
                 self.stateDisposable = (combineLatest(
-                    context.engine.messages.chatList(group: .root, count: 200) |> take(1),
+                    context.engine.messages.chatList(group: .root, count: 200, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds) |> take(1),
                     context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)),
                     context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init))),
                     grayListPeers
@@ -2603,7 +2603,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                 let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]), NoError>
                 if onlyContacts {
                     signal = combineLatest(
-                        context.engine.contacts.searchLocalPeers(query: query),
+                        context.engine.contacts.searchLocalPeers(query: query, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds),
                         context.engine.contacts.searchContacts(query: query)
                     )
                     |> map { peers, contacts in
@@ -2611,7 +2611,7 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         return (peers.filter { contactIds.contains($0.peerId) }, [:], [:])
                     }
                 } else {
-                    signal = context.engine.contacts.searchLocalPeers(query: query)
+                    signal = context.engine.contacts.searchLocalPeers(query: query, inactiveSecretChatPeerIds: context.inactiveSecretChatPeerIds)
                     |> mapToSignal { peers in
                         return context.engine.data.subscribe(
                             EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
