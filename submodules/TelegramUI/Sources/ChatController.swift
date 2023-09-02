@@ -11272,7 +11272,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if let arguments = self.presentationArguments as? ChatListPreviewPresentationData,
-           let (sourceNode, sourceRect) = arguments.sourceAndRect()
+           let (sourceNode, sourceRect) = arguments.sourceNodeAndRect()
         {
             let containerNode = ASDisplayNode()
             containerNode.backgroundColor = .white.withAlphaComponent(0.5)

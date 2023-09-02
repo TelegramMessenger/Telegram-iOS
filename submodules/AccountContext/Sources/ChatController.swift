@@ -561,10 +561,12 @@ public enum ChatControllerPresentationMode: Equatable {
 
 public final class ChatListPreviewPresentationData {
 
-    public let sourceAndRect: (() -> (ASDisplayNode, CGRect)?)
+    public let sourceNodeAndRect: (() -> (ASDisplayNode, CGRect)?)
+    public let contentArea: (() -> (CGRect))
     
-    public init(sourceNodeAndRect: @escaping (() -> (ASDisplayNode, CGRect)?)) {
-        self.sourceAndRect = sourceNodeAndRect
+    public init(sourceNodeAndRect: @escaping (() -> (ASDisplayNode, CGRect)?), contentArea: @escaping (() -> (CGRect))) {
+        self.sourceNodeAndRect = sourceNodeAndRect
+        self.contentArea = contentArea
     }
 }
 

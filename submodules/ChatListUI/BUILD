@@ -99,6 +99,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
         "//submodules/TelegramUI/Components/Settings/ArchiveInfoScreen",
+        "//submodules/TelegramUI/Components/Chat/ChatAvatarNavigationNode",
     ],
     visibility = [
         "//visibility:public",

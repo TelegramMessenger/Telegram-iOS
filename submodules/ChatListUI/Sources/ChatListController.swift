@@ -1310,8 +1310,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 messageId: MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
                             )), subject: nil, botStart: nil, mode: .standard(previewing: true))
                             chatController.canReadHistory.set(false)
+                            
+
+                            
                             strongSelf.present(chatController, in: .window(.root), with: ChatListPreviewPresentationData(sourceNodeAndRect: {
                                 return (node, node.frame)
+                            }, contentArea: {
+                                let baseContentFrame = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.frame
+                                if case let .known(topOffset) = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.visibleContentOffset(),
+                                   case let .known(bottomOffset) = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.visibleBottomContentOffset() {
+                                    return baseContentFrame.inset(by: .init(top: topOffset, left: .zero, bottom: bottomOffset, right: .zero))
+                                } else {
+                                    return baseContentFrame.inset(by: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.headerInsets)
+                                }
                             }))
 
 //                            source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
@@ -1339,6 +1350,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let chatPreviewController = ChatListPreviewController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId))
                         strongSelf.present(chatPreviewController, in: .window(.root), with: ChatListPreviewPresentationData(sourceNodeAndRect: {
                             return (node, node.frame)
+                        }, contentArea: {
+                            let baseContentFrame = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.frame
+                            if case let .known(topOffset) = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.visibleContentOffset(),
+                               case let .known(bottomOffset) = strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.visibleBottomContentOffset() {
+                                return baseContentFrame.inset(by: .init(top: topOffset, left: .zero, bottom: bottomOffset, right: .zero))
+                            } else {
+                                return baseContentFrame.inset(by: strongSelf.chatListDisplayNode.mainContainerNode.currentItemNode.headerInsets)
+                            }
                         }))
 
 //                            source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
