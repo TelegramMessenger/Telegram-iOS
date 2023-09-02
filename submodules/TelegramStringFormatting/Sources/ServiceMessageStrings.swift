@@ -629,6 +629,16 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = stringWithAppliedEntities(text, entities: entities, baseColor: primaryTextColor, linkColor: primaryTextColor, baseFont: titleFont, linkFont: titleBoldFont, boldFont: titleBoldFont, italicFont: titleFont, boldItalicFont: titleBoldFont, fixedFont: titleFont, blockQuoteFont: titleFont, underlineLinks: false, message: message._asMessage())
             case let .botDomainAccessGranted(domain):
                 attributedString = NSAttributedString(string: strings.AuthSessions_Message(domain).string, font: titleFont, textColor: primaryTextColor)
+            case let .botAppAccessGranted(appName, type):
+                let text: String
+                if type == .attachMenu {
+                    text = strings.Notification_BotWriteAllowedMenu
+                } else if type == .request {
+                    text = strings.Notification_BotWriteAllowedRequest
+                } else {
+                    text = strings.AuthSessions_MessageApp(appName ?? "").string
+                }
+                attributedString = NSAttributedString(string: text, font: titleFont, textColor: primaryTextColor)
             case let .botSentSecureValues(types):
                 var typesString = ""
                 var hasIdentity = false

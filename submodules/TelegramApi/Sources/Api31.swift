@@ -1807,12 +1807,42 @@ public extension Api.functions.auth {
                 }
 }
 public extension Api.functions.bots {
+                static func allowSendMessage(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-248323089)
+                    bot.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.allowSendMessage", parameters: [("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
                 static func answerWebhookJSONQuery(queryId: Int64, data: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-434028723)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     data.serialize(buffer, true)
                     return (FunctionDescription(name: "bots.answerWebhookJSONQuery", parameters: [("queryId", String(describing: queryId)), ("data", String(describing: data))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func canSendMessage(bot: Api.InputUser) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(324662502)
+                    bot.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.canSendMessage", parameters: [("bot", String(describing: bot))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
@@ -1865,6 +1895,23 @@ public extension Api.functions.bots {
                         var result: Api.BotMenuButton?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.BotMenuButton
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.bots {
+                static func invokeWebViewCustomMethod(bot: Api.InputUser, customMethod: String, params: Api.DataJSON) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DataJSON>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(142591463)
+                    bot.serialize(buffer, true)
+                    serializeString(customMethod, buffer: buffer, boxed: false)
+                    params.serialize(buffer, true)
+                    return (FunctionDescription(name: "bots.invokeWebViewCustomMethod", parameters: [("bot", String(describing: bot)), ("customMethod", String(describing: customMethod)), ("params", String(describing: params))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.DataJSON? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.DataJSON?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.DataJSON
                         }
                         return result
                     })

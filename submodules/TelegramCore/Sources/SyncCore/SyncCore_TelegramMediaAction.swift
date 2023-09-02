@@ -23,6 +23,11 @@ public enum SentSecureValueType: Int32 {
     case temporaryRegistration = 12
 }
 
+public enum BotSendMessageAccessGrantedType: Int32 {
+    case attachMenu = 0
+    case request = 1
+}
+
 public enum TelegramMediaActionType: PostboxCoding, Equatable {
     public enum ForumTopicEditComponent: PostboxCoding, Equatable {
         case title(String)
@@ -86,6 +91,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case paymentSent(currency: String, totalAmount: Int64, invoiceSlug: String?, isRecurringInit: Bool, isRecurringUsed: Bool)
     case customText(text: String, entities: [MessageTextEntity])
     case botDomainAccessGranted(domain: String)
+    case botAppAccessGranted(appName: String?, type: BotSendMessageAccessGrantedType?)
     case botSentSecureValues(types: [SentSecureValueType])
     case peerJoined
     case phoneNumberRequest
@@ -195,6 +201,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 self = .unknown
             }
+        case 35:
+            self = .botAppAccessGranted(appName: decoder.decodeOptionalStringForKey("app"), type: decoder.decodeOptionalInt32ForKey("atp").flatMap { BotSendMessageAccessGrantedType(rawValue: $0) })
         default:
             self = .unknown
         }
@@ -362,6 +370,18 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case let .setSameChatWallpaper(wallpaper):
             encoder.encodeInt32(34, forKey: "_rawValue")
             encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
+        case let .botAppAccessGranted(appName, type):
+            encoder.encodeInt32(35, forKey: "_rawValue")
+            if let appName = appName {
+                encoder.encodeString(appName, forKey: "app")
+            } else {
+                encoder.encodeNil(forKey: "app")
+            }
+            if let type = type {
+                encoder.encodeInt32(type.rawValue, forKey: "atp")
+            } else {
+                encoder.encodeNil(forKey: "atp")
+            }
         }
     }
     

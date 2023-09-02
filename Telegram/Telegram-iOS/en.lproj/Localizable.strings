@@ -9854,3 +9854,14 @@ Sorry for the inconvenience.";
 "Location.TypeCity" = "City";
 "Location.TypeStreet" = "Street";
 "Location.TypeLocation" = "Location";
+
+"WebApp.AllowWriteTitle" = "Allow Sending Messages?";
+"WebApp.AllowWriteConfirmation" = "This will allow the bot **%@** to message you on Telegram.";
+
+"AuthSessions.MessageApp" = "You allowed this bot to message you when you opened %@.";
+"Notification.BotWriteAllowedMenu" = "You allowed this bot to message you when you added it to your attachment menu.";
+"Notification.BotWriteAllowedRequest" = "You allowed this bot to message you in the app.";
+
+"WebApp.SharePhoneTitle" = "Share Phone Number?";
+"WebApp.SharePhoneConfirmation" = "**%@** will know your phone number. This can be useful for integration with other services.";
+"WebApp.SharePhoneConfirmationUnblock" = "**%@** will know your phone number. This can be useful for integration with other services.\n\nThis will also unblock the bot.";
