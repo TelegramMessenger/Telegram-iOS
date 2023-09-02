@@ -3070,7 +3070,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 
                 let path = url.path
-                let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
+                let fileName =  "audio_\(url.lastPathComponent)"
+                let copyPath = fullDraftPath(engine: self.context.engine, path: fileName)
+                try? FileManager.default.copyItem(atPath: path, toPath: copyPath)
+                
+                let audioAsset = AVURLAsset(url: URL(fileURLWithPath: copyPath))
                 var artist: String?
                 var title: String?
                 for data in audioAsset.commonMetadata {
@@ -3083,7 +3087,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 
                 let duration = audioAsset.duration.seconds
-                mediaEditor.setAudioTrack(MediaAudioTrack(path: path, artist: artist, title: title, duration: duration))
+                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: duration))
                 if !mediaEditor.sourceIsVideo {
                     mediaEditor.setAudioTrackTrimRange(0 ..< min(15, duration), apply: true)
                 }
@@ -3093,8 +3097,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentAudioOptions(sourceView: UIView) {
+            let value = self.mediaEditor?.values.audioTrackVolume ?? 1.0
             let items: [ContextMenuItem] = [
-                .custom(VolumeSliderContextItem(minValue: 0.0, value: 0.75, valueChanged: { [weak self] value, _ in
+                .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
                     if let self {
                         self.mediaEditor?.setAudioTrackVolume(value)
                     }
@@ -4262,6 +4267,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, !self.didComplete else {
             return
         }
+        
+        if "".isEmpty { // let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
+            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(level: 0, link: "t.me/channel?boost"), count: 5, forceDark: true, cancel: {}, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            })
+            self.push(controller)
+            return
+        }
+        
         self.didComplete = true
         
         self.dismissAllTooltips()
@@ -5105,6 +5123,10 @@ public final class BlurredGradientComponent: Component {
 
 func draftPath(engine: TelegramEngine) -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())"
+}
+
+private func fullDraftPath(engine: TelegramEngine, path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())/" + path
 }
 
 func hasFirstResponder(_ view: UIView) -> Bool {

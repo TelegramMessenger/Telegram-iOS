@@ -274,6 +274,6 @@ public extension MediaEditorDraft {
     }
 }
 
-private func fullDraftPath(engine: TelegramEngine, path: String) -> String {
+func fullDraftPath(engine: TelegramEngine, path: String) -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())/" + path
 }

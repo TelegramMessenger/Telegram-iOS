@@ -913,7 +913,8 @@ public final class MediaEditor {
         }
         
         if let audioTrack {
-            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioTrack.path))
+            let path = fullDraftPath(engine: self.context.engine, path: audioTrack.path)
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
             let playerItem = AVPlayerItem(asset: audioAsset)
             let player = AVPlayer(playerItem: playerItem)
             player.automaticallyWaitsToMinimizeStalling = false

@@ -165,6 +165,8 @@ final class VideoScrubberComponent: Component {
         private let audioWaveform = ComponentView<Empty>()
         
         private let trimView = TrimView(frame: .zero)
+        private let ghostTrimView = TrimView(frame: .zero)
+        
         private let cursorView = HandleView()
         
         private let transparentFramesContainer = UIView()
@@ -251,6 +253,7 @@ final class VideoScrubberComponent: Component {
             
             self.addSubview(self.transparentFramesContainer)
             self.addSubview(self.opaqueFramesContainer)
+            self.addSubview(self.ghostTrimView)
             self.addSubview(self.trimView)
             
             self.addSubview(self.audioButton)
@@ -275,6 +278,12 @@ final class VideoScrubberComponent: Component {
                     } else {
                         component.videoTrimUpdated(startValue, endValue, updatedEnd, done)
                     }
+                }
+            }
+            
+            self.ghostTrimView.trimUpdated = { [weak self] startValue, endValue, updatedEnd, done in
+                if let self, let component = self.component {
+                    component.videoTrimUpdated(startValue, endValue, updatedEnd, done)
                 }
             }
             
@@ -552,7 +561,20 @@ final class VideoScrubberComponent: Component {
                 }
             }
             
-            if let audioData = component.audioData, let samples = audioData.samples {
+            if let audioData = component.audioData {
+                let samples = audioData.samples ?? Data()
+                
+                if let view = self.audioWaveform.view, previousComponent?.audioData?.samples == nil && audioData.samples != nil, let snapshotView = view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = view.frame
+                    self.audioVibrancyContainer.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        snapshotView.removeFromSuperview()
+                    })
+                    
+                    view.layer.animateScaleY(from: 0.01, to: 1.0, duration: 0.2)
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
                 let audioWaveformSize = self.audioWaveform.update(
                     transition: transition,
                     component: AnyComponent(
@@ -574,9 +596,6 @@ final class VideoScrubberComponent: Component {
                 if let view = self.audioWaveform.view {
                     if view.superview == nil {
                         self.audioVibrancyContainer.addSubview(view)
-                        
-                        view.layer.animateScaleY(from: 0.01, to: 1.0, duration: 0.2)
-                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                     audioTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected || component.audioOnly ? 0.0 : 6.0), size: audioWaveformSize))
                 }
@@ -637,11 +656,23 @@ final class VideoScrubberComponent: Component {
                 transition: transition
             )
             
+            let (ghostLeftHandleFrame, ghostRightHandleFrame) = self.ghostTrimView.update(
+                totalWidth: totalWidth,
+                scrubberSize: CGSize(width: scrubberSize.width, height: collapsedScrubberHeight),
+                duration: component.duration,
+                startPosition: component.startPosition,
+                endPosition: component.endPosition,
+                position: component.position,
+                minDuration: component.minDuration,
+                maxDuration: component.maxDuration,
+                transition: transition
+            )
+            
             var containerLeftEdge = leftHandleFrame.maxX
             var containerRightEdge = rightHandleFrame.minX
             if self.isAudioSelected && component.duration > 0.0 {
-                containerLeftEdge = floorToScreenPixels(component.startPosition / component.duration * scrubberSize.width)
-                containerRightEdge = floorToScreenPixels(component.endPosition / component.duration * scrubberSize.width)
+                containerLeftEdge = ghostLeftHandleFrame.maxX
+                containerRightEdge = ghostRightHandleFrame.minX
             }
             
             if self.isPanningPositionHandle || !component.isPlaying {
@@ -664,6 +695,10 @@ final class VideoScrubberComponent: Component {
 //            transition.setAlpha(view: self.cursorView, alpha: self.isPanningTrimHandle ? 0.0 : 1.0)
             
             videoTransition.setFrame(view: self.trimView, frame: bounds.offsetBy(dx: 0.0, dy: self.isAudioSelected ? 0.0 : originY))
+            
+            videoTransition.setFrame(view: self.ghostTrimView, frame: bounds.offsetBy(dx: 0.0, dy: originY))
+            videoTransition.setAlpha(view: self.ghostTrimView, alpha: self.isAudioSelected ? 0.75 : 0.0)
+            
             let handleInset: CGFloat = 7.0
             videoTransition.setFrame(view: self.transparentFramesContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: originY), size: CGSize(width: scrubberSize.width, height: videoScrubberHeight)))
             videoTransition.setFrame(view: self.opaqueFramesContainer, frame: CGRect(origin: CGPoint(x: containerLeftEdge - handleInset, y: originY), size: CGSize(width: containerRightEdge - containerLeftEdge + handleInset * 2.0, height: videoScrubberHeight)))
@@ -718,15 +753,19 @@ private class TrimView: UIView {
     private let borderView = UIImageView()
     private let zoneView = HandleView()
     
+    private let leftCapsuleView = UIView()
+    private let rightCapsuleView = UIView()
+    
     private var isPanningTrimHandle = false
     
     var trimUpdated: (Double, Double, Bool, Bool) -> Void = { _, _, _, _ in }
     var updated: (Transition) -> Void = { _ in }
     
     override init(frame: CGRect) {
-        super.init(frame: frame)
+        super.init(frame: .zero)
         
-        let handleImage = generateImage(CGSize(width: handleWidth, height: scrubberHeight), rotatedContext: { size, context in
+        let height = scrubberHeight
+        let handleImage = generateImage(CGSize(width: handleWidth, height: height), rotatedContext: { size, context in
             context.clear(CGRect(origin: .zero, size: size))
             context.setFillColor(UIColor.white.cgColor)
             
@@ -739,12 +778,14 @@ private class TrimView: UIView {
             context.addPath(innerPath.cgPath)
             context.fillPath()
             
-            context.setBlendMode(.clear)
-            let holeSize = CGSize(width: 2.0, height: 11.0)
-            let holePath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: (size.height - holeSize.height) / 2.0), size: holeSize), cornerRadius: holeSize.width / 2.0)
-            context.addPath(holePath.cgPath)
-            context.fillPath()
-        })?.withRenderingMode(.alwaysTemplate)
+//            if !ghost {
+//                context.setBlendMode(.clear)
+//                let holeSize = CGSize(width: 2.0, height: 11.0)
+//                let holePath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: (size.height - holeSize.height) / 2.0), size: holeSize), cornerRadius: holeSize.width / 2.0)
+//                context.addPath(holePath.cgPath)
+//                context.fillPath()
+//            }
+        })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
         
         self.zoneView.image = UIImage()
         self.zoneView.isUserInteractionEnabled = true
@@ -753,26 +794,39 @@ private class TrimView: UIView {
         self.leftHandleView.image = handleImage
         self.leftHandleView.isUserInteractionEnabled = true
         self.leftHandleView.tintColor = .white
+        self.leftHandleView.contentMode = .scaleToFill
         self.leftHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
         
         self.rightHandleView.image = handleImage
         self.rightHandleView.transform = CGAffineTransform(scaleX: -1.0, y: 1.0)
         self.rightHandleView.isUserInteractionEnabled = true
         self.rightHandleView.tintColor = .white
+        self.rightHandleView.contentMode = .scaleToFill
         self.rightHandleView.hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
         
-        self.borderView.image = generateImage(CGSize(width: 1.0, height: scrubberHeight), rotatedContext: { size, context in
+        self.borderView.image = generateImage(CGSize(width: 1.0, height: height), rotatedContext: { size, context in
             context.clear(CGRect(origin: .zero, size: size))
             context.setFillColor(UIColor.white.cgColor)
             context.fill(CGRect(origin: .zero, size: CGSize(width: size.width, height: borderHeight)))
-            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - borderHeight), size: CGSize(width: size.width, height: scrubberHeight)))
-        })?.withRenderingMode(.alwaysTemplate)
+            context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height - borderHeight), size: CGSize(width: size.width, height: height)))
+        })?.withRenderingMode(.alwaysTemplate).resizableImage(withCapInsets: UIEdgeInsets(top: 10.0, left: 0.0, bottom: 10.0, right: 0.0))
         self.borderView.tintColor = .white
         self.borderView.isUserInteractionEnabled = false
         
+        self.leftCapsuleView.clipsToBounds = true
+        self.leftCapsuleView.layer.cornerRadius = 1.0
+        self.leftCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
+        
+        self.rightCapsuleView.clipsToBounds = true
+        self.rightCapsuleView.layer.cornerRadius = 1.0
+        self.rightCapsuleView.backgroundColor = UIColor(rgb: 0x343436)
+        
         self.addSubview(self.zoneView)
         self.addSubview(self.leftHandleView)
+        self.leftHandleView.addSubview(self.leftCapsuleView)
+        
         self.addSubview(self.rightHandleView)
+        self.rightHandleView.addSubview(self.rightCapsuleView)
         self.addSubview(self.borderView)
         
         self.zoneView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handleZoneHandlePan(_:))))
@@ -935,6 +989,10 @@ private class TrimView: UIView {
         
         let rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
         transition.setFrame(view: self.rightHandleView, frame: rightHandleFrame)
+        
+        let capsuleSize = CGSize(width: 2.0, height: 11.0)
+        transition.setFrame(view: self.leftCapsuleView, frame: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
+        transition.setFrame(view: self.rightCapsuleView, frame: CGRect(origin: CGPoint(x: 5.0 - UIScreenPixel, y: floorToScreenPixels((leftHandleFrame.height - capsuleSize.height) / 2.0)), size: capsuleSize))
         
         let zoneFrame = CGRect(x: leftHandleFrame.maxX, y: 0.0, width: rightHandleFrame.minX - leftHandleFrame.maxX, height: scrubberSize.height)
         transition.setFrame(view: self.zoneView, frame: zoneFrame)

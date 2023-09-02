@@ -61,6 +61,7 @@ public final class ContextReferenceButtonComponent: Component {
             
             super.init(frame: CGRect())
                         
+            self.buttonView.allowsGroupOpacity = true
             self.addSubview(self.buttonView.view)
             self.buttonView.addSubnode(self.sourceView)
             self.sourceView.addSubnode(self.contextContentView)

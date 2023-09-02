@@ -1704,6 +1704,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
         }
         
+        private var currentHasChannels: Bool?
         func update(component: ShareWithPeersScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<ViewControllerComponentContainer.Environment>, transition: Transition) -> CGSize {
             guard !self.isDismissed else {
                 return availableSize
@@ -1713,6 +1714,23 @@ final class ShareWithPeersScreenComponent: Component {
             var contentTransition = transition
             if let animationHint, animationHint.contentReloaded, !transition.animation.isImmediate {
                 contentTransition = .immediate
+            }
+            
+            var hasCategories = false
+            var hasChannels = false
+            if case .stories = component.stateContext.subject {
+                if let peerId = self.sendAsPeerId, peerId.isGroupOrChannel {
+                } else {
+                    hasCategories = true
+                }
+                let sendAsPeersCount = component.stateContext.stateValue?.sendAsPeers.count ?? 1
+                if sendAsPeersCount > 1 {
+                    hasChannels = true
+                }
+                if let currentHasChannels = self.currentHasChannels, currentHasChannels != hasChannels {
+                    contentTransition = .spring(duration: 0.4)
+                }
+                self.currentHasChannels = hasChannels
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -1976,20 +1994,7 @@ final class ShareWithPeersScreenComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
-            
-            var hasCategories = false
-            var hasChannels = false
-            if case .stories = component.stateContext.subject {
-                if let peerId = self.sendAsPeerId, peerId.isGroupOrChannel {
-                } else {
-                    hasCategories = true
-                }
-                let sendAsPeersCount = component.stateContext.stateValue?.sendAsPeers.count ?? 1
-                if sendAsPeersCount > 1 {
-                    hasChannels = true
-                }
-            }
-            
+                        
             var footersTotalHeight: CGFloat = 0.0
             if case let .stories(editing) = component.stateContext.subject {
                 let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: environment.theme.list.freeTextColor)
