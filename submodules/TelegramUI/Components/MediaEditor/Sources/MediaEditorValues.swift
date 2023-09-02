@@ -383,7 +383,7 @@ public final class MediaEditorValues: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        try container.encode(self.peerId, forKey: .peerId)
+        try container.encode(self.peerId.toInt64(), forKey: .peerId)
         
         try container.encode(self.originalDimensions.width, forKey: .originalWidth)
         try container.encode(self.originalDimensions.height, forKey: .originalHeight)
