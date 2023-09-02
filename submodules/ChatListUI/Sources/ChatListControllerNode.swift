@@ -242,7 +242,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil
-                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, params: .emptyVisibleParams, interaction: interaction)
+                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, params: .empty, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -2574,8 +2574,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                                 scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight,
-                                                finalizeAnimation: false,
-                                                isHiddenByDefault: currentParams.isHiddenByDefault
+                                                finalizeAnimation: false
                                             ))
                                         }
                                     }
@@ -2589,8 +2588,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                                 scrollOffset: scrollOffset.rounded(),
                                                 storiesFraction: archiveFraction,
                                                 expandedHeight: expandedHeight,
-                                                finalizeAnimation: false,
-                                                isHiddenByDefault: currentParams.isHiddenByDefault
+                                                finalizeAnimation: false
                                             ))
                                         }
                                     }
