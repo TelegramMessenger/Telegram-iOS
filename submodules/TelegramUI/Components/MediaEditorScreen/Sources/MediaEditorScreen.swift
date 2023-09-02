@@ -4272,17 +4272,17 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
         
-        if "".isEmpty { // let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
-            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(level: 0, link: "t.me/channel?boost"), count: 5, forceDark: true, cancel: {}, action: { [weak self] in
-                guard let self else {
-                    return
-                }
-                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-            })
-            self.push(controller)
-            return
-        }
+//        if "".isEmpty { // let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
+//            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(level: 0, link: "t.me/channel?boost"), count: 5, forceDark: true, cancel: {}, action: { [weak self] in
+//                guard let self else {
+//                    return
+//                }
+//                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+//                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+//            })
+//            self.push(controller)
+//            return
+//        }
         
         self.didComplete = true
         
