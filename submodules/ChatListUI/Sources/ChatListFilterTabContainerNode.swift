@@ -439,6 +439,13 @@ private final class ItemNode: ASDisplayNode {
                 return deleteButtonNode.view
             }
         }
+        
+        if self.buttonNode.isUserInteractionEnabled {
+            if let result = self.buttonNode.view.hitTest(self.view.convert(point, to: self.buttonNode.view), with: event) {
+                return result
+            }
+        }
+        
         return super.hitTest(point, with: event)
     }
 }

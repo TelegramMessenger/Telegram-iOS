@@ -3318,8 +3318,6 @@ final class StoryItemSetContainerSendMessage {
                     return
                 }
                 if component.slice.peer.id != component.context.account.peerId {
-                } else if case .channel = component.slice.peer {
-                } else {
                     let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
                 }
                 

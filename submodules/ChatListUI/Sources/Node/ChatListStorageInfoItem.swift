@@ -12,6 +12,7 @@ class ChatListStorageInfoItem: ListViewItem {
     enum Action {
         case activate
         case hide
+        case buttonChoice(isPositive: Bool)
     }
     
     let theme: PresentationTheme
@@ -84,7 +85,19 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
     private let arrowNode: ASImageNode
     private let separatorNode: ASDisplayNode
     
+    private var okButtonText: TextNode?
+    private var cancelButtonText: TextNode?
+    private var okButton: HighlightableButtonNode?
+    private var cancelButton: HighlightableButtonNode?
+    
     private var item: ChatListStorageInfoItem?
+    
+    override var apparentHeight: CGFloat {
+        didSet {
+            self.contentContainer.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.width, height: self.apparentHeight))
+            self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentContainer.bounds.height - UIScreenPixel), size: CGSize(width: self.contentContainer.bounds.width, height: UIScreenPixel))
+        }
+    }
     
     required init() {
         self.contentContainer = ASDisplayNode()
@@ -96,6 +109,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
+        self.contentContainer.clipsToBounds = true
         self.clipsToBounds = true
         
         self.addSubnode(self.separatorNode)
@@ -124,19 +138,26 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
+        let makeOkButtonTextLayout = TextNode.asyncLayout(self.okButtonText)
+        let makeCancelButtonTextLayout = TextNode.asyncLayout(self.cancelButtonText)
+        
         return { item, params, last in
             let baseWidth = params.width - params.leftInset - params.rightInset
             let _ = baseWidth
             
             let sideInset: CGFloat = params.leftInset + 16.0
             let rightInset: CGFloat = sideInset + 24.0
-            let verticalInset: CGFloat = 8.0
-            let spacing: CGFloat = 0.0
+            let verticalInset: CGFloat = 9.0
+            var spacing: CGFloat = 0.0
             
             let themeUpdated = item.theme !== previousItem?.theme
             
             let titleString: NSAttributedString
             let textString: NSAttributedString
+            
+            var okButtonLayout: (TextNodeLayout, () -> TextNode)?
+            var cancelButtonLayout: (TextNodeLayout, () -> TextNode)?
+            var alignment: NSTextAlignment = .left
             
             switch item.notice {
             case let .clearStorage(sizeFraction):
@@ -182,34 +203,128 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+            case let .reviewLogin(newSessionReview):
+                spacing = 2.0
+                alignment = .center
+                
+                //TODO:localize
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: "Someone just got acess to your messages!", font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                titleString = titleStringValue
+                
+                textString = NSAttributedString(string: "We detected a new login to your account from \(newSessionReview.device), \(newSessionReview.location). Is it you?", font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                
+                okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Yes, it's me", font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+                cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "No, it's not me!", font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
             }
             
-            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            let titleLayout = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
             
-            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
+            let textLayout = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, maximumNumberOfLines: 10, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0), alignment: alignment, lineSpacing: 0.18))
             
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.0.size.height + textLayout.0.size.height), insets: UIEdgeInsets())
+            var contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.0.size.height + textLayout.0.size.height)
+            if let okButtonLayout {
+                contentSize.height += okButtonLayout.0.size.height + 20.0
+            }
+            
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
                     
                     if themeUpdated {
-                        strongSelf.backgroundColor = item.theme.chatList.pinnedItemBackgroundColor
+                        strongSelf.contentContainer.backgroundColor = item.theme.chatList.pinnedItemBackgroundColor
                         strongSelf.separatorNode.backgroundColor = item.theme.chatList.itemSeparatorColor
                         strongSelf.arrowNode.image = PresentationResourcesItemList.disclosureArrowImage(item.theme)
                     }
                     
-                    strongSelf.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel))
-                    
                     let _ = titleLayout.1()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleLayout.0.size)
+                    if case .center = alignment {
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.0.size.width) * 0.5), y: verticalInset), size: titleLayout.0.size)
+                    } else {
+                        strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: sideInset, y: verticalInset), size: titleLayout.0.size)
+                    }
                     
                     let _ = textLayout.1()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                    
+                    if case .center = alignment {
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.0.size.width) * 0.5), y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                    } else {
+                        strongSelf.textNode.frame = CGRect(origin: CGPoint(x: sideInset, y: strongSelf.titleNode.frame.maxY + spacing), size: textLayout.0.size)
+                    }
                     
                     if let image = strongSelf.arrowNode.image {
                         strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: layout.size.width - sideInset - image.size.width + 8.0, y: floor((layout.size.height - image.size.height) / 2.0)), size: image.size)
+                    }
+                    
+                    if let okButtonLayout, let cancelButtonLayout {
+                        strongSelf.arrowNode.isHidden = true
+                        
+                        let okButton: HighlightableButtonNode
+                        if let current = strongSelf.okButton {
+                            okButton = current
+                        } else {
+                            okButton = HighlightableButtonNode()
+                            strongSelf.okButton = okButton
+                            strongSelf.contentContainer.addSubnode(okButton)
+                            okButton.addTarget(strongSelf, action: #selector(strongSelf.okButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        
+                        let cancelButton: HighlightableButtonNode
+                        if let current = strongSelf.cancelButton {
+                            cancelButton = current
+                        } else {
+                            cancelButton = HighlightableButtonNode()
+                            strongSelf.cancelButton = cancelButton
+                            strongSelf.contentContainer.addSubnode(cancelButton)
+                            cancelButton.addTarget(strongSelf, action: #selector(strongSelf.cancelButtonPressed), forControlEvents: .touchUpInside)
+                        }
+                        
+                        let okButtonText = okButtonLayout.1()
+                        if okButtonText !== strongSelf.okButtonText {
+                            strongSelf.okButtonText?.removeFromSupernode()
+                            strongSelf.okButtonText = okButtonText
+                            okButton.addSubnode(okButtonText)
+                        }
+                        
+                        let cancelButtonText = cancelButtonLayout.1()
+                        if cancelButtonText !== strongSelf.okButtonText {
+                            strongSelf.cancelButtonText?.removeFromSupernode()
+                            strongSelf.cancelButtonText = cancelButtonText
+                            cancelButton.addSubnode(cancelButtonText)
+                        }
+                        
+                        let buttonsWidth: CGFloat = max(min(300.0, params.width), okButtonLayout.0.size.width + cancelButtonLayout.0.size.width + 32.0)
+                        let buttonWidth: CGFloat = floor(buttonsWidth * 0.5)
+                        let buttonHeight: CGFloat = 32.0
+                        
+                        let okButtonFrame = CGRect(origin: CGPoint(x: floor((params.width - buttonsWidth) * 0.5), y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        let cancelButtonFrame = CGRect(origin: CGPoint(x: okButtonFrame.maxX, y: strongSelf.textNode.frame.maxY + 6.0), size: CGSize(width: buttonWidth, height: buttonHeight))
+                        
+                        okButton.frame = okButtonFrame
+                        cancelButton.frame = cancelButtonFrame
+                        
+                        okButtonText.frame = CGRect(origin: CGPoint(x: floor((okButtonFrame.width - okButtonLayout.0.size.width) * 0.5), y: floor((okButtonFrame.height - okButtonLayout.0.size.height) * 0.5)), size: okButtonLayout.0.size)
+                        cancelButtonText.frame = CGRect(origin: CGPoint(x: floor((cancelButtonFrame.width - cancelButtonLayout.0.size.width) * 0.5), y: floor((cancelButtonFrame.height - cancelButtonLayout.0.size.height) * 0.5)), size: cancelButtonLayout.0.size)
+                    } else {
+                        strongSelf.arrowNode.isHidden = false
+                        
+                        if let okButton = strongSelf.okButton {
+                            strongSelf.okButton = nil
+                            okButton.removeFromSupernode()
+                        }
+                        if let cancelButton = strongSelf.cancelButton {
+                            strongSelf.cancelButton = nil
+                            cancelButton.removeFromSupernode()
+                        }
+                        if let okButtonText = strongSelf.okButtonText {
+                            strongSelf.okButtonText = nil
+                            okButtonText.removeFromSupernode()
+                        }
+                        if let cancelButtonText = strongSelf.cancelButtonText {
+                            strongSelf.cancelButtonText = nil
+                            cancelButtonText.removeFromSupernode()
+                        }
                     }
                     
                     strongSelf.contentSize = layout.contentSize
@@ -217,7 +332,7 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
                     
-                    strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    //strongSelf.contentContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                     
                     switch item.notice {
                     default:
@@ -228,10 +343,18 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
         }
     }
     
+    @objc private func okButtonPressed() {
+        self.item?.action(.buttonChoice(isPositive: true))
+    }
+    
+    @objc private func cancelButtonPressed() {
+        self.item?.action(.buttonChoice(isPositive: false))
+    }
+    
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
-        //self.transitionOffset = self.bounds.size.height * 1.6
+        //self.transitionOffset = self.bounds.size.height
         //self.addTransitionOffsetAnimation(0.0, duration: duration, beginAt: currentTimestamp)
     }
     

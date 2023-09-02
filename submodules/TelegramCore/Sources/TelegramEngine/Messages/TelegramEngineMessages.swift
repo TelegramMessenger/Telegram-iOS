@@ -868,23 +868,31 @@ public extension TelegramEngine {
                                     }
                                 }
                             }
-                            var pendingItemCount = 0
+                            var maxPendingTimestamp: Int32?
                             if let localState {
                                 for item in localState.items {
                                     if case .peer(peerId) = item.target {
-                                        pendingItemCount += 1
+                                        if let maxPendingTimestampValue = maxPendingTimestamp {
+                                            maxPendingTimestamp = max(maxPendingTimestampValue, item.timestamp)
+                                        } else {
+                                            maxPendingTimestamp = item.timestamp
+                                        }
                                     }
                                 }
                             }
                             
+                            var lastItemTimestamp = lastEntry.timestamp
+                            if let maxPendingTimestamp, maxPendingTimestamp > lastItemTimestamp {
+                                lastItemTimestamp = maxPendingTimestamp
+                            }
                             let item = EngineStorySubscriptions.Item(
                                 peer: EnginePeer(peer),
                                 hasUnseen: hasUnseen,
                                 hasUnseenCloseFriends: hasUnseenCloseFriends,
-                                hasPending: pendingItemCount != 0,
+                                hasPending: maxPendingTimestamp != nil,
                                 storyCount: itemsView.items.count,
                                 unseenCount: unseenCount,
-                                lastTimestamp: lastEntry.timestamp
+                                lastTimestamp: lastItemTimestamp
                             )
                             
                             if peerId == accountPeer.id {
@@ -919,15 +927,11 @@ public extension TelegramEngine {
                         }
                         
                         items.sort(by: { lhs, rhs in
-                            if lhs.hasPending != rhs.hasPending {
-                                if lhs.hasPending {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }
-                            if lhs.hasUnseen != rhs.hasUnseen {
-                                if lhs.hasUnseen {
+                            let lhsUnseenOrPending = lhs.hasUnseen || lhs.hasPending
+                            let rhsUnseenOrPending = rhs.hasUnseen || rhs.hasPending
+                            
+                            if lhsUnseenOrPending != rhsUnseenOrPending {
+                                if lhsUnseenOrPending {
                                     return true
                                 } else {
                                     return false
@@ -952,6 +956,10 @@ public extension TelegramEngine {
                             }
                             return lhs.peer.id < rhs.peer.id
                         })
+                        
+                        if !isHidden {
+                            assert(true)
+                        }
                         
                         return EngineStorySubscriptions(accountItem: accountItem, items: items, hasMoreToken: hasMoreToken)
                     }

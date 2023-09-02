@@ -982,6 +982,29 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
             pane.pane.update(size: paneFrame.size, topInset: tabsHeight, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, presentationData: presentationData, synchronous: true, transition: paneTransition)
         }
+        
+        var removeKeys: [PeerInfoPaneKey] = []
+        for (key, paneNode) in self.pendingPanes {
+            if !availablePanes.contains(key) {
+                removeKeys.append(key)
+                paneNode.pane.node.removeFromSupernode()
+            }
+        }
+        for key in removeKeys {
+            self.pendingPanes.removeValue(forKey: key)
+        }
+        removeKeys.removeAll()
+        
+        for (key, paneNode) in self.currentPanes {
+            if !availablePanes.contains(key) {
+                removeKeys.append(key)
+                paneNode.node.removeFromSupernode()
+            }
+        }
+        for key in removeKeys {
+            self.currentPanes.removeValue(forKey: key)
+        }
+        
         if !self.didSetIsReady && data != nil {
             if let currentPaneKey = self.currentPaneKey, let currentPane = self.currentPanes[currentPaneKey] {
                 self.didSetIsReady = true

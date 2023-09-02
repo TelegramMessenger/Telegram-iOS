@@ -169,9 +169,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                             return EngineStoryItem.Views(
                                 seenCount: views.seenCount,
                                 reactedCount: views.reactedCount,
+                                forwardCount: views.forwardCount,
                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                     return peers[id].flatMap(EnginePeer.init)
                                 },
+                                reactions: views.reactions,
                                 hasList: views.hasList
                             )
                         },
@@ -1076,9 +1078,11 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                         return EngineStoryItem.Views(
                             seenCount: views.seenCount,
                             reactedCount: views.reactedCount,
+                            forwardCount: views.forwardCount,
                             seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                 return peers[id].flatMap(EnginePeer.init)
                             },
+                            reactions: views.reactions,
                             hasList: views.hasList
                         )
                     },

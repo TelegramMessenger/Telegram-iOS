@@ -20,6 +20,10 @@ import Postbox
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import ChatListHeaderComponent
+import UndoUI
+import NewSessionInfoScreen
+
+private var debugDidAddNewSessionReview = false
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -98,6 +102,8 @@ public final class ChatListNodeInteraction {
     let openStorageManagement: () -> Void
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
+    let openActiveSessions: () -> Void
+    let performActiveSessionAction: (NewSessionReview, Bool) -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -146,6 +152,8 @@ public final class ChatListNodeInteraction {
         openStorageManagement: @escaping () -> Void,
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
+        openActiveSessions: @escaping () -> Void,
+        performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -181,6 +189,8 @@ public final class ChatListNodeInteraction {
         self.openStorageManagement = openStorageManagement
         self.openPasswordSetup = openPasswordSetup
         self.openPremiumIntro = openPremiumIntro
+        self.openActiveSessions = openActiveSessions
+        self.performActiveSessionAction = performActiveSessionAction
         self.openChatFolderUpdates = openChatFolderUpdates
         self.hideChatFolderUpdates = hideChatFolderUpdates
         self.openStories = openStories
@@ -700,9 +710,18 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .reviewLogin:
+                            break
                         }
                     case .hide:
                         switch notice {
+                        default:
+                            break
+                        }
+                    case let .buttonChoice(isPositive):
+                        switch notice {
+                        case let .reviewLogin(newSessionReview):
+                            nodeInteraction?.performActiveSessionAction(newSessionReview, isPositive)
                         default:
                             break
                         }
@@ -1011,9 +1030,18 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             nodeInteraction?.openPasswordSetup()
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
+                        case .reviewLogin:
+                            break
                         }
                     case .hide:
                         switch notice {
+                        default:
+                            break
+                        }
+                    case let .buttonChoice(isPositive):
+                        switch notice {
+                        case let .reviewLogin(newSessionReview):
+                            nodeInteraction?.performActiveSessionAction(newSessionReview, isPositive)
                         default:
                             break
                         }
@@ -1564,6 +1592,57 @@ public final class ChatListNode: ListView {
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
             self.push?(controller)
+        }, openActiveSessions: { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            let activeSessionsContext = self.context.engine.privacy.activeSessions()
+            let _ = (activeSessionsContext.state
+            |> filter { state in
+                return !state.sessions.isEmpty
+            }
+            |> take(1)
+            |> deliverOnMainQueue).start(completed: { [weak self] in
+                guard let self else {
+                    return
+                }
+                
+                let recentSessionsController = self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext)
+                self.push?(recentSessionsController)
+            })
+        }, performActiveSessionAction: { [weak self] newSessionReview, isPositive in
+            guard let self else {
+                return
+            }
+            
+            if isPositive {
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                
+                let animationBackgroundColor: UIColor
+                if presentationData.theme.overallDarkAppearance {
+                    animationBackgroundColor = presentationData.theme.rootController.tabBar.backgroundColor
+                } else {
+                    animationBackgroundColor = UIColor(rgb: 0x474747)
+                }
+                //TODO:localize
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "New Login Allowed", text: "You can check the list of your active logins in [Settings > Devices]().", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { [weak self] action in
+                    switch action {
+                    case .info:
+                        self?.interaction?.openActiveSessions()
+                    default:
+                        break
+                    }
+                    
+                    return true
+                }))
+                
+                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
+            } else {
+                self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
+                
+                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
+            }
         }, openChatFolderUpdates: { [weak self] in
             guard let self else {
                 return
@@ -1664,13 +1743,24 @@ public final class ChatListNode: ListView {
     
         let suggestedChatListNotice: Signal<ChatListNotice?, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
+            #if DEBUG
+            if !debugDidAddNewSessionReview {
+                debugDidAddNewSessionReview = true
+                let _ = addNewSessionReview(postbox: context.account.postbox, item: NewSessionReview(id: 1, device: "iPhone 14 Pro", location: "Dubai, UAE")).start()
+            }
+            #endif
+            
             suggestedChatListNotice = .single(nil)
             |> then (
                 combineLatest(
                     getServerProvidedSuggestions(account: context.account),
-                    context.engine.auth.twoStepVerificationConfiguration()
+                    context.engine.auth.twoStepVerificationConfiguration(),
+                    newSessionReviews(postbox: context.account.postbox)
                 )
-                |> mapToSignal { suggestions, configuration -> Signal<ChatListNotice?, NoError> in
+                |> mapToSignal { suggestions, configuration, newSessionReviews -> Signal<ChatListNotice?, NoError> in
+                    if let newSessionReview = newSessionReviews.first {
+                        return .single(.reviewLogin(newSessionReview: newSessionReview))
+                    }
                     if suggestions.contains(.setupPassword) {
                         var notSet = false
                         switch configuration {

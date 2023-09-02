@@ -42,19 +42,48 @@ public enum Stories {
             private enum CodingKeys: String, CodingKey {
                 case seenCount = "seenCount"
                 case reactedCount = "reactedCount"
+                case forwardCount = "forwardCount"
                 case seenPeerIds = "seenPeerIds"
+                case reactions = "reactions"
                 case hasList = "hasList"
             }
             
             public var seenCount: Int
             public var reactedCount: Int
+            public var forwardCount: Int
             public var seenPeerIds: [PeerId]
+            public var reactions: [MessageReaction]
             public var hasList: Bool
             
-            public init(seenCount: Int, reactedCount: Int, seenPeerIds: [PeerId], hasList: Bool) {
+            public var isEmpty: Bool {
+                if self.seenCount != 0 {
+                    return false
+                }
+                if self.reactedCount != 0 {
+                    return false
+                }
+                if self.forwardCount != 0 {
+                    return false
+                }
+                if !self.seenPeerIds.isEmpty {
+                    return false
+                }
+                if !self.reactions.isEmpty {
+                    return false
+                }
+                if self.hasList {
+                    return false
+                }
+                
+                return true
+            }
+            
+            public init(seenCount: Int, reactedCount: Int, forwardCount: Int, seenPeerIds: [PeerId], reactions: [MessageReaction], hasList: Bool) {
                 self.seenCount = seenCount
                 self.reactedCount = reactedCount
+                self.forwardCount = forwardCount
                 self.seenPeerIds = seenPeerIds
+                self.reactions = reactions
                 self.hasList = hasList
             }
             
@@ -63,7 +92,9 @@ public enum Stories {
                 
                 self.seenCount = Int(try container.decode(Int32.self, forKey: .seenCount))
                 self.reactedCount = Int(try container.decodeIfPresent(Int32.self, forKey: .reactedCount) ?? 0)
+                self.forwardCount = Int(try container.decodeIfPresent(Int32.self, forKey: .forwardCount) ?? 0)
                 self.seenPeerIds = try container.decode([Int64].self, forKey: .seenPeerIds).map(PeerId.init)
+                self.reactions = try container.decodeIfPresent([MessageReaction].self, forKey: .reactions) ?? []
                 self.hasList = try container.decodeIfPresent(Bool.self, forKey: .hasList) ?? true
             }
             
@@ -72,7 +103,9 @@ public enum Stories {
                 
                 try container.encode(Int32(clamping: self.seenCount), forKey: .seenCount)
                 try container.encode(Int32(clamping: self.reactedCount), forKey: .reactedCount)
+                try container.encode(Int32(clamping: self.forwardCount), forKey: .forwardCount)
                 try container.encode(self.seenPeerIds.map { $0.toInt64() }, forKey: .seenPeerIds)
+                try container.encode(self.reactions, forKey: .reactions)
                 try container.encode(self.hasList, forKey: .hasList)
             }
         }
@@ -1000,6 +1033,15 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         updatedItems.append(updatedItem)
                                                     }
                                                     transaction.setStoryItems(peerId: toPeerId, items: items)
+                                                    
+                                                    if let peer = transaction.getPeer(toPeerId) as? TelegramChannel, let storiesHidden = peer.storiesHidden {
+                                                        let subscriptionsKey: PostboxStorySubscriptionsKey = storiesHidden ? .hidden : .filtered
+                                                        var (state, peerIds) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
+                                                        if !peerIds.contains(toPeerId) {
+                                                            peerIds.append(toPeerId)
+                                                        }
+                                                        transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                                                    }
                                                 }
                                                 
                                                 id = idValue
@@ -1436,13 +1478,32 @@ extension Api.StoryItem {
 extension Stories.Item.Views {
     init(apiViews: Api.StoryViews) {
         switch apiViews {
-        case let .storyViews(flags, viewsCount, reactionsCount, recentViewers):
+        case let .storyViews(flags, viewsCount, forwardsCount, reactions, reactionsCount, recentViewers):
+            //storyViews#8d595cd6 flags:# has_viewers:flags.1?true views_count:int forwards_count:flags.2?int reactions:flags.3?Vector<ReactionCount> reactions_count:flags.4?int recent_viewers:flags.0?Vector<long> = StoryViews;
             let hasList = (flags & (1 << 1)) != 0
             var seenPeerIds: [PeerId] = []
             if let recentViewers = recentViewers {
                 seenPeerIds = recentViewers.map { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }
             }
-            self.init(seenCount: Int(viewsCount), reactedCount: Int(reactionsCount), seenPeerIds: seenPeerIds, hasList: hasList)
+            var mappedReactions: [MessageReaction] = []
+            if let reactions = reactions {
+                for result in reactions {
+                    switch result {
+                    case let .reactionCount(_, chosenOrder, reaction, count):
+                        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+                            mappedReactions.append(MessageReaction(value: reaction, count: count, chosenOrder: chosenOrder.flatMap(Int.init)))
+                        }
+                    }
+                }
+            }
+            self.init(
+                seenCount: Int(viewsCount),
+                reactedCount: Int(reactionsCount ?? 0),
+                forwardCount: Int(forwardsCount ?? 0),
+                seenPeerIds: seenPeerIds,
+                reactions: mappedReactions,
+                hasList: hasList
+            )
         }
     }
 }
@@ -1896,6 +1957,58 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
 }
 
+func _internal_updateStoryViewsForMyReaction(views: Stories.Item.Views?, previousReaction: MessageReaction.Reaction?, reaction: MessageReaction.Reaction?) -> Stories.Item.Views? {
+    var views = views ?? Stories.Item.Views(seenCount: 0, reactedCount: 0, forwardCount: 0, seenPeerIds: [], reactions: [], hasList: false)
+    
+    if let reaction {
+        if previousReaction == nil {
+            views.reactedCount += 1
+        }
+        
+        do {
+            var reactions = views.reactions
+            
+            if let previousIndex = reactions.firstIndex(where: { $0.chosenOrder != nil }) {
+                reactions[previousIndex].chosenOrder = nil
+                reactions[previousIndex].count = max(0, reactions[previousIndex].count - 1)
+            }
+            if let reactionIndex = reactions.firstIndex(where: { $0.value == reaction }) {
+                reactions[reactionIndex].chosenOrder = 0
+                reactions[reactionIndex].count += 1
+            } else {
+                reactions.append(MessageReaction(
+                    value: reaction,
+                    count: 1,
+                    chosenOrder: 0
+                ))
+            }
+            views.reactions = reactions
+        }
+    } else {
+        if previousReaction != nil {
+            views.reactedCount = max(0, views.reactedCount - 1)
+        }
+        do {
+            var reactions = views.reactions
+            
+            if let previousIndex = reactions.firstIndex(where: { $0.chosenOrder != nil }) {
+                reactions[previousIndex].chosenOrder = nil
+                reactions[previousIndex].count = max(0, reactions[previousIndex].count - 1)
+                if reactions[previousIndex].count == 0 {
+                    reactions.remove(at: previousIndex)
+                }
+            }
+            views.reactions = reactions
+        }
+    }
+    
+    if views.isEmpty {
+        return nil
+    } else {
+        return views
+    }
+}
+
 func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int32, reaction: MessageReaction.Reaction?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> (Stories.StoredItem?, Api.InputPeer?) in
         guard let peer = transaction.getPeer(peerId) else {
@@ -1906,6 +2019,10 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
         }
         
         var updatedItemValue: Stories.StoredItem?
+        
+        let updateViews: (Stories.Item.Views?, MessageReaction.Reaction?) -> Stories.Item.Views? = { views, previousReaction in
+            return _internal_updateStoryViewsForMyReaction(views: views, previousReaction: previousReaction, reaction: reaction)
+        }
         
         var currentItems = transaction.getStoryItems(peerId: peerId)
         for i in 0 ..< currentItems.count {
@@ -1919,7 +2036,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
-                        views: item.views,
+                        views: updateViews(item.views, item.myReaction),
                         privacy: item.privacy,
                         isPinned: item.isPinned,
                         isExpired: item.isEdited,
@@ -1949,7 +2066,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 mediaAreas: item.mediaAreas,
                 text: item.text,
                 entities: item.entities,
-                views: item.views,
+                views: updateViews(item.views, item.myReaction),
                 privacy: item.privacy,
                 isPinned: item.isPinned,
                 isExpired: item.isEdited,

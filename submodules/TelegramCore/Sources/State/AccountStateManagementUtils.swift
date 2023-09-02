@@ -4566,6 +4566,8 @@ func replayFinalState(
                     return item.id == id
                 }) {
                     if let value = updatedPeerEntries[index].value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        let updatedReaction = MessageReaction.Reaction(apiReaction: reaction)
+                        
                         let updatedItem: Stories.StoredItem = .item(Stories.Item(
                             id: item.id,
                             timestamp: item.timestamp,
@@ -4574,7 +4576,7 @@ func replayFinalState(
                             mediaAreas: item.mediaAreas,
                             text: item.text,
                             entities: item.entities,
-                            views: item.views,
+                            views: _internal_updateStoryViewsForMyReaction(views: item.views, previousReaction: item.myReaction, reaction: updatedReaction),
                             privacy: item.privacy,
                             isPinned: item.isPinned,
                             isExpired: item.isExpired,
@@ -4584,7 +4586,7 @@ func replayFinalState(
                             isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited,
-                            myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                            myReaction: updatedReaction
                         ))
                         if let entry = CodableEntry(updatedItem) {
                             updatedPeerEntries[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: item.expirationTimestamp, isCloseFriends: item.isCloseFriends)
@@ -4592,8 +4594,10 @@ func replayFinalState(
                     }
                 }
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
-            
+                
                 if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id))?.get(Stories.StoredItem.self), case let .item(item) = value {
+                    let updatedReaction = MessageReaction.Reaction(apiReaction: reaction)
+                    
                     let updatedItem: Stories.StoredItem = .item(Stories.Item(
                         id: item.id,
                         timestamp: item.timestamp,
@@ -4602,7 +4606,7 @@ func replayFinalState(
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
-                        views: item.views,
+                        views: _internal_updateStoryViewsForMyReaction(views: item.views, previousReaction: item.myReaction, reaction: updatedReaction),
                         privacy: item.privacy,
                         isPinned: item.isPinned,
                         isExpired: item.isExpired,
@@ -4616,7 +4620,6 @@ func replayFinalState(
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
-                        
                         storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: updatedItem))
                     }
                 }

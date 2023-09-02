@@ -358,7 +358,14 @@ public final class EngineStoryViewListContext {
                                         mediaAreas: item.mediaAreas,
                                         text: item.text,
                                         entities: item.entities,
-                                        views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds, hasList: currentViews.hasList),
+                                        views: Stories.Item.Views(
+                                            seenCount: Int(count),
+                                            reactedCount: Int(reactionsCount),
+                                            forwardCount: currentViews.forwardCount,
+                                            seenPeerIds: currentViews.seenPeerIds,
+                                            reactions: currentViews.reactions,
+                                            hasList: currentViews.hasList
+                                        ),
                                         privacy: item.privacy,
                                         isPinned: item.isPinned,
                                         isExpired: item.isExpired,
@@ -387,7 +394,14 @@ public final class EngineStoryViewListContext {
                                                 mediaAreas: item.mediaAreas,
                                                 text: item.text,
                                                 entities: item.entities,
-                                                views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds, hasList: currentViews.hasList),
+                                                views: Stories.Item.Views(
+                                                    seenCount: Int(count),
+                                                    reactedCount: Int(reactionsCount),
+                                                    forwardCount: currentViews.forwardCount,
+                                                    seenPeerIds: currentViews.seenPeerIds,
+                                                    reactions: currentViews.reactions,
+                                                    hasList: currentViews.hasList
+                                                ),
                                                 privacy: item.privacy,
                                                 isPinned: item.isPinned,
                                                 isExpired: item.isExpired,

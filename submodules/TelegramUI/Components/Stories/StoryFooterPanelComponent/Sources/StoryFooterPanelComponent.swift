@@ -355,7 +355,7 @@ public final class StoryFooterPanelComponent: Component {
                 }
             }
             
-            self.viewStatsButton.isEnabled = viewCount != 0
+            self.viewStatsButton.isEnabled = viewCount != 0 && !component.isChannel
             
             var rightContentOffset: CGFloat = availableSize.width - 12.0
             

@@ -460,6 +460,18 @@ public final class StoryPeerListComponent: Component {
             })
         }
         
+        public func ensureItemVisible(peerId: EnginePeer.Id) {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+            if let index = self.sortedItems.firstIndex(where: { $0.peer.id == peerId }) {
+                let itemFrame = itemLayout.frame(at: index)
+                if !self.scrollView.bounds.contains(itemFrame.insetBy(dx: 20.0, dy: 0.0)) {
+                    self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -40.0, dy: 0.0), animated: false)
+                }
+            }
+        }
+        
         public func setLoadingItem(peerId: EnginePeer.Id, signal: Signal<Never, NoError>) {
             var applyLoadingItem = true
             self.loadingItemDisposable?.dispose()

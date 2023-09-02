@@ -45,8 +45,6 @@ final class StoryItemOverlaysView: UIView {
         var activate: ((UIView, MessageReaction.Reaction) -> Void)?
         var requestUpdate: (() -> Void)?
         
-        private var demoCounter: Bool = false
-        
         private var requestStickerDisposable: Disposable?
         private var resolvedFile: TelegramMediaFile?
         
@@ -97,9 +95,6 @@ final class StoryItemOverlaysView: UIView {
                 return
             }
             activate(self, reaction)
-            
-            self.demoCounter = !self.demoCounter
-            self.requestUpdate?()
         }
         
         func update(
@@ -112,11 +107,6 @@ final class StoryItemOverlaysView: UIView {
             synchronous: Bool,
             size: CGSize
         ) {
-            var counter = counter
-            if self.demoCounter {
-                counter += 1
-            }
-            
             var transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
             if self.reaction == nil {
                 transition = .immediate
@@ -396,11 +386,17 @@ final class StoryItemOverlaysView: UIView {
                 transition.setPosition(view: itemView, position: targetFrame.center)
                 transition.setBounds(view: itemView, bounds: CGRect(origin: CGPoint(), size: targetFrame.size))
                 transition.setTransform(view: itemView, transform: CATransform3DMakeRotation(coordinates.rotation * (CGFloat.pi / 180.0), 0.0, 0.0, 1.0))
+                
+                var counter = 0
+                if let reactionData = story.views?.reactions.first(where: { $0.value == reaction }) {
+                    counter = Int(reactionData.count)
+                }
+                
                 itemView.update(
                     context: context,
                     reaction: reaction,
                     flags: flags,
-                    counter: 0,
+                    counter: counter,
                     availableReactions: availableReactions,
                     entityFiles: entityFiles,
                     synchronous: attemptSynchronous,

@@ -23,6 +23,8 @@ swift_library(
         "//submodules/PeerInfoUI:PeerInfoUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",
