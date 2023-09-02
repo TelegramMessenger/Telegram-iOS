@@ -559,6 +559,15 @@ public enum ChatControllerPresentationMode: Equatable {
     case inline(NavigationController?)
 }
 
+public final class ChatListPreviewPresentationData {
+
+    public let sourceAndRect: (() -> (ASDisplayNode, CGRect)?)
+    
+    public init(sourceNodeAndRect: @escaping (() -> (ASDisplayNode, CGRect)?)) {
+        self.sourceAndRect = sourceNodeAndRect
+    }
+}
+
 public enum ChatPresentationInputQueryResult: Equatable {
     case stickers([FoundStickerItem])
     case hashtags([String])

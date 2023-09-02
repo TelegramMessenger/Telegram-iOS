@@ -11271,6 +11271,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
+        if let arguments = self.presentationArguments as? ChatListPreviewPresentationData,
+           let (sourceNode, sourceRect) = arguments.sourceAndRect()
+        {
+            let containerNode = ASDisplayNode()
+            containerNode.backgroundColor = .white.withAlphaComponent(0.5)
+            
+            sourceNode.backgroundColor = .red
+            self.chatDisplayNode.bounds = sourceRect
+            self.chatDisplayNode.position = sourceRect.center
+        }
+        
         if !self.didSetup3dTouch {
             self.didSetup3dTouch = true
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
