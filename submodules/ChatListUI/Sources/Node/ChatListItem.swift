@@ -2865,7 +2865,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
                     
-                    if case let .groupReference(data) = item.content, data.groupId == .archive {
+                    if case let .groupReference(data) = item.content, data.groupId == .archive, item.params.isHiddenByDefault {
                         transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
                         transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
                         transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)

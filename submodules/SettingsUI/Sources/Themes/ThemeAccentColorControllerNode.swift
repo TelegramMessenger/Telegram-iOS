@@ -931,7 +931,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                 header: nil,
                 enableContextActions: false,
                 hiddenOffset: false,
-                params: .empty,
+                params: .emptyVisibleParams,
                 interaction: interaction
             )
         }
