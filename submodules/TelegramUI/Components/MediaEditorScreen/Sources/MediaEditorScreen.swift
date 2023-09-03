@@ -3087,34 +3087,93 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     return
                 }
                 
-                let path = url.path
-                let fileName =  "audio_\(url.lastPathComponent)"
-                let copyPath = fullDraftPath(peerId: self.context.account.peerId, path: fileName)
-                try? FileManager.default.copyItem(atPath: path, toPath: copyPath)
+                let isScopedResource = url.startAccessingSecurityScopedResource()
                 
-                let audioAsset = AVURLAsset(url: URL(fileURLWithPath: copyPath))
-                var artist: String?
-                var title: String?
-                for data in audioAsset.commonMetadata {
-                    if data.commonKey == .commonKeyArtist {
-                        artist = data.stringValue
+                let coordinator = NSFileCoordinator(filePresenter: nil)
+                var error: NSError?
+                coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { sourceUrl in
+                    let path = sourceUrl.path
+                    let fileName =  "audio_\(sourceUrl.lastPathComponent)"
+                    
+                    let copyPath = fullDraftPath(peerId: self.context.account.peerId, path: fileName)
+                    try? FileManager.default.removeItem(atPath: copyPath)
+                    do {
+                        try FileManager.default.copyItem(atPath: path, toPath: copyPath)
+                    } catch let e {
+                        Logger.shared.log("MediaEditor", "copy file error \(e)")
+                        if isScopedResource {
+                            sourceUrl.stopAccessingSecurityScopedResource()
+                        }
+                        return
                     }
-                    if data.commonKey == .commonKeyTitle {
-                        title = data.stringValue
+                    
+                    Queue.mainQueue().async {
+                        let audioAsset = AVURLAsset(url: URL(fileURLWithPath: copyPath))
+                        
+                        func loadValues(asset: AVAsset, retryCount: Int, completion: @escaping () -> Void) {
+                            asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"], completionHandler: {
+                                if asset.statusOfValue(forKey: "tracks", error: nil) == .loading {
+                                    if retryCount < 2 {
+                                        Queue.mainQueue().after(0.1, {
+                                            loadValues(asset: asset, retryCount: retryCount + 1, completion: completion)
+                                        })
+                                    } else {
+                                        completion()
+                                    }
+                                } else {
+                                    completion()
+                                }
+                            })
+                        }
+                        
+                        loadValues(asset: audioAsset, retryCount: 0, completion: {
+                            var audioDuration: Double = 0.0
+                            guard let track = audioAsset.tracks(withMediaType: .audio).first else {
+                                Logger.shared.log("MediaEditor", "track is nil")
+                                if isScopedResource {
+                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                }
+                                return
+                            }
+                            
+                            audioDuration = track.timeRange.duration.seconds
+                            if audioDuration.isZero {
+                                Logger.shared.log("MediaEditor", "duration is zero")
+                                if isScopedResource {
+                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                }
+                                return
+                            }
+                            
+                            var artist: String?
+                            var title: String?
+                            for data in audioAsset.commonMetadata {
+                                if data.commonKey == .commonKeyArtist {
+                                    artist = data.stringValue
+                                }
+                                if data.commonKey == .commonKeyTitle {
+                                    title = data.stringValue
+                                }
+                            }
+                            
+                            Queue.mainQueue().async {
+                                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
+                                if mediaEditor.sourceIsVideo {
+                                    if let videoDuration = mediaEditor.duration {
+                                        mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
+                                    }
+                                } else {
+                                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
+                                }
+                                
+                                self.requestUpdate(transition: .easeInOut(duration: 0.2))
+                                if isScopedResource {
+                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                }
+                            }
+                        })
                     }
-                }
-                
-                let audioDuration = audioAsset.duration.seconds
-                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
-                if mediaEditor.sourceIsVideo {
-                    if let videoDuration = mediaEditor.duration {
-                        mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
-                    }
-                } else {
-                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
-                }
-                
-                self.requestUpdate(transition: .easeInOut(duration: 0.2))
+                })
             }), in: .window(.root))
         }
         

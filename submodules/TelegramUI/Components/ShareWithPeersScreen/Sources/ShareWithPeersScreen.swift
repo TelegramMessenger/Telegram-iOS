@@ -1027,7 +1027,11 @@ final class ShareWithPeersScreenComponent: Component {
                         if case .user = peer {
                             subtitle = environment.strings.VoiceChat_PersonalAccount
                         } else {
-                            subtitle = environment.strings.Channel_Status
+                            if let count = component.stateContext.stateValue?.participants[peer.id] {
+                                subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                            } else {
+                                subtitle = environment.strings.Channel_Status
+                            }
                         }
                         
                         var isStories = false
@@ -2657,20 +2661,47 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
              
             switch subject {
             case let .peers(peers, _):
-                let state = State(
-                    sendAsPeers: peers,
-                    peers: [],
-                    peersMap: [:],
-                    savedSelectedPeers: [:],
-                    presences: [:],
-                    participants: [:],
-                    closeFriendsPeers: [],
-                    grayListPeers: []
-                )
-                self.stateValue = state
-                self.stateSubject.set(.single(state))
+                self.stateDisposable = (.single(peers)
+                |> mapToSignal { peers -> Signal<([EnginePeer], [EnginePeer.Id: Optional<Int>]), NoError> in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                    )
+                    |> map { participantCountMap -> ([EnginePeer], [EnginePeer.Id: Optional<Int>]) in
+                        return (peers, participantCountMap)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] peers, participantCounts in
+                    guard let self else {
+                        return
+                    }
+                    var participants: [EnginePeer.Id: Int] = [:]
+                    for (key, value) in participantCounts {
+                        if let value {
+                            participants[key] = value
+                        }
+                    }
+                    
+                    let state = State(
+                        sendAsPeers: peers,
+                        peers: [],
+                        peersMap: [:],
+                        savedSelectedPeers: [:],
+                        presences: [:],
+                        participants: participants,
+                        closeFriendsPeers: [],
+                        grayListPeers: []
+                    )
+                    self.stateValue = state
+                    self.stateSubject.set(.single(state))
+                    
+                    for peer in peers {
+                        if case let .channel(channel) = peer, participants[channel.id] == nil {
+                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
+                        }
+                    }
 
-                self.readySubject.set(true)
+                    self.readySubject.set(true)
+                })
             case .stories:
                 let savedEveryoneExceptionPeers = peersListStoredState(engine: context.engine, base: .everyone)
                 let savedContactsExceptionPeers = peersListStoredState(engine: context.engine, base: .contacts)
@@ -2742,18 +2773,36 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         )
                     }
                 }
+                
+                let adminedChannelsWithParticipants = adminedChannels
+                |> mapToSignal { peers -> Signal<([EnginePeer], [EnginePeer.Id: Optional<Int>]), NoError> in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                    )
+                    |> map { participantCountMap -> ([EnginePeer], [EnginePeer.Id: Optional<Int>]) in
+                        return (peers, participantCountMap)
+                    }
+                }
             
                 self.stateDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
-                    adminedChannels,
+                    adminedChannelsWithParticipants,
                     savedPeers,
                     closeFriends,
                     grayListPeers
                 )
-                .start(next: { [weak self] accountPeer, adminedChannels, savedPeers, closeFriends, grayListPeers in
+                .start(next: { [weak self] accountPeer, adminedChannelsWithParticipants, savedPeers, closeFriends, grayListPeers in
                     guard let self else {
                         return
+                    }
+                    
+                    let (adminedChannels, participantCounts) = adminedChannelsWithParticipants
+                    var participants: [EnginePeer.Id: Int] = [:]
+                    for (key, value) in participantCounts {
+                        if let value {
+                            participants[key] = value
+                        }
                     }
                     
                     var sendAsPeers: [EnginePeer] = []
@@ -2773,12 +2822,18 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         peersMap: peersMap,
                         savedSelectedPeers: savedSelectedPeers,
                         presences: [:],
-                        participants: [:],
+                        participants: participants,
                         closeFriendsPeers: closeFriends,
                         grayListPeers: grayListPeers
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
+                    
+                    for peer in adminedChannels {
+                        if case let .channel(channel) = peer, participants[channel.id] == nil {
+                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
+                        }
+                    }
 
                     self.readySubject.set(true)
                 })

@@ -167,6 +167,7 @@ public final class ChatControllerInteraction {
     public let openWebView: (String, String, Bool, ChatOpenWebViewSource) -> Void
     public let activateAdAction: (EngineMessage.Id) -> Void
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void
+    public let saveMediaToFiles: (EngineMessage.Id) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -280,6 +281,7 @@ public final class ChatControllerInteraction {
         openWebView: @escaping (String, String, Bool, ChatOpenWebViewSource) -> Void,
         activateAdAction: @escaping (EngineMessage.Id) -> Void,
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void,
+        saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -375,6 +377,7 @@ public final class ChatControllerInteraction {
         self.openWebView = openWebView
         self.activateAdAction = activateAdAction
         self.openRequestedPeerSelection = openRequestedPeerSelection
+        self.saveMediaToFiles = saveMediaToFiles
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput

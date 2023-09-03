@@ -2854,6 +2854,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
         }, openRequestedPeerSelection: { _, _, _ in
+        }, saveMediaToFiles: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

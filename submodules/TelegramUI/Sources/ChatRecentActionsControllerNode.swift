@@ -556,6 +556,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openWebView: { _, _, _, _ in
         }, activateAdAction: { _ in
         }, openRequestedPeerSelection: { _, _, _ in
+        }, saveMediaToFiles: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1064,6 +1065,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case .importStickers:
                         break
                     case .startAttach:
+                        break
+                    case .boost:
                         break
                 }
             }
