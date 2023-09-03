@@ -5,26 +5,26 @@
 //  Created by Bogdan Redkin on 02/09/2023.
 //
 
-import Foundation
-import UIKit
-import Display
-import AsyncDisplayKit
-import Postbox
-import TelegramCore
-import SwiftSignalKit
 import AccountContext
-import ContextUI
+import AsyncDisplayKit
 import ChatAvatarNavigationNode
 import ChatTitleView
+import ContextUI
+import Display
+import Foundation
+import Postbox
+import SwiftSignalKit
+import TelegramCore
 import TelegramPresentationData
+import UIKit
 
 final class ChatListPreviewContentContainerNode: ASDisplayNode {
     public var controllerNode: ContextControllerContentNode?
-    
+
     override public init() {
         super.init()
     }
-    
+
     public func updateLayout(size: CGSize, scaledSize: CGSize, transition: ContainedViewLayoutTransition) {
         guard let contentNode = self.controllerNode else { return }
         transition.updatePosition(node: contentNode, position: CGPoint(x: scaledSize.width / 2.0, y: scaledSize.height / 2.0))
@@ -52,21 +52,19 @@ final class ChatListPreviewContentContainerNode: ASDisplayNode {
 func convertFrame(_ frame: CGRect, from fromView: UIView, to toView: UIView) -> CGRect {
     let sourceWindowFrame = fromView.convert(frame, to: nil)
     var targetWindowFrame = toView.convert(sourceWindowFrame, from: nil)
-    
+
     if let fromWindow = fromView.window, let toWindow = toView.window {
         targetWindowFrame.origin.x += toWindow.bounds.width - fromWindow.bounds.width
     }
     return targetWindowFrame
 }
 
-
 final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    
     private let context: AccountContext
     private let presentationData: PresentationData
-    
+
     private var validLayout: ContainerViewLayout?
-    
+
     private let effectView: UIVisualEffectView
     private var propertyAnimator: AnyObject?
     private var displayLinkAnimator: DisplayLinkAnimator?
@@ -74,48 +72,24 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
     private let withoutBlurDimNode: ASDisplayNode
     private let dismissNode: ASDisplayNode
     private let dismissAccessibilityArea: AccessibilityAreaNode
-
     private let clippingNode: ASDisplayNode
     private let scrollNode: ASScrollNode
 
     private var originalProjectedContentViewFrame: (CGRect, CGRect)?
-    private var contentAreaInScreenSpace: CGRect?
-    private var customPosition: CGPoint?
+//    private var contentAreaInScreenSpace: CGRect?
+//    private var customPosition: CGPoint?
     private let contentContainerNode: ChatListPreviewContentContainerNode
     private weak var gesture: ContextGesture?
-    
+
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
-    
+
     private var animatedIn = false
     private var isAnimatingOut = false
     private var didCompleteAnimationIn = false
 
     var presentationArguments: ChatListPreviewPresentationData?
     var controller: ViewController?
-    var transitionParams: TransitionParams?
-    
-    struct TransitionParams {
-        var contentArea: CGRect
-        
-        var sourceMessageFrame: CGRect
-        var sourceChatItemSnapshot: CALayer
-        var sourceTitleSnapshot: CALayer
-        var sourceTitleFrame: CGRect
-        var sourceAvatarSnapshot: CALayer
-        var sourceAvatarStartFrame: CGRect
-        var sourceAvatarFinalFrame: CGRect
-
-        var targetTitleView: ChatTitleView
-        var targetTitleViewFrame: CGRect
-        var targetAvatarNode: NavigationButtonNode
-        var targetAvatarFrameStart: CGRect
-        var targetAvatarFrameEnd: CGRect
-        var targetBackgroundLayer: CALayer
-        var targetBackgroundMaskLayer: CALayer
-        var targetBackgroundStartFrame: CGRect
-        var targetBackgroundEndFrame: CGRect
-    }
 
     init(context: AccountContext, gesture: ContextGesture?) {
         self.context = context
@@ -132,23 +106,23 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             self.effectView.alpha = 0.0
         }
-        
+
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         self.dimNode.alpha = 0.0
-        
+
         self.withoutBlurDimNode = ASDisplayNode()
         self.withoutBlurDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
         self.withoutBlurDimNode.alpha = 0.0
-        
+
         self.dismissNode = ASDisplayNode()
         self.dismissAccessibilityArea = AccessibilityAreaNode()
         self.dismissAccessibilityArea.accessibilityLabel = presentationData.strings.VoiceOver_DismissContextMenu
         self.dismissAccessibilityArea.accessibilityTraits = .button
-        
+
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
-        
+
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
         self.scrollNode.view.delaysContentTouches = false
@@ -156,18 +130,18 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         if #available(iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        
+
         self.contentContainerNode = ChatListPreviewContentContainerNode()
-                
+
         super.init()
         self.scrollNode.view.delegate = self
-        
+
         self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
         self.addSubnode(self.withoutBlurDimNode)
 
         self.addSubnode(self.clippingNode)
-        
+
         self.clippingNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.dismissNode)
         self.scrollNode.addSubnode(self.dismissAccessibilityArea)
@@ -179,7 +153,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             return true
         }
     }
-    
+
     deinit {
         if let propertyAnimator = self.propertyAnimator {
             if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -191,63 +165,57 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
 
     override func didLoad() {
         super.didLoad()
-        
+
         self.dismissNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimNodeTapped)))
     }
-    
+
     @objc private func dimNodeTapped() {
         guard self.animatedIn else {
             return
         }
         self.cancel?()
     }
-    
+
     func initializeContent() {
-        guard let presentationArguments,
-              let controller,
-              let (sourceNode, sourceRect) = presentationArguments.sourceNodeAndRect()
+        guard
+            let presentationArguments,
+            let controller,
+            let (sourceNode, sourceNodeRect) = presentationArguments.sourceNodeAndRect()
         else { return }
-        
+
         let controlleContentrNode = ContextControllerContentNode(sourceView: sourceNode.view, controller: controller, tapped: {
             print("tapped")
         })
-        
+
         self.contentContainerNode.controllerNode = controlleContentrNode
         self.scrollNode.addSubnode(self.contentContainerNode)
         self.contentContainerNode.clipsToBounds = true
         self.contentContainerNode.cornerRadius = 14.0
         self.contentContainerNode.addSubnode(controlleContentrNode)
-        
-        let projectedFrame = convertFrame(sourceRect, from: sourceNode.view, to: self.view)
+
+        let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
         self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
     }
-        
+
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancel?()
         }
     }
-    
+
     func animateIn() {
         self.gesture?.endPressedAppearance()
-        guard
-            let transitionParams
-        else { return }
-        let sourceTitleSnapshot = transitionParams.sourceTitleSnapshot
-//        let projectedFrame = convertFrame(sourceRect, from: sourceNode.view, to: self.view)
-        let sourceChatItemSnapshot = transitionParams.sourceChatItemSnapshot
-        let sourceAvatarSnapshot = transitionParams.sourceAvatarSnapshot
-        var updatedContentAreaInScreenSpace = transitionParams.contentArea
-        self.originalProjectedContentViewFrame = (transitionParams.sourceMessageFrame, transitionParams.sourceMessageFrame)
-
-        updatedContentAreaInScreenSpace.origin.x = 0.0
-        updatedContentAreaInScreenSpace.size.width = self.bounds.width
-        self.contentAreaInScreenSpace = updatedContentAreaInScreenSpace
+//        guard
+//            let tp = transitionParams
+//        else { return }
+//        let sourceTitleSnapshot = transitionParams.sourceTitleSnapshot
+//        let sourceChatItemSnapshot = tp.sourceChatItemSnapshot
+//        let sourceAvatarSnapshot = transitionParams.sourceAvatarSnapshot
 
         if let validLayout = self.validLayout {
             self.updateLayout(validLayout, transition: .immediate)
         }
-        
+
         if !self.dimNode.isHidden {
             self.dimNode.alpha = 1.0
             self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -255,101 +223,226 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             self.withoutBlurDimNode.alpha = 1.0
             self.withoutBlurDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
-        
-        if let propertyAnimator = self.propertyAnimator {
-            let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
-            propertyAnimator?.stopAnimation(true)
-        }
-        self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
-        self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.propertyAnimator = UIViewPropertyAnimator(duration: 0.3 * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
-        })
+//
+//        if let propertyAnimator = self.propertyAnimator {
+//            let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+//            propertyAnimator?.stopAnimation(true)
+//        }
+//        self.effectView.effect = makeCustomZoomBlurEffect(isLight: presentationData.theme.rootController.keyboardColor == .light)
+//        self.effectView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+//        self.propertyAnimator = UIViewPropertyAnimator(duration: 0.3 * UIView.animationDurationFactor(), curve: .easeInOut, animations: {
+//        })
+//
 
-        if let _ = self.propertyAnimator {
-            self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.3 * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
-                (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
-            }, completion: { [weak self] in
-                self?.didCompleteAnimationIn = true
-            })
-        } else {
-            UIView.animate(withDuration: 0.3, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
-            }, completion: { [weak self] _ in
-                self?.didCompleteAnimationIn = true
-//                self?.actionsContainerNode.animateIn()
-            })
-        }
+//        let springDuration: Double = 0.52
+//        let springDamping: CGFloat = 110.0
 
-        let springDuration: Double = 0.52
-        let springDamping: CGFloat = 110.0
-        
-        self.contentContainerNode.allowsGroupOpacity = true
-        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 1.15, completion: { [weak self] _ in
-            self?.contentContainerNode.allowsGroupOpacity = false
-        })
-        
-        
-        sourceAvatarSnapshot.animateAlpha(from: 1.0, to: 0.0, duration: 1.15)
-        sourceChatItemSnapshot.animateAlpha(from: 1.0, to: 0.0, duration: 1.15)
-        
-        
+//        self.contentContainerNode.allowsGroupOpacity = true
+//        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 1.15, completion: { [weak self] _ in
+//            self?.contentContainerNode.allowsGroupOpacity = false
+//        })
+
+//        sourceAvatarSnapshot.animateAlpha(from: 1.0, to: 0.0, duration: 1.15)
+//        sourceChatItemSnapshot.animateAlpha(from: 1.0, to: 0.0, duration: 1.15)
+
         if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
             let localSourceFrame = self.view.convert(
-                CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX,
-                                       y: originalProjectedContentViewFrame.1.minY),
-                       size: CGSize(width: originalProjectedContentViewFrame.1.width,
-                                    height: originalProjectedContentViewFrame.1.height)),
+                CGRect(
+                    origin: CGPoint(
+                        x: originalProjectedContentViewFrame.1.minX,
+                        y: originalProjectedContentViewFrame.1.minY
+                    ),
+                    size: CGSize(
+                        width: originalProjectedContentViewFrame.1.width,
+                        height: originalProjectedContentViewFrame.1.height
+                    )
+                ),
                 to: self.scrollNode.view
             )
 
-            self.contentContainerNode.layer.animateSpring(from: min(localSourceFrame.width / self.contentContainerNode.frame.width, localSourceFrame.height / self.contentContainerNode.frame.height) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-           
-//            if let source = self.contentContainerNode.controllerNode {
-//
-//            }
+            print("locate source frame: \(localSourceFrame) originalProjectedContentViewFrame: \(originalProjectedContentViewFrame)")
+
+            CATransaction.begin()
+            CATransaction.setCompletionBlock {
+                print("animation finsihed")
+            }
+            CATransaction.setAnimationDuration(0.5)
+
+            if let _ = self.propertyAnimator {
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 1.15 * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
+                    (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
+                }, completion: { [weak self] in
+                    self?.didCompleteAnimationIn = true
+                })
+            } else {
+                UIView.animate(withDuration: 1.15, animations: {
+                    self.effectView.effect = makeCustomZoomBlurEffect(isLight: self.presentationData.theme.rootController.keyboardColor == .light)
+                }, completion: { [weak self] _ in
+                    self?.didCompleteAnimationIn = true
+                    //                self?.actionsContainerNode.animateIn()
+                })
+            }
+            CATransaction.commit()
+            //prepare variables to transition snapshots
+            guard
+                let controller = self.contentContainerNode.controllerNode,
+                let (sourceNode, sourceFrame) = self.presentationArguments?.sourceNodeAndRect(),
+                let contentArea = self.presentationArguments?.contentArea(),
+                let sourceChatItem = sourceNode.supernode as? ChatListItemNode else { return }
+
+            let titleNode = sourceChatItem.titleNode
+            let titleSnapshot = titleNode.view.snapshotContentTree()
+            let titleSourceframe = self.view.convert(titleNode.view.frame, from: titleNode.view)
+
+            let avatarNode = sourceChatItem.avatarContainerNode
+            let avatarSnapshot = avatarNode.view.snapshotContentTree()
+            let avatarSourceFrame = self.view.convert(avatarNode.view.frame, from: avatarNode.view)
+
+            titleNode.isHidden = true
+            avatarNode.isHidden = true
+
+            guard
+                let chatSnapshot = sourceChatItem.view.snapshotContentTree(),
+                let titleView = controller.controller.navigationItem.titleView as? ChatTitleView,
+                let navigationBackgroundSnapshot = controller.controller.navigationBar?.layer.snapshotContentTree(),
+                let titleSnapshot,
+                let avatarSnapshot
+            else {
+                titleNode.isHidden = false
+                avatarNode.isHidden = false
+                return
+            }
+
+            titleNode.isHidden = false
+            avatarNode.isHidden = false
             
-            let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
-            if let controller = self.contentContainerNode.controllerNode {
-                let snapshotView: UIView? = nil// controller.sourceNode.view.snapshotContentTree()
-                if let snapshotView = snapshotView {
-                    controller.sourceView.isHidden = true
-                    
-                    self.view.insertSubview(snapshotView, belowSubview: self.contentContainerNode.view)
-                    snapshotView.layer.animateSpring(from: NSValue(cgPoint: localSourceFrame.center), to: NSValue(cgPoint: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0)), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
-                    snapshotView.layer.animateSpring(from: 1.0 as NSNumber, to: (self.contentContainerNode.frame.width / localSourceFrame.width) as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                        snapshotView?.removeFromSuperview()
-                    })
-                }
+            
+            // snapshot transition and resize
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.35)
+
+            let targeBgPosition = CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0)
+            _ = self.contentContainerNode.frame.size
+
+            let sourceMessageFrameStart = self.view.convert(sourceFrame, from: titleView)
+
+            let navigationFrameStart = sourceMessageFrameStart.insetBy(dx: .zero, dy: -15)
+            //                let contentViewFrame = originalProjectedContentViewFrame.1
+            let navigationFrameEnd = self.view.convert(controller.controller.navigationBar!.frame, from: controller.controller.navigationBar!.view)
+
+            let convertedFrame = self.view
+                .convert(titleView.frame, from: titleView) // CGRect(x: (contentViewFrame.width - titleSourceframe.width) / 2, y: contentViewFrame.minY + titleSourceframe.height / 2, width: titleSourceframe.width, height: titleSourceframe.height)
+            let titleFinalFrame = CGRect(
+                x: (originalProjectedContentViewFrame.1.width - convertedFrame.width) / 2,
+                y: convertedFrame.minY - (titleView.frame.height - convertedFrame.height.rounded()) * 2 - 5,
+                width: convertedFrame.width,
+                height: titleView.frame.height
+            )
+
+            //                    let heightScale =  titleSourceframe.height / titleFinalFrame.height
+
+            let targetAvatarSize = CGSize(width: 36, height: 36)
+            let avatarFinalFrame = CGRect(
+                x: titleFinalFrame.minX - targetAvatarSize.width / 2,
+                y: titleFinalFrame.midY - targetAvatarSize.height / 2,
+                width: targetAvatarSize.width,
+                height: targetAvatarSize.height
+            )
+
+            let smallAvatarHeight = CGFloat(20)
+
+            let sourceMessageFrameFinal = CGRect(
+                x: avatarFinalFrame.minX,
+                y: avatarFinalFrame.midY - sourceMessageFrameStart.height / 2,
+                width: sourceMessageFrameStart.width,
+                height: sourceMessageFrameStart.height
+            )
+
+            let startedBackgrounMaskPath = UIBezierPath(roundedRect: sourceMessageFrameStart, cornerRadius: .zero)
+            let targtePath = UIBezierPath(roundedRect: contentArea, cornerRadius: 40)
+
+            let targetBackgroundMaskLayer = CAShapeLayer()
+            targetBackgroundMaskLayer.frame = clippingNode.layer.bounds
+            targetBackgroundMaskLayer.position = targeBgPosition
+            navigationBackgroundSnapshot.mask = targetBackgroundMaskLayer
+            navigationBackgroundSnapshot.masksToBounds = true
+
+            targetBackgroundMaskLayer.path = targtePath.cgPath
+            targetBackgroundMaskLayer.path = targtePath.cgPath
+            clippingNode.layer.mask = targetBackgroundMaskLayer
+            let animation = clippingNode.layer.makeAnimation(from: startedBackgrounMaskPath.cgPath, to: targtePath.cgPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3) { _ in
+                print("mask path updated")
+            }
+            animation.fillMode = .forwards
+            targetBackgroundMaskLayer.add(animation, forKey: "path")
+
+            print("titleSourceframe: \(titleSourceframe) titleFinalFrame: \(titleFinalFrame) navigationFrameStar: \(navigationFrameStart)")
+
+            avatarSnapshot.layer.animateScale(from: 1.0, to: smallAvatarHeight / avatarFinalFrame.height, duration: 1.0)
+
+            chatSnapshot.frame = sourceMessageFrameStart
+            chatSnapshot.layer.addSublayer(navigationBackgroundSnapshot)
+            self.view.addSubview(chatSnapshot)
+            chatSnapshot.layer.animatePosition(from: sourceMessageFrameStart.center, to: sourceMessageFrameFinal.center, duration: 0.3, removeOnCompletion: true) { _ in
+                print("title snapshot animation finished")
+                //                    chatSnapshot.removeFromSuperview()
+            }
+            chatSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false)
+
+            titleSnapshot.frame = titleSourceframe
+            self.view.addSubview(titleSnapshot)
+            titleSnapshot.layer.animatePosition(from: titleSourceframe.center, to: titleFinalFrame.center, duration: 0.3, removeOnCompletion: true) { _ in
+                print("title snapshot animation finished")
+                chatSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 1.5, removeOnCompletion: false)
+                //                    titleSnapshot.removeFromSuperview()
             }
             
-            let targetPosition = CGPoint(x: localSourceFrame.midY, y: localSourceFrame.minX + 20)
-            sourceTitleSnapshot.animateSpring(from: NSValue(cgPoint: sourceTitleSnapshot.position), to: NSValue(cgPoint: targetPosition), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
-            
-            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
-                self?.animatedIn = true
-            })
+
+            avatarSnapshot.frame = avatarSourceFrame
+            self.view.addSubview(avatarSnapshot)
+            avatarSnapshot.layer.animatePosition(from: avatarSourceFrame.center, to: avatarFinalFrame.center, duration: 0.3, removeOnCompletion: true) { _ in
+                print("avatarSnapshot snapshot animation finished")
+                avatarSnapshot.removeFromSuperview()
+            }
+            avatarSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false)
+
+
+            let navigationSnapshotView = UIView()
+            navigationSnapshotView.layer.addSublayer(navigationBackgroundSnapshot)
+            navigationSnapshotView.frame = navigationFrameStart
+            navigationSnapshotView.layer.animatePosition(from: navigationFrameStart.center, to: navigationFrameEnd.center, duration: 0.3, removeOnCompletion: true) { _ in
+                print("navigationSnapshotView snapshot animation finished")
+                navigationSnapshotView.removeFromSuperview()
+            }
+
+//                let pf = originalProjectedContentViewFrame.1
+
+            CATransaction.commit()
+        
+//            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: targetBackgroundMaskLay cgPath), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
+//                self?.animatedIn = true
+//            })
         }
     }
-    
+
     func updateLayout() {
         if let layout = self.validLayout {
             self.updateLayout(layout, transition: .immediate)
         }
     }
-    
+
     func updateLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if self.isAnimatingOut {
             return
         }
 
         self.validLayout = layout
-        
+
         let targetFrame = CGRect(origin: CGPoint(), size: layout.size)
         transition.updateFrame(view: self.effectView, frame: targetFrame)
         transition.updateFrame(node: self.dimNode, frame: targetFrame)
         transition.updateFrame(node: self.withoutBlurDimNode, frame: targetFrame)
-        
+
         switch layout.metrics.widthClass {
         case .compact:
             if self.effectView.superview == nil {
@@ -373,21 +466,21 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        
-        let actionsSideInset: CGFloat = layout.safeInsets.left + 12.0
+
+        let actionsSideInset: CGFloat = layout.safeInsets.left + 11
         let contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
 
         let actionsBottomInset: CGFloat = 11.0
-        
+
         if let contentParentNode = contentContainerNode.controllerNode {
             var projectedFrame: CGRect = convertFrame(contentParentNode.sourceView.bounds, from: contentParentNode.sourceView, to: self.view)
             if let presentationArguments, let (sourceNode, sourceRect) = presentationArguments.sourceNodeAndRect() {
                 projectedFrame = convertFrame(sourceRect, from: sourceNode.view, to: self.view)
             }
             self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
-            if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                let topEdge = max(contentTopInset, presentationArguments!.contentArea().minY)
-                
+            if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame, let contentArea = self.presentationArguments?.contentArea() {
+                let topEdge = max(contentTopInset, contentArea.minY)
+
                 let constrainedWidth: CGFloat
                 if layout.size.width < layout.size.height {
                     constrainedWidth = layout.size.width
@@ -395,7 +488,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     constrainedWidth = floor(layout.size.width / 2.0)
                 }
                 let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
-                
+
                 var contentUnscaledSize: CGSize
                 if case .compact = layout.metrics.widthClass {
                     let proposedContentHeight: CGFloat
@@ -406,28 +499,52 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
 
                     contentUnscaledSize = CGSize(width: constrainedWidth, height: max(100.0, proposedContentHeight))
-                    if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                    if
+                        let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(
+                            size: contentUnscaledSize,
+                            metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
+                            deviceMetrics: layout.deviceMetrics,
+                            intrinsicInsets: UIEdgeInsets(),
+                            safeInsets: UIEdgeInsets(),
+                            additionalInsets: UIEdgeInsets(),
+                            statusBarHeight: nil,
+                            inputHeight: nil,
+                            inputHeightIsInteractivellyChanging: false,
+                            inVoiceOver: false
+                        )) {
                         contentUnscaledSize = preferredSize
                     }
                 } else {
                     let proposedContentHeight = layout.size.height - topEdge - actionsSideInset - layout.intrinsicInsets.bottom
 
-                    contentUnscaledSize = CGSize(width: min(layout.size.width, 340.0), height: min(568.0, proposedContentHeight))
-                    if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), additionalInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                    contentUnscaledSize = CGSize(width: min(layout.size.width, 340.0), height: min(400.0, proposedContentHeight))
+                    if
+                        let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(
+                            size: contentUnscaledSize,
+                            metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact),
+                            deviceMetrics: layout.deviceMetrics,
+                            intrinsicInsets: UIEdgeInsets(),
+                            safeInsets: UIEdgeInsets(),
+                            additionalInsets: UIEdgeInsets(),
+                            statusBarHeight: nil,
+                            inputHeight: nil,
+                            inputHeightIsInteractivellyChanging: false,
+                            inVoiceOver: false
+                        )) {
                         contentUnscaledSize = preferredSize
                     }
                 }
                 let contentSize = CGSize(width: floor(contentUnscaledSize.width * contentScale), height: floor(contentUnscaledSize.height * contentScale))
                 self.contentContainerNode.updateLayout(size: contentUnscaledSize, scaledSize: contentSize, transition: transition)
-                
+
                 let contentActionsSpacing: CGFloat = .zero
                 let actionsSize: CGSize = .zero
-                
+
                 let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height)
                 var originalActionsFrame: CGRect
                 var originalContentFrame: CGRect
                 var contentHeight: CGFloat
-                                
+
                 if case .compact = layout.metrics.widthClass {
                     if layout.size.width < layout.size.height {
                         let sideInset = floor((layout.size.width - contentSize.width) / 2.0)
@@ -471,121 +588,157 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                     contentHeight = max(contentHeight, originalActionsFrame.maxY + actionsBottomInset)
                     contentHeight = max(contentHeight, originalContentFrame.maxY + actionsBottomInset)
                 }
-                
+
                 let scrollContentSize = CGSize(width: layout.size.width, height: contentSize.height)
+                print("originalContentFrame: \(originalContentFrame) contentTopInset: \(contentTopInset) scrollContentSize: \(scrollContentSize)")
+
                 if self.scrollNode.view.contentSize != scrollContentSize {
                     self.scrollNode.view.contentSize = scrollContentSize
                 }
-                
+
                 let overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
-                
+
                 let contentContainerFrame = originalContentFrame
                 transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
-                
-                
-                
+
+                if let maskLayer = self.clippingNode.layer.mask as? CAShapeLayer {
+                    let newPath = UIBezierPath(roundedRect: originalContentFrame, cornerRadius: 40)
+                    transition.updatePath(layer: maskLayer, path: newPath.cgPath)
+                }
+
 //                let contentContainerFrame = CGRect(origin: CGPoint(x: floor(originalProjectedContentViewFrame.1.midX - contentSize.width / 2.0), y: floor(originalProjectedContentViewFrame.1.midY - contentSize.height / 2.0)), size: contentSize)
 //                transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
-
             }
         }
-        
+
         transition.updateFrame(node: self.dismissNode, frame: CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize))
         self.dismissAccessibilityArea.frame = CGRect(origin: CGPoint(), size: self.scrollNode.view.contentSize)
     }
 
-    
+    private func animateBlurBackground(isHidden: Bool) {}
+
     func animateOut(targetNode: ASDisplayNode?, completion: (() -> Void)? = nil) {
         var dimCompleted = false
-        
+
         let internalCompletion: () -> Void = { [weak self] in
             if let strongSelf = self, dimCompleted {
                 strongSelf.dismiss?()
             }
             completion?()
         }
-        
+
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
             dimCompleted = true
             internalCompletion()
         })
     }
-    
+
     func updatePresentationArguments(_ arguments: ChatListPreviewPresentationData?, controller: ViewController?) {
         self.presentationArguments = arguments
         self.controller = controller
-        guard
-            let (sourceNode, sourceFrame) = arguments?.sourceNodeAndRect(),
-            let contentArea = arguments?.contentArea(),
-            let sourceChatItem = sourceNode.supernode as? ChatListItemNode,
-            let controller = controller
-        else { return }
-                
-        self.gesture?.endPressedAppearance()
-        
-        let titleNode = sourceChatItem.titleNode
-        let titleSnapshot = titleNode.layer.snapshotContentTree()
-        let titleSourceframe = sourceChatItem.convert(sourceChatItem.titleNode.frame, to: nil)
+//        guard
+//            let (sourceNode, sourceFrame) = arguments?.sourceNodeAndRect(),
+//            let contentArea = arguments?.contentArea(),
+//            let sourceChatItem = sourceNode.supernode as? ChatListItemNode,
+//            let controller = controller
+//        else { return }
+//
+//        self.gesture?.endPressedAppearance()
+//
+//        let titleNode = sourceChatItem.titleNode
+//        let titleSnapshot = titleNode.layer.snapshotContentTree()
+//        let titleSourceframe = titleNode.convert(titleNode.frame, to: nil)
+//
+//        let avatarNode = sourceChatItem.avatarContainerNode
+//        let avatarSnapshot = avatarNode.layer.snapshotContentTree()
+//        let avatarSourceFrame = avatarNode.convert(avatarNode.frame, to: nil)
+//
+//        titleNode.isHidden = true
+//        avatarNode.isHidden = true
+//
+//        guard
+//            let chatSnapshot = sourceChatItem.layer.snapshotContentTree(),
+//            let sourceMessageNode,
+//            let titleSnapshot,
+//            let avatarSnapshot,
+//            let navigationBar = controller.navigationBar,
+//            let avatarNode = navigationBar.subnodes?.compactMap({ $0.subnodes }).flatMap({ $0 }).first(where: { $0 is NavigationButtonNode }) as? NavigationButtonNode,
+//            let titleView = controller.navigationItem.titleView as? ChatTitleView,
+//            let navigationBackgroundSnapshot = navigationBar.layer.snapshotContentTree()
+//        else { return }
+//
+//        let sourceMessageFrameStart = sourceNode.convert(sourceFrame, to: nil)//.align(in: finalFrame)
+//
+//        let finalFrame = previewFrame(from: contentArea)
+//        let navigationFrameStart = sourceMessageFrameStart.insetBy(dx: .zero, dy: -15)
+//        let navigationFrameEnd = CGRect(origin: finalFrame.origin, size: CGSize(width: finalFrame.width, height: 43.0))
+//
+//        let titleFinalFrame = CGRect(x: (finalFrame.width - titleSourceframe.width) / 2, y: finalFrame.minX + titleSourceframe.height / 2, width: titleSourceframe.width, height: titleSourceframe.height)
+//        let targetAvatarSize = CGSize(width: 36, height: 36)
+//        let avatarFinalFrame = CGRect(x: (titleFinalFrame.minX - targetAvatarSize.width) / 2 + finalFrame.minX,
+//                                      y: (navigationFrameEnd.height - targetAvatarSize.height) / 2, width: targetAvatarSize.width, height: targetAvatarSize.height)
+//
+//        let targetAvatarStart = CGRect(origin: CGPoint(x: finalFrame.maxX - 5 - (targetAvatarSize.width / 2),
+//                                                       y: (sourceMessageFrameStart.minY - (targetAvatarSize.height / 2))),
+//                                       size: CGSize(width: targetAvatarSize.width / 2, height: targetAvatarSize.height / 2))
+//
+//        let contentScale = self.view.contentScaleFactor
+//
+//        chatSnapshot.bounds = sourceMessageFrameStart
+//        chatSnapshot.contentsScale = contentScale
+//        chatSnapshot.contentsGravity = .resizeAspect
+//        chatSnapshot.position = sourceMessageFrameStart.center
+//        sourceMessageNode.layer.addSublayer(chatSnapshot)
+//
+//        let targetBackgroundMaskLayer = CAShapeLayer()
+//        targetBackgroundMaskLayer.path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: navigationFrameStart.size), cornerRadius: .zero).cgPath
+//        targetBackgroundMaskLayer.bounds = sourceMessageFrameStart
+//        targetBackgroundMaskLayer.position = sourceMessageFrameStart.center
+//        navigationBackgroundSnapshot.mask = targetBackgroundMaskLayer
+//        sourceMessageNode.layer.addSublayer(navigationBackgroundSnapshot)
+//
+//        titleSnapshot.bounds = titleSourceframe
+//        titleSnapshot.position = titleSourceframe.center
+//        titleSnapshot.contentsScale = contentScale
+//        titleSnapshot.contentsGravity = .resizeAspect
+//        sourceMessageNode.layer.addSublayer(titleSnapshot)
+//
+//        self.sourceAvatarNode?.bounds = avatarSourceFrame
+//        self.sourceAvatarNode?.position = avatarSourceFrame.center
+//        self.sourceAvatarNode?.layer.addSublayer(avatarSnapshot)
+//        avatarSnapshot.contentsScale = contentScale
+//        avatarSnapshot.contentsGravity = .resizeAspect
+//        avatarSnapshot.frame = self.sourceAvatarNode!.layer.bounds
+//
+//        let sourceMessageFrameEnd = CGRect(x: finalFrame.minX + 60, y: navigationFrameEnd.minY, width: sourceMessageFrameStart.width, height: sourceMessageFrameStart.height)
+//        let targtetAvatarEnd = CGRect(origin: CGPoint(x: finalFrame.maxX - 5 - targetAvatarSize.width, y: finalFrame.minY + 5), size: targetAvatarSize)
+//
+//
+//        self.transitionParams = TransitionParams(contentArea: finalFrame,
+//                                                 sourceMessageFrameStart: sourceMessageFrameStart,
+//                                                 sourceMessageFrameEnd: sourceMessageFrameEnd,
+//                                                 sourceChatItemSnapshot: chatSnapshot,
+//                                                 sourceTitleSnapshot: titleSnapshot,
+//                                                 sourceTitleFrame: titleSourceframe,
+        ////                                                 sourceAvatarSnapshot: avatarSnapshot,
+//                                                 sourceAvatarStartFrame: avatarSourceFrame,
+//                                                 sourceAvatarFinalFrame: avatarFinalFrame,
+//                                                 targetTitleView: titleView,
+//                                                 targetTitleViewFrame: titleFinalFrame,
+//                                                 targetAvatarNode: avatarNode,
+//                                                 targetAvatarFrameStart: targetAvatarStart,
+//                                                 targetAvatarFrameEnd: targtetAvatarEnd,
+//                                                 targetBackgroundLayer: navigationBackgroundSnapshot,
+//                                                 targetBackgroundMaskLayer: targetBackgroundMaskLayer,
+//                                                 targetBackgroundStartFrame: navigationFrameStart,
+//                                                 targetBackgroundEndFrame: navigationFrameEnd)
+//
+//        print("calculated transition params: \(self.transitionParams!)")
+    }
 
-        let avatarNode = sourceChatItem.avatarContainerNode
-        let avatarSnapshot = avatarNode.layer.snapshotContentTree()
-        let avatarSourceFrame = sourceChatItem.convert(avatarNode.frame, to: nil)
-
-        titleNode.isHidden = true
-        avatarNode.isHidden = true
-
-        guard
-            let chatSnapshot = sourceChatItem.layer.snapshotContentTree(),
-            let titleSnapshot,
-            let avatarSnapshot,
-            let navigationBar = controller.navigationBar,
-            let avatarNode = navigationBar.subnodes?.compactMap({ $0.subnodes }).flatMap({ $0 }).first(where: { $0 is NavigationButtonNode }) as? NavigationButtonNode,
-            let titleView = controller.navigationItem.titleView as? ChatTitleView,
-            let navigationBackgroundSnapshot = navigationBar.layer.snapshotContentTree()
-        else { return }
-        
-        let finalFrame = contentArea
-        let titleFinalFrame = titleView.frame //update according to current content area
-        let targetAvatarSize = avatarNode.bounds.size
-        let avatarFinalFrame = CGRect(x: titleFinalFrame.minX / 2 - targetAvatarSize.width / 2, y: avatarNode.frame.minY, width: targetAvatarSize.width, height: targetAvatarSize.height)
-        let targetAvatarStart = CGRect(origin: CGPoint(x: avatarNode.frame.minX, y: sourceFrame.midY - 12), size: CGSize(width: 24, height: 24))
-        let targtetAvatarEnd = titleView.frame
-        
-        let targetBackgroundMaskLayer = CAShapeLayer()
-        targetBackgroundMaskLayer.path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: sourceFrame.size), cornerRadius: .zero).cgPath
-        navigationBackgroundSnapshot.mask = targetBackgroundMaskLayer
-        
-        chatSnapshot.bounds = sourceChatItem.convert(sourceFrame, to: nil)
-        chatSnapshot.position = sourceChatItem.convert(sourceFrame.center, to: nil)
-        self.layer.addSublayer(chatSnapshot)
-        
-        titleSnapshot.bounds = sourceChatItem.convert(titleSourceframe, to: nil)
-        titleSnapshot.position = sourceChatItem.convert(titleSourceframe.center, to: nil)
-        self.layer.addSublayer(titleSnapshot)
-
-        avatarSnapshot.bounds = sourceChatItem.convert(avatarSourceFrame, to: nil)
-        avatarSnapshot.position = sourceChatItem.convert(avatarSourceFrame.center, to: nil)
-        self.layer.addSublayer(avatarSnapshot)
-
-        self.transitionParams = TransitionParams(contentArea: contentArea,
-                                                 sourceMessageFrame: sourceFrame,
-                                                 sourceChatItemSnapshot: chatSnapshot,
-                                                 sourceTitleSnapshot: titleSnapshot,
-                                                 sourceTitleFrame: titleSourceframe,
-                                                 sourceAvatarSnapshot: avatarSnapshot,
-                                                 sourceAvatarStartFrame: avatarSourceFrame,
-                                                 sourceAvatarFinalFrame: avatarFinalFrame,
-                                                 targetTitleView: titleView,
-                                                 targetTitleViewFrame: titleFinalFrame,
-                                                 targetAvatarNode: avatarNode,
-                                                 targetAvatarFrameStart: targetAvatarStart,
-                                                 targetAvatarFrameEnd: targtetAvatarEnd,
-                                                 targetBackgroundLayer: navigationBackgroundSnapshot,
-                                                 targetBackgroundMaskLayer: targetBackgroundMaskLayer,
-                                                 targetBackgroundStartFrame: sourceFrame,
-                                                 targetBackgroundEndFrame: finalFrame)
-        
-        print("calculated transition params: \(self.transitionParams!) controller layout size: \(String(describing: controller.currentlyAppliedLayout)) contentArea: \(contentArea)")
+    private func previewFrame(from contentArea: CGRect) -> CGRect {
+        let size = CGSize(width: min(self.bounds.width - 22, contentArea.width), height: min(400, contentArea.height))
+        return CGRect(x: (self.bounds.width - size.width) / 2, y: (self.bounds.height - size.height) / 2, width: size.width, height: size.height)
     }
 }
 
@@ -595,17 +748,17 @@ public final class ChatListPreviewController: ViewController {
 
     private var animatedDidAppear = false
     private var wasDismissed = false
-    
+
     private var controllerNode: ChatListPreviewControllerNode {
         return self.displayNode as! ChatListPreviewControllerNode
     }
-    
+
     private var animatedIn = false
-    
+
     private let context: AccountContext
     private var chatLocation: ChatLocation
     private var chatPrevewController: ChatController
-    
+
     public init(context: AccountContext, chatLocation: ChatLocation, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil) {
         self.context = context
         self.chatLocation = chatLocation
@@ -617,11 +770,11 @@ public final class ChatListPreviewController: ViewController {
         self.lockOrientation = true
         self.blocksBackgroundWhenInOverlay = true
     }
-    
-    required public init(coder aDecoder: NSCoder) {
+
+    @available(*, unavailable) public required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+
     override public func loadDisplayNode() {
         self.displayNode = ChatListPreviewControllerNode(context: context, gesture: gesture)
         self.controllerNode.dismiss = { [weak self] in
@@ -632,67 +785,58 @@ public final class ChatListPreviewController: ViewController {
         }
         self.displayNodeDidLoad()
     }
-    
-    public override func viewWillAppear(_ animated: Bool) {
+
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         if let _ = self.presentationArguments as? ChatListPreviewPresentationData {
             self.updateChatLocation(self.chatLocation)
             self.ready.set(.single(true))
         }
     }
-    
+
     override public func viewDidAppear(_ animated: Bool) {
         if self.ignoreAppearanceMethodInvocations() {
             return
         }
         super.viewDidAppear(animated)
-        let _ = (self.ready.get() |> deliverOnMainQueue).start(next: { value in
+        _ = (self.ready.get() |> deliverOnMainQueue).start(next: { value in
             guard value else { return }
-            
+
             self.controllerNode.initializeContent()
-            
+
             print("content is ready: \(value)")
-            if !self.wasDismissed && !self.animatedDidAppear {
+            if !self.wasDismissed, !self.animatedDidAppear {
                 self.animatedDidAppear = true
                 self.controllerNode.animateIn()
             }
         })
-        
-//        super.viewDidAppear(animated)
-//        guard
-//            let arguments = self.presentationArguments as? ChatListPreviewPresentationData,
-//            let (sourceNode, _) = arguments.sourceAndRect()
-//        else { return }
-//
-//        if !self.animatedIn {
-//            self.animatedIn = true
-//            self.controllerNode.animateIn(sourceNode: sourceNode)
-//        }
     }
-    
+
     override public func dismiss(completion: (() -> Void)? = nil) {
         guard
             let arguments = self.presentationArguments as? ChatListPreviewPresentationData,
             let (sourceNode, _) = arguments.sourceNodeAndRect()
         else { return }
-        
+
         self.controllerNode.animateOut(targetNode: sourceNode, completion: completion)
     }
-    
+
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         self.chatPrevewController.updateNavigationBarLayout(layout, transition: transition)
         self.controllerNode.updateLayout(layout, transition: transition)
     }
-    
+
     public func updateChatLocation(_ chatLocation: ChatLocation) {
         self.chatLocation = chatLocation
         let chatController = context.sharedContext.makeChatController(context: self.context, chatLocation: chatLocation, subject: nil, botStart: nil, mode: .standard(previewing: true))
         self.chatPrevewController = chatController
         if let layout = self.currentlyAppliedLayout {
             chatController.updateNavigationBarLayout(layout, transition: .immediate)
-            self.controllerNode.updatePresentationArguments(self.presentationArguments as? ChatListPreviewPresentationData,
-                                                            controller: chatController)
+            self.controllerNode.updatePresentationArguments(
+                self.presentationArguments as? ChatListPreviewPresentationData,
+                controller: chatController
+            )
         }
 
 //        if self.chatLocation != chatLocation {
