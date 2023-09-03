@@ -1066,8 +1066,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .startAttach:
                         break
-                    case .boost:
-                        break
                 }
             }
         }))
