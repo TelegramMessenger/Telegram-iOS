@@ -400,8 +400,8 @@ final class JoinLinkPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
         self.transitionToContentNode(contentNode)
     }
     
-    func setRequestPeer(image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, isGroup: Bool) {
-        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .request(isGroup: isGroup, image: image, title: title, about: about, memberCount: memberCount))
+    func setRequestPeer(image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, isGroup: Bool, isVerified: Bool, isFake: Bool, isScam: Bool) {
+        let contentNode = JoinLinkPreviewPeerContentNode(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, content: .request(isGroup: isGroup, image: image, title: title, about: about, memberCount: memberCount, isVerified: isVerified, isFake: isFake, isScam: isScam))
         contentNode.join = { [weak self] in
             self?.join?()
         }

@@ -10,6 +10,8 @@ import SelectablePeerNode
 import ShareController
 import SolidRoundedButtonNode
 import ActivityIndicator
+import ComponentFlow
+import EmojiStatusComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 42.0)
 
@@ -31,33 +33,60 @@ private final class MoreNode: ASDisplayNode {
 final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainerNode {
     enum Content {
         case invite(isGroup: Bool, image: TelegramMediaImageRepresentation?, title: String, memberCount: Int32, members: [EnginePeer])
-        case request(isGroup: Bool, image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32)
+        case request(isGroup: Bool, image: TelegramMediaImageRepresentation?, title: String, about: String?, memberCount: Int32, isVerified: Bool, isFake: Bool, isScam: Bool)
         
         var isGroup: Bool {
             switch self {
-                case let .invite(isGroup, _, _, _, _), let .request(isGroup, _, _, _, _):
+                case let .invite(isGroup, _, _, _, _), let .request(isGroup, _, _, _, _, _, _, _):
                     return isGroup
             }
         }
         
         var image: TelegramMediaImageRepresentation? {
             switch self {
-                case let .invite(_, image, _, _, _), let .request(_, image, _, _, _):
+                case let .invite(_, image, _, _, _), let .request(_, image, _, _, _, _, _, _):
                     return image
             }
         }
         
         var title: String {
             switch self {
-                case let .invite(_, _, title, _, _), let .request(_, _, title, _, _):
+                case let .invite(_, _, title, _, _), let .request(_, _, title, _, _, _, _, _):
                     return title
             }
         }
         
         var memberCount: Int32 {
             switch self {
-                case let .invite(_, _, _, memberCount, _), let .request(_, _, _, _, memberCount):
+                case let .invite(_, _, _, memberCount, _), let .request(_, _, _, _, memberCount, _, _, _):
                     return memberCount
+            }
+        }
+        
+        var isVerified: Bool {
+            switch self {
+            case .invite:
+                return false
+            case let .request(_, _, _, _, _, isVerified, _, _):
+                return isVerified
+            }
+        }
+        
+        var isFake: Bool {
+            switch self {
+            case .invite:
+                return false
+            case let .request(_, _, _, _, _, _, isFake, _):
+                return isFake
+            }
+        }
+        
+        var isScam: Bool {
+            switch self {
+            case .invite:
+                return false
+            case let .request(_, _, _, _, _, _, _, isScam):
+                return isScam
             }
         }
     }
@@ -65,7 +94,8 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     private var contentOffsetUpdated: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let avatarNode: AvatarNode
-    private let titleNode: ASTextNode
+    private let titleNode: ImmediateTextNode
+    private var avatarIcon: ComponentView<Empty>?
     private let countNode: ASTextNode
     private let aboutNode: ASTextNode
     private let descriptionNode: ASTextNode
@@ -76,11 +106,22 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
     
     private let actionButtonNode: SolidRoundedButtonNode
     
+    private let context: AccountContext
+    private let content: Content
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    
     var join: (() -> Void)?
     
     init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, content: JoinLinkPreviewPeerContentNode.Content) {
+        self.context = context
+        self.content = content
+        self.theme = theme
+        self.strings = strings
+        
         self.avatarNode = AvatarNode(font: avatarFont)
-        self.titleNode = ASTextNode()
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.maximumNumberOfLines = 2
         self.titleNode.textAlignment = .center
         self.countNode = ASTextNode()
         self.aboutNode = ASTextNode()
@@ -153,7 +194,7 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         }
         self.moreNode.flatMap(self.peersScrollNode.addSubnode)
         
-        if case let .request(isGroup, _, _, about, _) = content {
+        if case let .request(isGroup, _, _, about, _, _, _, _) = content {
             if let about = about, !about.isEmpty {
                 self.aboutNode.attributedText = NSAttributedString(string: about, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor, paragraphAlignment: .center)
                 self.addSubnode(self.aboutNode)
@@ -219,7 +260,22 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         }
         
         let constrainSize = CGSize(width: size.width - 32.0, height: size.height)
-        let titleSize = self.titleNode.measure(constrainSize)
+        
+        var statusIcon: EmojiStatusComponent.Content?
+        var constrainedTextSize = constrainSize
+        if self.content.isFake {
+            statusIcon = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_FakeAccount.uppercased())
+            constrainedTextSize.width -= 32.0
+        } else if self.content.isScam {
+            statusIcon = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_ScamAccount.uppercased())
+            constrainedTextSize.width -= 32.0
+        } else if self.content.isVerified {
+            statusIcon = .verified(fillColor: self.theme.list.itemCheckColors.fillColor, foregroundColor: self.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
+            constrainedTextSize.width -= 24.0
+        }
+        
+        let titleInfo = self.titleNode.updateLayoutFullInfo(constrainedTextSize)
+        let titleSize = titleInfo.size
         nodeHeight += titleSize.height
         
         let verticalOrigin = size.height - nodeHeight
@@ -228,7 +284,51 @@ final class JoinLinkPreviewPeerContentNode: ASDisplayNode, ShareContentContainer
         
         transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: floor((size.width - avatarSize) / 2.0), y: verticalOrigin + 32.0), size: CGSize(width: avatarSize, height: avatarSize)))
         
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0), size: titleSize))
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        if let statusIcon, let lastLine = titleInfo.linesRects().last {
+            let animationCache = self.context.animationCache
+            let animationRenderer = self.context.animationRenderer
+            
+            let avatarIcon: ComponentView<Empty>
+            var avatarIconTransition = Transition(transition)
+            if let current = self.avatarIcon {
+                avatarIcon = current
+            } else {
+                avatarIconTransition = avatarIconTransition.withAnimation(.none)
+                avatarIcon = ComponentView<Empty>()
+                self.avatarIcon = avatarIcon
+            }
+            
+            let avatarIconComponent = EmojiStatusComponent(
+                context: self.context,
+                animationCache: animationCache,
+                animationRenderer: animationRenderer,
+                content: statusIcon,
+                isVisibleForAnimations: true,
+                action: nil,
+                emojiFileUpdated: nil
+            )
+            let iconSize = avatarIcon.update(
+                transition: avatarIconTransition,
+                component: AnyComponent(avatarIconComponent),
+                environment: {},
+                containerSize: CGSize(width: 20.0, height: 20.0)
+            )
+            
+            if let avatarIconView = avatarIcon.view {
+                if avatarIconView.superview == nil {
+                    avatarIconView.isUserInteractionEnabled = false
+                    self.view.addSubview(avatarIconView)
+                }
+                
+                avatarIconTransition.setFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: titleFrame.minX + floor((titleSize.width - lastLine.width) * 0.5) + lastLine.width + 5.0, y: 8.0 + titleFrame.minY + floorToScreenPixels(lastLine.midY - iconSize.height / 2.0) - lastLine.height), size: iconSize))
+            }
+        } else if let avatarIcon = self.avatarIcon {
+            self.avatarIcon = nil
+            avatarIcon.view?.removeFromSuperview()
+        }
         
         let countSize = self.countNode.measure(constrainSize)
         transition.updateFrame(node: self.countNode, frame: CGRect(origin: CGPoint(x: floor((size.width - countSize.width) / 2.0), y: verticalOrigin + 27.0 + avatarSize + 15.0 + titleSize.height + 3.0), size: countSize))

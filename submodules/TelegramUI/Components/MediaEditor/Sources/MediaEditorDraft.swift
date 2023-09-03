@@ -219,7 +219,7 @@ public func addStoryDraft(engine: TelegramEngine, item: MediaEditorDraft) {
 
 public func removeStoryDraft(engine: TelegramEngine, path: String, delete: Bool) {
     if delete {
-        try? FileManager.default.removeItem(atPath: fullDraftPath(engine: engine, path: path))
+        try? FileManager.default.removeItem(atPath: fullDraftPath(peerId: engine.account.peerId, path: path))
     }
     let itemId = MediaEditorDraftItemId(path.persistentHashValue)
     let _ = engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts, id: itemId.rawValue).start()
@@ -270,10 +270,10 @@ public func updateStoryDrafts(engine: TelegramEngine) {
 
 public extension MediaEditorDraft {
     func fullPath(engine: TelegramEngine) -> String {
-        return fullDraftPath(engine: engine, path: self.path)
+        return fullDraftPath(peerId: engine.account.peerId, path: self.path)
     }
 }
 
-private func fullDraftPath(engine: TelegramEngine, path: String) -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())/" + path
+func fullDraftPath(peerId: EnginePeer.Id, path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/" + path
 }

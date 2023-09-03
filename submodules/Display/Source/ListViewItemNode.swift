@@ -237,7 +237,7 @@ open class ListViewItemNode: ASDisplayNode, AccessibilityFocusableNode {
         self.isLayerBacked = layerBacked
     }
     
-    var apparentHeight: CGFloat = 0.0
+    open var apparentHeight: CGFloat = 0.0
     public private(set) var apparentHeightTransition: (CGFloat, CGFloat)?
     private var _bounds: CGRect = CGRect()
     private var _position: CGPoint = CGPoint()

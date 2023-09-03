@@ -916,7 +916,7 @@ final class MediaEditorScreenComponent: Component {
             var audioData: VideoScrubberComponent.AudioData?
             if let audioTrack = mediaEditor?.values.audioTrack {
                 let trimRange = mediaEditor?.values.audioTrackTrimRange
-                let offset = mediaEditor?.values.audioTrackStart
+                let offset = mediaEditor?.values.audioTrackOffset
                 let audioSamples = mediaEditor?.values.audioTrackSamples
                 audioData = VideoScrubberComponent.AudioData(
                     artist: audioTrack.artist,
@@ -1318,8 +1318,26 @@ final class MediaEditorScreenComponent: Component {
                         audioTrimUpdated: { [weak mediaEditor] start, end, _, done in
                             if let mediaEditor {
                                 mediaEditor.setAudioTrackTrimRange(start..<end, apply: done)
-                                if done && isAudioOnly {
-                                    mediaEditor.seek(start, andPlay: true)
+                                if isAudioOnly {
+                                    if done {
+                                        mediaEditor.seek(start, andPlay: true)
+                                    }
+                                } else {
+                                    if done {
+                                        mediaEditor.play()
+                                    } else {
+                                        mediaEditor.stop()
+                                    }
+                                }
+                            }
+                        },
+                        audioOffsetUpdated: { [weak mediaEditor] offset, done in
+                            if let mediaEditor {
+                                mediaEditor.setAudioTrackOffset(offset, apply: done)
+                                if done {
+                                    mediaEditor.play()
+                                } else {
+                                    mediaEditor.stop()
                                 }
                             }
                         },
@@ -3070,7 +3088,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 
                 let path = url.path
-                let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
+                let fileName =  "audio_\(url.lastPathComponent)"
+                let copyPath = fullDraftPath(peerId: self.context.account.peerId, path: fileName)
+                try? FileManager.default.copyItem(atPath: path, toPath: copyPath)
+                
+                let audioAsset = AVURLAsset(url: URL(fileURLWithPath: copyPath))
                 var artist: String?
                 var title: String?
                 for data in audioAsset.commonMetadata {
@@ -3082,10 +3104,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     }
                 }
                 
-                let duration = audioAsset.duration.seconds
-                mediaEditor.setAudioTrack(MediaAudioTrack(path: path, artist: artist, title: title, duration: duration))
-                if !mediaEditor.sourceIsVideo {
-                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, duration), apply: true)
+                let audioDuration = audioAsset.duration.seconds
+                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
+                if mediaEditor.sourceIsVideo {
+                    if let videoDuration = mediaEditor.duration {
+                        mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
+                    }
+                } else {
+                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
                 }
                 
                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
@@ -3093,8 +3119,9 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentAudioOptions(sourceView: UIView) {
+            let value = self.mediaEditor?.values.audioTrackVolume ?? 1.0
             let items: [ContextMenuItem] = [
-                .custom(VolumeSliderContextItem(minValue: 0.0, value: 0.75, valueChanged: { [weak self] value, _ in
+                .custom(VolumeSliderContextItem(minValue: 0.0, value: value, valueChanged: { [weak self] value, _ in
                     if let self {
                         self.mediaEditor?.setAudioTrackVolume(value)
                     }
@@ -4262,6 +4289,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, !self.didComplete else {
             return
         }
+        
+//        if "".isEmpty { // let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
+//            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(level: 0, link: "t.me/channel?boost"), count: 5, forceDark: true, cancel: {}, action: { [weak self] in
+//                guard let self else {
+//                    return
+//                }
+//                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+//                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+//            })
+//            self.push(controller)
+//            return
+//        }
+        
         self.didComplete = true
         
         self.dismissAllTooltips()
@@ -5105,6 +5145,10 @@ public final class BlurredGradientComponent: Component {
 
 func draftPath(engine: TelegramEngine) -> String {
     return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())"
+}
+
+private func fullDraftPath(peerId: EnginePeer.Id, path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/" + path
 }
 
 func hasFirstResponder(_ view: UIView) -> Bool {

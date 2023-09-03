@@ -101,6 +101,9 @@ public struct MediaAudioTrackSamples: Equatable {
 
 public final class MediaEditorValues: Codable, Equatable {
     public static func == (lhs: MediaEditorValues, rhs: MediaEditorValues) -> Bool {
+        if lhs.peerId != rhs.peerId {
+            return false
+        }
         if lhs.originalDimensions != rhs.originalDimensions {
             return false
         }
@@ -161,6 +164,12 @@ public final class MediaEditorValues: Codable, Equatable {
         if lhs.audioTrackTrimRange != rhs.audioTrackTrimRange {
             return false
         }
+        if lhs.audioTrackOffset != rhs.audioTrackOffset {
+            return false
+        }
+        if lhs.audioTrackVolume != rhs.audioTrackVolume {
+            return false
+        }
         if lhs.audioTrackSamples != rhs.audioTrackSamples {
             return false
         }
@@ -197,6 +206,8 @@ public final class MediaEditorValues: Codable, Equatable {
     }
     
     private enum CodingKeys: String, CodingKey {
+        case peerId
+        
         case originalWidth
         case originalHeight
         case cropOffset
@@ -224,10 +235,11 @@ public final class MediaEditorValues: Codable, Equatable {
         
         case audioTrack
         case audioTrackTrimRange
-        case audioTrackStart
+        case audioTrackOffset
         case audioTrackVolume
     }
     
+    public let peerId: EnginePeer.Id
     public let originalDimensions: PixelDimensions
     public let cropOffset: CGPoint
     public let cropSize: CGSize?
@@ -254,11 +266,12 @@ public final class MediaEditorValues: Codable, Equatable {
     
     public let audioTrack: MediaAudioTrack?
     public let audioTrackTrimRange: Range<Double>?
-    public let audioTrackStart: Double?
+    public let audioTrackOffset: Double?
     public let audioTrackVolume: CGFloat?
     public let audioTrackSamples: MediaAudioTrackSamples?
     
     init(
+        peerId: EnginePeer.Id,
         originalDimensions: PixelDimensions,
         cropOffset: CGPoint,
         cropSize: CGSize?,
@@ -280,10 +293,11 @@ public final class MediaEditorValues: Codable, Equatable {
         toolValues: [EditorToolKey: Any],
         audioTrack: MediaAudioTrack?,
         audioTrackTrimRange: Range<Double>?,
-        audioTrackStart: Double?,
+        audioTrackOffset: Double?,
         audioTrackVolume: CGFloat?,
         audioTrackSamples: MediaAudioTrackSamples?
     ) {
+        self.peerId = peerId
         self.originalDimensions = originalDimensions
         self.cropOffset = cropOffset
         self.cropSize = cropSize
@@ -305,13 +319,15 @@ public final class MediaEditorValues: Codable, Equatable {
         self.toolValues = toolValues
         self.audioTrack = audioTrack
         self.audioTrackTrimRange = audioTrackTrimRange
-        self.audioTrackStart = audioTrackStart
+        self.audioTrackOffset = audioTrackOffset
         self.audioTrackVolume = audioTrackVolume
         self.audioTrackSamples = audioTrackSamples
     }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.peerId = EnginePeer.Id(try container.decodeIfPresent(Int64.self, forKey: .peerId) ?? 0)
         
         let width = try container.decode(Int32.self, forKey: .originalWidth)
         let height = try container.decode(Int32.self, forKey: .originalHeight)
@@ -358,7 +374,7 @@ public final class MediaEditorValues: Codable, Equatable {
         
         self.audioTrack = try container.decodeIfPresent(MediaAudioTrack.self, forKey: .audioTrack)
         self.audioTrackTrimRange = try container.decodeIfPresent(Range<Double>.self, forKey: .audioTrackTrimRange)
-        self.audioTrackStart = try container.decodeIfPresent(Double.self, forKey: .audioTrackStart)
+        self.audioTrackOffset = try container.decodeIfPresent(Double.self, forKey: .audioTrackOffset)
         self.audioTrackVolume = try container.decodeIfPresent(CGFloat.self, forKey: .audioTrackVolume)
         
         self.audioTrackSamples = nil
@@ -366,6 +382,8 @@ public final class MediaEditorValues: Codable, Equatable {
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.peerId.toInt64(), forKey: .peerId)
         
         try container.encode(self.originalDimensions.width, forKey: .originalWidth)
         try container.encode(self.originalDimensions.height, forKey: .originalHeight)
@@ -407,73 +425,73 @@ public final class MediaEditorValues: Codable, Equatable {
         
         try container.encodeIfPresent(self.audioTrack, forKey: .audioTrack)
         try container.encodeIfPresent(self.audioTrackTrimRange, forKey: .audioTrackTrimRange)
-        try container.encodeIfPresent(self.audioTrackStart, forKey: .audioTrackStart)
+        try container.encodeIfPresent(self.audioTrackOffset, forKey: .audioTrackOffset)
         try container.encodeIfPresent(self.audioTrackVolume, forKey: .audioTrackVolume)
     }
     
     public func makeCopy() -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedCrop(offset: CGPoint, scale: CGFloat, rotation: CGFloat, mirroring: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: offset, cropSize: self.cropSize, cropScale: scale, cropRotation: rotation, cropMirroring: mirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedGradientColors(gradientColors: [UIColor]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedVideoIsMuted(_ videoIsMuted: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedVideoIsFullHd(_ videoIsFullHd: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     
     func withUpdatedVideoIsMirrored(_ videoIsMirrored: Bool) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAdditionalVideo(path: String, positionChanges: [VideoPositionChange]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: path, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: positionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: path, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: positionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAdditionalVideo(position: CGPoint, scale: CGFloat, rotation: CGFloat) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: position, additionalVideoScale: scale, additionalVideoRotation: rotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: position, additionalVideoScale: scale, additionalVideoRotation: rotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedVideoTrimRange(_ videoTrimRange: Range<Double>) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedDrawingAndEntities(drawing: UIImage?, entities: [CodableDrawingEntity]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: drawing, entities: entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: drawing, entities: entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedToolValues(_ toolValues: [EditorToolKey: Any]) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAudioTrack(_ audioTrack: MediaAudioTrack?) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: self.videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAudioTrackTrimRange(_ audioTrackTrimRange: Range<Double>?) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
-    func withUpdatedAudioTrackStart(_ audioTrackStart: Double?) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+    func withUpdatedAudioTrackOffset(_ audioTrackOffset: Double?) -> MediaEditorValues {
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAudioTrackVolume(_ audioTrackVolume: CGFloat?) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: audioTrackVolume, audioTrackSamples: self.audioTrackSamples)
     }
     
     func withUpdatedAudioTrackSamples(_ audioTrackSamples: MediaAudioTrackSamples?) -> MediaEditorValues {
-        return MediaEditorValues(originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackStart: self.audioTrackStart, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: audioTrackSamples)
+        return MediaEditorValues(peerId: self.peerId, originalDimensions: self.originalDimensions, cropOffset: self.cropOffset, cropSize: self.cropSize, cropScale: self.cropScale, cropRotation: self.cropRotation, cropMirroring: self.cropMirroring, gradientColors: self.gradientColors, videoTrimRange: videoTrimRange, videoIsMuted: self.videoIsMuted, videoIsFullHd: self.videoIsFullHd, videoIsMirrored: self.videoIsMirrored, additionalVideoPath: self.additionalVideoPath, additionalVideoPosition: self.additionalVideoPosition, additionalVideoScale: self.additionalVideoScale, additionalVideoRotation: self.additionalVideoRotation, additionalVideoPositionChanges: self.additionalVideoPositionChanges, drawing: self.drawing, entities: self.entities, toolValues: self.toolValues, audioTrack: self.audioTrack, audioTrackTrimRange: self.audioTrackTrimRange, audioTrackOffset: self.audioTrackOffset, audioTrackVolume: self.audioTrackVolume, audioTrackSamples: audioTrackSamples)
     }
     
     public var resultDimensions: PixelDimensions {

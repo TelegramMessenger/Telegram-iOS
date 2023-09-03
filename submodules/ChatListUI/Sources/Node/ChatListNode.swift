@@ -21,6 +21,9 @@ import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import ChatListHeaderComponent
 import UndoUI
+import NewSessionInfoScreen
+
+private var debugDidAddNewSessionReview = false
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -100,7 +103,7 @@ public final class ChatListNodeInteraction {
     let openPasswordSetup: () -> Void
     let openPremiumIntro: () -> Void
     let openActiveSessions: () -> Void
-    let performActiveSessionAction: (Bool) -> Void
+    let performActiveSessionAction: (NewSessionReview, Bool) -> Void
     let openChatFolderUpdates: () -> Void
     let hideChatFolderUpdates: () -> Void
     let openStories: (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -150,7 +153,7 @@ public final class ChatListNodeInteraction {
         openPasswordSetup: @escaping () -> Void,
         openPremiumIntro: @escaping () -> Void,
         openActiveSessions: @escaping () -> Void,
-        performActiveSessionAction: @escaping (Bool) -> Void,
+        performActiveSessionAction: @escaping (NewSessionReview, Bool) -> Void,
         openChatFolderUpdates: @escaping () -> Void,
         hideChatFolderUpdates: @escaping () -> Void,
         openStories: @escaping (ChatListNode.OpenStoriesSubject, ASDisplayNode?) -> Void
@@ -717,8 +720,8 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                     case let .buttonChoice(isPositive):
                         switch notice {
-                        case .reviewLogin:
-                            nodeInteraction?.performActiveSessionAction(isPositive)
+                        case let .reviewLogin(newSessionReview):
+                            nodeInteraction?.performActiveSessionAction(newSessionReview, isPositive)
                         default:
                             break
                         }
@@ -1037,8 +1040,8 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                     case let .buttonChoice(isPositive):
                         switch notice {
-                        case .reviewLogin:
-                            nodeInteraction?.performActiveSessionAction(isPositive)
+                        case let .reviewLogin(newSessionReview):
+                            nodeInteraction?.performActiveSessionAction(newSessionReview, isPositive)
                         default:
                             break
                         }
@@ -1608,7 +1611,7 @@ public final class ChatListNode: ListView {
                 let recentSessionsController = self.context.sharedContext.makeRecentSessionsController(context: self.context, activeSessionsContext: activeSessionsContext)
                 self.push?(recentSessionsController)
             })
-        }, performActiveSessionAction: { [weak self] isPositive in
+        }, performActiveSessionAction: { [weak self] newSessionReview, isPositive in
             guard let self else {
                 return
             }
@@ -1633,8 +1636,12 @@ public final class ChatListNode: ListView {
                     
                     return true
                 }))
-            } else {
                 
+                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
+            } else {
+                self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
+                
+                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
             }
         }, openChatFolderUpdates: { [weak self] in
             guard let self else {
@@ -1736,13 +1743,24 @@ public final class ChatListNode: ListView {
     
         let suggestedChatListNotice: Signal<ChatListNotice?, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
+            #if DEBUG
+            if !debugDidAddNewSessionReview {
+                debugDidAddNewSessionReview = true
+                let _ = addNewSessionReview(postbox: context.account.postbox, item: NewSessionReview(id: 1, device: "iPhone 14 Pro", location: "Dubai, UAE")).start()
+            }
+            #endif
+            
             suggestedChatListNotice = .single(nil)
             |> then (
                 combineLatest(
                     getServerProvidedSuggestions(account: context.account),
-                    context.engine.auth.twoStepVerificationConfiguration()
+                    context.engine.auth.twoStepVerificationConfiguration(),
+                    newSessionReviews(postbox: context.account.postbox)
                 )
-                |> mapToSignal { suggestions, configuration -> Signal<ChatListNotice?, NoError> in
+                |> mapToSignal { suggestions, configuration, newSessionReviews -> Signal<ChatListNotice?, NoError> in
+                    if let newSessionReview = newSessionReviews.first {
+                        return .single(.reviewLogin(newSessionReview: newSessionReview))
+                    }
                     if suggestions.contains(.setupPassword) {
                         var notSet = false
                         switch configuration {
@@ -1790,11 +1808,6 @@ public final class ChatListNode: ListView {
                             }
                         }
                     } else {
-                        #if DEBUG
-                        if "".isEmpty {
-                            return .single(.reviewLogin(device: "Macbook M2", location: "Stockholm, Sweden"))
-                        }
-                        #endif
                         return .single(nil)
                     }
                 }
