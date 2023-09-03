@@ -31,7 +31,7 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
         if inline {
             flags |= (1 << 1)
         }
-        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, themeParams: serializedThemeParams, platform: botWebViewPlatform))
+        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, startParam: nil, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestSimpleWebViewError in
             return .generic
         }
