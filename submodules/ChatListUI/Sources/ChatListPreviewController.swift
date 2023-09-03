@@ -268,7 +268,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             CATransaction.setAnimationDuration(0.5)
 
-            if let _ = self.propertyAnimator {
+            if let _ = self.propertyAnimator {`
                 self.displayLinkAnimator = DisplayLinkAnimator(duration: 1.15 * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
                 }, completion: { [weak self] in
@@ -385,7 +385,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             self.view.addSubview(chatSnapshot)
             chatSnapshot.layer.animatePosition(from: sourceMessageFrameStart.center, to: sourceMessageFrameFinal.center, duration: 0.3, removeOnCompletion: true) { _ in
                 print("title snapshot animation finished")
-                //                    chatSnapshot.removeFromSuperview()
+                                    chatSnapshot.removeFromSuperview()
             }
             chatSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.35, removeOnCompletion: false)
 
@@ -394,7 +394,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
             titleSnapshot.layer.animatePosition(from: titleSourceframe.center, to: titleFinalFrame.center, duration: 0.3, removeOnCompletion: true) { _ in
                 print("title snapshot animation finished")
                 chatSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 1.5, removeOnCompletion: false)
-                //                    titleSnapshot.removeFromSuperview()
+                                    titleSnapshot.removeFromSuperview()
             }
             
 
@@ -415,7 +415,7 @@ final class ChatListPreviewControllerNode: ViewControllerTracingNode, UIScrollVi
                 navigationSnapshotView.removeFromSuperview()
             }
 
-//                let pf = originalProjectedContentViewFrame.1
+                let pf = originalProjectedContentViewFrame.1
 
             CATransaction.commit()
         
