@@ -880,12 +880,8 @@ public final class StoryPeerListComponent: Component {
                 
                 let minimizedMaxItemScale: CGFloat = (24.0 + 4.0) / 52.0
                 
-                let overscrollScaleFactor: CGFloat
-                if index == overscrollFocusIndex {
-                    overscrollScaleFactor = 1.0
-                } else {
-                    overscrollScaleFactor = 0.0
-                }
+                let overscrollScaleFactor: CGFloat = 0.1
+                
                 var maximizedItemScale: CGFloat = 1.0 + overscrollStage1 * 0.1 + overscrollScaleFactor * overscrollStage2 * 0.5
                 maximizedItemScale = min(1.6, maximizedItemScale)
                 
@@ -912,7 +908,7 @@ public final class StoryPeerListComponent: Component {
                     
                     var itemPosition = collapsedItemPosition.interpolate(to: adjustedRegularFrame.center, amount: min(1.0, collapsedState.maxFraction))
                     
-                    itemPosition.y += realTimeOverscrollFraction * 83.0 * 0.5
+                    itemPosition.y += realTimeOverscrollFraction * 83.0 * 0.1
                     
                     var bounceOffsetFraction = (adjustedRegularFrame.midX - itemLayout.frame(at: collapseStartIndex).midX) / itemLayout.containerSize.width
                     bounceOffsetFraction = max(-1.0, min(1.0, bounceOffsetFraction))
@@ -1655,4 +1651,10 @@ public final class StoryPeerListComponent: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+
+private func highlight(view: UIView?, color: UIColor, width: CGFloat = 7) {
+    view?.layer.borderColor = color.cgColor
+    view?.layer.borderWidth = width
 }

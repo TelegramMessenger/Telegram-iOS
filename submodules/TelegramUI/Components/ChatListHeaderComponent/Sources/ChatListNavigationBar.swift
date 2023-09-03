@@ -179,6 +179,10 @@ public final class ChatListNavigationBar: Component {
         
         private var currentHeaderComponent: ChatListHeaderComponent?
         
+        private var hasStories: Bool {
+            !(component?.storySubscriptions?.items.isEmpty ?? false)
+        }
+        
         override public init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
             self.backgroundView.layer.anchorPoint = CGPoint(x: 0.0, y: 1.0)
@@ -221,6 +225,21 @@ public final class ChatListNavigationBar: Component {
         
         public func applyScroll(offset: CGFloat, allowAvatarsExpansion: Bool, forceUpdate: Bool = false, transition: Transition) {
             let transition = transition
+            let storiesOffsetFraction: CGFloat
+            let storiesUnlocked: Bool
+            if allowAvatarsExpansion {
+                storiesOffsetFraction = max(0.0, min(4.0, -offset / ChatListNavigationBar.storiesScrollHeight))
+                if offset <= -65.0 {
+                    storiesUnlocked = true
+                } else if offset >= -61.0 {
+                    storiesUnlocked = false
+                } else {
+                    storiesUnlocked = self.storiesUnlocked
+                }
+            } else {
+                storiesOffsetFraction = 0.0
+                storiesUnlocked = false
+            }
             
             self.rawScrollOffset = offset
             let allowAvatarsExpansionUpdated = self.currentAllowAvatarsExpansion != allowAvatarsExpansion
@@ -251,7 +270,18 @@ public final class ChatListNavigationBar: Component {
             self.hasDeferredScrollOffset = false
             self.clippedScrollOffset = clippedScrollOffset
             
-            let visibleSize = CGSize(width: currentLayout.size.width, height: max(0.0, currentLayout.size.height - clippedScrollOffset))
+            
+            var visibleSize = CGSize(width: currentLayout.size.width, height: max(0.0, currentLayout.size.height - clippedScrollOffset))
+            
+            let visibleSizeStickyHeight = ChatListNavigationBar.storiesScrollHeight + currentLayout.size.height
+            if hasStories, visibleSize.height > visibleSizeStickyHeight, storiesOffsetFraction >= 1 {
+                let delta = visibleSize.height - visibleSizeStickyHeight
+                let const = visibleSizeStickyHeight / visibleSize.height
+                visibleSize.height = visibleSizeStickyHeight + delta * const * 0.2
+            }
+            if !hasStories, visibleSize.height > currentLayout.size.height {
+                visibleSize.height = currentLayout.size.height
+            }
             
             let previousHeight = self.separatorLayer.position.y
             
@@ -317,22 +347,6 @@ public final class ChatListNavigationBar: Component {
             searchContentNode.updateLayout(size: searchSize, leftInset: component.sideInset, rightInset: component.sideInset, transition: transition.containedViewLayoutTransition)
             
             let headerTransition = transition
-            
-            let storiesOffsetFraction: CGFloat
-            let storiesUnlocked: Bool
-            if allowAvatarsExpansion {
-                storiesOffsetFraction = max(0.0, min(4.0, -offset / ChatListNavigationBar.storiesScrollHeight))
-                if offset <= -65.0 {
-                    storiesUnlocked = true
-                } else if offset >= -61.0 {
-                    storiesUnlocked = false
-                } else {
-                    storiesUnlocked = self.storiesUnlocked
-                }
-            } else {
-                storiesOffsetFraction = 0.0
-                storiesUnlocked = false
-            }
             
             if allowAvatarsExpansion, transition.animation.isImmediate, let storySubscriptions = component.storySubscriptions, !storySubscriptions.items.isEmpty {
                 if self.storiesUnlocked != storiesUnlocked {
@@ -631,4 +645,10 @@ public final class ChatListNavigationBar: Component {
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
+}
+
+
+private func highlight(view: UIView?, color: UIColor, width: CGFloat = 7) {
+    view?.layer.borderColor = color.cgColor
+    view?.layer.borderWidth = width
 }

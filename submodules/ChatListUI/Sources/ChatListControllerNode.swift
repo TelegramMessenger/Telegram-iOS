@@ -2423,6 +2423,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let containerLayout = self.containerLayout else {
             return
         }
+        
         self.updateNavigationScrolling(navigationHeight: containerLayout.navigationBarHeight, transition: self.tempNavigationScrollingTransition ?? .immediate)
         
         if listView.isDragging {
@@ -2488,9 +2489,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                                 self.allowOverscrollItemExpansion = false
                                 
                                 if isPrimary {
-                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
+//                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
                                 } else {
-                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+//                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
                                 }
                             }
                         }
