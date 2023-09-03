@@ -1112,8 +1112,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         
                         let _ = (self.context.engine.messages.allowBotSendMessages(botId: controller.botId)
-                        |> deliverOnMainQueue).start(next: { result in
-                            sendEvent(result)
+                        |> deliverOnMainQueue).start(completed: {
+                            sendEvent(true)
                         })
                     })], parseMarkdown: true)
                     alertController.dismissed = { byOutsideTap in
