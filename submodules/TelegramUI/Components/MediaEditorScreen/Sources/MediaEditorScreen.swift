@@ -3093,17 +3093,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 let coordinator = NSFileCoordinator(filePresenter: nil)
                 var error: NSError?
                 coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { sourceUrl in
-                    let path = sourceUrl.path
                     let fileName =  "audio_\(sourceUrl.lastPathComponent)"
-                    
                     let copyPath = fullDraftPath(peerId: self.context.account.peerId, path: fileName)
+                    
+                    Logger.shared.log("MediaEditor", "fileexists = \(FileManager.default.fileExists(atPath: sourceUrl.path))")
+                    
                     try? FileManager.default.removeItem(atPath: copyPath)
                     do {
-                        try FileManager.default.copyItem(atPath: path, toPath: copyPath)
+                        try FileManager.default.copyItem(at: sourceUrl, to: URL(fileURLWithPath: copyPath))
                     } catch let e {
                         Logger.shared.log("MediaEditor", "copy file error \(e)")
                         if isScopedResource {
-                            sourceUrl.stopAccessingSecurityScopedResource()
+                            url.stopAccessingSecurityScopedResource()
                         }
                         return
                     }
@@ -3132,7 +3133,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             guard let track = audioAsset.tracks(withMediaType: .audio).first else {
                                 Logger.shared.log("MediaEditor", "track is nil")
                                 if isScopedResource {
-                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                    url.stopAccessingSecurityScopedResource()
                                 }
                                 return
                             }
@@ -3141,7 +3142,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             if audioDuration.isZero {
                                 Logger.shared.log("MediaEditor", "duration is zero")
                                 if isScopedResource {
-                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                    url.stopAccessingSecurityScopedResource()
                                 }
                                 return
                             }
@@ -3169,7 +3170,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 
                                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
                                 if isScopedResource {
-                                    sourceUrl.stopAccessingSecurityScopedResource()
+                                    url.stopAccessingSecurityScopedResource()
                                 }
                             }
                         })
