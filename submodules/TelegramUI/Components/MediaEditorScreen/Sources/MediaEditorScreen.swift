@@ -3088,6 +3088,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
                 
                 let isScopedResource = url.startAccessingSecurityScopedResource()
+                Logger.shared.log("MediaEditor", "isScopedResource = \(isScopedResource)")
                 
                 let coordinator = NSFileCoordinator(filePresenter: nil)
                 var error: NSError?
@@ -3174,6 +3175,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         })
                     }
                 })
+                
+                if let error {
+                    Logger.shared.log("MediaEditor", "coordinator error \(e)")
+                }
             }), in: .window(.root))
         }
         
