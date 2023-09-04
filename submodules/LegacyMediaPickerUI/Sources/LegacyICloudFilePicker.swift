@@ -52,18 +52,21 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
 public enum LegacyICloudFilePickerMode {
     case `default`
     case `import`
+    case `export`
     
     var documentPickerMode: UIDocumentPickerMode {
         switch self {
-            case .default:
-                return .open
-            case .import:
-                return .import
+        case .default:
+            return .open
+        case .import:
+            return .import
+        case .export:
+            return .exportToService
         }
     }
 }
 
-public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, dismissed: @escaping () -> Void = {}, completion: @escaping ([URL]) -> Void) -> ViewController {
+public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, url: URL? = nil,  documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, dismissed: @escaping () -> Void = {}, completion: @escaping ([URL]) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     let legacyController = LegacyICloudFileController(presentation: .modal(animateIn: true), theme: theme, completion: { urls in
         dismissImpl?()
@@ -71,7 +74,16 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
     })
     legacyController.statusBar.statusBarStyle = .Black
     
-    let controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+    let controller: DocumentPickerViewController
+    if case .export = mode, let url {
+        if #available(iOS 14.0, *) {
+            controller = DocumentPickerViewController(forExporting: [url], asCopy: true)
+        } else {
+            controller = DocumentPickerViewController(url: url, in: mode.documentPickerMode)
+        }
+    } else {
+        controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
+    }
     controller.forceDarkTheme = forceDarkTheme
     controller.didDisappear = {
         dismissImpl?()

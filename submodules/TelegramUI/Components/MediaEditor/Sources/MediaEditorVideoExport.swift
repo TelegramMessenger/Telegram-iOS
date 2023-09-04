@@ -382,6 +382,8 @@ public final class MediaEditorVideoExport {
     
     private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
         var inputAsset = asset
+        
+        var inputAudioMix: AVMutableAudioMix?
         if let audioData = self.configuration.values.audioTrack {
             let mixComposition = AVMutableComposition()
             let audioPath = fullDraftPath(peerId: self.configuration.values.peerId, path: audioData.path)
@@ -398,10 +400,10 @@ public final class MediaEditorVideoExport {
                 return
             }
             
+
+            
             let timeRange: CMTimeRange = CMTimeRangeMake(start: .zero, duration: duration)
-            
             try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
-            
             if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid), !self.configuration.values.videoIsMuted {
                 try? audioTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: .zero)
             }
@@ -411,6 +413,17 @@ public final class MediaEditorVideoExport {
                 musicRange = audioTrackRange
             }
             try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: self.configuration.audioStartTime)
+            
+            if let volume = self.configuration.values.audioTrackVolume, volume < 1.0 {
+                let audioMix = AVMutableAudioMix()
+                var audioMixParam: [AVMutableAudioMixInputParameters] = []
+                let param: AVMutableAudioMixInputParameters = AVMutableAudioMixInputParameters(track: musicTrack)
+                param.trackID = musicTrack.trackID
+                param.setVolume(Float(volume), at: CMTime.zero)
+                audioMixParam.append(param)
+                audioMix.inputParameters = audioMixParam
+                inputAudioMix = audioMix
+            }
             
             inputAsset = mixComposition
         }
@@ -503,6 +516,7 @@ public final class MediaEditorVideoExport {
         let audioTracks = inputAsset.tracks(withMediaType: .audio)
         if audioTracks.count > 0, !self.configuration.values.videoIsMuted || self.configuration.values.audioTrack != nil {
             let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
+            audioOutput.audioMix = inputAudioMix
             audioOutput.alwaysCopiesSampleData = false
             if reader.canAdd(audioOutput) {
                 reader.add(audioOutput)

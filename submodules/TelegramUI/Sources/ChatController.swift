@@ -101,6 +101,7 @@ import ChatAvatarNavigationNode
 import ChatContextQuery
 import PeerReportScreen
 import PeerSelectionController
+import SaveToCameraRoll
 
 #if DEBUG
 import os.signpost
@@ -317,6 +318,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var sendAsPeersDisposable: Disposable?
     private var preloadAttachBotIconsDisposables: DisposableSet?
     private var keepMessageCountersSyncrhonizedDisposable: Disposable?
+    private var saveMediaDisposable: MetaDisposable?
     
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -4510,6 +4512,113 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             self.push(controller)
+        }, saveMediaToFiles: { [weak self] messageId in
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+            |> deliverOnMainQueue).start(next: { message in
+                guard let self, let message else {
+                    return
+                }
+                var file: TelegramMediaFile?
+                for media in message.media {
+                    if let mediaFile = media as? TelegramMediaFile, mediaFile.isMusic {
+                        file = mediaFile
+                    }
+                }
+                guard let file else {
+                    return
+                }
+                
+                var signal = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .message(message: MessageReference(message._asMessage()), media: file))
+                
+                let disposable: MetaDisposable
+                if let current = self.saveMediaDisposable {
+                    disposable = current
+                } else {
+                    disposable = MetaDisposable()
+                    self.saveMediaDisposable = disposable
+                }
+                
+                var cancelImpl: (() -> Void)?
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                    guard let self else {
+                        return EmptyDisposable
+                    }
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
+                    }
+                }
+                |> runOn(Queue.mainQueue())
+                |> delay(0.15, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                signal = signal
+                |> afterDisposed {
+                    Queue.mainQueue().async {
+                        progressDisposable.dispose()
+                    }
+                }
+                cancelImpl = { [weak disposable] in
+                    disposable?.set(nil)
+                }
+                disposable.set((signal
+                |> deliverOnMainQueue).start(next: { [weak self] state, _ in
+                    guard let self else {
+                        return
+                    }
+                    switch state {
+                    case .progress:
+                        break
+                    case let .data(data):
+                        if data.complete {
+                            var symlinkPath = data.path + ".mp3"
+                            if fileSize(symlinkPath) != nil {
+                                try? FileManager.default.removeItem(atPath: symlinkPath)
+                            }
+                            let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                            
+                            let audioUrl = URL(fileURLWithPath: symlinkPath)
+                            let audioAsset = AVURLAsset(url: audioUrl)
+                            var nameComponents: [String] = []
+                            var artist: String?
+                            var title: String?
+                            for data in audioAsset.commonMetadata {
+                                if data.commonKey == .commonKeyArtist {
+                                    artist = data.stringValue
+                                }
+                                if data.commonKey == .commonKeyTitle {
+                                    title = data.stringValue
+                                }
+                            }
+                            if let artist, !artist.isEmpty {
+                                nameComponents.append(artist)
+                            }
+                            if let title, !title.isEmpty {
+                                nameComponents.append(title)
+                            }
+                            if !nameComponents.isEmpty {
+                                try? FileManager.default.removeItem(atPath: symlinkPath)
+                                
+                                let filename = "\(nameComponents.joined(separator: " – ")).mp3"
+                                symlinkPath = symlinkPath.replacingOccurrences(of: audioUrl.lastPathComponent, with: filename)
+                                let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
+                            }
+                            
+                            let url = URL(fileURLWithPath: symlinkPath)
+                            let controller = legacyICloudFilePicker(theme: self.presentationData.theme, mode: .export, url: url, documentTypes: [], forceDarkTheme: false, dismissed: {}, completion: { _ in
+                                
+                            })
+                            self.present(controller, in: .window(.root))
+                        }
+                    }
+                }))
+            })
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -6385,6 +6494,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.translationStateDisposable?.dispose()
             self.premiumGiftSuggestionDisposable?.dispose()
             self.powerSavingMonitoringDisposable?.dispose()
+            self.saveMediaDisposable?.dispose()
         }
         deallocate()
     }

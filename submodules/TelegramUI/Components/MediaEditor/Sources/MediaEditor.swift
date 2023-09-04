@@ -617,7 +617,12 @@ public final class MediaEditor {
         if self.didPlayToEndTimeObserver == nil {
             self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: observedPlayer.currentItem, queue: nil, using: { [weak self] notification in
                 if let self {
-                    let start = self.values.videoTrimRange?.lowerBound ?? 0.0
+                    var start: Double
+                    if self.sourceIsVideo {
+                        start = self.values.videoTrimRange?.lowerBound ?? 0.0
+                    } else {
+                        start = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                    }
                     let targetTime = CMTime(seconds: start, preferredTimescale: CMTimeScale(1000))
                     self.player?.seek(to: targetTime)
                     self.additionalPlayer?.seek(to: targetTime)
@@ -626,18 +631,22 @@ public final class MediaEditor {
                     self.player?.play()
                     self.additionalPlayer?.play()
                     
-                    let audioTime = self.audioTime(for: targetTime)
-                    if let audioDelay = self.audioDelay(for: targetTime) {
-                        self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                            self?.audioPlayer?.seek(to: audioTime)
-                            self?.audioPlayer?.play()
-                        }, queue: Queue.mainQueue())
-                        self.audioDelayTimer?.start()
+                    if self.sourceIsVideo {
+                        let audioTime = self.audioTime(for: targetTime)
+                        if let audioDelay = self.audioDelay(for: targetTime) {
+                            self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                                self?.audioPlayer?.seek(to: audioTime)
+                                self?.audioPlayer?.play()
+                            }, queue: Queue.mainQueue())
+                            self.audioDelayTimer?.start()
+                        } else {
+                            self.audioPlayer?.seek(to: audioTime)
+                            self.audioPlayer?.play()
+                        }
                     } else {
-                        self.audioPlayer?.seek(to: audioTime)
+                        self.audioPlayer?.seek(to: targetTime)
                         self.audioPlayer?.play()
                     }
-                    
                     
                     Queue.mainQueue().justDispatch {
                         self.onPlaybackAction(.play)
@@ -761,15 +770,20 @@ public final class MediaEditor {
             self.player?.play()
             self.additionalPlayer?.play()
             
-            let audioTime = self.audioTime(for: targetPosition)
-            if let audioDelay = self.audioDelay(for: targetPosition) {
-                self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                    self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                    self?.audioPlayer?.play()
-                }, queue: Queue.mainQueue())
-                self.audioDelayTimer?.start()
+            if self.sourceIsVideo {
+                let audioTime = self.audioTime(for: targetPosition)
+                if let audioDelay = self.audioDelay(for: targetPosition) {
+                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                        self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        self?.audioPlayer?.play()
+                    }, queue: Queue.mainQueue())
+                    self.audioDelayTimer?.start()
+                } else {
+                    self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    self.audioPlayer?.play()
+                }
             } else {
-                self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                self.audioPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
                 self.audioPlayer?.play()
             }
             

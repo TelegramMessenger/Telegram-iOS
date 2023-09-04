@@ -269,7 +269,7 @@ private final class VolumeSliderContextItemNode: ASDisplayNode, ContextMenuCusto
     
     @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
         let location = gestureRecognizer.location(in: gestureRecognizer.view)
-        self.value = max(self.minValue, min(2.0, location.x / self.bounds.width * 2.0))
+        self.value = max(self.minValue, min(1.0, location.x / self.bounds.width))
         self.valueChanged(self.value, true)
     }
     
