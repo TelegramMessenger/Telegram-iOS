@@ -3177,7 +3177,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 })
                 
                 if let error {
-                    Logger.shared.log("MediaEditor", "coordinator error \(e)")
+                    Logger.shared.log("MediaEditor", "coordinator error \(error)")
                 }
             }), in: .window(.root))
         }
