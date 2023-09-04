@@ -3087,6 +3087,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     return
                 }
                 
+                try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
+                
                 let isScopedResource = url.startAccessingSecurityScopedResource()
                 Logger.shared.log("MediaEditor", "isScopedResource = \(isScopedResource)")
                 
@@ -3095,8 +3097,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 coordinator.coordinate(readingItemAt: url, options: .forUploading, error: &error, byAccessor: { sourceUrl in
                     let fileName =  "audio_\(sourceUrl.lastPathComponent)"
                     let copyPath = fullDraftPath(peerId: self.context.account.peerId, path: fileName)
-                    
-                    Logger.shared.log("MediaEditor", "fileexists = \(FileManager.default.fileExists(atPath: sourceUrl.path))")
                     
                     try? FileManager.default.removeItem(atPath: copyPath)
                     do {
