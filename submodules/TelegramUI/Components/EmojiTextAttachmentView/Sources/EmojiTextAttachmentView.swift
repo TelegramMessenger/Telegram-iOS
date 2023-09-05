@@ -547,7 +547,9 @@ public final class EmojiTextAttachmentView: UIView {
     
     public var isActive: Bool = true {
         didSet {
-            
+            if self.isActive != oldValue {
+                self.contentLayer.isVisibleForAnimations = self.isActive
+            }
         }
     }
     
