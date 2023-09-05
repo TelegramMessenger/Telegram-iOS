@@ -4125,14 +4125,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             
             let content: UndoOverlayContent
             if context.isPremium {
-                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(premiumLimits.maxStoriesSuggestedReactions)
+                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(limit)
                 content = .info(
                     title: presentationData.strings.Story_Editor_TooltipReachedReactionLimitTitle,
                     text: presentationData.strings.Story_Editor_TooltipReachedReactionLimitText(value).string,
                     timeout: nil
                 )
             } else {
-                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(limit)
+                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(premiumLimits.maxStoriesSuggestedReactions)
                 content = .premiumPaywall(
                     title: presentationData.strings.Story_Editor_TooltipPremiumReactionLimitTitle,
                     text: presentationData.strings.Story_Editor_TooltipPremiumReactionLimitText(value).string,
