@@ -545,6 +545,12 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 public final class EmojiTextAttachmentView: UIView {
     private let contentLayer: InlineStickerItemLayer
     
+    public var isActive: Bool = true {
+        didSet {
+            
+        }
+    }
+    
     public convenience init(context: AccountContext, userLocation: MediaResourceUserLocation, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
         self.init(
             context: .account(context),

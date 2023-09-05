@@ -19,6 +19,38 @@ import AnimatedCountLabelNode
 import LottieComponent
 import LottieComponentResourceContent
 
+public final class StaticStoryItemOverlaysView: UIImageView {
+    override public init(frame: CGRect) {
+        super.init(frame: frame)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        
+    }
+    
+    public func update(
+        context: AccountContext,
+        peer: EnginePeer,
+        story: EngineStoryItem,
+        availableReactions: StoryAvailableReactions?,
+        entityFiles: [MediaId: TelegramMediaFile]
+    ) {
+        
+    }
+    
+    override public func draw(_ rect: CGRect) {
+        guard let context = UIGraphicsGetCurrentContext() else {
+            return
+        }
+        
+        let _ = context
+    }
+}
+
 final class StoryItemOverlaysView: UIView {
     static let counterFont: UIFont = {
         return Font.with(size: 17.0, design: .camera, weight: .semibold, traits: .monospacedNumbers)
@@ -105,7 +137,8 @@ final class StoryItemOverlaysView: UIView {
             availableReactions: StoryAvailableReactions?,
             entityFiles: [MediaId: TelegramMediaFile],
             synchronous: Bool,
-            size: CGSize
+            size: CGSize,
+            isActive: Bool
         ) {
             var transition = Transition(animation: .curve(duration: 0.18, curve: .easeInOut))
             if self.reaction == nil {
@@ -291,9 +324,11 @@ final class StoryItemOverlaysView: UIView {
                 stickerTransition.setPosition(view: customEmojiView, position: stickerFrame.center)
                 stickerTransition.setBounds(view: customEmojiView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
                 stickerTransition.setScale(view: customEmojiView, scale: stickerScale)
+                
+                customEmojiView.isActive = isActive
             }
             
-            if let directStickerView = self.directStickerView?.view {
+            if let directStickerView = self.directStickerView?.view as? LottieComponent.View {
                 var stickerTransition = transition
                 if directStickerView.superview == nil {
                     self.addSubview(directStickerView)
@@ -314,6 +349,8 @@ final class StoryItemOverlaysView: UIView {
                 stickerTransition.setPosition(view: directStickerView, position: stickerFrame.center)
                 stickerTransition.setBounds(view: directStickerView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
                 stickerTransition.setScale(view: directStickerView, scale: stickerScale)
+                
+                directStickerView.externalShouldPlay = isActive
             }
         }
     }
@@ -352,6 +389,7 @@ final class StoryItemOverlaysView: UIView {
         size: CGSize,
         isCaptureProtected: Bool,
         attemptSynchronous: Bool,
+        isActive: Bool,
         transition: Transition
     ) {
         var nextId = 0
@@ -400,7 +438,8 @@ final class StoryItemOverlaysView: UIView {
                     availableReactions: availableReactions,
                     entityFiles: entityFiles,
                     synchronous: attemptSynchronous,
-                    size: targetFrame.size
+                    size: targetFrame.size,
+                    isActive: isActive
                 )
                 
                 nextId += 1
