@@ -133,7 +133,11 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         }
         
         let absoluteTimestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
-        self.progress = min(1.0, CGFloat((absoluteTimestamp - self.beginTime) / self.timeout))
+        var progress = min(1.0, CGFloat((absoluteTimestamp - self.beginTime) / self.timeout))
+        if self.timeout == 0x7fffffff {
+            progress = 0.0
+        }
+        self.progress = progress
         
         if self.sparks {
             let lineWidth: CGFloat = 1.75
@@ -202,6 +206,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         }
         
         if let parameters = parameters as? RadialStatusSecretTimeoutContentNodeParameters {
+            var drawArc = true
             if case let .image(icon) = parameters.icon, let iconImage = icon.cgImage {
                 let imageRect = CGRect(origin: CGPoint(x: floor((bounds.size.width - icon.size.width) / 2.0), y: floor((bounds.size.height - icon.size.height) / 2.0)), size: icon.size)
                 context.saveGState()
@@ -210,6 +215,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
                 context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
                 context.draw(iconImage, in: imageRect)
                 context.restoreGState()
+                
+                drawArc = false
             }
             
             let lineWidth: CGFloat
@@ -232,10 +239,12 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             let startAngle: CGFloat = -CGFloat.pi / 2.0
             let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * parameters.progress
             
-            let path = CGMutablePath()
-            path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
-            context.addPath(path)
-            context.strokePath()
+            if drawArc {
+                let path = CGMutablePath()
+                path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+                context.addPath(path)
+                context.strokePath()
+            }
             
             for particle in parameters.particles {
                 let size: CGFloat = 1.3

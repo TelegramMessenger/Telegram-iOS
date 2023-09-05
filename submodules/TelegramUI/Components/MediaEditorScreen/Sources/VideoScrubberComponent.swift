@@ -249,10 +249,12 @@ final class VideoScrubberComponent: Component {
             self.transparentFramesContainer.alpha = 0.5
             self.transparentFramesContainer.clipsToBounds = true
             self.transparentFramesContainer.layer.cornerRadius = 9.0
+            self.transparentFramesContainer.isUserInteractionEnabled = false
             
             self.opaqueFramesContainer.clipsToBounds = true
             self.opaqueFramesContainer.layer.cornerRadius = 9.0
-
+            self.opaqueFramesContainer.isUserInteractionEnabled = false
+            
             self.addSubview(self.audioClippingView)
             self.audioClippingView.addSubview(self.audioScrollView)
             self.audioScrollView.addSubview(self.audioContainerView)
@@ -383,13 +385,19 @@ final class VideoScrubberComponent: Component {
             guard let component = self.component else {
                 return
             }
+            
+            var trimDuration = component.duration
+            if component.audioOnly, let audioData = component.audioData {
+                trimDuration = min(30.0, audioData.duration)
+            }
+            
             let location = gestureRecognizer.location(in: self)
             let start = handleWidth
             let end = self.frame.width - handleWidth
             let length = end - start
             let fraction = (location.x - start) / length
             
-            let position = max(component.startPosition, min(component.endPosition, component.duration * fraction))
+            let position = max(component.startPosition, min(component.endPosition, trimDuration * fraction))
             let transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
@@ -409,8 +417,16 @@ final class VideoScrubberComponent: Component {
             let cursorPositionFraction = duration > 0.0 ? position / duration : 0.0
             let cursorPosition = floorToScreenPixels(handleWidth - 1.0 + (size.width - handleWidth * 2.0 + 2.0) * cursorPositionFraction)
             var cursorFrame = CGRect(origin: CGPoint(x: cursorPosition - handleWidth / 2.0, y: -5.0 - UIScreenPixel), size: CGSize(width: handleWidth, height: height))
-            cursorFrame.origin.x = max(self.ghostTrimView.leftHandleView.frame.maxX - cursorPadding, cursorFrame.origin.x)
-            cursorFrame.origin.x = min(self.ghostTrimView.rightHandleView.frame.minX - handleWidth + cursorPadding, cursorFrame.origin.x)
+            
+            var leftEdge = self.ghostTrimView.leftHandleView.frame.maxX
+            var rightEdge = self.ghostTrimView.rightHandleView.frame.minX
+            if let component = self.component, component.audioOnly {
+                leftEdge = self.trimView.leftHandleView.frame.maxX
+                rightEdge = self.trimView.rightHandleView.frame.minX
+            }
+            
+            cursorFrame.origin.x = max(leftEdge - cursorPadding, cursorFrame.origin.x)
+            cursorFrame.origin.x = min(rightEdge - handleWidth + cursorPadding, cursorFrame.origin.x)
             return cursorFrame
         }
         
@@ -419,6 +435,11 @@ final class VideoScrubberComponent: Component {
                 return
             }
             let timestamp = CACurrentMediaTime()
+            
+            var trimDuration = component.duration
+            if component.audioOnly, let audioData = component.audioData {
+                trimDuration = min(30.0, audioData.duration)
+            }
             
             let updatedPosition: Double
             if let (start, from, to, _) = self.positionAnimation {
@@ -433,7 +454,7 @@ final class VideoScrubberComponent: Component {
                 updatedPosition = max(component.startPosition, min(component.endPosition, component.position + advance))
             }
             let cursorHeight: CGFloat = component.audioData != nil ? 80.0 : 50.0
-            self.cursorView.frame = cursorFrame(size: scrubberSize, height: cursorHeight, position: updatedPosition, duration: component.duration)
+            self.cursorView.frame = cursorFrame(size: scrubberSize, height: cursorHeight, position: updatedPosition, duration: trimDuration)
         }
                 
         func update(component: VideoScrubberComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -735,7 +756,7 @@ final class VideoScrubberComponent: Component {
 //                if self.cursorView.alpha.isZero {
 //                    cursorPosition = component.startPosition
 //                }
-                videoTransition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, height: cursorHeight, position: cursorPosition, duration: component.duration))
+                videoTransition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, height: cursorHeight, position: cursorPosition, duration: trimDuration))
             } else {
                 if let (_, _, end, ended) = self.positionAnimation {
                     if ended, component.position >= component.startPosition && component.position < end - 1.0 {
@@ -787,6 +808,11 @@ final class VideoScrubberComponent: Component {
         override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
             let hitTestSlop = UIEdgeInsets(top: -8.0, left: -9.0, bottom: -8.0, right: -9.0)
             return self.bounds.inset(by: hitTestSlop).contains(point)
+        }
+        
+        override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+            let result = super.hitTest(point, with: event)
+            return result
         }
     }
 

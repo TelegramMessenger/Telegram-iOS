@@ -1199,6 +1199,16 @@ final class MediaEditorScreenComponent: Component {
             )
             
             if self.inputPanelExternalState.isEditing {
+                if let controller = self.environment?.controller() as? MediaEditorScreen {
+                    if controller.node.entitiesView.hasSelection {
+                        Queue.mainQueue().justDispatch {
+                            controller.node.entitiesView.selectEntity(nil)
+                        }
+                    }
+                }
+            }
+            
+            if self.inputPanelExternalState.isEditing {
                 if self.currentInputMode == .emoji || (inputHeight.isZero && keyboardWasHidden) {
                     inputHeight = max(inputHeight, environment.deviceMetrics.standardInputHeight(inLandscape: false))
                 }

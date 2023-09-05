@@ -866,9 +866,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             } else {
                 maxWidth = maxDimensions.width
             }
-            if isSecretMedia {
-                let _ = PresentationResourcesChat.chatBubbleSecretMediaIcon(presentationData.theme.theme)
-            }
             
             return (nativeSize, maxWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
                 var resultWidth: CGFloat
@@ -1986,15 +1983,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 case .Local:
                     state = .none
-                    let secretProgressIcon: UIImage?
-                    if case .constrained = sizeCalculation {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
-                    } else {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
-                    }
                     if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
                         state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
-                    } else if isSecretMedia, let _ = secretProgressIcon {
+                    } else if isSecretMedia {
                         state = .staticTimeout
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)

@@ -340,9 +340,16 @@ public final class MediaEditor {
     
     deinit {
         self.textureSourceDisposable?.dispose()
-        
+        self.destroyTimeObservers()
+    }
+    
+    private func destroyTimeObservers() {
         if let timeObserver = self.timeObserver {
-            self.player?.removeTimeObserver(timeObserver)
+            if self.sourceIsVideo {
+                self.player?.removeTimeObserver(timeObserver)
+            } else {
+                self.audioPlayer?.removeTimeObserver(timeObserver)
+            }
         }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
@@ -1017,11 +1024,11 @@ public final class MediaEditor {
             }
         } else if let audioPlayer = self.audioPlayer {
             audioPlayer.pause()
+            
+            self.destroyTimeObservers()
+            
             self.audioPlayer = nil
-            
-            self.audioDelayTimer?.invalidate()
-            self.audioDelayTimer = nil
-            
+             
             if !self.sourceIsVideo {
                 self.playerPromise.set(.single(nil))
             }
@@ -1047,10 +1054,16 @@ public final class MediaEditor {
         if apply {
             let offset = offset ?? 0.0
             let duration = self.duration ?? 0.0
+            let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
             let upperBound = self.values.audioTrackTrimRange?.upperBound ?? duration
             
-            let time = self.player?.currentTime() ?? .zero
-            let audioTime = self.audioTime(for: time)
+            let audioTime: CMTime
+            if self.sourceIsVideo {
+                let time = self.player?.currentTime() ?? .zero
+                audioTime = self.audioTime(for: time)
+            } else {
+                audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
+            }
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
             self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
         }
