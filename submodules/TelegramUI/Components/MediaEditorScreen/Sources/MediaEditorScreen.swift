@@ -1363,7 +1363,7 @@ final class MediaEditorScreenComponent: Component {
                         }
                     }
                     bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
-                    if !self.animatingButtons && !isAudioOnly {
+                    if !self.animatingButtons && !(isAudioOnly && animateIn) {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities || isEditingCaption ? 0.0 : 1.0)
                     } else if animateIn {
                         scrubberView.layer.animatePosition(from: CGPoint(x: 0.0, y: 44.0), to: .zero, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
@@ -3167,6 +3167,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 } else {
                                     mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
                                 }
+                                mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: true)
                                 
                                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
                                 if isScopedResource {
@@ -3249,8 +3250,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        private var drawingScreen: DrawingScreen?
-        private var stickerScreen: StickerPickerScreen?
+        fileprivate var drawingScreen: DrawingScreen?
+        fileprivate var stickerScreen: StickerPickerScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -3350,6 +3351,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     controller.completion = { [weak self] content in
                                         if let self {
                                             if let content {
+                                                if case let .file(file, _) = content {
+                                                    if file.isCustomEmoji {
+                                                        self.defaultToEmoji = true
+                                                    } else {
+                                                        self.defaultToEmoji = false
+                                                    }
+                                                }
+                                                                                                
                                                 let stickerEntity = DrawingStickerEntity(content: content)
                                                 let scale: CGFloat
                                                 if case .image = content {
@@ -3364,18 +3373,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 self.hasAnyChanges = true
                                                 self.controller?.isSavingAvailable = true
                                                 self.controller?.requestLayout(transition: .immediate)
-                                                
-                                                if case let .file(file, _) = content {
-                                                    if file.isCustomEmoji {
-                                                        self.defaultToEmoji = true
-                                                    } else {
-                                                        self.defaultToEmoji = false
-                                                    }
-                                                }
                                             }
                                             self.stickerScreen = nil
                                             self.mediaEditor?.play()
                                         }
+                                        return true
                                     }
                                     controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
                                         if let self, let controller {
@@ -3405,6 +3407,18 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     }
                                     controller.addReaction = { [weak self, weak controller] in
                                         if let self {
+                                            let maxReactionCount = self.context.userLimits.maxStoriesSuggestedReactions
+                                            var currentReactionCount = 0
+                                            self.entitiesView.eachView { entityView in
+                                                if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
+                                                    currentReactionCount += 1
+                                                }
+                                            }
+                                            if currentReactionCount >= maxReactionCount {
+                                                self.controller?.presentReactionPremiumSuggestion()
+                                                return
+                                            }
+                                            
                                             self.stickerScreen = nil
                                             controller?.dismiss(animated: true)
                                             
@@ -3421,6 +3435,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     return
                                 case .text:
+                                    self.mediaEditor?.stop()
                                     self.insertTextEntity()
                                     
                                     self.hasAnyChanges = true
@@ -4093,6 +4108,53 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return false
         })
         self.present(controller, in: .current)
+    }
+    
+    fileprivate func presentReactionPremiumSuggestion() {
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true))
+        |> deliverOnMainQueue).start(next: { [weak self] premiumLimits in
+            guard let self else {
+                return
+            }
+          
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let limit = context.userLimits.maxStoriesSuggestedReactions
+            
+            let content: UndoOverlayContent
+            if context.isPremium {
+                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(premiumLimits.maxStoriesSuggestedReactions)
+                content = .info(
+                    title: presentationData.strings.Story_Editor_TooltipReachedReactionLimitTitle,
+                    text: presentationData.strings.Story_Editor_TooltipReachedReactionLimitText(value).string,
+                    timeout: nil
+                )
+            } else {
+                let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(limit)
+                content = .premiumPaywall(
+                    title: presentationData.strings.Story_Editor_TooltipPremiumReactionLimitTitle,
+                    text: presentationData.strings.Story_Editor_TooltipPremiumReactionLimitText(value).string,
+                    customUndoText: nil,
+                    timeout: nil,
+                    linkAction: nil
+                )
+            }
+                    
+            let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+                if case .info = action, let self {
+                    if let stickerScreen = self.node.stickerScreen {
+                        self.node.stickerScreen = nil
+                        stickerScreen.dismiss(animated: true)
+                    }
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesSuggestedReactions, forceDark: true, dismissed: nil)
+                    self.push(controller)
+                }
+                return true
+            })
+            self.present(controller, in: .window(.root))
+        })
     }
 
     fileprivate func presentCaptionLimitPremiumSuggestion(isPremium: Bool) {

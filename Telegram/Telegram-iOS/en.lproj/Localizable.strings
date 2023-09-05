@@ -9901,3 +9901,13 @@ Sorry for the inconvenience.";
 "WebApp.SharePhoneTitle" = "Share Phone Number?";
 "WebApp.SharePhoneConfirmation" = "**%@** will know your phone number. This can be useful for integration with other services.";
 "WebApp.SharePhoneConfirmationUnblock" = "**%@** will know your phone number. This can be useful for integration with other services.\n\nThis will also unblock the bot.";
+
+"Story.Editor.TooltipPremiumReactionLimitValue_1" = "**%@** reaction tag";
+"Story.Editor.TooltipPremiumReactionLimitValue_any" = "**%@** reactions tags";
+
+"Story.Editor.TooltipPremiumReactionLimitTitle" = "Increase Limit";
+"Story.Editor.TooltipPremiumReactionLimitText" = "Upgrade to [Telegram Premium]() to add up to %@ to a story.";
+
+"Story.Editor.TooltipReachedReactionLimitTitle" = "Limit Reached";
+"Story.Editor.TooltipReachedReactionLimitText" = "You can't add up more than %@ to a story.";
+

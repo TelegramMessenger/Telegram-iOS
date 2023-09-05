@@ -45,6 +45,7 @@ private class PremiumLimitAnimationComponent: Component {
     private let badgeText: String?
     private let badgePosition: CGFloat
     private let badgeGraphPosition: CGFloat
+    private let invertProgress: Bool
     private let isPremiumDisabled: Bool
     
     init(
@@ -55,6 +56,7 @@ private class PremiumLimitAnimationComponent: Component {
         badgeText: String?,
         badgePosition: CGFloat,
         badgeGraphPosition: CGFloat,
+        invertProgress: Bool,
         isPremiumDisabled: Bool
     ) {
         self.iconName = iconName
@@ -64,6 +66,7 @@ private class PremiumLimitAnimationComponent: Component {
         self.badgeText = badgeText
         self.badgePosition = badgePosition
         self.badgeGraphPosition = badgeGraphPosition
+        self.invertProgress = invertProgress
         self.isPremiumDisabled = isPremiumDisabled
     }
     
@@ -89,6 +92,9 @@ private class PremiumLimitAnimationComponent: Component {
         if lhs.badgeGraphPosition != rhs.badgeGraphPosition {
             return false
         }
+        if lhs.invertProgress != rhs.invertProgress {
+            return false
+        }
         if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
             return false
         }
@@ -96,6 +102,8 @@ private class PremiumLimitAnimationComponent: Component {
     }
     
     final class View: UIView {
+        private var component: PremiumLimitAnimationComponent?
+        
         private let container: SimpleLayer
         private let inactiveBackground: SimpleLayer
         
@@ -240,6 +248,7 @@ private class PremiumLimitAnimationComponent: Component {
         
         var previousAvailableSize: CGSize?
         func update(component: PremiumLimitAnimationComponent, availableSize: CGSize, transition: Transition) -> CGSize {
+            self.component = component
             self.inactiveBackground.backgroundColor = component.inactiveColor.cgColor
             self.activeBackground.backgroundColor = component.activeColors.last?.cgColor
             
@@ -255,9 +264,13 @@ private class PremiumLimitAnimationComponent: Component {
             let activeWidth: CGFloat = containerFrame.width - activityPosition
             
             if !component.isPremiumDisabled {
-                self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
-                self.activeContainer.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight))
-                
+                if component.invertProgress {
+                    self.inactiveBackground.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: availableSize.width - activityPosition, height: lineHeight))
+                    self.activeContainer.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
+                } else {
+                    self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
+                    self.activeContainer.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight))
+                }
                 self.activeBackground.frame = CGRect(origin: .zero, size: CGSize(width: activeWidth * (1.0 + 0.35), height: lineHeight))
                 if self.activeBackground.animation(forKey: "movement") == nil {
                     self.activeBackground.position = CGPoint(x: -self.activeContainer.frame.width * 0.35, y: lineHeight / 2.0)
@@ -373,6 +386,9 @@ private class PremiumLimitAnimationComponent: Component {
         }
         
         private func setupGradientAnimations() {
+            guard let _ = self.component else {
+                return
+            }
             if let _ = self.badgeForeground.animation(forKey: "movement") {
             } else {
                 CATransaction.begin()
@@ -440,6 +456,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
     let badgeText: String?
     let badgePosition: CGFloat
     let badgeGraphPosition: CGFloat
+    let invertProgress: Bool
     let isPremiumDisabled: Bool
     
     public init(
@@ -455,6 +472,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         badgeText: String?,
         badgePosition: CGFloat,
         badgeGraphPosition: CGFloat,
+        invertProgress: Bool = false,
         isPremiumDisabled: Bool
     ) {
         self.inactiveColor = inactiveColor
@@ -469,6 +487,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         self.badgeText = badgeText
         self.badgePosition = badgePosition
         self.badgeGraphPosition = badgeGraphPosition
+        self.invertProgress = invertProgress
         self.isPremiumDisabled = isPremiumDisabled
     }
     
@@ -509,6 +528,9 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
         if lhs.badgeGraphPosition != rhs.badgeGraphPosition {
             return false
         }
+        if lhs.invertProgress != rhs.invertProgress {
+            return false
+        }
         if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
             return false
         }
@@ -528,6 +550,16 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
             let height: CGFloat = 120.0
             let lineHeight: CGFloat = 30.0
             
+            let leftTextColor: UIColor
+            let rightTextColor: UIColor
+            if component.invertProgress {
+                leftTextColor = component.activeTitleColor
+                rightTextColor = component.inactiveTitleColor
+            } else {
+                leftTextColor = component.inactiveTitleColor
+                rightTextColor = component.activeTitleColor
+            }
+            
             let animation = animation.update(
                 component: PremiumLimitAnimationComponent(
                     iconName: component.badgeIconName,
@@ -537,6 +569,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                     badgeText: component.badgeText,
                     badgePosition: component.badgePosition,
                     badgeGraphPosition: component.badgeGraphPosition,
+                    invertProgress: component.invertProgress,
                     isPremiumDisabled: component.isPremiumDisabled
                 ),
                 availableSize: CGSize(width: context.availableSize.width, height: height),
@@ -554,7 +587,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                             NSAttributedString(
                                 string: component.inactiveTitle,
                                 font: Font.semibold(15.0),
-                                textColor: component.inactiveTitleColor
+                                textColor: leftTextColor
                             )
                         )
                     ),
@@ -568,7 +601,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                             NSAttributedString(
                                 string: component.inactiveValue,
                                 font: Font.semibold(15.0),
-                                textColor: component.inactiveTitleColor
+                                textColor: leftTextColor
                             )
                         )
                     ),
@@ -582,7 +615,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                             NSAttributedString(
                                 string: component.activeTitle,
                                 font: Font.semibold(15.0),
-                                textColor: component.activeTitleColor
+                                textColor: rightTextColor
                             )
                         )
                     ),
@@ -596,7 +629,7 @@ public final class PremiumLimitDisplayComponent: CombinedComponent {
                             NSAttributedString(
                                 string: component.activeValue,
                                 font: Font.semibold(15.0),
-                                textColor: component.activeTitleColor
+                                textColor: rightTextColor
                             )
                         )
                     ),
@@ -720,6 +753,7 @@ private final class LimitSheetContent: CombinedComponent {
         let title = Child(MultilineTextComponent.self)
         let text = Child(BalancedTextComponent.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
+        let linkButton = Child(SolidRoundedButtonComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         
         return { context in
@@ -761,219 +795,262 @@ private final class LimitSheetContent: CombinedComponent {
             )
              
             var titleText = strings.Premium_LimitReached
+            var actionButtonText: String?
             var buttonAnimationName: String? = "premium_x2"
+            var buttonIconName: String?
             let iconName: String
             var badgeText: String
             var string: String
             let defaultValue: String
+            var defaultTitle = strings.Premium_Free
+            var premiumTitle = strings.Premium_Premium
             let premiumValue: String
             let badgePosition: CGFloat
             let badgeGraphPosition: CGFloat
+            var invertProgress = false
             switch subject {
-                case .folders:
-                    let limit = state.limits.maxFoldersCount
-                    let premiumLimit = state.premiumLimits.maxFoldersCount
-                    iconName = "Premium/Folder"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxFoldersCountFinalText("\(premiumLimit)").string : strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count >= premiumLimit {
-                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
-                    } else {
-                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
-                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                
-                    if !state.isPremium && badgePosition > 0.5 {
-                        string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
-                    }
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxFoldersCountNoPremiumText("\(limit)").string
-                    }
-                case .chatsPerFolder:
-                    let limit = state.limits.maxFolderChatsCount
-                    let premiumLimit = state.premiumLimits.maxFolderChatsCount
-                    iconName = "Premium/Chat"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxChatsInFolderFinalText("\(premiumLimit)").string : strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
-                    badgeGraphPosition = badgePosition
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
-                    }
-                case .channels:
-                    let limit = state.limits.maxChannelsCount
-                    let premiumLimit = state.premiumLimits.maxChannelsCount
-                    iconName = "Premium/Chat"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxChannelsFinalText("\(premiumLimit)").string : strings.Premium_MaxChannelsText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count >= premiumLimit {
-                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
-                    } else {
-                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
-                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxChannelsNoPremiumText("\(limit)").string
-                    }
-                case .linksPerSharedFolder:
-                    /*let count: Int32 = 5 + Int32("".count)// component.count
-                    let limit: Int32 = 5 + Int32("".count)//state.limits.maxSharedFolderInviteLinks
-                    let premiumLimit: Int32 = 100 + Int32("".count)//state.premiumLimits.maxSharedFolderInviteLinks*/
-                
-                    let count: Int32 = component.count
-                    let limit: Int32 = state.limits.maxSharedFolderInviteLinks
-                    let premiumLimit: Int32 = state.premiumLimits.maxSharedFolderInviteLinks
-                
-                    iconName = "Premium/Link"
-                    badgeText = "\(count)"
-                    string = count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = count > limit ? "\(limit)" : ""
-                    premiumValue = count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if count >= premiumLimit {
-                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
-                    } else {
-                        badgeGraphPosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
-                    }
-                    badgePosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
-                    }
-                
-                    buttonAnimationName = nil
-                case .membershipInSharedFolders:
-                    let limit = state.limits.maxSharedFolderJoin
-                    let premiumLimit = state.premiumLimits.maxSharedFolderJoin
-                    iconName = "Premium/Folder"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderMembershipFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderMembershipText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count >= premiumLimit {
-                        badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
-                    } else {
-                        badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
-                    badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxSharedFolderMembershipNoPremiumText("\(limit)").string
-                    }
-                
-                    buttonAnimationName = nil
-                case .pins:
-                    let limit = state.limits.maxPinnedChatCount
-                    let premiumLimit = state.premiumLimits.maxPinnedChatCount
-                    iconName = "Premium/Pin"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
-                    badgeGraphPosition = badgePosition
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
-                    }
-                case .files:
-                    let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
-                    let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
-                    iconName = "Premium/File"
-                    badgeText = dataSizeString(component.count == 4 ? premiumLimit : limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                    string = component.count == 4 ? strings.Premium_MaxFileSizeFinalText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string : strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
-                    defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
-                    premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
-                    badgePosition = component.count == 4 ? 1.0 : 0.5
-                    badgeGraphPosition = badgePosition
-                    titleText = strings.Premium_FileTooLarge
-                
-                    if isPremiumDisabled {
-                        badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
-                        string = strings.Premium_MaxFileSizeNoPremiumText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
-                    }
-                case .accounts:
-                    let limit = 3
-                    let premiumLimit = limit + 1
-                    iconName = "Premium/Account"
-                    badgeText = "\(component.count)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
-                    defaultValue = component.count > limit ? "\(limit)" : ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    if component.count == limit {
-                        badgePosition = 0.5
-                    } else {
-                        badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
-                    }
-                    badgeGraphPosition = badgePosition
-                    buttonAnimationName = "premium_addone"
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxAccountsNoPremiumText("\(limit)").string
-                    }
-                case .expiringStories:
-                    let limit = state.limits.maxExpiringStoriesCount
-                    let premiumLimit = state.premiumLimits.maxExpiringStoriesCount
-                    iconName = "Premium/Stories"
+            case .folders:
+                let limit = state.limits.maxFoldersCount
+                let premiumLimit = state.premiumLimits.maxFoldersCount
+                iconName = "Premium/Folder"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxFoldersCountFinalText("\(premiumLimit)").string : strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                if component.count >= premiumLimit {
+                    badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                } else {
+                    badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                }
+                badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+            
+                if !state.isPremium && badgePosition > 0.5 {
+                    string = strings.Premium_MaxFoldersCountText("\(limit)", "\(premiumLimit)").string
+                }
+            
+                if isPremiumDisabled {
                     badgeText = "\(limit)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxExpiringStoriesFinalText("\(premiumLimit)").string : strings.Premium_MaxExpiringStoriesText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
-                    badgeGraphPosition = badgePosition
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxExpiringStoriesNoPremiumText("\(limit)").string
-                    }
-                    buttonAnimationName = nil
-                case .storiesWeekly:
-                    let limit = state.limits.maxStoriesWeeklyCount
-                    let premiumLimit = state.premiumLimits.maxStoriesWeeklyCount
-                    iconName = "Premium/Stories"
+                    string = strings.Premium_MaxFoldersCountNoPremiumText("\(limit)").string
+                }
+            case .chatsPerFolder:
+                let limit = state.limits.maxFolderChatsCount
+                let premiumLimit = state.premiumLimits.maxFolderChatsCount
+                iconName = "Premium/Chat"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxChatsInFolderFinalText("\(premiumLimit)").string : strings.Premium_MaxChatsInFolderText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
                     badgeText = "\(limit)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxStoriesWeeklyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesWeeklyText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
-                    badgeGraphPosition = badgePosition
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxStoriesWeeklyNoPremiumText("\(limit)").string
-                    }
-                    buttonAnimationName = nil
-                case .storiesMonthly:
-                    let limit = state.limits.maxStoriesMonthlyCount
-                    let premiumLimit = state.premiumLimits.maxStoriesMonthlyCount
-                    iconName = "Premium/Stories"
+                    string = strings.Premium_MaxChatsInFolderNoPremiumText("\(limit)").string
+                }
+            case .channels:
+                let limit = state.limits.maxChannelsCount
+                let premiumLimit = state.premiumLimits.maxChannelsCount
+                iconName = "Premium/Chat"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxChannelsFinalText("\(premiumLimit)").string : strings.Premium_MaxChannelsText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                if component.count >= premiumLimit {
+                    badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                } else {
+                    badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                }
+                badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+            
+                if isPremiumDisabled {
                     badgeText = "\(limit)"
-                    string = component.count >= premiumLimit ? strings.Premium_MaxStoriesMonthlyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesMonthlyText("\(limit)", "\(premiumLimit)").string
-                    defaultValue = ""
-                    premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
-                    badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
-                    badgeGraphPosition = badgePosition
-                
-                    if isPremiumDisabled {
-                        badgeText = "\(limit)"
-                        string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
+                    string = strings.Premium_MaxChannelsNoPremiumText("\(limit)").string
+                }
+            case .linksPerSharedFolder:
+                /*let count: Int32 = 5 + Int32("".count)// component.count
+                let limit: Int32 = 5 + Int32("".count)//state.limits.maxSharedFolderInviteLinks
+                let premiumLimit: Int32 = 100 + Int32("".count)//state.premiumLimits.maxSharedFolderInviteLinks*/
+            
+                let count: Int32 = component.count
+                let limit: Int32 = state.limits.maxSharedFolderInviteLinks
+                let premiumLimit: Int32 = state.premiumLimits.maxSharedFolderInviteLinks
+            
+                iconName = "Premium/Link"
+                badgeText = "\(count)"
+                string = count >= premiumLimit ? strings.Premium_MaxSharedFolderLinksFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderLinksText("\(limit)", "\(premiumLimit)").string
+                defaultValue = count > limit ? "\(limit)" : ""
+                premiumValue = count >= premiumLimit ? "" : "\(premiumLimit)"
+                if count >= premiumLimit {
+                    badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                } else {
+                    badgeGraphPosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
+                }
+                badgePosition = max(0.15, CGFloat(count) / CGFloat(premiumLimit))
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxSharedFolderLinksNoPremiumText("\(limit)").string
+                }
+            
+                buttonAnimationName = nil
+            case .membershipInSharedFolders:
+                let limit = state.limits.maxSharedFolderJoin
+                let premiumLimit = state.premiumLimits.maxSharedFolderJoin
+                iconName = "Premium/Folder"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxSharedFolderMembershipFinalText("\(premiumLimit)").string : strings.Premium_MaxSharedFolderMembershipText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                if component.count >= premiumLimit {
+                    badgeGraphPosition = max(0.15, CGFloat(limit) / CGFloat(premiumLimit))
+                } else {
+                    badgeGraphPosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+                }
+                badgePosition = max(0.15, CGFloat(component.count) / CGFloat(premiumLimit))
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxSharedFolderMembershipNoPremiumText("\(limit)").string
+                }
+            
+                buttonAnimationName = nil
+            case .pins:
+                let limit = state.limits.maxPinnedChatCount
+                let premiumLimit = state.premiumLimits.maxPinnedChatCount
+                iconName = "Premium/Pin"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxPinsFinalText("\(premiumLimit)").string : strings.Premium_MaxPinsText("\(limit)", "\(premiumLimit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = CGFloat(component.count) / CGFloat(premiumLimit)
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxPinsNoPremiumText("\(limit)").string
+                }
+            case .files:
+                let limit = Int64(state.limits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
+                let premiumLimit = Int64(state.premiumLimits.maxUploadFileParts) * 512 * 1024 + 1024 * 1024 * 100
+                iconName = "Premium/File"
+                badgeText = dataSizeString(component.count == 4 ? premiumLimit : limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                string = component.count == 4 ? strings.Premium_MaxFileSizeFinalText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string : strings.Premium_MaxFileSizeText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+                defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
+                premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
+                badgePosition = component.count == 4 ? 1.0 : 0.5
+                badgeGraphPosition = badgePosition
+                titleText = strings.Premium_FileTooLarge
+            
+                if isPremiumDisabled {
+                    badgeText = dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))
+                    string = strings.Premium_MaxFileSizeNoPremiumText(dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator))).string
+                }
+            case .accounts:
+                let limit = 3
+                let premiumLimit = limit + 1
+                iconName = "Premium/Account"
+                badgeText = "\(component.count)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxAccountsFinalText("\(premiumLimit)").string : strings.Premium_MaxAccountsText("\(limit)").string
+                defaultValue = component.count > limit ? "\(limit)" : ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                if component.count == limit {
+                    badgePosition = 0.5
+                } else {
+                    badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
+                }
+                badgeGraphPosition = badgePosition
+                buttonAnimationName = "premium_addone"
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxAccountsNoPremiumText("\(limit)").string
+                }
+            case .expiringStories:
+                let limit = state.limits.maxExpiringStoriesCount
+                let premiumLimit = state.premiumLimits.maxExpiringStoriesCount
+                iconName = "Premium/Stories"
+                badgeText = "\(limit)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxExpiringStoriesFinalText("\(premiumLimit)").string : strings.Premium_MaxExpiringStoriesText("\(limit)", "\(premiumLimit)").string
+                defaultValue = ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxExpiringStoriesNoPremiumText("\(limit)").string
+                }
+                buttonAnimationName = nil
+            case .storiesWeekly:
+                let limit = state.limits.maxStoriesWeeklyCount
+                let premiumLimit = state.premiumLimits.maxStoriesWeeklyCount
+                iconName = "Premium/Stories"
+                badgeText = "\(limit)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxStoriesWeeklyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesWeeklyText("\(limit)", "\(premiumLimit)").string
+                defaultValue = ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxStoriesWeeklyNoPremiumText("\(limit)").string
+                }
+                buttonAnimationName = nil
+            case .storiesMonthly:
+                let limit = state.limits.maxStoriesMonthlyCount
+                let premiumLimit = state.premiumLimits.maxStoriesMonthlyCount
+                iconName = "Premium/Stories"
+                badgeText = "\(limit)"
+                string = component.count >= premiumLimit ? strings.Premium_MaxStoriesMonthlyFinalText("\(premiumLimit)").string : strings.Premium_MaxStoriesMonthlyText("\(limit)", "\(premiumLimit)").string
+                defaultValue = ""
+                premiumValue = component.count >= premiumLimit ? "" : "\(premiumLimit)"
+                badgePosition = max(0.32, CGFloat(component.count) / CGFloat(premiumLimit))
+                badgeGraphPosition = badgePosition
+            
+                if isPremiumDisabled {
+                    badgeText = "\(limit)"
+                    string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
+                }
+                buttonAnimationName = nil
+            case let .storiesChannelBoost(level, link):
+                let limit = 2
+//                let premiumLimit = 1
+                iconName = "Premium/Boost"
+                badgeText = "\(limit)"
+            
+                if let _ = link {
+                    if level == 0 {
+                        titleText = "Enable Stories"
+                        string = "Your channel needs **2** more boosts to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                    } else {
+                        titleText = "Increase Story Limit"
+                        string = "Your channel needs **1** more boosts to post **2** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
                     }
-                    buttonAnimationName = nil
+                    actionButtonText = "Copy Link"
+                    buttonIconName = "Premium/CopyLink"
+                } else {
+                    if level == 0 {
+                        titleText = "Enable Stories for Channel"
+                        string = "Channel needs **1** more boosts to enable posting stories. Help make it possible!"
+                    } else {
+                        titleText = "Help Upgrade Channel"
+                        string = "**Channel** needs **2** more boosts to be able to post **2** stories per day."
+                    }
+                    actionButtonText = "Boost Channel"
+                    buttonIconName = "Premium/BoostChannel"
+                }
+                buttonAnimationName = nil
+                defaultTitle = "Level \(level)"
+                defaultValue = ""
+                premiumValue = "Level \(level + 1)"
+                
+                premiumTitle = ""
+                
+                badgePosition = 0.32
+                badgeGraphPosition = badgePosition
+                
+                invertProgress = true
             }
             var reachedMaximumLimit = badgePosition >= 1.0
             if case .folders = subject, !state.isPremium {
@@ -997,8 +1074,8 @@ private final class LimitSheetContent: CombinedComponent {
                     transition: .immediate
                 )
                 
-                let textFont = Font.regular(17.0)
-                let boldTextFont = Font.semibold(17.0)
+                let textFont = Font.regular(15.0)
+                let boldTextFont = Font.semibold(15.0)
                 let textColor = theme.actionSheet.primaryTextColor
                 let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
                     return nil
@@ -1034,16 +1111,17 @@ private final class LimitSheetContent: CombinedComponent {
                     component: PremiumLimitDisplayComponent(
                         inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
                         activeColors: gradientColors,
-                        inactiveTitle: strings.Premium_Free,
+                        inactiveTitle: defaultTitle,
                         inactiveValue: defaultValue,
                         inactiveTitleColor: theme.list.itemPrimaryTextColor,
-                        activeTitle: strings.Premium_Premium,
+                        activeTitle: premiumTitle,
                         activeValue: premiumValue,
                         activeTitleColor: .white,
                         badgeIconName: iconName,
                         badgeText: badgeText,
                         badgePosition: badgePosition,
                         badgeGraphPosition: badgeGraphPosition,
+                        invertProgress: invertProgress,
                         isPremiumDisabled: isPremiumDisabled
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
@@ -1056,8 +1134,7 @@ private final class LimitSheetContent: CombinedComponent {
                 let isIncreaseButton = !reachedMaximumLimit && !isPremiumDisabled
                 let button = button.update(
                     component: SolidRoundedButtonComponent(
-                        title: isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK,
-                        
+                        title: actionButtonText ?? (isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK),
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: .black,
                             backgroundColors: gradientColors,
@@ -1068,8 +1145,9 @@ private final class LimitSheetContent: CombinedComponent {
                         height: 50.0,
                         cornerRadius: 10.0,
                         gloss: isIncreaseButton,
+                        iconName: buttonIconName,
                         animationName: isIncreaseButton ? buttonAnimationName : nil,
-                        iconPosition: .right,
+                        iconPosition: buttonIconName != nil ? .left : .right,
                         action: {
                             component.dismiss()
                             if isIncreaseButton {
@@ -1081,7 +1159,37 @@ private final class LimitSheetContent: CombinedComponent {
                     transition: context.transition
                 )
                 
+                var buttonOffset: CGFloat = 0.0
                 var textOffset: CGFloat = 228.0
+                if case let .storiesChannelBoost(level, link) = component.subject {
+                    if let _ = link {
+                        let linkButton = linkButton.update(
+                            component: SolidRoundedButtonComponent(
+                                title: "t.me/channel?boost",
+                                theme: SolidRoundedButtonComponent.Theme(
+                                    backgroundColor: UIColor(rgb: 0x343436),
+                                    backgroundColors: [],
+                                    foregroundColor: .white
+                                ),
+                                font: .regular,
+                                fontSize: 17.0,
+                                height: 50.0,
+                                cornerRadius: 10.0,
+                                action: {}
+                            ),
+                            availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
+                            transition: context.transition
+                        )
+                        buttonOffset += 66.0
+                                                
+                        let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 24.0), size: linkButton.size)
+                        context.add(linkButton
+                            .position(CGPoint(x: linkFrame.midX, y: linkFrame.midY))
+                        )
+                    } else if link == nil, level > 0 {
+                        textOffset -= 26.0
+                    }
+                }
                 if isPremiumDisabled {
                     textOffset -= 68.0
                 }
@@ -1093,7 +1201,7 @@ private final class LimitSheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
                 )
                 
-                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 38.0), size: button.size)
+                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + buttonOffset + 24.0), size: button.size)
                 context.add(button
                     .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
                 )
@@ -1104,6 +1212,15 @@ private final class LimitSheetContent: CombinedComponent {
                 if isPremiumDisabled {
                     height -= 78.0
                 }
+                
+                if case let .storiesChannelBoost(_, link) = component.subject {
+                    if link != nil {
+                        height += 66.0
+                    } else {
+                        height -= 53.0
+                    }
+                }
+                
                 contentSize = CGSize(width: context.availableSize.width, height: height + environment.safeInsets.bottom)
             }
             
@@ -1204,7 +1321,7 @@ private final class LimitSheetComponent: CombinedComponent {
 }
 
 public class PremiumLimitScreen: ViewControllerComponentContainer {
-    public enum Subject {
+    public enum Subject: Equatable {
         case folders
         case chatsPerFolder
         case pins
@@ -1216,6 +1333,8 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case expiringStories
         case storiesWeekly
         case storiesMonthly
+        
+        case storiesChannelBoost(level: Int32, link: String?)
     }
     
     public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Void) {

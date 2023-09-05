@@ -10,11 +10,17 @@ private let botWebViewPlatform = "macos"
 private let botWebViewPlatform = "ios"
 #endif
 
+public enum RequestSimpleWebViewSource {
+    case generic
+    case inline
+    case settings
+}
+
 public enum RequestSimpleWebViewError {
     case generic
 }
 
-func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: PeerId, url: String, inline: Bool, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
+func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: PeerId, url: String?, source: RequestSimpleWebViewSource, themeParams: [String: Any]?) -> Signal<String, RequestSimpleWebViewError> {
     var serializedThemeParams: Api.DataJSON?
     if let themeParams = themeParams, let data = try? JSONSerialization.data(withJSONObject: themeParams, options: []), let dataString = String(data: data, encoding: .utf8) {
         serializedThemeParams = .dataJSON(data: dataString)
@@ -28,8 +34,16 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
         if let _ = serializedThemeParams {
             flags |= (1 << 0)
         }
-        if inline {
+        switch source {
+        case .inline:
             flags |= (1 << 1)
+        case .settings:
+            flags |= (1 << 2)
+        default:
+            break
+        }
+        if let _ = url {
+            flags |= (1 << 3)
         }
         return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, startParam: nil, themeParams: serializedThemeParams, platform: botWebViewPlatform))
         |> mapError { _ -> RequestSimpleWebViewError in

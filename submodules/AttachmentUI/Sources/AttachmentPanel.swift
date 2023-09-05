@@ -176,7 +176,7 @@ private final class AttachButtonComponent: CombinedComponent {
             let imageName: String
             var imageFile: TelegramMediaFile?
             var animationFile: TelegramMediaFile?
-            var botPeer: Peer?
+            var botPeer: EnginePeer?
             
             let component = context.component
             let strings = component.strings
@@ -245,7 +245,7 @@ private final class AttachButtonComponent: CombinedComponent {
                 )
             } else {
                 var fileReference: FileMediaReference?
-                if let peer = botPeer.flatMap({ PeerReference($0 )}), let imageFile = imageFile {
+                if let peer = botPeer.flatMap({ PeerReference($0._asPeer())}), let imageFile = imageFile {
                     fileReference = .attachBot(peer: peer, media: imageFile)
                 }
                 
@@ -1143,7 +1143,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             if case let .app(peer, _, iconFiles) = type {
                 for (name, file) in iconFiles {
                     if [.default, .iOSAnimated, .placeholder].contains(name) {
-                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer) {
+                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer._asPeer()) {
                             if case .placeholder = name {
                                 let account = self.context.account
                                 let path = account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())

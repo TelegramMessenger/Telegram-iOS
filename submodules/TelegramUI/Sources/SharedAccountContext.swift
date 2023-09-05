@@ -1802,6 +1802,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesFormatting
         case .storiesExpirationDurations:
             mappedSource = .storiesExpirationDurations
+        case .storiesSuggestedReactions:
+            mappedSource = .storiesSuggestedReactions
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
