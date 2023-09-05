@@ -525,7 +525,7 @@ final class VideoScrubberComponent: Component {
             }
             audioTransition.setAlpha(view: self.audioClippingView, alpha: audioAlpha)
             
-            var audioClipOrigin: CGFloat = 0.0
+            var audioClipOrigin: CGFloat = -9.0
             var audioClipWidth = availableSize.width + 18.0
             
             var deselectedAudioClipWidth: CGFloat = 0.0
