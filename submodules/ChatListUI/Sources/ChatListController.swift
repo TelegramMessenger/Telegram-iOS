@@ -2851,50 +2851,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                         
-                        let isMuted = resolvedAreStoriesMuted(globalSettings: globalSettings._asGlobalNotificationSettings(), peer: peer._asPeer(), peerSettings: notificationSettings._asNotificationSettings(), topSearchPeers: topSearchPeers)
-                        items.append(.action(ContextMenuActionItem(text: isMuted ? self.presentationData.strings.StoryFeed_ContextNotifyOn : self.presentationData.strings.StoryFeed_ContextNotifyOff, icon: { theme in
-                            return generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor)
-                        }, action: { [weak self] _, f in
-                            f(.default)
-                            
-                            guard let self else {
-                                return
-                            }
-                            let _ = self.context.engine.peers.togglePeerStoriesMuted(peerId: peer.id).start()
-                            
-                            let iconColor = UIColor.white
-                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                            if isMuted {
-                                self.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .universal(animation: "anim_profileunmute", scale: 0.075, colors: [
-                                        "Middle.Group 1.Fill 1": iconColor,
-                                        "Top.Group 1.Fill 1": iconColor,
-                                        "Bottom.Group 1.Fill 1": iconColor,
-                                        "EXAMPLE.Group 1.Fill 1": iconColor,
-                                        "Line.Group 1.Stroke 1": iconColor
-                                    ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOn(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                            } else {
-                                self.present(UndoOverlayController(
-                                    presentationData: presentationData,
-                                    content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
-                                        "Middle.Group 1.Fill 1": iconColor,
-                                        "Top.Group 1.Fill 1": iconColor,
-                                        "Bottom.Group 1.Fill 1": iconColor,
-                                        "EXAMPLE.Group 1.Fill 1": iconColor,
-                                        "Line.Group 1.Stroke 1": iconColor
-                                    ], title: nil, text: presentationData.strings.StoryFeed_TooltipNotifyOff(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, customUndoText: nil, timeout: nil),
-                                    elevatedLayout: false,
-                                    animateInAsReplacement: false,
-                                    action: { _ in return false }
-                                ), in: .current)
-                            }
-                        })))
-                        
                         let hideText: String
                         if self.location == .chatList(groupId: .archive) {
                             hideText = self.presentationData.strings.StoryFeed_ContextUnarchive
