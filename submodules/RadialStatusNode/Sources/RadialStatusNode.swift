@@ -4,6 +4,35 @@ import AsyncDisplayKit
 import Display
 
 public enum RadialStatusNodeState: Equatable {
+    public enum SecretTimeoutIcon: Equatable {
+        case none
+        case image(UIImage)
+        case flame
+        
+        public static func ==(lhs: SecretTimeoutIcon, rhs: SecretTimeoutIcon) -> Bool {
+            switch lhs {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .image(lhsImage):
+                if case let .image(rhsImage) = rhs, lhsImage === rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case .flame:
+                if case .flame = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            }
+        }
+    }
+    
     case none
     case download(UIColor)
     case play(UIColor)
@@ -13,7 +42,7 @@ public enum RadialStatusNodeState: Equatable {
     case check(UIColor)
     case customIcon(UIImage)
     case staticTimeout
-    case secretTimeout(color: UIColor, icon: UIImage?, beginTime: Double, timeout: Double, sparks: Bool)
+    case secretTimeout(color: UIColor, icon: SecretTimeoutIcon, beginTime: Double, timeout: Double, sparks: Bool)
     
     public static func ==(lhs: RadialStatusNodeState, rhs: RadialStatusNodeState) -> Bool {
         switch lhs {
@@ -72,7 +101,7 @@ public enum RadialStatusNodeState: Equatable {
                     return false
                 }
             case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout, lhsSparks):
-                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
+                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon == rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
                     return true
                 } else {
                     return false
@@ -137,7 +166,7 @@ public enum RadialStatusNodeState: Equatable {
                     return false
                 }
             case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout, lhsSparks):
-                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
+                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon == rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
                     return true
                 } else {
                     return false

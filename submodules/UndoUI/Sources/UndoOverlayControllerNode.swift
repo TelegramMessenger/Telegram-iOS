@@ -1347,8 +1347,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var panelWrapperFrame = CGRect(origin: CGPoint(x: leftMargin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - leftMargin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
         
         if case .top = self.placementPosition {
-            panelFrame.origin.y = insets.top + margin
-            panelWrapperFrame.origin.y = insets.top + margin
+            var topInset = insets.top
+            if topInset.isZero {
+                topInset = layout.statusBarHeight ?? 44.0
+            }
+            panelFrame.origin.y = topInset + margin
+            panelWrapperFrame.origin.y = topInset + margin
         }
         
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
@@ -1441,7 +1445,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             let statusSize: CGFloat = 30.0
             transition.updateFrame(node: statusNode, frame: CGRect(origin: CGPoint(x: floor((leftInset - statusSize) / 2.0), y: floor((contentHeight - statusSize) / 2.0)), size: CGSize(width: statusSize, height: statusSize)))
             if firstLayout {
-                statusNode.transitionToState(.secretTimeout(color: .white, icon: nil, beginTime: CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, timeout: Double(self.remainingSeconds), sparks: false), completion: {})
+                statusNode.transitionToState(.secretTimeout(color: .white, icon: .none, beginTime: CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, timeout: Double(self.remainingSeconds), sparks: false), completion: {})
             }
         }
         

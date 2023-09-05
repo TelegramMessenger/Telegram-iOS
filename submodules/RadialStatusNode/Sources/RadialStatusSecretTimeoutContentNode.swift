@@ -25,12 +25,12 @@ private struct ContentParticle {
 
 private final class RadialStatusSecretTimeoutContentNodeParameters: NSObject {
     let color: UIColor
-    let icon: UIImage?
+    let icon: RadialStatusNodeState.SecretTimeoutIcon
     let progress: CGFloat
     let sparks: Bool
     let particles: [ContentParticle]
     
-    init(color: UIColor, icon: UIImage?, progress: CGFloat, sparks: Bool, particles: [ContentParticle]) {
+    init(color: UIColor, icon: RadialStatusNodeState.SecretTimeoutIcon, progress: CGFloat, sparks: Bool, particles: [ContentParticle]) {
         self.color = color
         self.icon = icon
         self.progress = progress
@@ -48,7 +48,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     
     private let beginTime: Double
     private let timeout: Double
-    private let icon: UIImage?
+    private let icon: RadialStatusNodeState.SecretTimeoutIcon
     private let sparks: Bool
     
     private var progress: CGFloat = 0.0
@@ -58,7 +58,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     
     private var displayLink: CADisplayLink?
     
-    init(color: UIColor, beginTime: Double, timeout: Double, icon: UIImage?, sparks: Bool) {
+    init(color: UIColor, beginTime: Double, timeout: Double, icon: RadialStatusNodeState.SecretTimeoutIcon, sparks: Bool) {
         self.color = color
         self.beginTime = beginTime
         self.timeout = timeout
@@ -84,7 +84,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         self.displayLink?.isPaused = true
         self.displayLink?.add(to: RunLoop.main, forMode: .common)
         
-        if icon != nil {
+        if case .flame = icon {
             self.addSubnode(self.animationNode)
         }
     }
@@ -202,15 +202,15 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         }
         
         if let parameters = parameters as? RadialStatusSecretTimeoutContentNodeParameters {
-//            if let icon = parameters.icon, let _ = icon.cgImage {
-//                let imageRect = CGRect(origin: CGPoint(x: floor((bounds.size.width - icon.size.width) / 2.0), y: floor((bounds.size.height - icon.size.height) / 2.0)), size: icon.size)
-//                context.saveGState()
-//                context.translateBy(x: imageRect.midX, y: imageRect.midY)
-//                context.scaleBy(x: 1.0, y: -1.0)
-//                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
-//                context.draw(iconImage, in: imageRect)
-//                context.restoreGState()
-//            }
+            if case let .image(icon) = parameters.icon, let iconImage = icon.cgImage {
+                let imageRect = CGRect(origin: CGPoint(x: floor((bounds.size.width - icon.size.width) / 2.0), y: floor((bounds.size.height - icon.size.height) / 2.0)), size: icon.size)
+                context.saveGState()
+                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                context.draw(iconImage, in: imageRect)
+                context.restoreGState()
+            }
             
             let lineWidth: CGFloat
             if parameters.sparks {

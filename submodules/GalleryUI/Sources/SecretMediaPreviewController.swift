@@ -11,6 +11,7 @@ import RadialStatusNode
 import ScreenCaptureDetection
 import AppBundle
 import LocalizedPeerData
+import TooltipUI
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {
@@ -57,23 +58,54 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
     private var timeoutNode: RadialStatusNode?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
-    
+        
     var beginTimeAndTimeout: (Double, Double)? {
         didSet {
-            if let (beginTime, timeout) = self.beginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
+            if let (beginTime, timeout) = self.beginTimeAndTimeout {
+                var beginTime = beginTime
                 if self.timeoutNode == nil {
                     let timeoutNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
                     self.timeoutNode = timeoutNode
-                    var iconImage: UIImage?
-                    if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: .white) {
-                        let factor: CGFloat = 0.48
-                        iconImage = generateImage(CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor)), contextGenerator: { size, context in
-                            context.clear(CGRect(origin: CGPoint(), size: size))
-                            context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                        })
+                    let icon: RadialStatusNodeState.SecretTimeoutIcon
+                    let timeoutValue = Int32(timeout)
+                    if timeoutValue == viewOnceTimeout || "".isEmpty {
+                        beginTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+                        
+                        if let image = generateImage(CGSize(width: 28.0, height: 28.0), rotatedContext: { size, context in
+                            let bounds = CGRect(origin: .zero, size: size)
+                            context.clear(bounds)
+                            
+                            let string = "1"
+                            let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: Font.with(size: 14.0, design: .round), NSAttributedString.Key.foregroundColor: UIColor.white])
+                            
+                            let line = CTLineCreateWithAttributedString(attributedString)
+                            let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+                            
+                            let lineOffset = CGPoint(x: -1.0, y: 0.0)
+                            let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (bounds.size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (bounds.size.height - lineBounds.size.height) / 2.0))
+                            
+                            context.translateBy(x: bounds.size.width / 2.0, y: bounds.size.height / 2.0)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
+                            
+                            context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+                            CTLineDraw(line, context)
+                            context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+                        }) {
+                            icon = .image(image)
+                        } else {
+                            icon = .flame
+                        }
+                    } else {
+                        icon = .flame
                     }
-                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: iconImage, beginTime: beginTime, timeout: timeout, sparks: true), completion: {})
+                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: icon, beginTime: beginTime, timeout: timeout, sparks: true), completion: {})
                     self.addSubnode(timeoutNode)
+  
+                    timeoutNode.addTarget(self, action: #selector(self.statusTapGesture), forControlEvents: .touchUpInside)
+                    
+//                    let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.statusTapGesture))
+//                    timeoutNode.view.addGestureRecognizer(tapGesture)
                     
                     if let (layout, navigationHeight) = self.validLayout {
                         self.layoutTimeoutNode(layout, navigationBarHeight: navigationHeight, transition: .immediate)
@@ -83,6 +115,13 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
                 self.timeoutNode = nil
                 timeoutNode.removeFromSupernode()
             }
+        }
+    }
+    
+    var statusPressed: (UIView) -> Void = { _ in }
+    @objc private func statusTapGesture() {
+        if let sourceView = self.timeoutNode?.view {
+            self.statusPressed(sourceView)
         }
     }
     
@@ -149,6 +188,8 @@ public final class SecretMediaPreviewController: ViewController {
     
     private var screenCaptureEventsDisposable: Disposable?
     
+    private weak var tooltipController: TooltipScreen?
+    
     public init(context: AccountContext, messageId: MessageId) {
         self.context = context
         self.messageId = messageId
@@ -213,6 +254,12 @@ public final class SecretMediaPreviewController: ViewController {
         })
         self.displayNode = SecretMediaPreviewControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
+        
+        self.controllerNode.statusPressed = { [weak self] sourceView in
+            if let self {
+                self.presentViewOnceTooltip(sourceView: sourceView)
+            }
+        }
         
         self.controllerNode.statusBar = self.statusBar
         self.controllerNode.navigationBar = self.navigationBar
@@ -495,6 +542,42 @@ public final class SecretMediaPreviewController: ViewController {
                 self.dismiss()
             }
         }
+    }
+    
+    private func presentViewOnceTooltip(sourceView: UIView) {
+        if let tooltipController = self.tooltipController {
+            self.tooltipController = nil
+            tooltipController.dismiss()
+        }
+        
+        let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil)
+        let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 2.0), size: CGSize())
+        
+        let iconName = "anim_autoremove_on"
+        let text: String
+        if self.currentNodeMessageIsVideo {
+            text = "This video can only be viewed once"
+        } else {
+            text = "This photo can only be viewed once"
+        }
+        
+        let tooltipController = TooltipScreen(
+            account: self.context.account,
+            sharedContext: self.context.sharedContext,
+            text: .plain(text: text),
+            balancedTextLayout: true,
+            style: .customBlur(UIColor(rgb: 0x18181a), 0.0),
+            arrowStyle: .small,
+            icon: .animation(name: iconName, delay: 0.1, tintColor: nil),
+            location: .point(location, .top),
+            displayDuration: .default,
+            inset: 8.0,
+            shouldDismissOnTouch: { _, _ in
+                return .ignore
+            }
+        )
+        self.tooltipController = tooltipController
+        self.present(tooltipController, in: .window(.root))
     }
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -1796,6 +1796,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         var badgeContent: ChatMessageInteractiveMediaBadgeContent?
         var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
         
+        if isSecretMedia {
+            backgroundColor = messageTheme.mediaDateAndStatusFillColor
+        }
+        
         if let invoice = invoice {
             if let extendedMedia = invoice.extendedMedia {
                 if case let .preview(_, _, maybeVideoDuration) = extendedMedia, let videoDuration = maybeVideoDuration {
@@ -1989,11 +1993,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
                     }
                     if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
-                        state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
-                        backgroundColor = messageTheme.mediaDateAndStatusFillColor
+                        state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
                     } else if isSecretMedia, let _ = secretProgressIcon {
                         state = .staticTimeout
-                        backgroundColor = messageTheme.mediaDateAndStatusFillColor
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
                         if (!isInlinePlayableVideo || isStory) && file.isVideo {

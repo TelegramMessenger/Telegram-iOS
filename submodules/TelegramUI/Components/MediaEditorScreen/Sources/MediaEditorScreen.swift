@@ -4111,6 +4111,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
     
     fileprivate func presentReactionPremiumSuggestion() {
+        self.hapticFeedback.impact(.light)
+        
         self.dismissAllTooltips()
         
         let context = self.context
@@ -4142,7 +4144,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 )
             }
                     
-            let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+            let controller = UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { [weak self] action in
                 if case .info = action, let self {
                     if let stickerScreen = self.node.stickerScreen {
                         self.node.stickerScreen = nil
