@@ -2809,7 +2809,11 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     if let accountPeer {
                         sendAsPeers.append(accountPeer)
                     }
-                    sendAsPeers.append(contentsOf: adminedChannels)
+                    for channel in adminedChannels {
+                        if case let .channel(channel) = channel, channel.hasPermission(.postStories) {
+                            sendAsPeers.append(contentsOf: adminedChannels)
+                        }
+                    }
 
                     let (peersMap, everyonePeers, contactsPeers, selectedPeers) = savedPeers
                     var savedSelectedPeers: [Stories.Item.Privacy.Base: [EnginePeer.Id]] = [:]

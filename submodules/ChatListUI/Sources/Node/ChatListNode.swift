@@ -23,8 +23,6 @@ import ChatListHeaderComponent
 import UndoUI
 import NewSessionInfoScreen
 
-private var debugDidAddNewSessionReview = false
-
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
     case peers(filter: ChatListNodePeersFilter, isSelecting: Bool, additionalCategories: [ChatListNodeAdditionalCategory], chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool, displayPresence: Bool)
@@ -1637,11 +1635,11 @@ public final class ChatListNode: ListView {
                     return true
                 }))
                 
-                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
+                let _ = self.context.engine.privacy.confirmNewSessionReview(id: newSessionReview.id)
             } else {
                 self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
                 
-                let _ = removeNewSessionReviews(postbox: self.context.account.postbox, ids: [newSessionReview.id]).start()
+                let _ = self.context.engine.privacy.terminateAnotherSession(id: newSessionReview.id).start()
             }
         }, openChatFolderUpdates: { [weak self] in
             guard let self else {
@@ -1743,12 +1741,7 @@ public final class ChatListNode: ListView {
     
         let suggestedChatListNotice: Signal<ChatListNotice?, NoError>
         if case .chatList(groupId: .root) = location, chatListFilter == nil {
-            #if DEBUG
-            if !debugDidAddNewSessionReview {
-                debugDidAddNewSessionReview = true
-                let _ = addNewSessionReview(postbox: context.account.postbox, item: NewSessionReview(id: 1, device: "iPhone 14 Pro", location: "Dubai, UAE")).start()
-            }
-            #endif
+            let _ = context.engine.privacy.cleanupSessionReviews().start()
             
             suggestedChatListNotice = .single(nil)
             |> then (
@@ -2950,6 +2943,15 @@ public final class ChatListNode: ListView {
             if revealHiddenItems && !strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
                 //strongSelf.revealScrollHiddenItem()
             }
+        }
+        
+        self.dynamicVisualInsets = { [weak self] in
+            guard let self else {
+                return UIEdgeInsets()
+            }
+            
+            let _ = self
+            return UIEdgeInsets()
         }
         
         self.pollFilterUpdates()

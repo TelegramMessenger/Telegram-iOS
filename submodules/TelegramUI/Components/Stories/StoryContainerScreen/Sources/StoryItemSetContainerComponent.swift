@@ -5679,59 +5679,68 @@ public final class StoryItemSetContainerComponent: Component {
             guard let component = self.component, let controller = component.controller() else {
                 return
             }
+            guard case let .channel(channel) = component.slice.peer else {
+                return
+            }
             
             self.dismissAllTooltips()
             
             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Edit, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                guard let self else {
-                    return
-                }
-                self.openStoryEditing()
-            })))
+            if (component.slice.item.storyItem.isMy && channel.hasPermission(.postStories)) || channel.hasPermission(.editStories) {
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_Edit, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self else {
+                        return
+                    }
+                    self.openStoryEditing()
+                })))
+            }
             
-            items.append(.separator)
+            if !items.isEmpty {
+                items.append(.separator)
+            }
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from Posts" : "Save to Posts", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Stories/Context Menu/Unpin" : "Stories/Context Menu/Pin"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                guard let self, let component = self.component else {
-                    return
-                }
-                
-                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
-                
-                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+            if channel.hasPermission(.editStories) {
                 //TODO:localize
-                if component.slice.item.storyItem.isPinned {
-                    self.component?.presentController(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .info(title: nil, text: "Story removed from the channel's profile", timeout: nil),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        blurred: true,
-                        action: { _ in return false }
-                    ), nil)
-                } else {
-                    self.component?.presentController(UndoOverlayController(
-                        presentationData: presentationData,
-                        content: .info(title: "Story saved to the channel's profile", text: "Saved stories can be viewed by others on the channel's profile until an admin removes them.", timeout: nil),
-                        elevatedLayout: false,
-                        animateInAsReplacement: false,
-                        blurred: true,
-                        action: { _ in return false }
-                    ), nil)
-                }
-            })))
+                items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from Posts" : "Save to Posts", icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Stories/Context Menu/Unpin" : "Stories/Context Menu/Pin"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    
+                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                    //TODO:localize
+                    if component.slice.item.storyItem.isPinned {
+                        self.component?.presentController(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .info(title: nil, text: "Story removed from the channel's profile", timeout: nil),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            blurred: true,
+                            action: { _ in return false }
+                        ), nil)
+                    } else {
+                        self.component?.presentController(UndoOverlayController(
+                            presentationData: presentationData,
+                            content: .info(title: "Story saved to the channel's profile", text: "Saved stories can be viewed by others on the channel's profile until an admin removes them.", timeout: nil),
+                            elevatedLayout: false,
+                            animateInAsReplacement: false,
+                            blurred: true,
+                            action: { _ in return false }
+                        ), nil)
+                    }
+                })))
+            }
             
             let saveText: String = component.strings.Story_Context_SaveToGallery
             items.append(.action(ContextMenuActionItem(text: saveText, icon: { theme in
@@ -5745,23 +5754,6 @@ public final class StoryItemSetContainerComponent: Component {
                 self.requestSave()
             })))
             
-            if case let .user(accountUser) = component.slice.peer {
-                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] _, a in
-                    a(.default)
-                    
-                    guard let self else {
-                        return
-                    }
-                    if accountUser.isPremium {
-                        self.sendMessageContext.requestStealthMode(view: self)
-                    } else {
-                        self.presentStealthModeUpgradeScreen()
-                    }
-                })))
-            }
-            
             if component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) && (component.slice.item.storyItem.expirationTimestamp > Int32(Date().timeIntervalSince1970) || component.slice.item.storyItem.isPinned) {
                 items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: theme.contextMenu.primaryColor)
@@ -5773,7 +5765,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                    |> deliverOnMainQueue).start(next: { [weak self] link in
+                             |> deliverOnMainQueue).start(next: { [weak self] link in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -5803,48 +5795,50 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
-            items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteStory, textColor: .destructive, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
-            }, action: { [weak self] _, a in
-                a(.default)
-                
-                guard let self, let component = self.component else {
-                    return
-                }
-                
-                let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                let actionSheet = ActionSheetController(presentationData: presentationData)
-                
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: component.strings.Story_ContextDeleteStory, color: .destructive, action: { [weak self, weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            component.delete()
-                        })
-                    ]),
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                        })
-                    ])
-                ])
-                
-                actionSheet.dismissed = { [weak self] _ in
-                    guard let self else {
+            if (component.slice.item.storyItem.isMy && channel.hasPermission(.postStories)) || channel.hasPermission(.deleteStories) {
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteStory, textColor: .destructive, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self, let component = self.component else {
                         return
                     }
-                    self.sendMessageContext.actionSheet = nil
+                    
+                    let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
+                    let actionSheet = ActionSheetController(presentationData: presentationData)
+                    
+                    actionSheet.setItemGroups([
+                        ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: component.strings.Story_ContextDeleteStory, color: .destructive, action: { [weak self, weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                
+                                guard let self, let component = self.component else {
+                                    return
+                                }
+                                component.delete()
+                            })
+                        ]),
+                        ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])
+                    ])
+                    
+                    actionSheet.dismissed = { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.sendMessageContext.actionSheet = nil
+                        self.updateIsProgressPaused()
+                    }
+                    self.sendMessageContext.actionSheet = actionSheet
                     self.updateIsProgressPaused()
-                }
-                self.sendMessageContext.actionSheet = actionSheet
-                self.updateIsProgressPaused()
-                
-                component.presentController(actionSheet, nil)
-            })))
+                    
+                    component.presentController(actionSheet, nil)
+                })))
+            }
             
             let (tip, tipSignal) = self.getLinkedStickerPacks()
             

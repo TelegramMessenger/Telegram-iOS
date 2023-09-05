@@ -187,6 +187,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
+                        isMy: item.isMy,
                         myReaction: item.myReaction
                     )
                 }
@@ -220,6 +221,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 isSelectedContacts: item.privacy.base == .nobody,
                                 isForwardingDisabled: false,
                                 isEdited: false,
+                                isMy: true,
                                 myReaction: nil
                             ))
                             totalCount += 1
@@ -1096,6 +1098,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isSelectedContacts: itemValue.isSelectedContacts,
                     isForwardingDisabled: itemValue.isForwardingDisabled,
                     isEdited: itemValue.isEdited,
+                    isMy: itemValue.isMy,
                     myReaction: itemValue.myReaction
                 )
                 

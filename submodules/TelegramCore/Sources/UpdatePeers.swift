@@ -70,6 +70,21 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
             }
         }
     }
+    for (_, chat) in peers.chats {
+        switch chat {
+        case let .channel(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+            let isMin = (flags & (1 << 12)) != 0
+            let storiesUnavailable = (flags2 & (1 << 3)) != 0
+            
+            if let storiesMaxId = storiesMaxId {
+                transaction.setStoryItemsInexactMaxId(peerId: chat.peerId, id: storiesMaxId)
+            } else if !isMin && storiesUnavailable {
+                transaction.clearStoryItemsInexactMaxId(peerId: chat.peerId)
+            }
+        default:
+            break
+        }
+    }
     for (_, peer) in peers.peers {
         parsedPeers.append(peer)
     }

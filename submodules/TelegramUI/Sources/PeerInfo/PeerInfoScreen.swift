@@ -5321,10 +5321,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else if let channel = peer as? TelegramChannel {
                     if let cachedData = strongSelf.data?.cachedData as? CachedChannelData {
-                        if channel.hasPermission(.sendSomething) {
+                        if channel.hasPermission(.editStories) {
                             //TODO:localize
                             items.append(.action(ContextMenuActionItem(text: "Archived Stories", icon: { theme in
-                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                                generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
                                 f(.dismissWithoutContent)
                                 

@@ -7,6 +7,7 @@ import MtProtoKit
 struct AccumulatedPeers {
     var peers: [PeerId: Peer] = [:]
     var users: [PeerId: Api.User] = [:]
+    var chats: [PeerId: Api.Chat] = [:]
     
     var allIds: Set<PeerId> {
         var result = Set<PeerId>()
@@ -31,6 +32,9 @@ struct AccumulatedPeers {
         for user in users {
             self.users[user.peerId] = user
         }
+        for chat in chats {
+            self.chats[chat.peerId] = chat
+        }
     }
     
     init(chats: [Api.Chat], users: [Api.User]) {
@@ -41,6 +45,9 @@ struct AccumulatedPeers {
         }
         for user in users {
             self.users[user.peerId] = user
+        }
+        for chat in chats {
+            self.chats[chat.peerId] = chat
         }
     }
     
@@ -64,6 +71,9 @@ struct AccumulatedPeers {
         }
         for (id, user) in other.users {
             result.users[id] = user
+        }
+        for (id, chat) in other.chats {
+            result.chats[id] = chat
         }
         
         return result
