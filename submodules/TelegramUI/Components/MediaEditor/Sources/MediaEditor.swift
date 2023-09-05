@@ -350,9 +350,11 @@ public final class MediaEditor {
             } else {
                 self.audioPlayer?.removeTimeObserver(timeObserver)
             }
+            self.timeObserver = nil
         }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
+            self.didPlayToEndTimeObserver = nil
         }
         
         self.audioDelayTimer?.invalidate()
@@ -890,7 +892,16 @@ public final class MediaEditor {
         
         if self.player == nil, let audioPlayer = self.audioPlayer {
             let itemTime = audioPlayer.currentItem?.currentTime() ?? .invalid
-            audioPlayer.setRate(rate, time: itemTime, atHostTime: futureTime)
+            if audioPlayer.status == .readyToPlay {
+                audioPlayer.setRate(rate, time: itemTime, atHostTime: futureTime)
+            } else {
+                audioPlayer.seek(to: itemTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                if rate > 0.0 {
+                    audioPlayer.play()
+                } else {
+                    audioPlayer.pause()
+                }
+            }
         } else {
             let itemTime = self.player?.currentItem?.currentTime() ?? .invalid
             let audioTime = self.audioTime(for: itemTime)
@@ -898,13 +909,24 @@ public final class MediaEditor {
             self.player?.setRate(rate, time: itemTime, atHostTime: futureTime)
             self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
             
-            if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
-                self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                    self?.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
-                }, queue: Queue.mainQueue())
-                self.audioDelayTimer?.start()
-            } else {
-                self.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
+            if let audioPlayer = self.audioPlayer {
+                if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
+                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                        self?.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
+                    }, queue: Queue.mainQueue())
+                    self.audioDelayTimer?.start()
+                } else {
+                    if audioPlayer.status == .readyToPlay {
+                        audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
+                    } else {
+                        audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        if rate > 0.0 {
+                            audioPlayer.play()
+                        } else {
+                            audioPlayer.pause()
+                        }
+                    }
+                }
             }
         }
         

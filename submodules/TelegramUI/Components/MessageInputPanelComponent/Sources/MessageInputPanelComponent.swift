@@ -374,6 +374,7 @@ public final class MessageInputPanelComponent: Component {
         private let counter = ComponentView<Empty>()
         
         private var disabledPlaceholder: ComponentView<Empty>?
+        private var textClippingView = UIView()
         private let textField = ComponentView<Empty>()
         private let textFieldExternalState = TextFieldComponent.ExternalState()
         
@@ -440,12 +441,15 @@ public final class MessageInputPanelComponent: Component {
             self.gradientView = UIImageView()
             self.bottomGradientView = UIView()
             
+            self.textClippingView.clipsToBounds = true
+            
             super.init(frame: frame)
             
             self.addSubview(self.bottomGradientView)
             self.addSubview(self.gradientView)
             self.fieldBackgroundView.addSubview(self.vibrancyEffectView)
             self.addSubview(self.fieldBackgroundView)
+            self.addSubview(self.textClippingView)
             
             self.viewForOverlayContent = ViewForOverlayContent(
                 ignoreHit: { [weak self] view, point in
@@ -715,7 +719,7 @@ public final class MessageInputPanelComponent: Component {
                             return value
                         }
                     },
-                    resetScrollOnFocusChange: component.style == .media,
+                    isOneLineWhenUnfocused: component.style == .media,
                     formatMenuAvailability: component.isFormattingLocked ? .locked : .available,
                     lockedFormatAction: {
                         component.presentTextFormattingTooltip?()
@@ -798,6 +802,12 @@ public final class MessageInputPanelComponent: Component {
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
             self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)
+            
+            var textClippingFrame = fieldBackgroundFrame
+            if component.style == .media, !isEditing {
+                textClippingFrame.size.height -= 10.0
+            }
+            transition.setFrame(view: self.textClippingView, frame: textClippingFrame)
             
             let gradientFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX - fieldFrame.minX, y: -topGradientHeight), size: CGSize(width: availableSize.width - (fieldBackgroundFrame.minX - fieldFrame.minX), height: topGradientHeight + fieldBackgroundFrame.maxY + insets.bottom))
             transition.setFrame(view: self.gradientView, frame: gradientFrame)
@@ -918,7 +928,7 @@ public final class MessageInputPanelComponent: Component {
             
             if let textFieldView = self.textField.view as? TextFieldComponent.View {
                 if textFieldView.superview == nil {
-                    self.addSubview(textFieldView)
+                    self.textClippingView.addSubview(textFieldView)
                     
                     if let viewForOverlayContent = self.viewForOverlayContent {
                         self.addSubview(viewForOverlayContent)
@@ -932,7 +942,7 @@ public final class MessageInputPanelComponent: Component {
                         }
                     }
                 }
-                let textFieldFrame = CGRect(origin: CGPoint(x: fieldBackgroundFrame.minX, y: fieldBackgroundFrame.maxY - textFieldSize.height), size: textFieldSize)
+                let textFieldFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: textFieldSize)
                 transition.setFrame(view: textFieldView, frame: textFieldFrame)
                 transition.setAlpha(view: textFieldView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
                 

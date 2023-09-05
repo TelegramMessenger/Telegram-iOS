@@ -3086,16 +3086,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentAudioPicker() {
+            var isSettingTrack = false
             self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, dismissed: { [weak self] in
                 if let self {
                     Queue.mainQueue().after(0.1) {
-                        self.mediaEditor?.play()
+                        if !isSettingTrack {
+                            self.mediaEditor?.play()
+                        }
                     }
                 }
             }, completion: { [weak self] urls in
                 guard let self, let mediaEditor = self.mediaEditor, !urls.isEmpty, let url = urls.first else {
                     return
                 }
+                isSettingTrack = true
                 
                 try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
                 
@@ -3183,6 +3187,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 if isScopedResource {
                                     url.stopAccessingSecurityScopedResource()
                                 }
+                                
+                                mediaEditor.play()
                             }
                         })
                     }

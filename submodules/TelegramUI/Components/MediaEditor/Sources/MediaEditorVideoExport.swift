@@ -72,7 +72,6 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         var videoSettings = configuration.videoSettings
         if var compressionSettings = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] {
             compressionSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
-//            compressionSettings[AVVideoMaxKeyFrameIntervalKey] = sourceFrameRate
             videoSettings[AVVideoCompressionPropertiesKey] = compressionSettings
         }
         
@@ -221,12 +220,19 @@ public final class MediaEditorVideoExport {
         }
         
         var audioTimeRange: CMTimeRange? {
-            let offset = self.values.audioTrackOffset ?? 0.0
-            if let range = self.values.audioTrackTrimRange {
-                return CMTimeRange(
-                    start: CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
-                    end: CMTime(seconds: offset + range.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-                )
+            if let audioTrack = self.values.audioTrack {
+                let offset = self.values.audioTrackOffset ?? 0.0
+                if let range = self.values.audioTrackTrimRange {
+                    return CMTimeRange(
+                        start: CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
+                        end: CMTime(seconds: offset + range.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                    )
+                } else {
+                    return CMTimeRange(
+                        start: CMTime(seconds: offset, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
+                        end: CMTime(seconds: offset + min(15.0, audioTrack.duration), preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                    )
+                }
             } else {
                 return nil
             }
@@ -289,7 +295,7 @@ public final class MediaEditorVideoExport {
     private var additionalReader: AVAssetReader?
     
     private var videoOutput: AVAssetReaderOutput?
-    private var audioOutput: AVAssetReaderAudioMixOutput?
+    private var audioOutput: AVAssetReaderOutput?
     private var textureRotation: TextureRotation = .rotate0Degrees
     
     private var additionalVideoOutput: AVAssetReaderOutput?
@@ -399,9 +405,7 @@ public final class MediaEditorVideoExport {
                 print("error")
                 return
             }
-            
-
-            
+        
             let timeRange: CMTimeRange = CMTimeRangeMake(start: .zero, duration: duration)
             try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
             if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid), !self.configuration.values.videoIsMuted {
@@ -542,12 +546,63 @@ public final class MediaEditorVideoExport {
         
         self.setupComposer()
         
+        var inputAudioMix: AVMutableAudioMix?
+        
         self.writer = MediaEditorVideoAVAssetWriter()
         guard let writer = self.writer else {
             return
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
         writer.setupVideoInput(configuration: self.configuration, sourceFrameRate: 30.0)
+                
+        if let audioData = self.configuration.values.audioTrack {
+            let mixComposition = AVMutableComposition()
+            let audioPath = fullDraftPath(peerId: self.configuration.values.peerId, path: audioData.path)
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioPath))
+            
+            if let musicAssetTrack = audioAsset.tracks(withMediaType: .audio).first,
+               let musicTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) {
+                do {
+                    let reader = try AVAssetReader(asset: mixComposition)
+                    
+                    var musicRange = CMTimeRange(start: .zero, duration: CMTime(seconds: min(15.0, audioData.duration), preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+                    if let audioTrackRange = self.configuration.audioTimeRange {
+                        musicRange = audioTrackRange
+                    }
+                    try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: .zero)
+                    
+                    if let volume = self.configuration.values.audioTrackVolume, volume < 1.0 {
+                        let audioMix = AVMutableAudioMix()
+                        var audioMixParam: [AVMutableAudioMixInputParameters] = []
+                        let param: AVMutableAudioMixInputParameters = AVMutableAudioMixInputParameters(track: musicTrack)
+                        param.trackID = musicTrack.trackID
+                        param.setVolume(Float(volume), at: CMTime.zero)
+                        audioMixParam.append(param)
+                        audioMix.inputParameters = audioMixParam
+                        inputAudioMix = audioMix
+                    }
+                    
+                    let audioTracks = mixComposition.tracks(withMediaType: .audio)
+                    let audioOutput = AVAssetReaderAudioMixOutput(audioTracks: audioTracks, audioSettings: nil)
+                    audioOutput.audioMix = inputAudioMix
+                    audioOutput.alwaysCopiesSampleData = false
+                    if reader.canAdd(audioOutput) {
+                        reader.add(audioOutput)
+                        
+                        self.reader = reader
+                        self.audioOutput = audioOutput
+                        
+                        writer.setupAudioInput(configuration: self.configuration)
+                    } else {
+                        self.internalStatus = .finished
+                        self.statusValue = .failed(.addAudioOutput)
+                    }
+                } catch {
+                    self.internalStatus = .finished
+                    self.statusValue = .failed(.addAudioOutput)
+                }
+            }
+        }
     }
     
     private func finish() {
@@ -818,19 +873,52 @@ public final class MediaEditorVideoExport {
             return
         }
         
+        if let _ = self.audioOutput, let reader = self.reader {
+            guard reader.startReading() else {
+                self.statusValue = .failed(.reading(nil))
+                return
+            }
+        }
+        
         self.internalStatus = .exporting
         
         writer.startSession(atSourceTime: .zero)
         
-        self.imageArguments = (5.0, Double(self.configuration.frameRate), CMTime(value: 0, timescale: Int32(self.configuration.frameRate)))
+        var duration: Double = 5.0
+        if let audioDuration = self.configuration.audioTimeRange?.duration.seconds {
+            duration = audioDuration
+        }
+        self.imageArguments = (duration, Double(self.configuration.frameRate), CMTime(value: 0, timescale: Int32(self.configuration.frameRate)))
+        
+        var videoCompleted = false
+        var audioCompleted = false
         
         var exportForVideoOutput: MediaEditorVideoExport? = self
         writer.requestVideoDataWhenReady(on: self.queue.queue) {
             guard let export = exportForVideoOutput else { return }
             if !export.encodeImageVideo() {
+                videoCompleted = true
                 exportForVideoOutput = nil
-                export.finish()
+                if audioCompleted {
+                    export.finish()
+                }
             }
+        }
+        
+        if let _ = self.audioOutput {
+            var exportForAudioOutput: MediaEditorVideoExport? = self
+            writer.requestAudioDataWhenReady(on: self.queue.queue) {
+                guard let export = exportForAudioOutput else { return }
+                if !export.encodeAudio() {
+                    audioCompleted = true
+                    exportForAudioOutput = nil
+                    if videoCompleted {
+                        export.finish()
+                    }
+                }
+            }
+        } else {
+            audioCompleted = true
         }
     }
     
