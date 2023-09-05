@@ -69,9 +69,10 @@ public final class EngineStoryItem: Equatable {
     public let isSelectedContacts: Bool
     public let isForwardingDisabled: Bool
     public let isEdited: Bool
+    public let isMy: Bool
     public let myReaction: MessageReaction.Reaction?
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, myReaction: MessageReaction.Reaction?) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -90,6 +91,7 @@ public final class EngineStoryItem: Equatable {
         self.isSelectedContacts = isSelectedContacts
         self.isForwardingDisabled = isForwardingDisabled
         self.isEdited = isEdited
+        self.isMy = isMy
         self.myReaction = myReaction
     }
     
@@ -148,6 +150,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.isEdited != rhs.isEdited {
             return false
         }
+        if lhs.isMy != rhs.isMy {
+            return false
+        }
         if lhs.myReaction != rhs.myReaction {
             return false
         }
@@ -189,6 +194,7 @@ extension EngineStoryItem {
             isSelectedContacts: self.isSelectedContacts,
             isForwardingDisabled: self.isForwardingDisabled,
             isEdited: self.isEdited,
+            isMy: self.isMy,
             myReaction: self.myReaction
         )
     }
@@ -563,6 +569,7 @@ public final class PeerStoryListContext {
                             isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited,
+                            isMy: item.isMy,
                             myReaction: item.myReaction
                         )
                         items.append(mappedItem)
@@ -693,6 +700,7 @@ public final class PeerStoryListContext {
                                             isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
                                             isEdited: item.isEdited,
+                                            isMy: item.isMy,
                                             myReaction: item.myReaction
                                         )
                                         storyItems.append(mappedItem)
@@ -847,6 +855,7 @@ public final class PeerStoryListContext {
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited,
+                                                                isMy: item.isMy,
                                                                 myReaction: item.myReaction
                                                             )
                                                             finalUpdatedState = updatedState
@@ -892,6 +901,7 @@ public final class PeerStoryListContext {
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
                                                             isEdited: item.isEdited,
+                                                            isMy: item.isMy,
                                                             myReaction: item.myReaction
                                                         )
                                                         finalUpdatedState = updatedState
@@ -939,6 +949,7 @@ public final class PeerStoryListContext {
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited,
+                                                                isMy: item.isMy,
                                                                 myReaction: item.myReaction
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
@@ -982,6 +993,7 @@ public final class PeerStoryListContext {
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
                                                             isEdited: item.isEdited,
+                                                            isMy: item.isMy,
                                                             myReaction: item.myReaction
                                                         ))
                                                         updatedState.items.sort(by: { lhs, rhs in
@@ -1149,6 +1161,7 @@ public final class PeerExpiringStoryListContext {
                                         isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited,
+                                        isMy: item.isMy,
                                         myReaction: item.myReaction
                                     )
                                     items.append(.item(mappedItem))

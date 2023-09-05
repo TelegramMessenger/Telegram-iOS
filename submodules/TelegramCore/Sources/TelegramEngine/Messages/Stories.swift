@@ -180,6 +180,7 @@ public enum Stories {
             case isSelectedContacts
             case isForwardingDisabled
             case isEdited
+            case isMy
             case myReaction
         }
         
@@ -200,6 +201,7 @@ public enum Stories {
         public let isSelectedContacts: Bool
         public let isForwardingDisabled: Bool
         public let isEdited: Bool
+        public let isMy: Bool
         public let myReaction: MessageReaction.Reaction?
         
         public init(
@@ -220,6 +222,7 @@ public enum Stories {
             isSelectedContacts: Bool,
             isForwardingDisabled: Bool,
             isEdited: Bool,
+            isMy: Bool,
             myReaction: MessageReaction.Reaction?
         ) {
             self.id = id
@@ -239,6 +242,7 @@ public enum Stories {
             self.isSelectedContacts = isSelectedContacts
             self.isForwardingDisabled = isForwardingDisabled
             self.isEdited = isEdited
+            self.isMy = isMy
             self.myReaction = myReaction
         }
         
@@ -268,6 +272,7 @@ public enum Stories {
             self.isSelectedContacts = try container.decodeIfPresent(Bool.self, forKey: .isSelectedContacts) ?? false
             self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .isForwardingDisabled) ?? false
             self.isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited) ?? false
+            self.isMy = try container.decodeIfPresent(Bool.self, forKey: .isMy) ?? false
             self.myReaction = try container.decodeIfPresent(MessageReaction.Reaction.self, forKey: .myReaction)
         }
         
@@ -298,6 +303,7 @@ public enum Stories {
             try container.encode(self.isSelectedContacts, forKey: .isSelectedContacts)
             try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
             try container.encode(self.isEdited, forKey: .isEdited)
+            try container.encode(self.isMy, forKey: .isMy)
             try container.encodeIfPresent(self.myReaction, forKey: .myReaction)
         }
         
@@ -1025,6 +1031,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
                                                             isEdited: item.isEdited,
+                                                            isMy: item.isMy,
                                                             myReaction: item.myReaction
                                                         )
                                                         if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
@@ -1204,6 +1211,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
+                isMy: item.isMy,
                 myReaction: item.myReaction
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
@@ -1232,6 +1240,7 @@ func _internal_editStoryPrivacy(account: Account, id: Int32, privacy: EngineStor
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
+                isMy: item.isMy,
                 myReaction: item.myReaction
             )
             if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
@@ -1406,6 +1415,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited,
+                    isMy: item.isMy,
                     myReaction: item.myReaction
                 )
                 if let entry = CodableEntry(Stories.StoredItem.item(updatedItem)) {
@@ -1433,6 +1443,7 @@ func _internal_updateStoriesArePinned(account: Account, peerId: PeerId, ids: [In
                     isSelectedContacts: item.isSelectedContacts,
                     isForwardingDisabled: item.isForwardingDisabled,
                     isEdited: item.isEdited,
+                    isMy: item.isMy,
                     myReaction: item.myReaction
                 )
                 updatedItems.append(updatedItem)
@@ -1575,6 +1586,13 @@ extension Stories.StoredItem {
                     mergedMyReaction = sentReaction.flatMap(MessageReaction.Reaction.init(apiReaction:))
                 }
                 
+                var mergedIsMy: Bool
+                if isMin, let existingItem = existingItem {
+                    mergedIsMy = existingItem.isMy
+                } else {
+                    mergedIsMy = (flags & (1 << 16)) != 0
+                }
+                
                 let item = Stories.Item(
                     id: id,
                     timestamp: date,
@@ -1593,6 +1611,7 @@ extension Stories.StoredItem {
                     isSelectedContacts: isSelectedContacts,
                     isForwardingDisabled: isForwardingDisabled,
                     isEdited: isEdited,
+                    isMy: mergedIsMy,
                     myReaction: mergedMyReaction
                 )
                 self = .item(item)
@@ -2046,6 +2065,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                         isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
+                        isMy: item.isMy,
                         myReaction: reaction
                     ))
                     updatedItemValue = updatedItem
@@ -2076,6 +2096,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
                 isSelectedContacts: item.isSelectedContacts,
                 isForwardingDisabled: item.isForwardingDisabled,
                 isEdited: item.isEdited,
+                isMy: item.isMy,
                 myReaction: reaction
             ))
             updatedItemValue = updatedItem

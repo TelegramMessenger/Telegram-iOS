@@ -3241,6 +3241,10 @@ final class StorageUsageScreenComponent: Component {
                     }
                 }
                 
+                if case .separator = subItems.last {
+                    subItems.removeLast()
+                }
+                
                 if let sourceLabelView = sourceView.labelView {
                     let items: Signal<ContextController.Items, NoError> = .single(ContextController.Items(content: .list(subItems)))
                     let source: ContextContentSource = .reference(StorageUsageContextReferenceContentSource(sourceView: sourceLabelView))

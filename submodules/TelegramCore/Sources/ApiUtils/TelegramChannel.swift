@@ -18,6 +18,9 @@ public enum TelegramChannelPermission {
     case changeInfo
     case canBeAnonymous
     case manageCalls
+    case postStories
+    case editStories
+    case deleteStories
 }
 
 public extension TelegramChannel {
@@ -235,6 +238,24 @@ public extension TelegramChannel {
                     return true
                 }
                 return false
+            case .postStories:
+                if let adminRights = self.adminRights {
+                    return adminRights.rights.contains(.canPostStories)
+                } else {
+                    return false
+                }
+            case .editStories:
+                if let adminRights = self.adminRights {
+                    return adminRights.rights.contains(.canEditStories)
+                } else {
+                    return false
+                }
+            case .deleteStories:
+                if let adminRights = self.adminRights {
+                    return adminRights.rights.contains(.canDeleteStories)
+                } else {
+                    return false
+                }
         }
     }
     

@@ -1165,7 +1165,7 @@ public extension Api {
         case updateReadFeaturedStickers
         case updateReadHistoryInbox(flags: Int32, folderId: Int32?, peer: Api.Peer, maxId: Int32, stillUnreadCount: Int32, pts: Int32, ptsCount: Int32)
         case updateReadHistoryOutbox(peer: Api.Peer, maxId: Int32, pts: Int32, ptsCount: Int32)
-        case updateReadMessagesContents(messages: [Int32], pts: Int32, ptsCount: Int32)
+        case updateReadMessagesContents(flags: Int32, messages: [Int32], pts: Int32, ptsCount: Int32, date: Int32?)
         case updateReadStories(peer: Api.Peer, maxId: Int32)
         case updateRecentEmojiStatuses
         case updateRecentReactions
@@ -2007,10 +2007,11 @@ public extension Api {
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
                     break
-                case .updateReadMessagesContents(let messages, let pts, let ptsCount):
+                case .updateReadMessagesContents(let flags, let messages, let pts, let ptsCount, let date):
                     if boxed {
-                        buffer.appendInt32(1757493555)
+                        buffer.appendInt32(-131960447)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(messages.count))
                     for item in messages {
@@ -2018,6 +2019,7 @@ public extension Api {
                     }
                     serializeInt32(pts, buffer: buffer, boxed: false)
                     serializeInt32(ptsCount, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(date!, buffer: buffer, boxed: false)}
                     break
                 case .updateReadStories(let peer, let maxId):
                     if boxed {
@@ -2384,8 +2386,8 @@ public extension Api {
                 return ("updateReadHistoryInbox", [("flags", flags as Any), ("folderId", folderId as Any), ("peer", peer as Any), ("maxId", maxId as Any), ("stillUnreadCount", stillUnreadCount as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
                 case .updateReadHistoryOutbox(let peer, let maxId, let pts, let ptsCount):
                 return ("updateReadHistoryOutbox", [("peer", peer as Any), ("maxId", maxId as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
-                case .updateReadMessagesContents(let messages, let pts, let ptsCount):
-                return ("updateReadMessagesContents", [("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any)])
+                case .updateReadMessagesContents(let flags, let messages, let pts, let ptsCount, let date):
+                return ("updateReadMessagesContents", [("flags", flags as Any), ("messages", messages as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any)])
                 case .updateReadStories(let peer, let maxId):
                 return ("updateReadStories", [("peer", peer as Any), ("maxId", maxId as Any)])
                 case .updateRecentEmojiStatuses:
@@ -4116,19 +4118,25 @@ public extension Api {
             }
         }
         public static func parse_updateReadMessagesContents(_ reader: BufferReader) -> Update? {
-            var _1: [Int32]?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Int32]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
             }
-            var _2: Int32?
-            _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.Update.updateReadMessagesContents(messages: _1!, pts: _2!, ptsCount: _3!)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.Update.updateReadMessagesContents(flags: _1!, messages: _2!, pts: _3!, ptsCount: _4!, date: _5)
             }
             else {
                 return nil

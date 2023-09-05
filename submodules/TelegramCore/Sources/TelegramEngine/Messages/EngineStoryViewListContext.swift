@@ -375,6 +375,7 @@ public final class EngineStoryViewListContext {
                                         isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited,
+                                        isMy: item.isMy,
                                         myReaction: item.myReaction
                                     ))
                                     if let entry = CodableEntry(updatedItem) {
@@ -411,6 +412,7 @@ public final class EngineStoryViewListContext {
                                                 isSelectedContacts: item.isSelectedContacts,
                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                 isEdited: item.isEdited,
+                                                isMy: item.isMy,
                                                 myReaction: item.myReaction
                                             ))
                                             if let entry = CodableEntry(updatedItem) {
