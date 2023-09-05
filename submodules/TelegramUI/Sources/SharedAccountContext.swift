@@ -1872,6 +1872,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .storiesWeekly
         case .storiesMonthly:
             mappedSubject = .storiesMonthly
+        case let .storiesChannelBoost(level, link):
+            mappedSubject = .storiesChannelBoost(level: level, link: link)
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }
