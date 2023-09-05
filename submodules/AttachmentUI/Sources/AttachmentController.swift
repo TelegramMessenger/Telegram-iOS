@@ -19,7 +19,7 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(Peer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case app(EnginePeer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
     case gift
     case standalone
     
@@ -56,7 +56,7 @@ public enum AttachmentButtonType: Equatable {
                     return false
                 }
             case let .app(lhsPeer, lhsTitle, lhsIcons):
-                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, arePeersEqual(lhsPeer, rhsPeer), lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, lhsPeer == rhsPeer, lhsTitle == rhsTitle, lhsIcons == rhsIcons {
                     return true
                 } else {
                     return false
@@ -1040,7 +1040,7 @@ public class AttachmentController: ViewController {
         |> deliverOnMainQueue).start(next: { bots in
             for bot in bots {
                 for (name, file) in bot.icons {
-                    if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer) {
+                    if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer._asPeer()) {
                         if case .placeholder = name {
                             let path = context.account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
                             if !FileManager.default.fileExists(atPath: path) {

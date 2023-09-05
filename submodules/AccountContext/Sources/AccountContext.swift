@@ -952,6 +952,7 @@ public enum PremiumIntroSource {
     case storiesPermanentViews
     case storiesFormatting
     case storiesExpirationDurations
+    case storiesSuggestedReactions
 }
 
 public enum PremiumDemoSubject {
@@ -984,6 +985,7 @@ public enum PremiumLimitSubject {
     case expiringStories
     case storiesWeekly
     case storiesMonthly
+    case storiesChannelBoost(level: Int32, link: String?)
 }
 
 public protocol ComposeController: ViewController {
@@ -1025,6 +1027,7 @@ public protocol AccountContext: AnyObject {
     
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
     
+    var isPremium: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     
     var imageCache: AnyObject? { get }

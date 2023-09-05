@@ -1157,9 +1157,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     case .Local:
                         if isSecretMedia && self.secretProgressIcon != nil {
                             if let (beginTime, timeout) = secretBeginTimeAndTimeout {
-                                state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
+                                state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
                             } else {
-                                state = .customIcon(secretProgressIcon!)
+                                state = .staticTimeout
                             }
                         } else {
                             state = .none

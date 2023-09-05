@@ -1802,6 +1802,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesFormatting
         case .storiesExpirationDurations:
             mappedSource = .storiesExpirationDurations
+        case .storiesSuggestedReactions:
+            mappedSource = .storiesSuggestedReactions
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -1870,6 +1872,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .storiesWeekly
         case .storiesMonthly:
             mappedSubject = .storiesMonthly
+        case let .storiesChannelBoost(level, link):
+            mappedSubject = .storiesChannelBoost(level: level, link: link)
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }

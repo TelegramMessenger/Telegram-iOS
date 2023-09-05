@@ -32,9 +32,34 @@ public final class CounterContollerTitleView: UIView {
         }
     }
     
+    private var primaryTextColor: UIColor?
+    private var secondaryTextColor: UIColor?
+    
+    public func updateTextColors(primary: UIColor?, secondary: UIColor?, transition: ContainedViewLayoutTransition) {
+        self.primaryTextColor = primary
+        self.secondaryTextColor = secondary
+        
+        if case let .animated(duration, curve) = transition {
+            if let snapshotView = self.snapshotContentTree() {
+                snapshotView.frame = self.bounds
+                self.addSubview(snapshotView)
+                
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { _ in
+                    snapshotView.removeFromSuperview()
+                })
+                self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
+                self.subtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
+            }
+        }
+        
+        self.update()
+    }
+    
     private func update() {
-        self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
+        let primaryTextColor = self.primaryTextColor ?? self.theme.rootController.navigationBar.primaryTextColor
+        let secondaryTextColor = self.secondaryTextColor ?? self.theme.rootController.navigationBar.secondaryTextColor
+        self.titleNode.attributedText = NSAttributedString(string: self.title.title, font: Font.semibold(17.0), textColor: primaryTextColor)
+        self.subtitleNode.attributedText = NSAttributedString(string: self.title.counter, font: Font.regular(13.0), textColor: secondaryTextColor)
         
         self.accessibilityLabel = self.title.title
         self.accessibilityValue = self.title.counter

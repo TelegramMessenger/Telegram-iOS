@@ -307,7 +307,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
                                         }
                                     }
                                     for messageId in messageIds {
-                                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId)
+                                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId, consumeDate: nil)
                                     }
                                 default:
                                     break

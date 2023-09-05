@@ -52,6 +52,9 @@ public final class AttachMenuBots: Equatable, Codable {
             
             public static let hasSettings = Flags(rawValue: 1 << 0)
             public static let requiresWriteAccess = Flags(rawValue: 1 << 1)
+            public static let showInAttachMenu = Flags(rawValue: 1 << 2)
+            public static let showInSettings = Flags(rawValue: 1 << 3)
+            public static let showInSettingsDisclaimer = Flags(rawValue: 1 << 4)
         }
         
         public struct PeerFlags: OptionSet, Codable {
@@ -323,6 +326,15 @@ func managedSynchronizeAttachMenuBots(accountPeerId: PeerId, postbox: Postbox, n
                                             if (apiFlags & (1 << 2)) != 0 {
                                                 flags.insert(.requiresWriteAccess)
                                             }
+                                            if (apiFlags & (1 << 3)) != 0 {
+                                                flags.insert(.showInAttachMenu)
+                                            }
+                                            if (apiFlags & (1 << 4)) != 0 {
+                                                flags.insert(.showInSettings)
+                                            }
+                                            if (apiFlags & (1 << 5)) != 0 {
+                                                flags.insert(.showInSettingsDisclaimer)
+                                            }
                                             resultBots.append(AttachMenuBots.Bot(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(botId)), name: name, icons: icons, peerTypes: peerTypes, flags: flags))
                                         }
                                 }
@@ -427,13 +439,13 @@ func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, 
 }
 
 public struct AttachMenuBot {
-    public let peer: Peer
+    public let peer: EnginePeer
     public let shortName: String
     public let icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile]
     public let peerTypes: AttachMenuBots.Bot.PeerFlags
     public let flags: AttachMenuBots.Bot.Flags
     
-    init(peer: Peer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags, flags: AttachMenuBots.Bot.Flags) {
+    init(peer: EnginePeer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags, flags: AttachMenuBots.Bot.Flags) {
         self.peer = peer
         self.shortName = shortName
         self.icons = icons
@@ -450,7 +462,7 @@ func _internal_attachMenuBots(postbox: Postbox) -> Signal<[AttachMenuBot], NoErr
         var resultBots: [AttachMenuBot] = []
         for bot in cachedBots {
             if let peer = transaction.getPeer(bot.peerId) {
-                resultBots.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
+                resultBots.append(AttachMenuBot(peer: EnginePeer(peer), shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
             }
         }
         return resultBots
@@ -465,7 +477,7 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
     return postbox.transaction { transaction -> Signal<AttachMenuBot, GetAttachMenuBotError> in
         if cached, let cachedBots = cachedAttachMenuBots(transaction: transaction)?.bots {
             if let bot = cachedBots.first(where: { $0.peerId == botId }), let peer = transaction.getPeer(bot.peerId) {
-                return .single(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
+                return .single(AttachMenuBot(peer: EnginePeer(peer), shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
             }
         }
         
@@ -526,7 +538,16 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
                                 if (apiFlags & (1 << 2)) != 0 {
                                     flags.insert(.requiresWriteAccess)
                                 }
-                                return .single(AttachMenuBot(peer: peer, shortName: name, icons: icons, peerTypes: peerTypes, flags: flags))
+                                if (apiFlags & (1 << 3)) != 0 {
+                                    flags.insert(.showInAttachMenu)
+                                }
+                                if (apiFlags & (1 << 4)) != 0 {
+                                    flags.insert(.showInSettings)
+                                }
+                                if (apiFlags & (1 << 5)) != 0 {
+                                    flags.insert(.showInSettingsDisclaimer)
+                                }
+                                return .single(AttachMenuBot(peer: EnginePeer(peer), shortName: name, icons: icons, peerTypes: peerTypes, flags: flags))
                         }
                 }
             }
