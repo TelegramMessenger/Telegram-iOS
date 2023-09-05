@@ -820,7 +820,7 @@ public extension TelegramEngine {
             |> beforeNext { _ in
                 let delayTime = CFAbsoluteTimeGetCurrent() - startTime
                 if delayTime > 0.3 {
-                    Logger.shared.log("getNextUnreadChannel", "took \(delayTime) s")
+                    //Logger.shared.log("getNextUnreadChannel", "took \(delayTime) s")
                 }
             }
         }

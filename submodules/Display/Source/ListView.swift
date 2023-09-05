@@ -189,6 +189,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public private(set) final var visibleSize: CGSize = CGSize()
     public private(set) final var insets = UIEdgeInsets()
     public final var visualInsets: UIEdgeInsets?
+    public final var dynamicVisualInsets: (() -> UIEdgeInsets)?
     public private(set) final var headerInsets = UIEdgeInsets()
     public private(set) final var scrollIndicatorInsets = UIEdgeInsets()
     private final var ensureTopInsetForOverlayHighlightedItems: CGFloat?
@@ -4388,7 +4389,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if abs(apparentHeightDelta) > CGFloat.ulpOfOne {
                 itemNode.updateFrame(itemNode.frame, within: self.visibleSize)
                 
-                let visualInsets = self.visualInsets ?? self.insets
+                let visualInsets = self.dynamicVisualInsets?() ?? self.visualInsets ?? self.insets
                 
                 if itemNode.apparentFrame.maxY <= visualInsets.top {
                     offsetRanges.offset(IndexRange(first: 0, last: index), offset: -apparentHeightDelta)
