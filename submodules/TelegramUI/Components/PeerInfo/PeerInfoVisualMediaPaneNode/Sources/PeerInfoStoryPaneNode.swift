@@ -919,6 +919,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
     public var emptyAction: (() -> Void)?
+    
+    public var ensureRectVisible: ((UIView, CGRect) -> Void)?
 
     private weak var currentGestureItem: SparseItemGridDisplayItem?
 
@@ -1116,6 +1118,21 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         self.itemInteraction.hiddenMedia = Set([itemId.id])
                         if let items = self.items, let item = items.items.first(where: { $0.id == AnyHashable(itemId.id) }) {
                             self.itemGrid.ensureItemVisible(index: item.index, anyAmount: anyAmount)
+                            
+                            if !anyAmount {
+                                var foundItemLayer: SparseItemGridLayer?
+                                self.itemGrid.forEachVisibleItem { item in
+                                    guard let itemLayer = item.layer as? ItemLayer else {
+                                        return
+                                    }
+                                    if let listItem = itemLayer.item, listItem.story.id == itemId.id {
+                                        foundItemLayer = itemLayer
+                                    }
+                                }
+                                if let foundItemLayer {
+                                    self.ensureRectVisible?(self.view, self.itemGrid.frameForItem(layer: foundItemLayer))
+                                }
+                            }
                         }
                     } else {
                         self.itemInteraction.hiddenMedia = Set()

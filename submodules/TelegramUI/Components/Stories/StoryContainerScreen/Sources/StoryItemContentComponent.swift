@@ -280,6 +280,10 @@ final class StoryItemContentComponent: Component {
             if self.progressMode != progressMode {
                 self.progressMode = progressMode
                 self.updateProgressMode(update: true)
+                
+                if let component = self.component, !self.overlaysView.bounds.isEmpty {
+                    self.updateOverlays(component: component, size: self.overlaysView.bounds.size, synchronousLoad: false, transition: .immediate)
+                }
             }
         }
         
@@ -483,6 +487,22 @@ final class StoryItemContentComponent: Component {
             return nil
         }
         
+        private func updateOverlays(component: StoryItemContentComponent, size: CGSize, synchronousLoad: Bool, transition: Transition) {
+            self.overlaysView.update(
+                context: component.context,
+                strings: component.strings,
+                peer: component.peer,
+                story: component.item,
+                availableReactions: component.availableReactions,
+                entityFiles: component.entityFiles,
+                size: size,
+                isCaptureProtected: component.item.isForwardingDisabled,
+                attemptSynchronous: synchronousLoad,
+                isActive: self.progressMode == .play,
+                transition: transition
+            )
+        }
+        
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
             let previousItem = self.component?.item
             
@@ -610,18 +630,7 @@ final class StoryItemContentComponent: Component {
                     attemptSynchronous: synchronousLoad,
                     transition: transition
                 )
-                self.overlaysView.update(
-                    context: component.context,
-                    strings: component.strings,
-                    peer: component.peer,
-                    story: component.item,
-                    availableReactions: component.availableReactions,
-                    entityFiles: component.entityFiles,
-                    size: availableSize,
-                    isCaptureProtected: component.item.isForwardingDisabled,
-                    attemptSynchronous: synchronousLoad,
-                    transition: transition
-                )
+                self.updateOverlays(component: component, size: availableSize, synchronousLoad: synchronousLoad, transition: transition)
                 applyState = true
                 if self.imageView.isContentLoaded {
                     self.contentLoaded = true

@@ -2982,6 +2982,35 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return false
             }
         }
+        
+        self.paneContainerNode.ensurePaneRectVisible = { [weak self] sourceView, rect in
+            guard let self else {
+                return
+            }
+            let localRect = sourceView.convert(rect, to: self.view)
+            if !self.view.bounds.insetBy(dx: -1000.0, dy: 0.0).contains(localRect) {
+                guard let (_, navigationHeight) = self.validLayout else {
+                    return
+                }
+                
+                if self.headerNode.isAvatarExpanded {
+                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                    
+                    self.headerNode.updateIsAvatarExpanded(false, transition: transition)
+                    self.updateNavigationExpansionPresentation(isExpanded: false, animated: true)
+                    
+                    if let (layout, navigationHeight) = self.validLayout {
+                        self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                    }
+                }
+                
+                let contentOffset = self.scrollNode.view.contentOffset
+                let paneAreaExpansionFinalPoint: CGFloat = self.paneContainerNode.frame.minY - navigationHeight
+                if contentOffset.y < paneAreaExpansionFinalPoint - CGFloat.ulpOfOne {
+                    self.scrollNode.view.setContentOffset(CGPoint(x: 0.0, y: paneAreaExpansionFinalPoint), animated: false)
+                }
+            }
+        }
 
         self.paneContainerNode.openMediaCalendar = { [weak self] in
             guard let strongSelf = self else {

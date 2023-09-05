@@ -5280,8 +5280,26 @@ public final class StoryItemSetContainerComponent: Component {
             }
             if component.slice.peer.id == component.context.account.peerId {
                 self.performMyMoreAction(sourceView: sourceView, gesture: gesture)
-            } else if case let .channel(channel) = component.slice.peer, channel.hasPermission(.sendSomething) {
-                self.performMyChannelMoreAction(sourceView: sourceView, gesture: gesture)
+            } else if case let .channel(channel) = component.slice.peer {
+                var canPerformStoryActions = false
+                
+                if channel.hasPermission(.editStories) {
+                    canPerformStoryActions = true
+                } else if component.slice.item.storyItem.isMy && channel.hasPermission(.postStories) {
+                    canPerformStoryActions = true
+                }
+                
+                if channel.hasPermission(.deleteStories) {
+                    canPerformStoryActions = true
+                } else if component.slice.item.storyItem.isMy && channel.hasPermission(.postStories) {
+                    canPerformStoryActions = true
+                }
+                    
+                if canPerformStoryActions {
+                    self.performMyChannelMoreAction(sourceView: sourceView, gesture: gesture)
+                } else {
+                    self.performOtherMoreAction(sourceView: sourceView, gesture: gesture)
+                }
             } else {
                 self.performOtherMoreAction(sourceView: sourceView, gesture: gesture)
             }
@@ -6055,20 +6073,22 @@ public final class StoryItemSetContainerComponent: Component {
                     })))
                 }
                 
-                items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
-                }, action: { [weak self] _, a in
-                    a(.default)
-                    
-                    guard let self else {
-                        return
-                    }
-                    if accountUser.isPremium {
-                        self.sendMessageContext.requestStealthMode(view: self)
-                    } else {
-                        self.presentStealthModeUpgradeScreen()
-                    }
-                })))
+                if case .user = component.slice.peer {
+                    items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextStealthMode, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: accountUser.isPremium ? "Chat/Context Menu/Eye" : "Chat/Context Menu/EyeLocked"), color: theme.contextMenu.primaryColor)
+                    }, action: { [weak self] _, a in
+                        a(.default)
+                        
+                        guard let self else {
+                            return
+                        }
+                        if accountUser.isPremium {
+                            self.sendMessageContext.requestStealthMode(view: self)
+                        } else {
+                            self.presentStealthModeUpgradeScreen()
+                        }
+                    })))
+                }
                 
                 if !component.slice.peer.isService && component.slice.item.storyItem.isPublic && (component.slice.peer.addressName != nil || !component.slice.peer._asPeer().usernames.isEmpty) {
                     items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_CopyLink, icon: { theme in

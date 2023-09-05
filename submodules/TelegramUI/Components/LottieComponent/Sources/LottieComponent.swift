@@ -146,6 +146,26 @@ public final class LottieComponent: Component {
         
         private var currentTemplateFrameImage: UIImage?
         
+        public var externalShouldPlay: Bool? {
+            didSet {
+                if self.externalShouldPlay != oldValue {
+                    self.visibilityUpdated()
+                }
+            }
+        }
+        
+        var isEffectivelyVisible: Bool {
+            if !self.isVisible {
+                return false
+            }
+            if let externalShouldPlay = self.externalShouldPlay {
+                if !externalShouldPlay {
+                    return false
+                }
+            }
+            return true
+        }
+        
         public weak var output: UIImageView? {
             didSet {
                 if let output = self.output, let currentTemplateFrameImage = self.currentTemplateFrameImage {
@@ -190,10 +210,14 @@ public final class LottieComponent: Component {
         }
         
         private func visibilityUpdated() {
-            if self.isVisible {
+            if self.isEffectivelyVisible {
                 if self.scheduledPlayOnce {
                     self.playOnce()
+                } else {
+                    self.displayLink?.isPaused = false
                 }
+            } else {
+                self.displayLink?.isPaused = true
             }
         }
         
@@ -204,7 +228,7 @@ public final class LottieComponent: Component {
                 self.scheduledPlayOnce = true
                 return
             }
-            if !self.isVisible {
+            if !self.isEffectivelyVisible {
                 self.scheduledPlayOnce = true
                 return
             }
