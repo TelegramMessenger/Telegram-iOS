@@ -785,10 +785,6 @@ private final class NotificationServiceHandler {
             var recordId: AccountRecordId?
             var isCurrentAccount: Bool = false
             
-            let loggingSettings = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) ?? LoggingSettings.defaultSettings
-            Logger.shared.logToFile = loggingSettings.logToFile
-            Logger.shared.logToConsole = loggingSettings.logToConsole
-            
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]?.get(MediaAutoDownloadSettings.self) {
                 automaticMediaDownloadSettings = value

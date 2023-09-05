@@ -220,6 +220,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesSuggestedReactions:
+            if case .storiesSuggestedReactions = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -255,6 +261,7 @@ public enum PremiumSource: Equatable {
     case storiesPermanentViews
     case storiesFormatting
     case storiesExpirationDurations
+    case storiesSuggestedReactions
     
     var identifier: String? {
         switch self {
@@ -324,6 +331,8 @@ public enum PremiumSource: Equatable {
             return "stories__links_and_formatting"
         case .storiesExpirationDurations:
             return "stories__expiration_durations"
+        case .storiesSuggestedReactions:
+            return "stories__suggested_reactions"
         }
     }
 }

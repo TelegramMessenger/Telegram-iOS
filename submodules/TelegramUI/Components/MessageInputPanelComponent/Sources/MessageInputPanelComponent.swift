@@ -431,6 +431,7 @@ public final class MessageInputPanelComponent: Component {
             let blurEffect = UIBlurEffect(style: style)
             let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
             let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+            vibrancyEffectView.alpha = 0.0
             self.vibrancyEffectView = vibrancyEffectView
             
             self.mediaRecordingVibrancyContainer = UIView()
@@ -791,6 +792,9 @@ public final class MessageInputPanelComponent: Component {
                         
             transition.setFrame(view: self.vibrancyEffectView, frame: CGRect(origin: CGPoint(), size: fieldBackgroundFrame.size))
             self.vibrancyEffectView.isHidden = component.style == .media
+            if isEditing {
+                self.vibrancyEffectView.alpha = 1.0
+            }
             
             transition.setFrame(view: self.fieldBackgroundView, frame: fieldBackgroundFrame)
             self.fieldBackgroundView.update(size: fieldBackgroundFrame.size, cornerRadius: baseFieldHeight * 0.5, transition: transition.containedViewLayoutTransition)

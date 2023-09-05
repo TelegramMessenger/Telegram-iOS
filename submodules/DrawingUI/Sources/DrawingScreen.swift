@@ -1022,6 +1022,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 } else {
                     self?.updateCurrentMode(.drawing)
                 }
+                return true
             }
             self.present(controller)
             self.updated(transition: .easeInOut(duration: 0.2))

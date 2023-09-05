@@ -137,6 +137,8 @@ public final class StoryFooterPanelComponent: Component {
         
         public let externalContainerView: UIView
         
+        private weak var likeButtonTracingOffsetView: UIView?
+        
         public var likeButtonView: UIView? {
             return self.likeButton?.view
         }
@@ -195,6 +197,10 @@ public final class StoryFooterPanelComponent: Component {
         
         deinit {
             self.uploadProgressDisposable?.dispose()
+        }
+        
+        public func setLikeButtonTracingOffset(view: UIView) {
+            self.likeButtonTracingOffsetView = view
         }
         
         @objc private func viewStatsPressed() {
@@ -456,6 +462,13 @@ public final class StoryFooterPanelComponent: Component {
                     }
                     var likeButtonFrame = CGRect(origin: CGPoint(x: rightContentOffset - likeButtonSize.width, y: floor((size.height - likeButtonSize.height) * 0.5)), size: likeButtonSize)
                     likeButtonFrame.origin.y += component.expandFraction * 45.0
+                    
+                    if let likeButtonTracingOffsetView = self.likeButtonTracingOffsetView {
+                        let difference = CGPoint(x: likeButtonFrame.midX - likeButtonView.layer.position.x, y: likeButtonFrame.midY - likeButtonView.layer.position.y)
+                        if difference != CGPoint() {
+                            likeStatsTransition.setPosition(view: likeButtonTracingOffsetView, position: likeButtonTracingOffsetView.layer.position.offsetBy(dx: difference.x, dy: difference.y))
+                        }
+                    }
                     
                     likeStatsTransition.setPosition(view: likeButtonView, position: likeButtonFrame.center)
                     likeStatsTransition.setBounds(view: likeButtonView, bounds: CGRect(origin: CGPoint(), size: likeButtonFrame.size))

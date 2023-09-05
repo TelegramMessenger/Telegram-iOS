@@ -321,6 +321,7 @@ public final class StoryPeerListItemComponent: Component {
             
             if let itemView {
                 if let portalView = PortalView(matchPosition: false) {
+                    portalView.view.layer.rasterizationScale = UIScreenScale
                     itemView.avatarContent.addPortal(view: portalView)
                     self.portalView = portalView
                     self.addSubview(portalView.view)

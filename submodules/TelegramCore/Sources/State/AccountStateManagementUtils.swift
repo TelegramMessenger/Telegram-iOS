@@ -1483,11 +1483,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateChannelPinnedTopic(flags, channelId, topicId):
                 let isPinned = (flags & (1 << 0)) != 0
                 updatedState.addUpdatePinnedTopic(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topicId), isPinned: isPinned)
-            case let .updateReadMessagesContents(_, messages, _, _, _):
-                updatedState.addReadMessagesContents((nil, messages))
+            case let .updateReadMessagesContents(_, messages, _, _, date):
+                updatedState.addReadMessagesContents((nil, messages), date: date)
             case let .updateChannelReadMessagesContents(_, channelId, topMsgId, messages):
                 let _ = topMsgId
-                updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), messages))
+                updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), messages), date: nil)
             case let .updateChannelMessageViews(channelId, id, views):
                 updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: id), count: views)
             /*case let .updateChannelMessageForwards(channelId, id, forwards):
@@ -2933,7 +2933,7 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                         }, pinned: (flags & (1 << 0)) != 0)
                     case let .updateChannelReadMessagesContents(_, _, topMsgId, messages):
                         let _ = topMsgId
-                        updatedState.addReadMessagesContents((peer.id, messages))
+                        updatedState.addReadMessagesContents((peer.id, messages), date: nil)
                     case let .updateChannelMessageViews(_, id, views):
                         updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
                     case let .updateChannelWebPage(_, apiWebpage, _, _):
@@ -4185,16 +4185,16 @@ func replayFinalState(
                 transaction.setPeerPinnedThreads(peerId: peerId, threadIds: currentThreadIds)
             case let .UpdatePinnedTopicOrder(peerId, threadIds):
                 transaction.setPeerPinnedThreads(peerId: peerId, threadIds: threadIds)
-            case let .ReadMessageContents(peerIdAndMessageIds):
+            case let .ReadMessageContents(peerIdAndMessageIds, date):
                 let (peerId, messageIds) = peerIdAndMessageIds
 
                 if let peerId = peerId {
                     for id in messageIds {
-                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id))
+                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), consumeDate: date)
                     }
                 } else {
                     for messageId in transaction.messageIdsForGlobalIds(messageIds) {
-                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId)
+                        markMessageContentAsConsumedRemotely(transaction: transaction, messageId: messageId, consumeDate: date)
                     }
                 }
             case let .UpdateMessageImpressionCount(id, count):

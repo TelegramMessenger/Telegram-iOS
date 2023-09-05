@@ -1550,7 +1550,8 @@ private final class StoryContainerScreenComponent: Component {
                                 closeFriends: self.closeFriendsPromise,
                                 blockedPeers: self.blockedPeers,
                                 sharedViewListsContext: self.sharedViewListsContext,
-                                stealthModeTimeout: stealthModeTimeout
+                                stealthModeTimeout: stealthModeTimeout,
+                                isDismissed: self.isDismissedExlusively
                             )),
                             environment: {},
                             containerSize: itemSetContainerSize
@@ -1697,6 +1698,7 @@ private final class StoryContainerScreenComponent: Component {
                     itemSetView.removeFromSuperview()
                     
                     if let view = itemSetView.view.view as? StoryItemSetContainerComponent.View {
+                        view.saveDraft()
                         view.transitionCloneContainerView.removeFromSuperview()
                     }
                 }

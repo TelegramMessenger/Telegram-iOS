@@ -147,7 +147,6 @@ private final class StickerSelectionComponent: Component {
             self.interaction = ChatEntityKeyboardInputNode.Interaction(
                 sendSticker: { [weak self] file, silent, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, _ in
                     if let self, let controller = self.component?.getController() {
-                        controller.completion(.file(file.media, .sticker))
                         controller.forEachController { c in
                             if let c = c as? StickerPackScreenImpl {
                                 c.dismiss(animated: true)
@@ -159,7 +158,9 @@ private final class StickerSelectionComponent: Component {
                                 c.dismiss(animated: true)
                             }
                         })
-                        controller.dismiss(animated: true)
+                        if controller.completion(.file(file.media, .sticker)) {
+                            controller.dismiss(animated: true)
+                        }
                     }
                     return false
                 },
@@ -167,8 +168,9 @@ private final class StickerSelectionComponent: Component {
                 },
                 sendGif: { [weak self] file, _, _, _, _ in
                     if let self, let controller = self.component?.getController() {
-                        controller.completion(.video(file.media))
-                        controller.dismiss(animated: true)
+                        if controller.completion(.video(file.media)) {
+                            controller.dismiss(animated: true)
+                        }
                     }
                     return false
                 },
@@ -176,8 +178,9 @@ private final class StickerSelectionComponent: Component {
                     if let self, let controller = self.component?.getController() {
                         if case let .internalReference(reference) = result {
                             if let file = reference.file {
-                                controller.completion(.video(file))
-                                controller.dismiss(animated: true)
+                                if controller.completion(.video(file)) {
+                                    controller.dismiss(animated: true)
+                                }
                             }
                         }
                     }
@@ -570,11 +573,12 @@ public class StickerPickerScreen: ViewController {
                 
                 let gifInputInteraction = GifPagerContentComponent.InputInteraction(
                     performItemAction: { [weak self] item, view, rect in
-                        guard let self else {
+                        guard let self, let controller = self.controller else {
                             return
                         }
-                        self.controller?.completion(.video(item.file.media))
-                        self.controller?.dismiss(animated: true)
+                        if controller.completion(.video(item.file.media)) {
+                            controller.dismiss(animated: true)
+                        }
                     },
                     openGifContextMenu: { [weak self] item, sourceView, sourceRect, gesture, isSaved in
                         guard let self else {
@@ -729,15 +733,17 @@ public class StickerPickerScreen: ViewController {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.actionSheet.primaryTextColor)
                 }, action: { [weak self] _, f in
                     f(.default)
-                    if let self {
+                    if let self, let controller = self.controller {
                         if isSaved {
-                            self.controller?.completion(.video(file.media))
-                            self.controller?.dismiss(animated: true)
+                            if controller.completion(.video(file.media)) {
+                                self.controller?.dismiss(animated: true)
+                            }
                         } else if let (_, result) = contextResult {
                             if case let .internalReference(reference) = result {
                                 if let file = reference.file {
-                                    self.controller?.completion(.video(file))
-                                    self.controller?.dismiss(animated: true)
+                                    if controller.completion(.video(file)) {
+                                        self.controller?.dismiss(animated: true)
+                                    }
                                 }
                             }
                         }
@@ -867,8 +873,9 @@ public class StickerPickerScreen: ViewController {
                             })
                         })
                     } else if let file = item.itemFile {
-                        strongSelf.controller?.completion(.file(file, .sticker))
-                        strongSelf.controller?.dismiss(animated: true)
+                        if controller.completion(.file(file, .sticker)) {
+                            controller.dismiss(animated: true)
+                        }
                     } else if case let .staticEmoji(emoji) = item.content {
                         if let image = generateImage(CGSize(width: 256.0, height: 256.0), scale: 1.0, rotatedContext: { size, context in
                             context.clear(CGRect(origin: .zero, size: size))
@@ -889,9 +896,12 @@ public class StickerPickerScreen: ViewController {
                             CTLineDraw(line, context)
                             context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
                         }) {
-                            strongSelf.controller?.completion(.image(image, .sticker))
+                            if controller.completion(.image(image, .sticker)) {
+                                controller.dismiss(animated: true)
+                            }
+                        } else {
+                            controller.dismiss(animated: true)
                         }
-                        strongSelf.controller?.dismiss(animated: true)
                     }
                 },
                 deleteBackwards: nil,
@@ -1222,10 +1232,10 @@ public class StickerPickerScreen: ViewController {
                 hideBackground: true,
                 stateContext: nil,
                 addImage: controller.hasGifs ? { [weak self] in
-                    if let self {
-                        self.controller?.completion(nil)
-                        self.controller?.dismiss(animated: true)
-                        self.controller?.presentGallery()
+                    if let self, let controller = self.controller {
+                        let _ = controller.completion(nil)
+                        controller.dismiss(animated: true)
+                        controller.presentGallery()
                     }
                 } : nil
             )
@@ -1263,11 +1273,12 @@ public class StickerPickerScreen: ViewController {
                                         highlightedPackId: featuredStickerPack.info.id,
                                         forceTheme: defaultDarkPresentationTheme,
                                         sendSticker: { [weak self] fileReference, _, _ in
-                                            guard let self else {
+                                            guard let self, let controller = self.controller else {
                                                 return false
                                             }
-                                            self.controller?.completion(.file(fileReference.media, .sticker))
-                                            self.controller?.dismiss(animated: true)
+                                            if controller.completion(.file(fileReference.media, .sticker)) {
+                                                controller.dismiss(animated: true)
+                                            }
                                             return true
                                         }
                                     ))
@@ -1277,8 +1288,8 @@ public class StickerPickerScreen: ViewController {
                             }
                         })
                     } else {
-                        self.controller?.completion(.file(file, .sticker))
-                        self.controller?.dismiss(animated: true)
+                        let _ = controller.completion(.file(file, .sticker))
+                        controller.dismiss(animated: true)
                     }
                 },
                 deleteBackwards: nil,
@@ -1490,10 +1501,10 @@ public class StickerPickerScreen: ViewController {
                 hideBackground: true,
                 stateContext: nil,
                 addImage: controller.hasGifs ? { [weak self] in
-                    if let self {
-                        self.controller?.completion(nil)
-                        self.controller?.dismiss(animated: true)
-                        self.controller?.presentGallery()
+                    if let self, let controller = self.controller {
+                        let _ = controller.completion(nil)
+                        controller.dismiss(animated: true)
+                        controller.presentGallery()
                     }
                 } : nil
             )
@@ -1520,7 +1531,7 @@ public class StickerPickerScreen: ViewController {
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.controller?.completion(nil)
+                let _ = self.controller?.completion(nil)
                 self.controller?.dismiss(animated: true)
             }
         }
@@ -1865,7 +1876,7 @@ public class StickerPickerScreen: ViewController {
 
                     var dismissing = false
                     if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
-                        self.controller?.completion(nil)
+                        let _ = self.controller?.completion(nil)
                         self.controller?.dismiss(animated: true, completion: nil)
                         dismissing = true
                     } else if self.isExpanded {
@@ -1947,7 +1958,7 @@ public class StickerPickerScreen: ViewController {
     public var pushController: (ViewController) -> Void = { _ in }
     public var presentController: (ViewController) -> Void = { _ in }
     
-    public var completion: (DrawingStickerEntity.Content?) -> Void = { _ in }
+    public var completion: (DrawingStickerEntity.Content?) -> Bool = { _ in return true }
     
     public var presentGallery: () -> Void = { }
     public var presentLocationPicker: () -> Void = { }

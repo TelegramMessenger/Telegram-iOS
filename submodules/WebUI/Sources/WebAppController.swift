@@ -38,6 +38,8 @@ public class WebAppCancelButtonNode: ASDisplayNode {
     
     public var state: State = .cancel
     
+    private var color: UIColor?
+    
     private var _theme: PresentationTheme
     public var theme: PresentationTheme {
         get {
@@ -49,6 +51,24 @@ public class WebAppCancelButtonNode: ASDisplayNode {
         }
     }
     private let strings: PresentationStrings
+    
+    public func updateColor(_ color: UIColor?, transition: ContainedViewLayoutTransition) {
+        self.color = color
+        
+        if case let .animated(duration, curve) = transition {
+            if let snapshotView = self.view.snapshotContentTree() {
+                snapshotView.frame = self.bounds
+                self.view.addSubview(snapshotView)
+                
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { _ in
+                    snapshotView.removeFromSuperview()
+                })
+                self.arrowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
+                self.labelNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration, timingFunction: curve.timingFunction)
+            }
+        }
+        self.setState(self.state, animated: false, animateScale: false, force: true)
+    }
     
     public init(theme: PresentationTheme, strings: PresentationStrings) {
         self._theme = theme
@@ -124,13 +144,15 @@ public class WebAppCancelButtonNode: ASDisplayNode {
             self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
         
+        let color = self.color ?? self.theme.rootController.navigationBar.accentTextColor
+        
         self.arrowNode.isHidden = state == .cancel
-        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Cancel : self.strings.Common_Back, font: Font.regular(17.0), textColor: self.theme.rootController.navigationBar.accentTextColor)
+        self.labelNode.attributedText = NSAttributedString(string: state == .cancel ? self.strings.Common_Cancel : self.strings.Common_Back, font: Font.regular(17.0), textColor: color)
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: 120.0, height: 56.0))
         
         self.buttonNode.frame = CGRect(origin: .zero, size: CGSize(width: labelSize.width, height: self.buttonNode.frame.height))
-        self.arrowNode.image = NavigationBarTheme.generateBackArrowImage(color: self.theme.rootController.navigationBar.accentTextColor)
+        self.arrowNode.image = NavigationBarTheme.generateBackArrowImage(color: color)
         if let image = self.arrowNode.image {
             self.arrowNode.frame = CGRect(origin: self.arrowNode.frame.origin, size: image.size)
         }
@@ -305,7 +327,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     return .complete()
                 }
                 |> mapToSignal { bot -> Signal<(FileMediaReference, Bool)?, NoError> in
-                    if let bot = bot, let peerReference = PeerReference(bot.peer) {
+                    if let bot = bot, let peerReference = PeerReference(bot.peer._asPeer()) {
                         var imageFile: TelegramMediaFile?
                         var isPlaceholder = false
                         if let file = bot.icons[.placeholder] {
@@ -546,12 +568,16 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             self.controller?.present(promptController, in: .window(.root))
         }
-                
+        
+        private func updateNavigationBarAlpha(transition: ContainedViewLayoutTransition) {
+            let contentOffset = self.webView?.scrollView.contentOffset.y ?? 0.0
+            let backgroundAlpha = min(30.0, contentOffset) / 30.0
+            self.controller?.navigationBar?.updateBackgroundAlpha(backgroundAlpha, transition: transition)
+        }
+        
         private var targetContentOffset: CGPoint?
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
-            let contentOffset = scrollView.contentOffset.y
-            self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
-            
+            self.updateNavigationBarAlpha(transition: .immediate)
             if let targetContentOffset = self.targetContentOffset, scrollView.contentOffset != targetContentOffset {
                 scrollView.contentOffset = targetContentOffset
             }
@@ -821,8 +847,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         transition.updateBackgroundColor(node: self.backgroundNode, color: color)
                     }
                 case "web_app_set_header_color":
-                    if let json = json, let colorKey = json["color_key"] as? String, ["bg_color", "secondary_bg_color"].contains(colorKey) {
-                        self.headerColorKey = colorKey
+                    if let json = json {
+                        if let colorKey = json["color_key"] as? String, ["bg_color", "secondary_bg_color"].contains(colorKey) {
+                            self.headerColor = nil
+                            self.headerColorKey = colorKey
+                        } else if let hexColor = json["color"] as? String, let color = UIColor(hexString: hexColor) {
+                            self.headerColor = color
+                            self.headerColorKey = nil
+                        }
                         self.updateHeaderBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
                     }
                 case "web_app_open_popup":
@@ -938,16 +970,37 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         fileprivate var needDismissConfirmation = false
         
+        fileprivate var headerColor: UIColor?
+        fileprivate var headerPrimaryTextColor: UIColor?
         private var headerColorKey: String?
+        
         private func updateHeaderBackgroundColor(transition: ContainedViewLayoutTransition) {
+            guard let controller = self.controller else {
+                return
+            }
+            
             let color: UIColor?
+            var primaryTextColor: UIColor?
+            var secondaryTextColor: UIColor?
             var backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             var secondaryBackgroundColor = self.presentationData.theme.list.blocksBackgroundColor
             if self.presentationData.theme.list.blocksBackgroundColor.rgb == self.presentationData.theme.list.plainBackgroundColor.rgb {
                 backgroundColor = self.presentationData.theme.list.modalPlainBackgroundColor
                 secondaryBackgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
-            if let headerColorKey = self.headerColorKey {
+            if let headerColor = self.headerColor {
+                color = headerColor
+                let textColor = headerColor.lightness > 0.5 ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
+                func calculateSecondaryAlpha(luminance: CGFloat, targetContrast: CGFloat) -> CGFloat {
+                    let targetLuminance = luminance > 0.5 ? 0.0 : 1.0
+                    let adaptiveAlpha = (luminance - targetLuminance + targetContrast) / targetContrast
+                    return max(0.5, min(0.64, adaptiveAlpha))
+                }
+                
+                primaryTextColor = textColor
+                self.headerPrimaryTextColor = textColor
+                secondaryTextColor = textColor.withAlphaComponent(calculateSecondaryAlpha(luminance: headerColor.lightness, targetContrast: 2.5))
+            } else if let headerColorKey = self.headerColorKey {
                 switch headerColorKey {
                     case "bg_color":
                         color = backgroundColor
@@ -959,6 +1012,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
             } else {
                 color = nil
             }
+            
+            self.updateNavigationBarAlpha(transition: transition)
+            controller.updateNavigationBarTheme(transition: transition)
+            
+            controller.titleView?.updateTextColors(primary: primaryTextColor, secondary: secondaryTextColor, transition: transition)
+            controller.cancelButtonNode.updateColor(primaryTextColor, transition: transition)
+            controller.moreButtonNode.updateColor(primaryTextColor, transition: transition)
             transition.updateBackgroundColor(node: self.headerBackgroundNode, color: color ?? .clear)
             transition.updateBackgroundColor(node: self.topOverscrollNode, color: color ?? .clear)
         }
@@ -1234,8 +1294,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     }
     
     private var titleView: CounterContollerTitleView?
-    private let cancelButtonNode: WebAppCancelButtonNode
-    private let moreButtonNode: MoreButtonNode
+    fileprivate let cancelButtonNode: WebAppCancelButtonNode
+    fileprivate let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
     private let peerId: PeerId
@@ -1318,10 +1378,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
-                let navigationBarPresentationData = NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: presentationData.theme), strings: NavigationBarStrings(back: "", close: ""))
-                strongSelf.navigationBar?.updatePresentationData(navigationBarPresentationData)
+                strongSelf.updateNavigationBarTheme(transition: .immediate)
                 strongSelf.titleView?.theme = presentationData.theme
-                
+
                 strongSelf.cancelButtonNode.theme = presentationData.theme
                 strongSelf.moreButtonNode.theme = presentationData.theme
                 
@@ -1339,6 +1398,32 @@ public final class WebAppController: ViewController, AttachmentContainable {
     deinit {
         assert(true)
         self.presentationDataDisposable?.dispose()
+    }
+    
+    fileprivate func updateNavigationBarTheme(transition: ContainedViewLayoutTransition) {
+        let navigationBarPresentationData: NavigationBarPresentationData
+        if let backgroundColor = self.controllerNode.headerColor, let textColor = self.controllerNode.headerPrimaryTextColor {
+            navigationBarPresentationData = NavigationBarPresentationData(
+                theme: NavigationBarTheme(
+                    buttonColor: textColor,
+                    disabledButtonColor: textColor,
+                    primaryTextColor: textColor,
+                    backgroundColor: backgroundColor,
+                    enableBackgroundBlur: true,
+                    separatorColor: UIColor(rgb: 0x000000, alpha: 0.25),
+                    badgeBackgroundColor: .clear,
+                    badgeStrokeColor: .clear,
+                    badgeTextColor: .clear
+                ),
+                strings: NavigationBarStrings(back: "", close: "")
+            )
+        } else {
+            navigationBarPresentationData = NavigationBarPresentationData(
+                theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme),
+                strings: NavigationBarStrings(back: "", close: "")
+            )
+        }
+        self.navigationBar?.updatePresentationData(navigationBarPresentationData)
     }
     
     @objc private func cancelPressed() {
