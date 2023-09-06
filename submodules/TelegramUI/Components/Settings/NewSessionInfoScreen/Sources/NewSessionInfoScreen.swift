@@ -7,28 +7,23 @@ import AccountContext
 import SheetComponent
 import ButtonComponent
 import TelegramCore
+import AnimatedTextComponent
 
 private final class NewSessionInfoSheetContentComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
-    let settings: GlobalPrivacySettings
-    let openSettings: () -> Void
+    let newSessionReview: NewSessionReview
     let dismiss: () -> Void
     
     init(
-        settings: GlobalPrivacySettings,
-        openSettings: @escaping () -> Void,
+        newSessionReview: NewSessionReview,
         dismiss: @escaping () -> Void
     ) {
-        self.settings = settings
-        self.openSettings = openSettings
+        self.newSessionReview = newSessionReview
         self.dismiss = dismiss
     }
     
     static func ==(lhs: NewSessionInfoSheetContentComponent, rhs: NewSessionInfoSheetContentComponent) -> Bool {
-        if lhs.settings != rhs.settings {
-            return false
-        }
         return true
     }
     
@@ -36,9 +31,15 @@ private final class NewSessionInfoSheetContentComponent: Component {
         private let content = ComponentView<Empty>()
         private let button = ComponentView<Empty>()
         
+        private var remainingTimer: Int
+        private var timer: Foundation.Timer?
+        
         private var component: NewSessionInfoSheetContentComponent?
+        private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.remainingTimer = 5
+            
             super.init(frame: frame)
         }
         
@@ -46,8 +47,28 @@ private final class NewSessionInfoSheetContentComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            self.timer?.invalidate()
+        }
+        
         func update(component: NewSessionInfoSheetContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            if self.timer == nil {
+                self.timer = Foundation.Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true, block: { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.remainingTimer = max(0, self.remainingTimer - 1)
+                    if self.remainingTimer == 0 {
+                        self.timer?.invalidate()
+                    }
+                    self.state?.updated(transition: .immediate)
+                })
+            }
+            
+            let previousComponent = self.component
+            
             self.component = component
+            self.state = state
             
             let environment = environment[EnvironmentType.self].value
             
@@ -61,8 +82,7 @@ private final class NewSessionInfoSheetContentComponent: Component {
                 component: AnyComponent(NewSessionInfoContentComponent(
                     theme: environment.theme,
                     strings: environment.strings,
-                    settings: component.settings,
-                    openSettings: component.openSettings
+                    newSessionReview: component.newSessionReview
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
@@ -76,8 +96,25 @@ private final class NewSessionInfoSheetContentComponent: Component {
             contentHeight += contentSize.height
             contentHeight += 30.0
             
+            //TODO:localize
+            
+            var buttonContents: [AnyComponentWithIdentity<Empty>] = []
+            buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
+                Text(text: "Got it", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+            )))
+            if self.remainingTimer > 0 {
+                buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
+                    AnimatedTextComponent(font: Font.with(size: 17.0, weight: .semibold, traits: .monospacedNumbers), color: environment.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.5), items: [
+                        AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .number(self.remainingTimer, minDigits: 0))
+                    ])
+                )))
+            }
+            var buttonTransition = transition
+            if transition.animation.isImmediate && previousComponent != nil {
+                buttonTransition = buttonTransition.withAnimation(.curve(duration: 0.2, curve: .easeInOut))
+            }
             let buttonSize = self.button.update(
-                transition: transition,
+                transition: buttonTransition,
                 component: AnyComponent(ButtonComponent(
                     background: ButtonComponent.Background(
                         color: environment.theme.list.itemCheckColors.fillColor,
@@ -85,9 +122,10 @@ private final class NewSessionInfoSheetContentComponent: Component {
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                        Text(text: environment.strings.NewSessionInfo_CloseAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                        HStack(buttonContents, spacing: 5.0)
                     )),
-                    isEnabled: true,
+                    isEnabled: self.remainingTimer == 0,
+                    tintWhenDisabled: false,
                     displaysProgress: false,
                     action: { [weak self] in
                         guard let self, let component = self.component else {
@@ -131,24 +169,21 @@ private final class NewSessionInfoScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let settings: GlobalPrivacySettings
-    let buttonAction: (() -> Void)?
+    let newSessionReview: NewSessionReview
     
     init(
         context: AccountContext,
-        settings: GlobalPrivacySettings,
-        buttonAction: (() -> Void)?
+        newSessionReview: NewSessionReview
     ) {
         self.context = context
-        self.settings = settings
-        self.buttonAction = buttonAction
+        self.newSessionReview = newSessionReview
     }
     
     static func ==(lhs: NewSessionInfoScreenComponent, rhs: NewSessionInfoScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.settings != rhs.settings {
+        if lhs.newSessionReview != rhs.newSessionReview {
             return false
         }
         return true
@@ -195,21 +230,7 @@ private final class NewSessionInfoScreenComponent: Component {
                 transition: transition,
                 component: AnyComponent(SheetComponent(
                     content: AnyComponent(NewSessionInfoSheetContentComponent(
-                        settings: component.settings,
-                        openSettings: { [weak self] in
-                            guard let self, let component = self.component, let controller = self.environment?.controller() else {
-                                return
-                            }
-                            let context = component.context
-                            self.sheetAnimateOut.invoke(Action { [weak context, weak controller] _ in
-                                if let controller, let context {
-                                    if let navigationController = controller.navigationController as? NavigationController {
-                                        navigationController.pushViewController(context.sharedContext.makeArchiveSettingsController(context: context))
-                                    }
-                                    controller.dismiss(completion: nil)
-                                }
-                            })
-                        },
+                        newSessionReview: component.newSessionReview,
                         dismiss: { [weak self] in
                             guard let self else {
                                 return
@@ -222,7 +243,8 @@ private final class NewSessionInfoScreenComponent: Component {
                                 guard let self else {
                                     return
                                 }
-                                self.component?.buttonAction?()
+                                let _ = self
+                                //self.component?.buttonAction?()
                             })
                         }
                     )),
@@ -256,11 +278,10 @@ private final class NewSessionInfoScreenComponent: Component {
 }
 
 public class NewSessionInfoScreen: ViewControllerComponentContainer {
-    public init(context: AccountContext, settings: GlobalPrivacySettings, buttonAction: (() -> Void)? = nil) {
+    public init(context: AccountContext, newSessionReview: NewSessionReview) {
         super.init(context: context, component: NewSessionInfoScreenComponent(
             context: context,
-            settings: settings,
-            buttonAction: buttonAction
+            newSessionReview: newSessionReview
         ), navigationBarAppearance: .none)
         
         self.statusBar.statusBarStyle = .Ignore

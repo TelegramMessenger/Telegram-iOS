@@ -223,7 +223,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openActiveSessions: {
-        }, performActiveSessionAction: { _ in
+        }, performActiveSessionAction: { _, _ in
         }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
         }, openStories: { _, _ in
         })

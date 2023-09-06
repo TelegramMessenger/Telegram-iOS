@@ -288,6 +288,7 @@ public final class ButtonComponent: Component {
     public let background: Background
     public let content: AnyComponentWithIdentity<Empty>
     public let isEnabled: Bool
+    public let tintWhenDisabled: Bool
     public let allowActionWhenDisabled: Bool
     public let displaysProgress: Bool
     public let action: () -> Void
@@ -296,6 +297,7 @@ public final class ButtonComponent: Component {
         background: Background,
         content: AnyComponentWithIdentity<Empty>,
         isEnabled: Bool,
+        tintWhenDisabled: Bool = true,
         allowActionWhenDisabled: Bool = false,
         displaysProgress: Bool,
         action: @escaping () -> Void
@@ -303,6 +305,7 @@ public final class ButtonComponent: Component {
         self.background = background
         self.content = content
         self.isEnabled = isEnabled
+        self.tintWhenDisabled = tintWhenDisabled
         self.allowActionWhenDisabled = allowActionWhenDisabled
         self.displaysProgress = displaysProgress
         self.action = action
@@ -316,6 +319,9 @@ public final class ButtonComponent: Component {
             return false
         }
         if lhs.isEnabled != rhs.isEnabled {
+            return false
+        }
+        if lhs.tintWhenDisabled != rhs.tintWhenDisabled {
             return false
         }
         if lhs.allowActionWhenDisabled != rhs.allowActionWhenDisabled {
@@ -389,7 +395,7 @@ public final class ButtonComponent: Component {
             var contentAlpha: CGFloat = 1.0
             if component.displaysProgress {
                 contentAlpha = 0.0
-            } else if !component.isEnabled {
+            } else if !component.isEnabled && component.tintWhenDisabled {
                 contentAlpha = 0.7
             }
 

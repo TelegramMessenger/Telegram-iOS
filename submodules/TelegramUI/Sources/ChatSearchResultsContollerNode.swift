@@ -267,7 +267,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, openPasswordSetup: {
         }, openPremiumIntro: {
         }, openActiveSessions: {
-        }, performActiveSessionAction: { _ in
+        }, performActiveSessionAction: { _, _ in
         }, openChatFolderUpdates: {
         }, hideChatFolderUpdates: {
         }, openStories: { _, _ in

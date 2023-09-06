@@ -857,7 +857,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in }, openStorageManagement: {}, openPasswordSetup: {}, openPremiumIntro: {}, openActiveSessions: {
-        }, performActiveSessionAction: { _ in
+        }, performActiveSessionAction: { _, _ in
         }, openChatFolderUpdates: {}, hideChatFolderUpdates: {
         }, openStories: { _, _ in
         })
