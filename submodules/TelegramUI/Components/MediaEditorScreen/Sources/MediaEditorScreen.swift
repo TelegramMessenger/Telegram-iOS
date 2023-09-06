@@ -3175,7 +3175,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             Queue.mainQueue().async {
                                 mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
                                 if mediaEditor.sourceIsVideo {
-                                    if let videoDuration = mediaEditor.duration {
+                                    if let videoDuration = mediaEditor.originalDuration {
                                         mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
                                     }
                                 } else {

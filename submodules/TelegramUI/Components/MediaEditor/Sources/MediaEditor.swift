@@ -137,6 +137,7 @@ public final class MediaEditor {
             return position
         }
     }
+   
     public var duration: Double? {
         if let _ = self.player {
             if let trimRange = self.values.videoTrimRange {
@@ -144,6 +145,14 @@ public final class MediaEditor {
             } else {
                 return min(60.0, self.playerPlaybackState.0)
             }
+        } else {
+            return nil
+        }
+    }
+    
+    public var originalDuration: Double? {
+        if let _ = self.player {
+            return min(60.0, self.playerPlaybackState.0)
         } else {
             return nil
         }
