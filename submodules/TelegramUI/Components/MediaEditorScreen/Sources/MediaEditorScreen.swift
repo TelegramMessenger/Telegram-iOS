@@ -1372,7 +1372,11 @@ final class MediaEditorScreenComponent: Component {
                             self.addSubview(scrubberView)
                         }
                     }
-                    bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                    if animateIn {
+                        scrubberView.frame = scrubberFrame
+                    } else {
+                        bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                    }
                     if !self.animatingButtons && !(isAudioOnly && animateIn) {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities || isEditingCaption ? 0.0 : 1.0)
                     } else if animateIn {

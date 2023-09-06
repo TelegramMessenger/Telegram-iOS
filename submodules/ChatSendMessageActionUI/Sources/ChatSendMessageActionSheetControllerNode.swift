@@ -242,7 +242,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendSilently, icon: .sendWithoutSound, hasSeparator: true, action: {
                 sendSilently?()
             }))
-            if canSendWhenOnline {
+            if canSendWhenOnline && schedule != nil {
                 contentNodes.append(ActionSheetItemNode(theme: self.presentationData.theme, title: self.presentationData.strings.Conversation_SendMessage_SendWhenOnline, icon: .sendWhenOnline, hasSeparator: true, action: {
                     sendWhenOnline?()
                 }))
