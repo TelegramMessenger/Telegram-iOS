@@ -20,6 +20,8 @@ import Postbox
 import ChatFolderLinkPreviewScreen
 import StoryContainerScreen
 import ChatListHeaderComponent
+import LegacyComponents
+import ManagedAnimationNode
 
 public enum ChatListNodeMode {
     case chatList(appendContacts: Bool)
@@ -1079,6 +1081,11 @@ public enum ChatListNodeEmptyState: Equatable {
     case notEmpty(containsChats: Bool, onlyArchive: Bool, onlyGeneralThread: Bool)
     case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
+
+
+// MARK: - ChatListNode
+
+
 
 public final class ChatListNode: ListView {
     public enum OpenStoriesSubject {
@@ -2336,12 +2343,6 @@ public final class ChatListNode: ListView {
                 if doesIncludeRemovingPeerId != didIncludeRemovingPeerId {
                     disableAnimations = false
                 }
-                if hideArchivedFolderByDefault && previousState.hiddenItemShouldBeTemporaryRevealed != state.hiddenItemShouldBeTemporaryRevealed && doesIncludeArchive {
-                    disableAnimations = false
-                }
-                if didIncludeHiddenByDefaultArchive != doesIncludeHiddenByDefaultArchive {
-                    disableAnimations = false
-                }
                 if previousState.hiddenItemShouldBeTemporaryRevealed != state.hiddenItemShouldBeTemporaryRevealed && doesIncludeHiddenThread {
                     disableAnimations = false
                 }
@@ -2351,10 +2352,14 @@ public final class ChatListNode: ListView {
                 if didIncludeNotice != doesIncludeNotice {
                     disableAnimations = false
                 }
-            }
-            
-            if let _ = previousHideArchivedFolderByDefaultValue, previousHideArchivedFolderByDefaultValue != hideArchivedFolderByDefault {
-                disableAnimations = false
+                if doesIncludeArchive && hideArchivedFolderByDefault {
+                    disableAnimations = false
+                }
+                _ = (
+                    didIncludeHiddenByDefaultArchive,
+                    doesIncludeHiddenByDefaultArchive,
+                    previousHideArchivedFolderByDefaultValue
+                )
             }
             
             var searchMode = false
@@ -2854,12 +2859,22 @@ public final class ChatListNode: ListView {
                     if strongSelf.startedScrollingAtUpperBound && startedScrollingWithCanExpandHiddenItems && strongSelf.isTracking {
                         revealHiddenItems = value <= -strongSelf.tempTopInset - 60.0
                     }
+                if !strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
+                    strongSelf.updateArchiveViewLayout(offset: value)
+                }
             }
             strongSelf.scrolledAtTopValue = atTop
             strongSelf.contentOffsetChanged?(offset)
             if revealHiddenItems && !strongSelf.currentState.hiddenItemShouldBeTemporaryRevealed {
                 //strongSelf.revealScrollHiddenItem()
             }
+        }
+        
+        self.endedDragging = { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.archiveItemView?.update(intent: .reveal)
         }
         
         self.pollFilterUpdates()
@@ -2872,6 +2887,11 @@ public final class ChatListNode: ListView {
             }
             return strongSelf.isSelectionGestureEnabled
         }
+        
+        self.archiveItemView = ArchiveItemView { [weak self](ended, offset) in
+            self?.handleArchiveViewReveal(ended: ended, offset: offset)
+        }
+        
         self.view.addGestureRecognizer(selectionRecognizer)
     }
     
@@ -2881,6 +2901,83 @@ public final class ChatListNode: ListView {
         self.updatedFilterDisposable.dispose()
         self.pollFilterUpdatesDisposable?.dispose()
         self.chatFilterUpdatesDisposable?.dispose()
+    }
+    
+    private var archiveItemView: ArchiveItemView?
+    private var canUpdateTempTopInset = true
+    private var realTempTopInset = 0.0
+    private var isOnReveal = false
+            
+    private func handleArchiveViewReveal(ended: Bool, offset: CGFloat) {
+                        
+        if !ended {
+            
+            self.isOnReveal = true
+            self.isUserInteractionEnabled = false
+
+            self.toggleArchivedFolderHiddenByDefault?()
+            self.tempTopInset = self.realTempTopInset
+
+        }
+
+        if ended, !canUpdateTempTopInset {
+
+            self.isUserInteractionEnabled = true
+            self.tempTopInset = self.realTempTopInset
+            _ = self.scrollToOffsetFromTop(0, animated: true)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {[weak self] in
+                self?.canUpdateTempTopInset = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {[weak self] in
+                self?.isOnReveal = false
+            }
+        }
+        
+    }
+    
+    
+    private func updateArchiveViewLayout(offset: CGFloat) {
+                
+        if let archiveItemView {
+            if archiveItemView.superview == nil {
+                self.view.addSubview(archiveItemView)
+            }
+        }
+        
+        if canUpdateTempTopInset, offset < 0.0 {
+            canUpdateTempTopInset = false
+            realTempTopInset = tempTopInset
+            tempTopInset += ArchiveItemView.neededHeightToEndReveal
+        }
+        
+        var y = 0.0
+        var height = 0.0
+
+        let maxHeight = insets.top + realTempTopInset
+        let actualHeight = insets.top - offset
+
+        let delta = actualHeight - maxHeight
+        let const = maxHeight / actualHeight
+
+        var constFactor = 0.0
+        if realTempTopInset > 0.0 {
+            constFactor = 1.0
+        }
+
+        if actualHeight > maxHeight {
+            height = -offset - realTempTopInset
+            y = maxHeight + (delta * const * constFactor * 0.2)
+        }
+        
+        if isOnReveal {
+            height += ArchiveItemView.neededHeightToEndReveal
+        }
+
+        archiveItemView?.frame.origin = .init(x: 0, y: y)
+        archiveItemView?.frame.size = .init(width: bounds.width, height: height)
+        archiveItemView?.update(intent: .offset(offset))
+        
     }
     
     func updateFilter(_ filter: ChatListFilter?) {
@@ -3826,6 +3923,8 @@ public final class ChatListNode: ListView {
     }
 }
 
+
+
 private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: PresentationStrings, peer: EnginePeer, isMuted: Bool, isUnread: Bool, isContact: Bool, hasUnseenMentions: Bool, chatListFilters: [ChatListFilter]?, displayAutoremoveTimeout: Bool, autoremoveTimeout: Int32?) -> (String, Bool, Bool, ContactsPeerItemStatus.Icon?)? {
     if accountPeerId == peer.id {
         return nil
@@ -3952,4 +4051,349 @@ public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
 
 func hideChatListContacts(context: AccountContext) {
     let _ = ApplicationSpecificNotice.setDisplayChatListContacts(accountManager: context.sharedContext.accountManager).start()
+}
+
+private final class ArchiveItemView: UIView {
+    
+    private var insets: UIEdgeInsets {
+        .init(top: 10, left: 12 + (avatarWidth - sliderToggleViewWidth) / 2.0, bottom: 10, right: 0)
+    }
+    private let sliderToggleViewWidth = 20.0
+    private let animationDuration = 0.2
+    private let avatarWidth = 56.0
+    
+    // Public
+    static let neededHeightToEndReveal = 76.0
+    
+    // Private
+    private var currentOffset: CGFloat = 0.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    private var isReadyToReveal = false {
+        didSet {
+            guard oldValue != isReadyToReveal,
+                  !isOnReveal
+            else {
+                return
+            }
+            self.setNeedsLayout()
+            self.updateState(
+                height: bounds.height,
+                width: bounds.width
+            )
+        }
+    }
+    private var isOnReveal = false {
+        didSet {
+            guard isOnReveal else {
+                return
+            }
+            self.setNeedsLayout()
+            self.updateOnReveal(
+                height: bounds.height,
+                width: bounds.width
+            )
+        }
+    }
+    private let didReveal: ((_ ended: Bool, _ currentHight: CGFloat) -> Void)?
+    private var isAnimatingReveal = false
+    
+    // ui
+    private static let disabledActions: [String: CAAction] = [
+        #keyPath(CALayer.frame): NSNull(),
+        #keyPath(CALayer.bounds): NSNull(),
+        #keyPath(CALayer.position): NSNull()
+    ]
+    
+    private let blueGradientColors: [UIColor] = [
+        .init(red: 14/255, green: 133/255, blue: 242/255, alpha: 1.0),
+        .init(red: 119/255, green: 197/255, blue: 253/255, alpha: 1.0),
+    ]
+    
+    private let grayGradientColors: [UIColor] = [
+        .init(red: 177/255, green: 183/255, blue: 190/255, alpha: 1.0),
+        .init(red: 218/255, green: 218/255, blue: 223/255, alpha: 1.0),
+    ]
+    
+    var animationNode: SimpleAnimationNode?
+    let animationName = "anim_archive"
+    
+    private lazy var mainBackgroundView: CAGradientLayer = {
+        var v = CAGradientLayer()
+        v.actions = ArchiveItemView.disabledActions
+        v.colors = grayGradientColors.compactMap { $0.cgColor }
+        v.startPoint = .init(x: 0, y: 0)
+        v.endPoint = .init(x: 1, y: 0)
+        return v
+    }()
+    
+    private lazy var backgroundView: CAGradientLayer = {
+        var v = CAGradientLayer()
+        v.actions = ArchiveItemView.disabledActions
+        v.colors = blueGradientColors.compactMap { $0.cgColor }
+        v.startPoint = .init(x: 0, y: 0)
+        v.endPoint = .init(x: 1, y: 0)
+        return v
+    }()
+    
+    private lazy var backgroundViewMask: CALayer = {
+        var v = CALayer()
+        v.backgroundColor = UIColor.green.cgColor
+        v.actions = ArchiveItemView.disabledActions
+        return v
+    }()
+    
+    private lazy var sliderBackgroundView: UIView = {
+        var v = UIView()
+        v.backgroundColor = UIColor
+            .white
+            .withAlphaComponent(0.5)
+        return v
+    }()
+    
+    private lazy var sliderToggleView: UIImageView = {
+        var v = UIImageView()
+        v.backgroundColor = UIColor.white
+        v.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/OverscrollArrow"), color: .systemBlue)
+        return v
+    }()
+    
+    private lazy var inactiveLabel: UILabel = {
+        var v = UILabel()
+        v.text = "Swipe down for archive"
+        v.font = Font.medium(17)
+        v.textColor = .white
+        return v
+    }()
+    
+    private lazy var activeLabel: UILabel = {
+        var v = UILabel()
+        v.text = "Release for archive"
+        v.font = Font.medium(17)
+        v.textColor = .white
+        return v
+    }()
+    
+    // init
+    init(didReveal: ((_ ended: Bool, _ currentHight: CGFloat) -> Void)? = nil) {
+        self.didReveal = didReveal
+        super.init(frame: .zero)
+                
+        layer.addSublayer(mainBackgroundView)
+        
+        layer.addSublayer(backgroundView)
+        backgroundViewMask.cornerRadius = sliderToggleViewWidth / 2.0
+        backgroundViewMask.frame.size = .init(
+            width: sliderToggleViewWidth,
+            height: sliderToggleViewWidth
+        )
+        backgroundView.mask = backgroundViewMask
+        
+        sliderBackgroundView.layer.cornerRadius = sliderToggleViewWidth / 2.0
+        addSubview(sliderBackgroundView)
+        
+        sliderToggleView.layer.cornerRadius = sliderToggleViewWidth / 2.0
+        addSubview(sliderToggleView)
+        
+        addSubview(activeLabel)
+        addSubview(inactiveLabel)
+                
+        animationNode = SimpleAnimationNode(
+            animationName: animationName,
+            size: .init(width: 70, height: 70),
+            playOnce: false
+        )
+        if let animationNode = animationNode {
+            addSubview(animationNode.view)
+        }
+        
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    // Update state
+    enum Intent {
+        case offset(CGFloat)
+        case reveal
+    }
+    
+    func update(intent: Intent) {
+        switch intent {
+        case let .offset(value):
+            currentOffset = value
+            isReadyToReveal = currentOffset < -86.0
+            if isOnReveal, currentOffset >= -(ArchiveItemView.neededHeightToEndReveal) {
+                isOnReveal = false
+                didReveal?(true, -currentOffset)
+            }
+        case .reveal:
+            isOnReveal = true
+            if isReadyToReveal {
+                didReveal?(false, -currentOffset)
+            }
+        }
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if bounds.height <= 0 {
+            backgroundViewMask.opacity = 1.0
+            sliderToggleView.alpha = 1.0
+            sliderBackgroundView.alpha = 1.0
+            animationNode?.alpha = 0.0
+            isOnReveal = false
+            isAnimatingReveal = false
+        }
+        self.updateLayout(
+            height: bounds.height,
+            width: bounds.width
+        )
+        if bounds.height <= 0 {
+            self.updateState(
+                height: bounds.height,
+                width: bounds.width
+            )
+        }
+    }
+}
+
+private extension ArchiveItemView {
+    func updateLayout(height: CGFloat, width: CGFloat) {
+                
+        mainBackgroundView.frame = .init(origin: .zero, size: .init(width: width, height: height))
+        
+        backgroundView.frame = .init(origin: .zero, size: .init(width: width, height: height))
+        
+        var sliderBackgrounViewY = insets.top
+        var sliderBackgroundViewHeight = sliderToggleViewWidth
+        if height - (insets.top + insets.bottom) > sliderToggleViewWidth {
+            sliderBackgroundViewHeight = height - (insets.top + insets.bottom)
+        } else {
+            sliderBackgrounViewY = height - sliderToggleViewWidth - insets.bottom
+        }
+        sliderBackgroundView.frame = .init(
+            x: insets.left,
+            y: sliderBackgrounViewY,
+            width: sliderToggleViewWidth,
+            height: sliderBackgroundViewHeight
+        )
+        
+        sliderToggleView.frame = .init(
+            x: insets.left,
+            y: sliderBackgroundView.frame.maxY - sliderToggleViewWidth,
+            width: sliderToggleViewWidth,
+            height: sliderToggleViewWidth
+        )
+        
+        if !isAnimatingReveal {
+            backgroundViewMask.position = sliderToggleView.center
+        } else {
+            if height - avatarWidth - insets.bottom > insets.top {
+                backgroundViewMask.position = .init(x: sliderToggleView.center.x, y: height - (avatarWidth / 2) - insets.bottom)
+            } else {
+                backgroundViewMask.position = .init(x: sliderToggleView.center.x, y: height / 2.0)
+            }
+        }
+        
+        activeLabel.sizeToFit()
+        activeLabel.center = .init(
+            x: width / 2.0,
+            y: sliderToggleView.center.y
+        )
+        
+        inactiveLabel.sizeToFit()
+        inactiveLabel.center = .init(
+            x: width / 2.0,
+            y: sliderToggleView.center.y
+        )
+        
+        animationNode?.frame.size = .init(width: 70, height: 70)
+        animationNode?.view.center = backgroundViewMask.position
+        
+    }
+    func updateState(height: CGFloat, width: CGFloat) {
+        self.updateBackgroungViewMask(height: height, width: width, transition: .animated(duration: animationDuration, curve: .easeInOut))
+        self.updateActiveLabel(width: width)
+        self.updateInactiveLabel(width: width)
+        self.updateSliderToggleView(transition: .animated(duration: animationDuration, curve: .easeInOut))
+    }
+    func updateOnReveal(height: CGFloat, width: CGFloat) {
+        isAnimatingReveal = true
+        let transition: ContainedViewLayoutTransition = .animated(
+            duration: animationDuration * 1.2,
+            curve: .spring
+        )
+        
+        animationNode?.play()
+        
+        mainBackgroundView.opacity = 0.0
+        
+        let scale = 70 / sliderToggleViewWidth
+        let transform = CGAffineTransformMakeScale(scale, scale)
+        
+        if let animationNode {
+            transition.updateAlpha(node: animationNode, alpha: 1.0)
+        }
+        transition.updateAlpha(layer: backgroundViewMask, alpha: 0.8)
+        transition.updateAlpha(layer: sliderToggleView.layer, alpha: 0.0)
+        transition.updateAlpha(layer: sliderBackgroundView.layer, alpha: 0.0)
+        transition.updateTransform(layer: backgroundViewMask, transform: transform, beginWithCurrentState: true)
+    }
+    func updateBackgroungViewMask(height: CGFloat, width: CGFloat, transition: ContainedViewLayoutTransition) {
+        let transform: CGAffineTransform
+        if isReadyToReveal {
+            let scale = 2 * max(width, height) / sliderToggleViewWidth
+            transform = CGAffineTransformMakeScale(scale, scale)
+        } else {
+            transform = CGAffineTransform.identity
+        }
+        transition.updateTransform(layer: backgroundViewMask, transform: transform, beginWithCurrentState: true)
+    }
+    func updateSliderToggleView(transition: ContainedViewLayoutTransition) {
+        let angle: CGFloat
+        if isReadyToReveal {
+            angle = 0
+        } else {
+            angle = -.pi
+        }
+        transition.updateTransformRotation(view: sliderToggleView, angle: angle)
+    }
+    func updateActiveLabel(width: CGFloat) {
+        let transition: ContainedViewLayoutTransition
+        let transform: CGAffineTransform
+        if isReadyToReveal {
+            transition = .animated(
+                duration: animationDuration * 2.0,
+                curve: .custom(0.9, 1.3, 0.2, 1.0)
+            )
+            transform = CGAffineTransform.identity
+        } else {
+            transition = .animated(duration: animationDuration, curve: .spring)
+            let distance = -activeLabel.frame.maxX
+            transform = CGAffineTransform(translationX: distance, y: 0)
+        }
+        transition.updateTransform(layer: activeLabel.layer, transform: transform, beginWithCurrentState: true)
+        transition.updateAlpha(layer: activeLabel.layer, alpha: isReadyToReveal ? 1.0 : 0.0)
+    }
+    func updateInactiveLabel(width: CGFloat) {
+        let transition: ContainedViewLayoutTransition
+        let transform: CGAffineTransform
+        if isReadyToReveal {
+            let distance = width - inactiveLabel.frame.minX
+            transition = .animated(duration: animationDuration, curve: .spring)
+            transform = CGAffineTransform(translationX: distance, y: 0)
+        } else {
+            transition = .animated(
+                duration: animationDuration * 2.0,
+                curve: .custom(0.8, 1.3, 0.2, 1.0)
+            )
+            transform = CGAffineTransform.identity
+        }
+        transition.updateTransform(layer: inactiveLabel.layer, transform: transform, beginWithCurrentState: true)
+        transition.updateAlpha(layer: inactiveLabel.layer, alpha: !isReadyToReveal ? 1.0 : 0.0)
+    }
 }
