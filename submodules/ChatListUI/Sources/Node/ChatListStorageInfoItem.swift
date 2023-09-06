@@ -112,12 +112,12 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
         self.contentContainer.clipsToBounds = true
         self.clipsToBounds = true
         
-        self.addSubnode(self.separatorNode)
         self.contentContainer.addSubnode(self.titleNode)
         self.contentContainer.addSubnode(self.textNode)
         self.contentContainer.addSubnode(self.arrowNode)
         
         self.addSubnode(self.contentContainer)
+        self.addSubnode(self.separatorNode)
         
         self.zPosition = 1.0
     }

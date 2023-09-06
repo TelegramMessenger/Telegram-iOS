@@ -68,5 +68,21 @@ public extension TelegramEngine {
         public func updateCloseFriends(peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
             return _internal_updateCloseFriends(account: self.account, peerIds: peerIds)
         }
+        
+        public func cleanupSessionReviews() -> Signal<Never, NoError> {
+            return _internal_cleanupSessionReviews(account: self.account)
+        }
+        
+        public func confirmNewSessionReview(id: Int64) -> Signal<Never, NoError> {
+            let _ = removeNewSessionReviews(postbox: self.account.postbox, ids: [id]).start()
+            return _internal_confirmNewSessionReview(account: self.account, id: id)
+        }
+        
+        public func terminateAnotherSession(id: Int64) -> Signal<Never, TerminateSessionError> {
+            let _ = removeNewSessionReviews(postbox: self.account.postbox, ids: [id]).start()
+            
+            return terminateAccountSession(account: self.account, hash: id)
+            |> ignoreValues
+        }
     }
 }
