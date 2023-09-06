@@ -42,8 +42,6 @@ public func storyPreviewWithAddedReactions(
     
     let loadFile: (MessageReaction.Reaction, TelegramMediaFile) -> Signal<(MessageReaction.Reaction, CGImage?), NoError> = { reaction, file in
         return Signal { subscriber in
-            subscriber.putNext((reaction, nil))
-            
             let isTemplate = !"".isEmpty
             return context.animationRenderer.loadFirstFrameAsImage(cache: context.animationCache, itemId: file.resource.id.stringRepresentation, size: CGSize(width: 128.0, height: 128.0), fetch: animationCacheFetchFile(postbox: context.account.postbox, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { result in
                 subscriber.putNext((reaction, result))
