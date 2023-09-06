@@ -12,6 +12,7 @@ import ScreenCaptureDetection
 import AppBundle
 import LocalizedPeerData
 import TooltipUI
+import TelegramNotices
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {
@@ -55,7 +56,7 @@ private func mediaForMessage(message: Message) -> Media? {
 }
 
 private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
-    private var timeoutNode: RadialStatusNode?
+    fileprivate var timeoutNode: RadialStatusNode?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
         
@@ -245,9 +246,9 @@ public final class SecretMediaPreviewController: ViewController {
         self.displayNode = SecretMediaPreviewControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()
         
-        self.controllerNode.statusPressed = { [weak self] sourceView in
+        self.controllerNode.statusPressed = { [weak self] _ in
             if let self {
-                self.presentViewOnceTooltip(sourceView: sourceView)
+                self.presentViewOnceTooltip()
             }
         }
         
@@ -427,6 +428,18 @@ public final class SecretMediaPreviewController: ViewController {
                 self.controllerNode.animateIn(animateContent: !nodeAnimatesItself, useSimpleAnimation: false)
             }
         }
+        
+        if self.currentNodeMessageIsViewOnce {
+            let _ = (ApplicationSpecificNotice.incrementViewOnceTooltip(accountManager: self.context.sharedContext.accountManager)
+            |> deliverOnMainQueue).start(next: { [weak self] count in
+                guard let self else {
+                    return
+                }
+                if count < 2 {
+                    self.presentViewOnceTooltip()
+                }
+            })
+        }
     }
     
     private func dismiss(forceAway: Bool) {
@@ -546,11 +559,11 @@ public final class SecretMediaPreviewController: ViewController {
         }
     }
     
-    private func presentViewOnceTooltip(sourceView: UIView) {
-        guard self.currentNodeMessageIsViewOnce else {
+    private func presentViewOnceTooltip() {
+        guard self.currentNodeMessageIsViewOnce, let sourceView = self.controllerNode.timeoutNode?.view else {
             return
         }
-        
+                
         if let tooltipController = self.tooltipController {
             self.tooltipController = nil
             tooltipController.dismiss()
@@ -559,12 +572,13 @@ public final class SecretMediaPreviewController: ViewController {
         let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil)
         let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 2.0), size: CGSize())
         
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let iconName = "anim_autoremove_on"
         let text: String
         if self.currentNodeMessageIsVideo {
-            text = "This video can only be viewed once."
+            text = presentationData.strings.Gallery_ViewOnceVideoTooltip
         } else {
-            text = "This photo can only be viewed once."
+            text = presentationData.strings.Gallery_ViewOncePhotoTooltip
         }
         
         let tooltipController = TooltipScreen(

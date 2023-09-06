@@ -179,6 +179,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case displayChatListArchiveTooltip = 45
     case displayStoryReactionTooltip = 46
     case storyStealthModeReplyCount = 47
+    case viewOnceTooltip = 48
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -423,6 +424,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func storyStealthModeReplyCount() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.storyStealthModeReplyCount.key)
+    }
+    
+    static func viewOnceTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.viewOnceTooltip.key)
     }
 }
 
@@ -1610,5 +1615,22 @@ public struct ApplicationSpecificNotice {
             }
         }
         |> ignoreValues
+    }
+
+    public static func incrementViewOnceTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.viewOnceTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.viewOnceTooltip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
     }
 }
