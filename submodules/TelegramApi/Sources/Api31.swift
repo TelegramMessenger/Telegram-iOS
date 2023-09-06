@@ -6385,15 +6385,16 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func requestSimpleWebView(flags: Int32, bot: Api.InputUser, url: String, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.SimpleWebViewResult>) {
+                static func requestSimpleWebView(flags: Int32, bot: Api.InputUser, url: String?, startParam: String?, themeParams: Api.DataJSON?, platform: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.SimpleWebViewResult>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(698084494)
+                    buffer.appendInt32(440815626)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     bot.serialize(buffer, true)
-                    serializeString(url, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {themeParams!.serialize(buffer, true)}
                     serializeString(platform, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.requestSimpleWebView", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("themeParams", String(describing: themeParams)), ("platform", String(describing: platform))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.SimpleWebViewResult? in
+                    return (FunctionDescription(name: "messages.requestSimpleWebView", parameters: [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("url", String(describing: url)), ("startParam", String(describing: startParam)), ("themeParams", String(describing: themeParams)), ("platform", String(describing: platform))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.SimpleWebViewResult? in
                         let reader = BufferReader(buffer)
                         var result: Api.SimpleWebViewResult?
                         if let signature = reader.readInt32() {

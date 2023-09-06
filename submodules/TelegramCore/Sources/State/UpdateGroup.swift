@@ -70,7 +70,7 @@ func apiUpdatePtsRange(_ update: Api.Update) -> (Int32, Int32)? {
             return (pts, ptsCount)
         case let .updateEditMessage(_, pts, ptsCount):
             return (pts, ptsCount)
-        case let .updateReadMessagesContents(_, pts, ptsCount):
+        case let .updateReadMessagesContents(_, _, pts, ptsCount, _):
             return (pts, ptsCount)
         case let .updateWebPage(_, pts, ptsCount):
             return (pts, ptsCount)

@@ -1479,7 +1479,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
             case let .updateChannelPinnedTopic(flags, channelId, topicId):
                 let isPinned = (flags & (1 << 0)) != 0
                 updatedState.addUpdatePinnedTopic(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topicId), isPinned: isPinned)
-            case let .updateReadMessagesContents(messages, _, _):
+            case let .updateReadMessagesContents(_, messages, _, _, _):
                 updatedState.addReadMessagesContents((nil, messages))
             case let .updateChannelReadMessagesContents(_, channelId, topMsgId, messages):
                 let _ = topMsgId

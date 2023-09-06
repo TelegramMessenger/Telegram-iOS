@@ -302,7 +302,7 @@ func managedSynchronizeAttachMenuBots(accountPeerId: PeerId, postbox: Postbox, n
                                         }
                                         if !icons.isEmpty {
                                             var peerTypes: AttachMenuBots.Bot.PeerFlags = []
-                                            for apiType in apiPeerTypes {
+                                            for apiType in apiPeerTypes ?? [] {
                                                 switch apiType {
                                                     case .attachMenuPeerTypeSameBotPM:
                                                         peerTypes.insert(.sameBot)
@@ -505,7 +505,7 @@ func _internal_getAttachMenuBot(accountPeerId: PeerId, postbox: Postbox, network
                                     }
                                 }
                                 var peerTypes: AttachMenuBots.Bot.PeerFlags = []
-                                for apiType in apiPeerTypes {
+                                for apiType in apiPeerTypes ?? [] {
                                     switch apiType {
                                         case .attachMenuPeerTypeSameBotPM:
                                             peerTypes.insert(.sameBot)
