@@ -349,12 +349,13 @@ public final class StoryPeerListComponent: Component {
         private var animationState: AnimationState?
         private var animator: ConstantDisplayLinkAnimator?
         
-        private var currentFraction: CGFloat = 0.0
+        public private(set) var currentFraction: CGFloat = 0.0
         private var currentTitleWidth: CGFloat = 0.0
         private var currentActivityFraction: CGFloat = 0.0
         
         public private(set) var overscrollSelectedId: EnginePeer.Id?
         public private(set) var overscrollHiddenChatItemsAllowed: Bool = false
+        public private(set) var overscrollFraction: CGFloat = 0.0
         
         private var anchorForTooltipRect: CGRect?
         
@@ -832,6 +833,8 @@ public final class StoryPeerListComponent: Component {
                 }
             }
             
+//            print("overscrollStage1: \(overscrollStage1) overscrollStage2: \(overscrollStage2) realTimeOverscrollFraction: \(realTimeOverscrollFraction)")
+            self.overscrollFraction = overscrollStage1
             if overscrollStage1 >= 0.5 {
                 self.overscrollHiddenChatItemsAllowed = true
             } else {

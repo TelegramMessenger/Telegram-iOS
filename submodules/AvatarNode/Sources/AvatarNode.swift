@@ -92,10 +92,11 @@ private func calculateColors(explicitColorIndex: Int?, peerId: EnginePeer.Id?, i
         } else if case let .archivedChatsIcon(hiddenByDefault) = icon, let theme = theme {
             let backgroundColors: (UIColor, UIColor)
             if hiddenByDefault {
-                backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
-            } else {
-                backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
-            }
+                print("hidden by default")
+//                backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
+            } //else {
+            backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
+//            }
             colors = [backgroundColors.1, backgroundColors.0]
         } else {
             colors = AvatarNode.grayscaleColors
@@ -348,12 +349,13 @@ public final class AvatarNode: ASDisplayNode {
             if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
                 let backgroundColors: (UIColor, UIColor)
                 if hiddenByDefault {
-                    backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
-                    iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
-                } else {
+//                    backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
+//                    iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
+                    print("archieve hidden by default")
+                } //else {
                     backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
                     iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
-                }
+//                }
                 let colors: NSArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
                 backgroundColor = backgroundColors.1.mixedWith(backgroundColors.0, alpha: 0.5)
                 animationBackgroundNode.image = generateGradientFilledCircleImage(diameter: self.imageNode.frame.width, colors: colors)
@@ -566,10 +568,11 @@ public final class AvatarNode: ASDisplayNode {
             if let parameters = parameters as? AvatarNodeParameters, parameters.icon != .none {
                 if case let .archivedChatsIcon(hiddenByDefault) = parameters.icon, let theme = parameters.theme {
                     if hiddenByDefault {
-                        iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
-                    } else {
+//                        iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
+                        
+                    } //else {
                         iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
-                    }
+//                    }
                 }
             }
             

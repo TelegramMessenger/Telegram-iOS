@@ -389,7 +389,7 @@ public func generateGradientImage(size: CGSize, scale: CGFloat = 0.0, colors: [U
         context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: direction == .horizontal ? CGPoint(x: size.width, y: 0.0) : CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
     }
     
-    let image = UIGraphicsGetImageFromCurrentImageContext()!
+    let image = UIGraphicsGetImageFromCurrentImageContext()
     UIGraphicsEndImageContext()
     
     return image

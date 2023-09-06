@@ -188,6 +188,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let selected: Bool
     let enableContextActions: Bool
     let hiddenOffset: Bool
+    var params: ArchiveAnimationParams
     let interaction: ChatListNodeInteraction
     
     public let selectable: Bool = true
@@ -211,7 +212,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, chatListLocation: ChatListControllerLocation, filterData: ChatListItemFilterData?, index: EngineChatList.Item.Index, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, params: ArchiveAnimationParams, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.chatListLocation = chatListLocation
         self.filterData = filterData
@@ -224,6 +225,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         self.header = header
         self.enableContextActions = enableContextActions
         self.hiddenOffset = hiddenOffset
+        self.params = params
         self.interaction = interaction
     }
     
@@ -932,6 +934,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    let archiveTransitionNode: ChatListArchiveTransitionNode
     let contextContainer: ContextControllerSourceNode
     let mainContentContainerNode: ASDisplayNode
     
@@ -950,7 +953,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var textArrowNode: ASImageNode?
     private var compoundTextButtonNode: HighlightTrackingButtonNode?
     let measureNode: TextNode
-    private var currentItemHeight: CGFloat?
+    var currentItemHeight: CGFloat?
     let forwardedIconNode: ASImageNode
     let textNode: TextNodeWithEntities
     var dustNode: InvisibleInkDustNode?
@@ -1243,6 +1246,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
+        self.archiveTransitionNode = ChatListArchiveTransitionNode()
+        
         super.init(layerBacked: false, dynamicBounce: false, rotated: false, seeThrough: false)
         
         self.isAccessibilityElement = true
@@ -1251,6 +1256,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.addSubnode(self.separatorNode)
         
         self.addSubnode(self.contextContainer)
+        self.addSubnode(self.archiveTransitionNode)
+
         self.contextContainer.addSubnode(self.mainContentContainerNode)
         
         self.avatarContainerNode.addSubnode(self.avatarNode)
@@ -1453,7 +1460,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                             strongSelf.hierarchyTrackingLayer?.removeFromSuperlayer()
                             strongSelf.hierarchyTrackingLayer = nil
-                        }                 
+                        }
                         strongSelf.updateVideoVisibility()
                     } else {
                         if let photo = peer.largeProfileImage, photo.hasVideo {
@@ -2692,11 +2699,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0)), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
-            var heightOffset: CGFloat = 0.0
-            if item.hiddenOffset {
-                heightOffset = -itemHeight
+            var heightOffset: CGFloat = .zero
+            if case let .groupReference(data) = item.content, data.groupId == .archive, !item.params.isArchiveGroupVisible {
+                itemHeight *= 1.2
+                heightOffset = -(itemHeight-item.params.expandedHeight)
+                print("height offset: \(heightOffset) with params: \(item.params) itemHeight: \(itemHeight)")
             }
-            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: max(0.0, itemHeight + heightOffset)), insets: insets)
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: itemHeight + heightOffset), insets: insets)
             
             var customActions: [ChatListItemAccessibilityCustomAction] = []
             for option in peerLeftRevealOptions {
@@ -2705,7 +2714,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             for option in peerRevealOptions {
                 customActions.append(ChatListItemAccessibilityCustomAction(name: option.title, target: nil, selector: #selector(ChatListItemNode.performLocalAccessibilityCustomAction(_:)), key: option.key))
             }
-            
             return (layout, { [weak self] synchronousLoads, animated in
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
@@ -2720,13 +2728,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         animateOnline = false
                     }
                     strongSelf.currentOnline = online
-                    
-                    if item.hiddenOffset {
-                        strongSelf.layer.zPosition = -1.0
-                    }
-                                       
-                    if case .groupReference = item.content {
-                        strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
+                                                           
+                    if case let .groupReference(data) = item.content {
+                        if data.groupId == .archive {
+                            strongSelf.layer.zPosition = -1.0
+                        }
+                        let translationY = layout.contentSize.height - itemHeight
+                        strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translationY, 0.0)
+//                        print("set sublayer translation y: \(translationY)")
                     }
                     
                     if let _ = updatedTheme {
@@ -2743,9 +2752,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let contextContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
-//                    strongSelf.contextContainer.position = contextContainerFrame.center
                     transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
+                    
                     
                     var mainContentFrame: CGRect
                     var mainContentBoundsOffset: CGFloat
@@ -2855,6 +2864,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateTransformScale(node: strongSelf.avatarNode, scale: avatarScale)
                     strongSelf.avatarNode.updateSize(size: avatarFrame.size)
                     strongSelf.updateVideoVisibility()
+                    
+                    if case let .groupReference(data) = item.content, data.groupId == .archive, item.params.isHiddenByDefault {
+                        transition.updatePosition(node: strongSelf.archiveTransitionNode, position: contextContainerFrame.center)
+                        transition.updateBounds(node: strongSelf.archiveTransitionNode, bounds: contextContainerFrame)
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: 1.0)
+                        strongSelf.archiveTransitionNode.updateLayout(
+                            transition: transition,
+                            size: contextContainerFrame.size,
+                            params: item.params,
+                            presentationData: item.presentationData,
+                            avatarNode: strongSelf.avatarNode
+                        )
+                    } else {
+                        transition.updateAlpha(node: strongSelf.archiveTransitionNode, alpha: .zero)
+                    }
                     
                     var itemPeerId: EnginePeer.Id?
                     if case let .chatList(index) = item.index {
@@ -3844,7 +3868,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let item = self.item {
             if case .groupReference = item.content {
-                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, currentValue - (self.currentItemHeight ?? 0.0), 0.0)
+                let translationY = currentValue - (self.currentItemHeight ?? 0.0)
+                self.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, translationY, 0.0)
             } else {
                 var separatorFrame = self.separatorNode.frame
                 separatorFrame.origin.y = currentValue - UIScreenPixel

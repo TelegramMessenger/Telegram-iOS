@@ -242,7 +242,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     topForumTopicItems: [],
                     autoremoveTimeout: nil,
                     storyState: nil
-                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
+                )), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, params: .emptyVisibleParams, interaction: interaction)
             }
             
             var itemNodes: [ChatListItemNode] = []
@@ -2428,9 +2428,13 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if listView.isDragging {
             var overscrollSelectedId: EnginePeer.Id?
             var overscrollHiddenChatItemsAllowed = false
+            var overscrollFraction: CGFloat?
+            var currentFraction: CGFloat?
             if let controller = self.controller, let componentView = controller.chatListHeaderView(), let storyPeerListView = componentView.storyPeerListView() {
                 overscrollSelectedId = storyPeerListView.overscrollSelectedId
                 overscrollHiddenChatItemsAllowed = storyPeerListView.overscrollHiddenChatItemsAllowed
+                overscrollFraction = storyPeerListView.overscrollFraction
+                currentFraction = storyPeerListView.currentFraction
             }
             
             if let chatListNode = listView as? ChatListNode {
@@ -2471,26 +2475,125 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                             manuallyAllow = true
                         }
                         
-                        if manuallyAllow, case let .known(value) = offset, value + listView.tempTopInset <= -40.0 {
-                            overscrollHiddenChatItemsAllowed = true
+
+                        if manuallyAllow, case let .known(value) = offset {
+                            let difference = value + listView.tempTopInset - 40.0
+                            print("offset difference: \(difference)")
+                            if difference <= 0 {
+                                overscrollHiddenChatItemsAllowed = true
+                            }
                         }
                     }
                 
-                    if overscrollHiddenChatItemsAllowed {
-                        if self.allowOverscrollItemExpansion {
-                            let timestamp = CACurrentMediaTime()
-                            if let _ = self.currentOverscrollItemExpansionTimestamp {
-                            } else {
-                                self.currentOverscrollItemExpansionTimestamp = timestamp
-                            }
-                            
-                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
+//                    if self.allowOverscrollItemExpansion {
+//                        if overscrollHiddenChatItemsAllowed {
+//                            let timestamp = CACurrentMediaTime()
+//                            if let _ = self.currentOverscrollItemExpansionTimestamp {
+//                            } else {
+//                                self.currentOverscrollItemExpansionTimestamp = timestamp
+//                            }
+//
+//                            if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
+//                                self.allowOverscrollItemExpansion = false
+//
+//                                if isPrimary {
+//                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
+//                                } else {
+//                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+//                                }
+//                            }
+//                        }
+//                    }
+                    
+                    
+//                    if case let .known(value) = offset {
+//                        let listViewOffsetFraction = (value + listView.tempTopInset)/76
+//                        print("#1 listViewOffset: \(value) listViewOffsetFraction: \(listViewOffsetFraction)")
+//                    }
+//                    let scrollViewFraction = (listView.scroller.contentOffset.y - listView.tempTopInset) / 76
+//                    print("#1 overscrollFraction: \(overscrollFraction ?? .zero) scrollViewOffset: \(listView.scroller.contentOffset) topInset: \(listView.tempTopInset) scrollViewFraction: \(scrollViewFraction)")
+//                    print("###1 \noverscrollFraction: \(overscrollFraction ?? .zero) \nscrollViewOffset: \(listView.scroller.contentOffset) \ntopInset: \(listView.tempTopInset) \nscrollViewFraction: \(scrollViewFraction)")
+//                    print("###2 currentFraction: \(currentFraction ?? .zero) \ncurrentActivityFraction: \(currentActivityFraction ?? .zero)")
+                    
+                    
+                    var archiveFraction: CGFloat = 0.0
+                    
+                    let currentParams = self.mainContainerNode.currentItemNode.currentState.archiveParams
+                    guard !currentParams.isArchiveGroupVisible else { return }
+                    
+                    if let overscrollFraction, let currentFraction {
+                        archiveFraction = (overscrollFraction  / 0.5) * 0.8
+                        if currentFraction < 0 {
+                            let lastOverscrol = max(-1.0, min(1.0, (currentFraction / -0.2))) * 0.2
+                            archiveFraction += lastOverscrol
+                            archiveFraction = max(-1.0, archiveFraction)
+                            archiveFraction = min(1.0, archiveFraction)
+                        } else if currentFraction >= 1.0 {
+                            archiveFraction = -currentFraction
+                        }
+                    }
+                    if
+                        archiveFraction != 0,
+//                        self.allowOverscrollItemExpansion,
+                        let node = self.mainContainerNode.currentItemNode.itemNodeAtIndex(2) as? ChatListItemNode, node.isNodeLoaded,
+                        var itemHeight = node.currentItemHeight, itemHeight > 0 {
+//                        if !self.mainContainerNode.currentItemNode.currentState.archiveParams.finalizeAnimation {
+                            itemHeight *= 1.2
+//                        }
+                        
+                        let expandedHeight: CGFloat
+                        if archiveFraction < 0 {
+                            expandedHeight = itemHeight - (-archiveFraction * itemHeight)
+                        } else {
+                            expandedHeight = archiveFraction * itemHeight
+                        }
+//listView.tempTopInset - 40.0
+//                        print("expandedHeight: \(expandedHeight) overscrollFraction: \(overscrollFraction) itemHeight: \(itemHeight)")
+
+                        let timestamp = CACurrentMediaTime()
+                        if let _ = self.currentOverscrollItemExpansionTimestamp {
+                        } else {
+                            self.currentOverscrollItemExpansionTimestamp = timestamp
+                        }
+
+                        var scrollOffset = listView.scroller.contentOffset.y
+                        if case let .known(value) = offset {
+                            scrollOffset = value
+                        }
+
+                        if let currentOverscrollItemExpansionTimestamp = self.currentOverscrollItemExpansionTimestamp, currentOverscrollItemExpansionTimestamp <= timestamp - 0.0 {
+                            if archiveFraction >= 0.8 {
                                 self.allowOverscrollItemExpansion = false
-                                
-                                if isPrimary {
-                                    self.mainContainerNode.currentItemNode.revealScrollHiddenItem()
-                                } else {
-                                    self.inlineStackContainerNode?.currentItemNode.revealScrollHiddenItem()
+                            }
+                            if isPrimary {
+                                self.mainContainerNode.currentItemNode.forEachItemNode { node in
+                                    if let chatNode = node as? ChatListItemNode {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
+//                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
+                                            self.mainContainerNode.currentItemNode.updateArchiveParams(params: .init(
+                                                scrollOffset: scrollOffset.rounded(),
+                                                storiesFraction: archiveFraction,
+                                                expandedHeight: expandedHeight,
+                                                finalizeAnimation: false,
+                                                isHiddenByDefault: currentParams.isHiddenByDefault
+                                            ))
+                                        }
+                                    }
+                                }
+                            } else {
+                                self.inlineStackContainerNode?.currentItemNode.forEachItemNode { node in
+                                    if let chatNode = node as? ChatListItemNode {
+                                        if case let .groupReference(data) = chatNode.item?.content, data.groupId == .archive, expandedHeight != chatNode.item?.params.expandedHeight {
+//                                            print("expandedHeight: \(expandedHeight) archiveFraction: \(archiveFraction) itemHeight: \(itemHeight)")
+                                            self.inlineStackContainerNode?.currentItemNode.updateArchiveParams(params: .init(
+                                                scrollOffset: scrollOffset.rounded(),
+                                                storiesFraction: archiveFraction,
+                                                expandedHeight: expandedHeight,
+                                                finalizeAnimation: false,
+                                                isHiddenByDefault: currentParams.isHiddenByDefault
+                                            ))
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2544,6 +2647,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         self.allowOverscrollItemExpansion = false
         self.currentOverscrollItemExpansionTimestamp = nil
+        
+        let params = self.mainContainerNode.currentItemNode.currentState.archiveParams
+        self.mainContainerNode.currentItemNode.updateArchiveParams(params: params.withUpdatedFinalizeAnimation(true))
     }
     
     private func contentScrollingEnded(listView: ListView, isPrimary: Bool) -> Bool {
@@ -2555,7 +2661,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         guard let navigationBarComponentView = self.navigationBarView.view as? ChatListNavigationBar.View else {
             return false
         }
-        
+                
         if let clippedScrollOffset = navigationBarComponentView.clippedScrollOffset {
             let searchScrollOffset = clippedScrollOffset
             if searchScrollOffset > 0.0 && searchScrollOffset < ChatListNavigationBar.searchScrollHeight {

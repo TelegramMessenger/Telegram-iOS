@@ -312,6 +312,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
         var unreadCount: Int
         var revealed: Bool
         var hiddenByDefault: Bool
+        var archiveParams: ArchiveAnimationParams
         var storyState: ChatListNodeState.StoryState?
         
         init(
@@ -324,6 +325,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             unreadCount: Int,
             revealed: Bool,
             hiddenByDefault: Bool,
+            archiveParams: ArchiveAnimationParams,
             storyState: ChatListNodeState.StoryState?
         ) {
             self.index = index
@@ -335,6 +337,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             self.unreadCount = unreadCount
             self.revealed = revealed
             self.hiddenByDefault = hiddenByDefault
+            self.archiveParams = archiveParams
             self.storyState = storyState
         }
         
@@ -367,6 +370,10 @@ enum ChatListNodeEntry: Comparable, Identifiable {
                 return false
             }
             if lhs.storyState != rhs.storyState {
+                return false
+            }
+            
+            if lhs.archiveParams != rhs.archiveParams {
                 return false
             }
             
@@ -847,6 +854,11 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                 if let archiveStoryState = state.archiveStoryState {
                     mappedStoryState = archiveStoryState
                 }
+                var params = state.archiveParams
+                if params.isHiddenByDefault != hideArchivedFolderByDefault {
+                    params.updateVisibility(isRevealed: state.hiddenItemShouldBeTemporaryRevealed, isHiddenByDefault: hideArchivedFolderByDefault)
+                }
+                
                 result.append(.GroupReferenceEntry(ChatListNodeEntry.GroupReferenceEntryData(
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: messageIndex)),
                     presentationData: state.presentationData,
@@ -857,6 +869,7 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
                     unreadCount: groupReference.unreadCount,
                     revealed: state.hiddenItemShouldBeTemporaryRevealed,
                     hiddenByDefault: hideArchivedFolderByDefault,
+                    archiveParams: params,
                     storyState: mappedStoryState
                 )))
                 if pinningIndex != 0 {
