@@ -806,6 +806,12 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         
         switch gestureRecognizer.state {
         case .began:
+            self.tapGestureRecognizer?.isEnabled = false
+            self.tapGestureRecognizer?.isEnabled = true
+            
+            self.longPressGestureRecognizer?.isEnabled = false
+            self.longPressGestureRecognizer?.isEnabled = true
+            
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
             
             let _ = entityView.dismissReactionSelection()

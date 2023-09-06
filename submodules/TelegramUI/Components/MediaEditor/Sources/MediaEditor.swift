@@ -137,6 +137,7 @@ public final class MediaEditor {
             return position
         }
     }
+   
     public var duration: Double? {
         if let _ = self.player {
             if let trimRange = self.values.videoTrimRange {
@@ -144,6 +145,14 @@ public final class MediaEditor {
             } else {
                 return min(60.0, self.playerPlaybackState.0)
             }
+        } else {
+            return nil
+        }
+    }
+    
+    public var originalDuration: Double? {
+        if let _ = self.player {
+            return min(60.0, self.playerPlaybackState.0)
         } else {
             return nil
         }
@@ -340,12 +349,21 @@ public final class MediaEditor {
     
     deinit {
         self.textureSourceDisposable?.dispose()
-        
+        self.destroyTimeObservers()
+    }
+    
+    private func destroyTimeObservers() {
         if let timeObserver = self.timeObserver {
-            self.player?.removeTimeObserver(timeObserver)
+            if self.sourceIsVideo {
+                self.player?.removeTimeObserver(timeObserver)
+            } else {
+                self.audioPlayer?.removeTimeObserver(timeObserver)
+            }
+            self.timeObserver = nil
         }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
+            self.didPlayToEndTimeObserver = nil
         }
         
         self.audioDelayTimer?.invalidate()
@@ -883,7 +901,16 @@ public final class MediaEditor {
         
         if self.player == nil, let audioPlayer = self.audioPlayer {
             let itemTime = audioPlayer.currentItem?.currentTime() ?? .invalid
-            audioPlayer.setRate(rate, time: itemTime, atHostTime: futureTime)
+            if audioPlayer.status == .readyToPlay {
+                audioPlayer.setRate(rate, time: itemTime, atHostTime: futureTime)
+            } else {
+                audioPlayer.seek(to: itemTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                if rate > 0.0 {
+                    audioPlayer.play()
+                } else {
+                    audioPlayer.pause()
+                }
+            }
         } else {
             let itemTime = self.player?.currentItem?.currentTime() ?? .invalid
             let audioTime = self.audioTime(for: itemTime)
@@ -891,13 +918,24 @@ public final class MediaEditor {
             self.player?.setRate(rate, time: itemTime, atHostTime: futureTime)
             self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
             
-            if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
-                self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                    self?.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
-                }, queue: Queue.mainQueue())
-                self.audioDelayTimer?.start()
-            } else {
-                self.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
+            if let audioPlayer = self.audioPlayer {
+                if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
+                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                        self?.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
+                    }, queue: Queue.mainQueue())
+                    self.audioDelayTimer?.start()
+                } else {
+                    if audioPlayer.status == .readyToPlay {
+                        audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
+                    } else {
+                        audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        if rate > 0.0 {
+                            audioPlayer.play()
+                        } else {
+                            audioPlayer.pause()
+                        }
+                    }
+                }
             }
         }
         
@@ -1017,11 +1055,11 @@ public final class MediaEditor {
             }
         } else if let audioPlayer = self.audioPlayer {
             audioPlayer.pause()
+            
+            self.destroyTimeObservers()
+            
             self.audioPlayer = nil
-            
-            self.audioDelayTimer?.invalidate()
-            self.audioDelayTimer = nil
-            
+             
             if !self.sourceIsVideo {
                 self.playerPromise.set(.single(nil))
             }
@@ -1047,10 +1085,16 @@ public final class MediaEditor {
         if apply {
             let offset = offset ?? 0.0
             let duration = self.duration ?? 0.0
+            let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
             let upperBound = self.values.audioTrackTrimRange?.upperBound ?? duration
             
-            let time = self.player?.currentTime() ?? .zero
-            let audioTime = self.audioTime(for: time)
+            let audioTime: CMTime
+            if self.sourceIsVideo {
+                let time = self.player?.currentTime() ?? .zero
+                audioTime = self.audioTime(for: time)
+            } else {
+                audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
+            }
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
             self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
         }

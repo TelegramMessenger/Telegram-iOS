@@ -91,7 +91,7 @@ public final class TextFieldComponent: Component {
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
     public let resetText: NSAttributedString?
-    public let resetScrollOnFocusChange: Bool
+    public let isOneLineWhenUnfocused: Bool
     public let formatMenuAvailability: FormatMenuAvailability
     public let lockedFormatAction: () -> Void
     public let present: (ViewController) -> Void
@@ -106,7 +106,7 @@ public final class TextFieldComponent: Component {
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
         resetText: NSAttributedString?,
-        resetScrollOnFocusChange: Bool,
+        isOneLineWhenUnfocused: Bool,
         formatMenuAvailability: FormatMenuAvailability,
         lockedFormatAction: @escaping () -> Void,
         present: @escaping (ViewController) -> Void,
@@ -120,7 +120,7 @@ public final class TextFieldComponent: Component {
         self.insets = insets
         self.hideKeyboard = hideKeyboard
         self.resetText = resetText
-        self.resetScrollOnFocusChange = resetScrollOnFocusChange
+        self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.formatMenuAvailability = formatMenuAvailability
         self.lockedFormatAction = lockedFormatAction
         self.present = present
@@ -149,7 +149,7 @@ public final class TextFieldComponent: Component {
         if lhs.resetText != rhs.resetText {
             return false
         }
-        if lhs.resetScrollOnFocusChange != rhs.resetScrollOnFocusChange {
+        if lhs.isOneLineWhenUnfocused != rhs.isOneLineWhenUnfocused {
             return false
         }
         if lhs.formatMenuAvailability != rhs.formatMenuAvailability {
@@ -201,6 +201,8 @@ public final class TextFieldComponent: Component {
         private var customEmojiContainerView: CustomEmojiContainerView?
         private var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
                 
+        private let ellipsisView = ComponentView<Empty>()
+        
         private var inputState: InputState {
             let selectionRange: Range<Int> = self.textView.selectedRange.location ..< (self.textView.selectedRange.location + self.textView.selectedRange.length)
             return InputState(inputText: stateAttributedStringForText(self.textView.attributedText ?? NSAttributedString()), selectionRange: selectionRange)
@@ -796,6 +798,30 @@ public final class TextFieldComponent: Component {
             component.externalState.hasTrackingView = hasTrackingView
         }
         
+        func rightmostPositionOfFirstLine() -> CGPoint? {
+            let glyphRange = self.layoutManager.glyphRange(for: self.textContainer)
+            
+            if glyphRange.length == 0 { return nil }
+                
+            var lineRect = CGRect.zero
+            var glyphIndexForStringStart = glyphRange.location
+            var lineRange: NSRange = NSRange()
+                
+            repeat {
+                lineRect = self.layoutManager.lineFragmentUsedRect(forGlyphAt: glyphIndexForStringStart, effectiveRange: &lineRange)
+                if NSMaxRange(lineRange) > glyphRange.length {
+                    lineRange.length = glyphRange.length - lineRange.location
+                }
+                glyphIndexForStringStart = NSMaxRange(lineRange)
+            } while glyphIndexForStringStart < NSMaxRange(glyphRange) && !NSLocationInRange(glyphRange.location, lineRange)
+                
+            let padding = self.textView.textContainerInset.left
+            let rightmostX = lineRect.maxX + padding
+            let rightmostY = lineRect.minY + self.textView.textContainerInset.top
+            
+            return CGPoint(x: rightmostX, y: rightmostY)
+        }
+        
         func update(component: TextFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             self.state = state
@@ -834,7 +860,7 @@ public final class TextFieldComponent: Component {
             let isEditing = self.textView.isFirstResponder
             
             var refreshScrolling = self.textView.bounds.size != size
-            if component.resetScrollOnFocusChange && !isEditing && isEditing != wasEditing {
+            if component.isOneLineWhenUnfocused && !isEditing && isEditing != wasEditing {
                 refreshScrolling = true
             }
             self.textView.frame = CGRect(origin: CGPoint(), size: size)
@@ -844,7 +870,7 @@ public final class TextFieldComponent: Component {
             
             if refreshScrolling {
                 if isEditing {
-                    if wasEditing {
+                    if wasEditing || component.isOneLineWhenUnfocused {
                         self.textView.setContentOffset(CGPoint(x: 0.0, y: max(0.0, self.textView.contentSize.height - self.textView.bounds.height)), animated: false)
                     }
                 } else {
@@ -869,6 +895,35 @@ public final class TextFieldComponent: Component {
                     if self.textView.isFirstResponder {
                         self.textView.reloadInputViews()
                     }
+                }
+            }
+            
+            if component.isOneLineWhenUnfocused, let position = self.rightmostPositionOfFirstLine() {
+                let ellipsisSize = self.ellipsisView.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        Text(
+                            text: "\u{2026}",
+                            font: Font.regular(component.fontSize),
+                            color: component.textColor
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                if let view = self.ellipsisView.view {
+                    if view.superview == nil {
+                        self.textView.addSubview(view)
+                    }
+                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: position.x - 11.0, y: position.y), size: ellipsisSize))
+                    
+                    let ellipsisTransition: Transition
+                    if isEditing {
+                        ellipsisTransition = .easeInOut(duration: 0.2)
+                    } else {
+                        ellipsisTransition = .easeInOut(duration: 0.3)
+                    }
+                    ellipsisTransition.setAlpha(view: view, alpha: isEditing ? 0.0 : 1.0)
                 }
             }
             

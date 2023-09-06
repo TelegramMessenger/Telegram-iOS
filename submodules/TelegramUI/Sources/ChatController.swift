@@ -4168,7 +4168,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.dismissInput()
             
             let botName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-           
+            let botAddress = peer.addressName ?? ""
+            
             if source == .generic {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                     return $0.updatedTitlePanelContext {
@@ -4222,6 +4223,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, fromAttachMenu: false, isInline: false, isSimple: false)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
+                    }, requestSwitchInline: { [weak self] query, chatTypes, completion in
+                        if let strongSelf = self {
+                            if let chatTypes {
+                                let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.excludeRecent, .doNotSearchMessages], requestPeerType: chatTypes, hasContactSelector: false, hasCreation: false))
+                                controller.peerSelected = { [weak self, weak controller] peer, _ in
+                                    if let strongSelf = self {
+                                        completion()
+                                        controller?.dismiss()
+                                        strongSelf.controllerInteraction?.activateSwitchInline(peer.id, "@\(botAddress) \(query)", nil)
+                                    }
+                                }
+                                strongSelf.push(controller)
+                            } else {
+                                strongSelf.controllerInteraction?.activateSwitchInline(peerId, "@\(botAddress) \(query)", nil)
+                            }
+                        }
                     }, getInputContainerNode: { [weak self] in
                         if let strongSelf = self, let layout = strongSelf.validLayout, case .compact = layout.metrics.widthClass {
                             return (strongSelf.chatDisplayNode.getWindowInputAccessoryHeight(), strongSelf.chatDisplayNode.inputPanelContainerNode, {
