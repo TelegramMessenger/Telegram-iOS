@@ -708,7 +708,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .reviewLogin:
-                            nodeInteraction?.openActiveSessions()
+                            break
                         }
                     case .hide:
                         switch notice {
@@ -1028,7 +1028,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         case .premiumUpgrade, .premiumAnnualDiscount, .premiumRestore:
                             nodeInteraction?.openPremiumIntro()
                         case .reviewLogin:
-                            nodeInteraction?.openActiveSessions()
+                            break
                         }
                     case .hide:
                         switch notice {
@@ -1623,7 +1623,7 @@ public final class ChatListNode: ListView {
                     animationBackgroundColor = UIColor(rgb: 0x474747)
                 }
                 //TODO:localize
-                self.present?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "New Login Allowed", text: "You can check the list of your active logins in [Settings > Devices]().", customUndoText: nil, timeout: 5), elevatedLayout: true, action: { [weak self] action in
+                self.present?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_success", scale: 1.0, colors: ["info1.info1.stroke": animationBackgroundColor, "info2.info2.Fill": animationBackgroundColor], title: "New Login Allowed", text: "You can check the list of your active logins in [Settings > Devices]().", customUndoText: nil, timeout: 5), elevatedLayout: false, action: { [weak self] action in
                     switch action {
                     case .info:
                         self?.interaction?.openActiveSessions()
