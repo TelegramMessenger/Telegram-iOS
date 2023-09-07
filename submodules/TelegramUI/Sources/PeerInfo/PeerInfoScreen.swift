@@ -91,6 +91,7 @@ import PeerInfoStoryGridScreen
 import StoryContainerScreen
 import ChatAvatarNavigationNode
 import PeerReportScreen
+import WebUI
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -549,6 +550,7 @@ private final class PeerInfoInteraction {
     let toggleForumTopics: (Bool) -> Void
     let displayTopicsLimited: (TopicsLimitedReason) -> Void
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
+    let openBotApp: (AttachMenuBot) -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -599,7 +601,8 @@ private final class PeerInfoInteraction {
         dismissInput: @escaping () -> Void,
         toggleForumTopics: @escaping (Bool) -> Void,
         displayTopicsLimited: @escaping (TopicsLimitedReason) -> Void,
-        openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void
+        openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
+        openBotApp: @escaping (AttachMenuBot) -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -650,6 +653,7 @@ private final class PeerInfoInteraction {
         self.toggleForumTopics = toggleForumTopics
         self.displayTopicsLimited = displayTopicsLimited
         self.openPeerMention = openPeerMention
+        self.openBotApp = openBotApp
     }
 }
 
@@ -661,7 +665,7 @@ private enum SettingsSection: Int, CaseIterable {
     case phone
     case accounts
     case proxy
-    case stories
+    case apps
     case shortcuts
     case advanced
     case payment
@@ -792,7 +796,19 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    items[.stories]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
+    var appIndex = 1000
+    if let settings = data.globalSettings {
+        for bot in settings.bots {
+            if bot.flags.contains(.showInSettings) {
+                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: bot.peer.compactDisplayTitle, icon: PresentationResourcesSettings.passport, action: {
+                    interaction.openBotApp(bot)
+                }))
+                appIndex += 1
+            }
+        }
+    }
+    
+    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
         interaction.openSettings(.stories)
     }))
     
@@ -2340,6 +2356,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             openPeerMention: { [weak self] mention, navigation in
                 self?.openPeerMention(mention, navigation: navigation)
+            },
+            openBotApp: { [weak self] bot in
+                self?.openBotApp(bot)
             }
         )
         
@@ -4398,7 +4417,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, contentContext: nil)
     }
     
-    private func openUrl(url: String, concealed: Bool, external: Bool) {
+    private func openUrl(url: String, concealed: Bool, external: Bool, forceExternal: Bool = false, commit: @escaping () -> Void = {}) {
         openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, concealed: concealed, present: { [weak self] c in
             self?.controller?.present(c, in: .window(.root))
         }, openResolved: { [weak self] tempResolved in
@@ -4408,8 +4427,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             
             let result: ResolvedUrl = external ? .externalUrl(url) : tempResolved
             
-            strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { peer, navigation in
+            strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: forceExternal, openPeer: { peer, navigation in
                 self?.openPeer(peerId: peer.id, navigation: navigation)
+                commit()
             }, sendFile: nil,
             sendSticker: nil,
             requestMessageActionUrlAuth: nil,
@@ -4577,6 +4597,51 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.controller?.push(searchController)
             }
         }))
+    }
+    
+    private let openBotAppDisposable = MetaDisposable()
+    private func openBotApp(_ bot: AttachMenuBot) {
+        guard let controller = self.controller else {
+            return
+        }
+        
+        let proceed = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.openBotAppDisposable.set(((self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
+            |> afterDisposed {
+//                updateProgress()
+            })
+            |> deliverOnMainQueue).start(next: { [weak self] url in
+                guard let self else {
+                    return
+                }
+                let params = WebAppParameters(peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: true)
+                let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
+                    self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
+                }, requestSwitchInline: { _, _, _ in
+                }, getNavigationController: { [weak self] in
+                    return self?.controller?.navigationController as? NavigationController
+                })
+                controller.navigationPresentation = .flatModal
+                self.controller?.push(controller)
+            }, error: { [weak self] error in
+                if let self {
+                    self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                    })]), in: .window(.root))
+                }
+            }))
+        }
+        
+        if bot.flags.contains(.showInSettingsDisclaimer) {
+            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: bot.peer, completion: {
+                proceed()
+            })
+            controller.present(alertController, in: .window(.root))
+        } else {
+            proceed()
+        }
     }
     
     private func performButtonAction(key: PeerInfoHeaderButtonKey, gesture: ContextGesture?) {

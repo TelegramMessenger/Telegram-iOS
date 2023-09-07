@@ -7,7 +7,7 @@ public final class AnimatedTextComponent: Component {
     public struct Item: Equatable {
         public enum Content: Equatable {
             case text(String)
-            case number(Int)
+            case number(Int, minDigits: Int)
         }
         
         public var id: AnyHashable
@@ -86,11 +86,16 @@ public final class AnimatedTextComponent: Component {
                     } else {
                         itemText = text.map(String.init)
                     }
-                case let .number(value):
+                case let .number(value, minDigits):
+                    var valueText: String = "\(value)"
+                    while valueText.count < minDigits {
+                        valueText.insert("0", at: valueText.startIndex)
+                    }
+                    
                     if item.isUnbreakable {
-                        itemText = ["\(value)"]
+                        itemText = [valueText]
                     } else {
-                        itemText = "\(value)".map(String.init)
+                        itemText = valueText.map(String.init)
                     }
                 }
                 var index = 0

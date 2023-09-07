@@ -87,12 +87,24 @@
         [strongSelf updateLayoutWithFrame:strongSelf->_currentFrame edgeInsets:strongSelf->_currentEdgeInsets animated:animated];
     };
     
+    _inputPanel.timerUpdated = ^(NSNumber *value) {
+        __strong TGPhotoCaptionInputMixin *strongSelf = weakSelf;
+        if (strongSelf.timerUpdated != nil) {
+            strongSelf.timerUpdated(value);
+        }
+    };
+    
+    
     _inputPanelView = inputPanel.view;
     
     _backgroundView = [[UIView alloc] init];
     _backgroundView.backgroundColor = [TGPhotoEditorInterfaceAssets toolbarTransparentBackgroundColor];
     [parentView addSubview:_backgroundView];
     [parentView addSubview:_inputPanelView];
+}
+
+- (void)onAnimateOut {
+    [_inputPanel onAnimateOut];
 }
 
 - (void)destroy
@@ -127,6 +139,10 @@
         return;
     _caption = caption;
     [_inputPanel setCaption:caption];
+}
+
+- (void)setTimeout:(int32_t)timeout {
+    [_inputPanel setTimeout:timeout];
 }
 
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)__unused animated
@@ -204,7 +220,7 @@
     
     CGRect frame = _currentFrame;
     UIEdgeInsets edgeInsets = _currentEdgeInsets;
-    CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0 animated:false];
+    CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size keyboardHeight:keyboardHeight sideInset:0.0 animated:false];
     [UIView animateWithDuration:duration delay:0.0f options:(curve << 16) animations:^{
         _inputPanelView.frame = CGRectMake(edgeInsets.left, frame.size.height - panelHeight - MAX(edgeInsets.bottom, _keyboardHeight), frame.size.width, panelHeight);
         
@@ -224,7 +240,7 @@
     _currentFrame = frame;
     _currentEdgeInsets = edgeInsets;
     
-    CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size sideInset:0.0 animated:animated];
+    CGFloat panelHeight = [_inputPanel updateLayoutSize:frame.size keyboardHeight:_keyboardHeight sideInset:0.0 animated:animated];
     
     CGFloat y = 0.0;
     if (frame.size.width > frame.size.height && !TGIsPad()) {
@@ -238,14 +254,15 @@
         backgroundHeight += _keyboardHeight - edgeInsets.bottom;
     }
     
+    CGRect panelFrame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
+    CGRect backgroundFrame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
+    
     if (animated) {
-        [UIView animateWithDuration:0.2 delay:0.0 options:UIViewAnimationOptionCurveEaseInOut animations:^{
-            _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
-            _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
-        } completion:nil];
+        [_inputPanel animateView:_inputPanelView frame:panelFrame];
+        [_inputPanel animateView:_backgroundView frame:backgroundFrame];
     } else {
-        _inputPanelView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, panelHeight);
-        _backgroundView.frame = CGRectMake(edgeInsets.left, y, frame.size.width, backgroundHeight);
+        _inputPanelView.frame = panelFrame;
+        _backgroundView.frame = backgroundFrame;
     }
 }
 

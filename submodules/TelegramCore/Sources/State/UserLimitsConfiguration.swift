@@ -21,6 +21,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxExpiringStoriesCount: Int32
     public let maxStoriesWeeklyCount: Int32
     public let maxStoriesMonthlyCount: Int32
+    public let maxStoriesSuggestedReactions: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -42,7 +43,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxStoryCaptionLength: 200,
             maxExpiringStoriesCount: 3,
             maxStoriesWeeklyCount: 7,
-            maxStoriesMonthlyCount: 30
+            maxStoriesMonthlyCount: 30,
+            maxStoriesSuggestedReactions: 1
         )
     }
 
@@ -65,7 +67,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxStoryCaptionLength: Int32,
         maxExpiringStoriesCount: Int32,
         maxStoriesWeeklyCount: Int32,
-        maxStoriesMonthlyCount: Int32
+        maxStoriesMonthlyCount: Int32,
+        maxStoriesSuggestedReactions: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -86,6 +89,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxExpiringStoriesCount = maxExpiringStoriesCount
         self.maxStoriesWeeklyCount = maxStoriesWeeklyCount
         self.maxStoriesMonthlyCount = maxStoriesMonthlyCount
+        self.maxStoriesSuggestedReactions = maxStoriesSuggestedReactions
     }
 }
 
@@ -129,5 +133,6 @@ extension UserLimitsConfiguration {
         self.maxExpiringStoriesCount = getValue("story_expiring_limit", orElse: defaultValue.maxExpiringStoriesCount)
         self.maxStoriesWeeklyCount = getValue("stories_sent_weekly_limit", orElse: defaultValue.maxStoriesWeeklyCount)
         self.maxStoriesMonthlyCount = getValue("stories_sent_monthly_limit", orElse: defaultValue.maxStoriesMonthlyCount)
+        self.maxStoriesSuggestedReactions = getValue("stories_suggested_reactions_limit", orElse: defaultValue.maxStoriesMonthlyCount)
     }
 }

@@ -89,7 +89,7 @@ extension UIView {
 }
 
 open class ComponentState {
-    var _updated: ((Transition) -> Void)?
+    open var _updated: ((Transition) -> Void)?
     var isUpdated: Bool = false
     
     public init() {

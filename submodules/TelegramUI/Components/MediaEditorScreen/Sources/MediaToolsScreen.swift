@@ -1005,12 +1005,7 @@ public final class MediaToolsScreen: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
-            let isTablet: Bool
-            if case .regular = layout.metrics.widthClass {
-                isTablet = true
-            } else {
-                isTablet = false
-            }
+            let isTablet = layout.metrics.isTablet
 
             let previewSize: CGSize
             let topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0

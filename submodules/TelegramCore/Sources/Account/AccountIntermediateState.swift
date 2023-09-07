@@ -95,7 +95,7 @@ enum AccountStateMutationOperation {
     case UpdatePinnedItemIds(PeerGroupId, AccountStateUpdatePinnedItemIdsOperation)
     case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
     case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
-    case ReadMessageContents((PeerId?, [Int32]))
+    case ReadMessageContents(peerIdsAndMessageIds: (PeerId?, [Int32]), date: Int32?)
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateMessageForwardsCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
@@ -574,8 +574,8 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedTopicOrder(peerId: peerId, threadIds: threadIds))
     }
     
-    mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
-        self.addOperation(.ReadMessageContents(peerIdsAndMessageIds))
+    mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32]), date: Int32?) {
+        self.addOperation(.ReadMessageContents(peerIdsAndMessageIds: peerIdsAndMessageIds, date: date))
     }
     
     mutating func addUpdateMessageImpressionCount(id: MessageId, count: Int32) {

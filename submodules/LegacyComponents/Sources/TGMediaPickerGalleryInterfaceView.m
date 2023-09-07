@@ -42,6 +42,28 @@
 
 #import <LegacyComponents/TGPhotoCaptionInputMixin.h>
 
+@interface TGMediaPickerGalleryWrapperView: UIView
+{
+    
+}
+@end
+
+@implementation TGMediaPickerGalleryWrapperView
+
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    __block UIView *result = nil;
+    [self.subviews enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(__kindof UIView * _Nonnull view, NSUInteger idx, BOOL * _Nonnull stop) {
+        UIView *hitTestView = [view hitTest:[self convertPoint:point toView:view] withEvent:event];
+        if (hitTestView != nil) {
+            *stop = true;
+            result = hitTestView;
+        }
+    }];
+    return result;
+}
+
+@end
+
 @interface TGMediaPickerGalleryInterfaceView () <ASWatcher>
 {
     id<TGModernGalleryItem> _currentItem;
@@ -121,7 +143,7 @@
         _itemHeaderViews = [[NSMutableArray alloc] init];
         _itemFooterViews = [[NSMutableArray alloc] init];
         
-        _wrapperView = [[UIView alloc] initWithFrame:CGRectZero];
+        _wrapperView = [[TGMediaPickerGalleryWrapperView alloc] initWithFrame:CGRectZero];
         [self addSubview:_wrapperView];
         
         _headerWrapperView = [[UIView alloc] init];
@@ -148,6 +170,8 @@
             strongSelf->_portraitToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_landscapeToolbarView.doneButton.userInteractionEnabled = false;
             strongSelf->_donePressed(strongSelf->_currentItem);
+            
+            [strongSelf->_captionMixin onAnimateOut];
         };
         void(^toolbarDoneLongPressed)(id) = ^(id sender)
         {
@@ -348,6 +372,18 @@
                 if (strongSelf->_scrollViewOffsetRequested != nil)
                     strongSelf->_scrollViewOffsetRequested(offset);
             } completion:nil];
+        };
+        
+        _captionMixin.timerUpdated = ^(NSNumber *timeout) {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            if (![strongSelf->_currentItem conformsToProtocol:@protocol(TGModernGalleryEditableItem)])
+                return;
+            
+            id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)strongSelf->_currentItem;
+            [strongSelf->_editingContext setTimer:timeout forItem:galleryEditableItem.editableMediaItem];
         };
         
         _captionMixin.stickersContext = stickersContext;
@@ -799,6 +835,8 @@
             
             id<TGMediaEditAdjustments> adjustments = dict[@"adjustments"];
             NSNumber *timer = dict[@"timer"];
+            
+            [strongSelf->_captionMixin setTimeout:[timer intValue]];
             
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
             {
@@ -1285,7 +1323,7 @@
 
 - (void)animateTransitionOutWithDuration:(NSTimeInterval)__unused duration
 {
-    
+    [_captionMixin onAnimateOut];
 }
 
 - (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual

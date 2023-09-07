@@ -54,7 +54,7 @@ public enum LegacyICloudFilePickerMode {
     }
 }
 
-public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], completion: @escaping ([URL]) -> Void) -> ViewController {
+public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], forceDarkTheme: Bool = false, dismissed: @escaping () -> Void = {}, completion: @escaping ([URL]) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     let legacyController = LegacyICloudFileController(presentation: .modal(animateIn: true), theme: theme, completion: { urls in
         dismissImpl?()
@@ -86,6 +86,7 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
         if let legacyController = legacyController {
             legacyController.dismiss()
         }
+        dismissed()
     }
     legacyController.bind(controller: UIViewController())
     return legacyController

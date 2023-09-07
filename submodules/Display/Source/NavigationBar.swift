@@ -1186,11 +1186,11 @@ open class NavigationBar: ASDisplayNode {
         transition.updateAlpha(node: self.stripeNode, alpha: alpha, delay: 0.15)
     }
     
-    public func updatePresentationData(_ presentationData: NavigationBarPresentationData) {
+    public func updatePresentationData(_ presentationData: NavigationBarPresentationData, transition: ContainedViewLayoutTransition = .immediate) {
         if presentationData.theme !== self.presentationData.theme || presentationData.strings !== self.presentationData.strings {
             self.presentationData = presentationData
             
-            self.backgroundNode.updateColor(color: self.presentationData.theme.backgroundColor, transition: .immediate)
+            self.backgroundNode.updateColor(color: self.presentationData.theme.backgroundColor, transition: transition)
             
             self.backButtonNode.color = self.presentationData.theme.buttonColor
             self.backButtonNode.disabledColor = self.presentationData.theme.disabledButtonColor

@@ -459,7 +459,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                             }
 
                                             let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: imageFlags)
-                                            if let timer = item.timer, timer > 0 && timer <= 60 {
+                                            if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
                                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                             }
                                             if let spoiler = item.spoiler, spoiler {
@@ -504,7 +504,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     
                                     let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                                     var attributes: [MessageAttribute] = []
-                                    if let timer = item.timer, timer > 0 && timer <= 60 {
+                                    if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
                                         attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                                     }
                                     if let spoiler = item.spoiler, spoiler {
@@ -749,7 +749,7 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                             
                             let media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: fileAttributes)
 
-                            if let timer = item.timer, timer > 0 && timer <= 60 {
+                            if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
                                 attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
                             }
                             if let spoiler = item.spoiler, spoiler {

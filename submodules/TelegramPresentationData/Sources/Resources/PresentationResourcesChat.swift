@@ -164,27 +164,7 @@ public struct PresentationResourcesChat {
             return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.mediaDateAndStatusTextColor)
         })
     }
-    
-    public static func chatBubbleSecretMediaIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleSecretMediaIcon.rawValue, { theme in
-            generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor)
-        })
-    }
-    
-    public static func chatBubbleSecretMediaCompactIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatBubbleSecretMediaCompactIcon.rawValue, { theme in
-            if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/SecretMediaIcon"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor) {
-                let factor: CGFloat = 0.6
-                return generateImage(CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor)), contextGenerator: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                })
-            } else {
-                return nil
-            }
-        })
-    }
-    
+        
     public static func chatInstantVideoBackgroundImage(_ theme: PresentationTheme, wallpaper: Bool) -> UIImage? {
         let key: PresentationResourceKey = !wallpaper ? PresentationResourceKey.chatInstantVideoWithoutWallpaperBackgroundImage : PresentationResourceKey.chatInstantVideoWithWallpaperBackgroundImage
         return theme.image(key.rawValue, { theme in

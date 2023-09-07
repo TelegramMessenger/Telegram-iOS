@@ -1422,6 +1422,7 @@ public class CameraScreen: ViewController {
             self.authorizationStatusDisposables.dispose()
         }
         
+        private var panGestureRecognizer: UIPanGestureRecognizer?
         private var pipPanGestureRecognizer: UIPanGestureRecognizer?
         override func didLoad() {
             super.didLoad()
@@ -1435,6 +1436,7 @@ public class CameraScreen: ViewController {
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
             panGestureRecognizer.delegate = self
             panGestureRecognizer.maximumNumberOfTouches = 1
+            self.panGestureRecognizer = panGestureRecognizer
             self.previewContainerView.addGestureRecognizer(panGestureRecognizer)
             
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
@@ -1464,6 +1466,7 @@ public class CameraScreen: ViewController {
             })
         }
         
+        fileprivate var captureStartTimestamp: Double?
         private func setupCamera() {
             guard self.camera == nil else {
                 return
@@ -1573,6 +1576,7 @@ public class CameraScreen: ViewController {
             
             camera.focus(at: CGPoint(x: 0.5, y: 0.5), autoFocus: true)
             camera.startCapture()
+            self.captureStartTimestamp = CACurrentMediaTime()
             
             self.camera = camera
             
@@ -1598,6 +1602,8 @@ public class CameraScreen: ViewController {
                     return false
                 }
                 return self.additionalPreviewContainerView.frame.contains(location)
+            } else if gestureRecognizer === self.panGestureRecognizer {
+                return true
             }
             return self.hasAppeared
         }
@@ -1628,7 +1634,7 @@ public class CameraScreen: ViewController {
             case .changed:
                 if case .none = self.cameraState.recording {
                     if case .compact = layout.metrics.widthClass {
-                        if translation.x < -10.0 || self.isDismissing {
+                        if (translation.x < -10.0 || self.isDismissing) && self.hasAppeared {
                             self.isDismissing = true
                             let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
                             controller.updateTransitionProgress(transitionFraction, transition: .immediate)
@@ -1640,11 +1646,13 @@ public class CameraScreen: ViewController {
                     }
                 }
             case .ended, .cancelled:
-                let velocity = gestureRecognizer.velocity(in: self.view)
-                let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
-                controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
-                
-                self.isDismissing = false
+                if self.isDismissing {
+                    let velocity = gestureRecognizer.velocity(in: self.view)
+                    let transitionFraction = 1.0 - max(0.0, translation.x * -1.0) / self.frame.width
+                    controller.completeWithTransitionProgress(transitionFraction, velocity: abs(velocity.x), dismissing: true)
+                    
+                    self.isDismissing = false
+                }
             default:
                 break
             }
@@ -1757,7 +1765,7 @@ public class CameraScreen: ViewController {
                 self.backgroundView.alpha = 1.0
             })
             
-            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            if let layout = self.validLayout, layout.metrics.isTablet {
                 self.controller?.statusBar.updateStatusBarStyle(.Hide, animated: true)
             }
             
@@ -2075,12 +2083,7 @@ public class CameraScreen: ViewController {
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
-            let isTablet: Bool
-            if case .regular = layout.metrics.widthClass {
-                isTablet = true
-            } else {
-                isTablet = false
-            }
+            let isTablet = layout.metrics.isTablet
             
             var topInset: CGFloat = (layout.statusBarHeight ?? 0.0) + 5.0
             let previewSize: CGSize
@@ -2514,8 +2517,19 @@ public class CameraScreen: ViewController {
             guard let self, !self.didStopCameraCapture else {
                 return
             }
-            self.didStopCameraCapture = true
-            self.node.pauseCameraCapture()
+            let currentTimestamp = CACurrentMediaTime()
+            if let startTimestamp = self.node.captureStartTimestamp {
+                let difference = currentTimestamp - startTimestamp
+                if difference < 2.0 {
+                    Queue.mainQueue().after(2.0 - difference) {
+                        self.didStopCameraCapture = true
+                        self.node.pauseCameraCapture()
+                    }
+                } else {
+                    self.didStopCameraCapture = true
+                    self.node.pauseCameraCapture()
+                }
+            }
         }
         
         let resumeCameraCapture = { [weak self] in
@@ -2615,7 +2629,7 @@ public class CameraScreen: ViewController {
         self.node.camera?.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
-            if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+            if let layout = self.validLayout, layout.metrics.isTablet {
                 self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.node.animateOut(completion: {
                     self.dismiss(animated: false)
@@ -2637,7 +2651,7 @@ public class CameraScreen: ViewController {
     }
         
     public func updateTransitionProgress(_ transitionFraction: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
-        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+        if let layout = self.validLayout, layout.metrics.isTablet {
             return
         }
         
@@ -2683,7 +2697,7 @@ public class CameraScreen: ViewController {
     }
     
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
-        if let layout = self.validLayout, case .regular = layout.metrics.widthClass {
+        if let layout = self.validLayout, layout.metrics.isTablet {
             return
         }
         if dismissing {

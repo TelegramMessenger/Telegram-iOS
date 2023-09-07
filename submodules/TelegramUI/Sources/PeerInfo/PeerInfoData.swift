@@ -132,6 +132,7 @@ final class TelegramGlobalSettings {
     let unreadTrendingStickerPacks: Int
     let archivedStickerPacks: [ArchivedStickerPackItem]?
     let userLimits: EngineConfiguration.UserLimits
+    let bots: [AttachMenuBot]
     let hasPassport: Bool
     let hasWatchApp: Bool
     let enableQRLogin: Bool
@@ -153,6 +154,7 @@ final class TelegramGlobalSettings {
         unreadTrendingStickerPacks: Int,
         archivedStickerPacks: [ArchivedStickerPackItem]?,
         userLimits: EngineConfiguration.UserLimits,
+        bots: [AttachMenuBot],
         hasPassport: Bool,
         hasWatchApp: Bool,
         enableQRLogin: Bool
@@ -173,6 +175,7 @@ final class TelegramGlobalSettings {
         self.unreadTrendingStickerPacks = unreadTrendingStickerPacks
         self.archivedStickerPacks = archivedStickerPacks
         self.userLimits = userLimits
+        self.bots = bots
         self.hasPassport = hasPassport
         self.hasWatchApp = hasWatchApp
         self.enableQRLogin = enableQRLogin
@@ -508,9 +511,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             return automaticEnergyUsageShouldBeOn(settings: settings)
         }
         |> distinctUntilChanged,
-        hasStories
+        hasStories,
+        context.engine.messages.attachMenuBots()
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -550,6 +554,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             unreadTrendingStickerPacks: unreadTrendingStickerPacks,
             archivedStickerPacks: archivedStickerPacks,
             userLimits: peer?.isPremium == true ? limits.1 : limits.0,
+            bots: bots,
             hasPassport: hasPassport,
             hasWatchApp: hasWatchApp,
             enableQRLogin: enableQRLogin)

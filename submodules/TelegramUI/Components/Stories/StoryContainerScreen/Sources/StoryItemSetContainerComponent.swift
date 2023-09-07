@@ -2296,7 +2296,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View {
                     Queue.mainQueue().justDispatch {
-                        inputPanelView.clearSendMessageInput()
+                        inputPanelView.clearSendMessageInput(updateState: true)
                     }
                 }
                 
@@ -2457,10 +2457,11 @@ public final class StoryItemSetContainerComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     style: .story,
-                    placeholder: inputPlaceholder,
+                    placeholder: .plain(inputPlaceholder),
                     maxLength: 4096,
                     queryTypes: [.mention, .emoji],
                     alwaysDarkWhenHasText: component.metrics.widthClass == .regular,
+                    resetInputContents: nil,
                     nextInputMode: { [weak self] hasText in
                         if case .media = self?.sendMessageContext.currentInputMode {
                             return .text
@@ -2652,7 +2653,9 @@ public final class StoryItemSetContainerComponent: Component {
                     hideKeyboard: self.sendMessageContext.currentInputMode == .media,
                     forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                     disabledPlaceholder: disabledPlaceholder,
-                    storyId: component.slice.item.storyItem.id
+                    isChannel: false,
+                    storyItem: component.slice.item.storyItem,
+                    chatLocation: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: 200.0)
