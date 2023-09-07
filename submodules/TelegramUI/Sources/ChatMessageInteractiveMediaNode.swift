@@ -24,6 +24,7 @@ import ChatMessageInteractiveMediaBadge
 import ContextUI
 import InvisibleInkDustNode
 import ChatControllerInteraction
+import StoryContainerScreen
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -866,9 +867,6 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             } else {
                 maxWidth = maxDimensions.width
             }
-            if isSecretMedia {
-                let _ = PresentationResourcesChat.chatBubbleSecretMediaIcon(presentationData.theme.theme)
-            }
             
             return (nativeSize, maxWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
                 var resultWidth: CGFloat
@@ -940,7 +938,16 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         
                         if !mediaUpdated, let media = media as? TelegramMediaStory {
                             if message.associatedStories[media.storyId] != currentMessage?.associatedStories[media.storyId] {
-                                mediaUpdated = true
+                                let previousStory = message.associatedStories[media.storyId]
+                                let updatedStory = currentMessage?.associatedStories[media.storyId]
+                                
+                                if let previousItem = previousStory?.get(Stories.StoredItem.self), let updatedItem = updatedStory?.get(Stories.StoredItem.self), case let .item(previousItemValue) = previousItem, case let .item(updatedItemValue) = updatedItem {
+                                    if let previousItemMedia = previousItemValue.media, let updatedItemMedia = updatedItemValue.media {
+                                        mediaUpdated = !previousItemMedia.isSemanticallyEqual(to: updatedItemMedia)
+                                    }
+                                } else {
+                                    mediaUpdated = true
+                                }
                             }
                         }
                     } else {
@@ -1037,7 +1044,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         }
                                     } else {
                                         updateImageSignal = { synchronousLoad, highQuality in
-                                            return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
+                                            return storyPreviewWithAddedReactions(context: context, storyItem: item, signal: chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality))
                                         }
                                         updateBlurredImageSignal = { synchronousLoad, _ in
                                             return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true, synchronousLoad: true)
@@ -1074,7 +1081,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         } else {
                                             onlyFullSizeVideoThumbnail = isSendingUpdated
                                             updateImageSignal = { synchronousLoad, _ in
-                                                return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                                return storyPreviewWithAddedReactions(context: context, storyItem: item, signal: mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true))
                                             }
                                             updateBlurredImageSignal = { synchronousLoad, _ in
                                                 return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), synchronousLoad: true)
@@ -1151,7 +1158,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad, _ in
-                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
+                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true)
                                 }
                             } else {
                                 updateImageSignal = { synchronousLoad, highQuality in
@@ -1986,15 +1993,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 case .Local:
                     state = .none
-                    let secretProgressIcon: UIImage?
-                    if case .constrained = sizeCalculation {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
-                    } else {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
-                    }
                     if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
                         state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
-                    } else if isSecretMedia, let _ = secretProgressIcon {
+                    } else if isSecretMedia {
                         state = .staticTimeout
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)

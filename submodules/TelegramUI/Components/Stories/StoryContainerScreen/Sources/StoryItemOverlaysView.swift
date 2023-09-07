@@ -18,50 +18,215 @@ import TextFormat
 import AnimatedCountLabelNode
 import LottieComponent
 import LottieComponentResourceContent
+import StickerResources
+import AnimationCache
 
-public final class StaticStoryItemOverlaysView: UIImageView {
-    override public init(frame: CGRect) {
-        super.init(frame: frame)
-    }
+private let shadowImage: UIImage = {
+    return UIImage(bundleImageName: "Stories/ReactionShadow")!
+}()
+
+private let coverImage: UIImage = {
+    return UIImage(bundleImageName: "Stories/ReactionOutline")!
+}()
+
+private let darkCoverImage: UIImage = {
+    return generateTintedImage(image: UIImage(bundleImageName: "Stories/ReactionOutline"), color: UIColor(rgb: 0x000000, alpha: 0.5))!
+}()
+
+public func storyPreviewWithAddedReactions(
+    context: AccountContext,
+    storyItem: Stories.Item,
+    signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
+) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    var reactionData: [Signal<(MessageReaction.Reaction, CGImage?), NoError>] = []
     
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
-    
-    deinit {
-        
-    }
-    
-    public func update(
-        context: AccountContext,
-        peer: EnginePeer,
-        story: EngineStoryItem,
-        availableReactions: StoryAvailableReactions?,
-        entityFiles: [MediaId: TelegramMediaFile]
-    ) {
-        
-    }
-    
-    override public func draw(_ rect: CGRect) {
-        guard let context = UIGraphicsGetCurrentContext() else {
-            return
+    let loadFile: (MessageReaction.Reaction, TelegramMediaFile) -> Signal<(MessageReaction.Reaction, CGImage?), NoError> = { reaction, file in
+        return Signal { subscriber in
+            let isTemplate = !"".isEmpty
+            return context.animationRenderer.loadFirstFrameAsImage(cache: context.animationCache, itemId: file.resource.id.stringRepresentation, size: CGSize(width: 128.0, height: 128.0), fetch: animationCacheFetchFile(postbox: context.account.postbox, userLocation: .other, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { result in
+                subscriber.putNext((reaction, result))
+                if result != nil {
+                    subscriber.putCompletion()
+                }
+            })
         }
+        |> distinctUntilChanged(isEqual: { lhs, rhs in
+            if lhs.0 != rhs.0 {
+                return false
+            }
+            if lhs.1 !== rhs.1 {
+                return false
+            }
+            return true
+        })
+    }
+    
+    var availableReactions: Promise<AvailableReactions?>?
+    var processedReactions: [MessageReaction.Reaction] = []
+    var customFileIds: [Int64] = []
+    for mediaArea in storyItem.mediaAreas {
+        if case let .reaction(_, reaction, _) = mediaArea {
+            if processedReactions.contains(reaction) {
+                continue
+            }
+            processedReactions.append(reaction)
+            
+            switch reaction {
+            case .builtin:
+                if availableReactions == nil {
+                    availableReactions = Promise()
+                    availableReactions?.set(context.engine.stickers.availableReactions())
+                }
+                reactionData.append(availableReactions!.get()
+                |> take(1)
+                |> mapToSignal { availableReactions -> Signal<(MessageReaction.Reaction, CGImage?), NoError> in
+                    guard let availableReactions else {
+                        return .single((reaction, nil))
+                    }
+                    for item in availableReactions.reactions {
+                        if item.value == reaction {
+                            guard let file = item.centerAnimation else {
+                                break
+                            }
+                            return loadFile(reaction, file)
+                        }
+                    }
+                    return .single((reaction, nil))
+                })
+            case let .custom(fileId):
+                if !customFileIds.contains(fileId) {
+                    customFileIds.append(fileId)
+                }
+            }
+        }
+    }
+    
+    if !customFileIds.isEmpty {
+        let customFiles = Promise<[Int64: TelegramMediaFile]>()
+        customFiles.set(context.engine.stickers.resolveInlineStickers(fileIds: customFileIds))
         
-        let _ = context
+        for id in customFileIds {
+            reactionData.append(customFiles.get()
+            |> take(1)
+            |> mapToSignal { customFiles -> Signal<(MessageReaction.Reaction, CGImage?), NoError> in
+                let reaction: MessageReaction.Reaction = .custom(id)
+                
+                guard let file = customFiles[id] else {
+                    return .single((reaction, nil))
+                }
+                
+                return loadFile(reaction, file)
+            })
+        }
+    }
+    
+    return combineLatest(
+        signal,
+        combineLatest(reactionData)
+    )
+    |> map { draw, reactionsData in
+        return { arguments in
+            guard let context = draw(arguments) else {
+                return nil
+            }
+            
+            let drawingRect = arguments.drawingRect
+            var fittedSize = arguments.imageSize
+            if abs(fittedSize.width - arguments.boundingSize.width).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.width = arguments.boundingSize.width
+            }
+            if abs(fittedSize.height - arguments.boundingSize.height).isLessThanOrEqualTo(CGFloat(1.0)) {
+                fittedSize.height = arguments.boundingSize.height
+            }
+            
+            let fittedRect = CGRect(origin: CGPoint(x: drawingRect.origin.x + (drawingRect.size.width - fittedSize.width) / 2.0, y: drawingRect.origin.y + (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize)
+            
+            context.withContext { c in
+                c.concatenate(c.ctm.inverted())
+                c.scaleBy(x: context.scale, y: context.scale)
+            }
+             
+            context.withFlippedContext { c in
+                c.setBlendMode(.normal)
+                
+                for mediaArea in storyItem.mediaAreas {
+                    c.saveGState()
+                    defer {
+                        c.restoreGState()
+                    }
+                    
+                    if case let .reaction(coordinates, reaction, flags) = mediaArea {
+                        let _ = reaction
+                        let _ = flags
+                        
+                        let referenceSize = fittedRect.size
+                        var areaSize = CGSize(width: coordinates.width / 100.0 * referenceSize.width, height: coordinates.height / 100.0 * referenceSize.height)
+                        areaSize.width *= 0.97
+                        areaSize.height *= 0.97
+                        let targetFrame = CGRect(x: coordinates.x / 100.0 * referenceSize.width - areaSize.width * 0.5, y: coordinates.y / 100.0 * referenceSize.height - areaSize.height * 0.5, width: areaSize.width, height: areaSize.height)
+                        if targetFrame.width < 2.0 || targetFrame.height < 2.0 {
+                            continue
+                        }
+                        
+                        c.saveGState()
+                        
+                        c.translateBy(x: targetFrame.midX, y: targetFrame.midY)
+                        c.scaleBy(x: flags.contains(.isFlipped) ? -1.0 : 1.0, y: -1.0)
+                        c.rotate(by: -coordinates.rotation * (CGFloat.pi / 180.0))
+                        c.translateBy(x: -targetFrame.midX, y: -targetFrame.midY)
+                        
+                        let insets = UIEdgeInsets(top: -0.08, left: -0.05, bottom: -0.01, right: -0.02)
+                        let coverFrame = CGRect(origin: CGPoint(x: targetFrame.width * insets.left, y: targetFrame.height * insets.top), size: CGSize(width: targetFrame.width - targetFrame.width * insets.left - targetFrame.width * insets.right, height: targetFrame.height - targetFrame.height * insets.top - targetFrame.height * insets.bottom)).offsetBy(dx: targetFrame.minX, dy: targetFrame.minY)
+                        
+                        c.draw(shadowImage.cgImage!, in: coverFrame)
+                        
+                        if flags.contains(.isDark) {
+                            c.draw(darkCoverImage.cgImage!, in: coverFrame)
+                        } else {
+                            c.draw(coverImage.cgImage!, in: coverFrame)
+                        }
+                        
+                        c.restoreGState()
+                        
+                        c.translateBy(x: targetFrame.midX, y: targetFrame.midY)
+                        c.scaleBy(x: 1.0, y: -1.0)
+                        c.rotate(by: -coordinates.rotation * (CGFloat.pi / 180.0))
+                        c.translateBy(x: -targetFrame.midX, y: -targetFrame.midY)
+                        
+                        let minSide = floor(min(200.0, min(targetFrame.width, targetFrame.height)) * 0.5)
+                        let itemSize = CGSize(width: minSide, height: minSide)
+                        
+                        if let (_, maybeImage) = reactionsData.first(where: { $0.0 == reaction }), let image = maybeImage {
+                            var imageFrame = itemSize.centered(around: targetFrame.center.offsetBy(dx: 0.0, dy: -targetFrame.height * 0.05))
+                            if case .builtin = reaction {
+                                imageFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.5, dy: -imageFrame.height * 0.5)
+                            }
+                            
+                            c.draw(image, in: imageFrame)
+                        }
+                    }
+                }
+            }
+            
+            context.withContext { c in
+                c.concatenate(c.ctm.inverted())
+                c.scaleBy(x: context.scale, y: context.scale)
+                
+                c.scaleBy(x: context.size.width * 0.5, y: context.size.height * 0.5)
+                c.scaleBy(x: 1.0, y: -1.0)
+                c.scaleBy(x: -context.size.width * 0.5, y: -context.size.height * 0.5)
+            }
+            
+            addCorners(context, arguments: arguments)
+            
+            return context
+        }
     }
 }
 
 final class StoryItemOverlaysView: UIView {
     static let counterFont: UIFont = {
         return Font.with(size: 17.0, design: .camera, weight: .semibold, traits: .monospacedNumbers)
-    }()
-    
-    private static let shadowImage: UIImage = {
-        return UIImage(bundleImageName: "Stories/ReactionShadow")!
-    }()
-    
-    private static let coverImage: UIImage = {
-        return UIImage(bundleImageName: "Stories/ReactionOutline")!
     }()
     
     private final class ItemView: HighlightTrackingButton {
@@ -83,8 +248,8 @@ final class StoryItemOverlaysView: UIView {
         private var customEmojiLoadDisposable: Disposable?
         
         override init(frame: CGRect) {
-            self.shadowView = UIImageView(image: StoryItemOverlaysView.shadowImage)
-            self.coverView = UIImageView(image: StoryItemOverlaysView.coverImage)
+            self.shadowView = UIImageView(image: shadowImage)
+            self.coverView = UIImageView(image: coverImage)
             
             super.init(frame: frame)
             

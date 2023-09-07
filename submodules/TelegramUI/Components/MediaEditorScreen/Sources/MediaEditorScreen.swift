@@ -1199,6 +1199,16 @@ final class MediaEditorScreenComponent: Component {
             )
             
             if self.inputPanelExternalState.isEditing {
+                if let controller = self.environment?.controller() as? MediaEditorScreen {
+                    if controller.node.entitiesView.hasSelection {
+                        Queue.mainQueue().justDispatch {
+                            controller.node.entitiesView.selectEntity(nil)
+                        }
+                    }
+                }
+            }
+            
+            if self.inputPanelExternalState.isEditing {
                 if self.currentInputMode == .emoji || (inputHeight.isZero && keyboardWasHidden) {
                     inputHeight = max(inputHeight, environment.deviceMetrics.standardInputHeight(inLandscape: false))
                 }
@@ -1362,7 +1372,11 @@ final class MediaEditorScreenComponent: Component {
                             self.addSubview(scrubberView)
                         }
                     }
-                    bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                    if animateIn {
+                        scrubberView.frame = scrubberFrame
+                    } else {
+                        bottomControlsTransition.setFrame(view: scrubberView, frame: scrubberFrame)
+                    }
                     if !self.animatingButtons && !(isAudioOnly && animateIn) {
                         transition.setAlpha(view: scrubberView, alpha: component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities || isEditingCaption ? 0.0 : 1.0)
                     } else if animateIn {
@@ -3076,16 +3090,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         }
         
         func presentAudioPicker() {
+            var isSettingTrack = false
             self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, dismissed: { [weak self] in
                 if let self {
                     Queue.mainQueue().after(0.1) {
-                        self.mediaEditor?.play()
+                        if !isSettingTrack {
+                            self.mediaEditor?.play()
+                        }
                     }
                 }
             }, completion: { [weak self] urls in
                 guard let self, let mediaEditor = self.mediaEditor, !urls.isEmpty, let url = urls.first else {
                     return
                 }
+                isSettingTrack = true
                 
                 try? FileManager.default.createDirectory(atPath: draftPath(engine: self.context.engine), withIntermediateDirectories: true)
                 
@@ -3161,7 +3179,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             Queue.mainQueue().async {
                                 mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
                                 if mediaEditor.sourceIsVideo {
-                                    if let videoDuration = mediaEditor.duration {
+                                    if let videoDuration = mediaEditor.originalDuration {
                                         mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
                                     }
                                 } else {
@@ -3173,6 +3191,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 if isScopedResource {
                                     url.stopAccessingSecurityScopedResource()
                                 }
+                                
+                                mediaEditor.play()
                             }
                         })
                     }

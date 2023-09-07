@@ -92,6 +92,7 @@ swift_library(
         "//submodules/TelegramUI/Components/OptionButtonComponent",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView",
         "//submodules/AnimatedCountLabelNode",
+        "//submodules/StickerResources",
     ],
     visibility = [
         "//visibility:public",

@@ -2771,6 +2771,11 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         self.playbackRatePromise.set(self.playbackRate ?? 1.0)
     }
     
+    public func seekToStart() {
+        self.videoNode?.seek(0.0)
+        self.videoNode?.play()
+    }
+    
     override var keyShortcuts: [KeyShortcut] {
         let strings = self.presentationData.strings
         

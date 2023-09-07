@@ -9911,3 +9911,5 @@ Sorry for the inconvenience.";
 "Story.Editor.TooltipReachedReactionLimitTitle" = "Limit Reached";
 "Story.Editor.TooltipReachedReactionLimitText" = "You can't add up more than %@ to a story.";
 
+"Gallery.ViewOncePhotoTooltip" = "This photo can only be viewed once.";
+"Gallery.ViewOnceVideoTooltip" = "This video can only be viewed once.";
