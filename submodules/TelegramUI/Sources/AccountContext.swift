@@ -243,6 +243,8 @@ public final class AccountContextImpl: AccountContext {
     private var userLimitsConfigurationDisposable: Disposable?
     public private(set) var userLimits: EngineConfiguration.UserLimits
     
+    public private(set) var isPremium: Bool
+        
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
@@ -250,6 +252,7 @@ public final class AccountContextImpl: AccountContext {
         self.engine = TelegramEngine(account: account)
         
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
+        self.isPremium = false
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         
@@ -380,14 +383,19 @@ public final class AccountContextImpl: AccountContext {
         })
         
         self.userLimitsConfigurationDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))
-        |> mapToSignal { peer -> Signal<EngineConfiguration.UserLimits, NoError> in
-            return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: peer?.isPremium ?? false))
+        |> mapToSignal { peer -> Signal<(Bool, EngineConfiguration.UserLimits), NoError> in
+            let isPremium = peer?.isPremium ?? false
+            return self.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: isPremium))
+            |> map { userLimits in
+                return (isPremium, userLimits)
+            }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).start(next: { [weak self] isPremium, userLimits in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.userLimits = value
+            strongSelf.isPremium = isPremium
+            strongSelf.userLimits = userLimits
         })
     }
     
@@ -399,6 +407,7 @@ public final class AccountContextImpl: AccountContext {
         self.countriesConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.animatedEmojiStickersDisposable?.dispose()
+        self.userLimitsConfigurationDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

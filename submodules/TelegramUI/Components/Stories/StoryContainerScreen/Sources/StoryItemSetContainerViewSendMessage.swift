@@ -601,7 +601,7 @@ final class StoryItemSetContainerSendMessage {
                                 }
                             }
                         })
-                        inputPanelView.clearSendMessageInput()
+                        inputPanelView.clearSendMessageInput(updateState: true)
                         
                         self.currentInputMode = .text
                         if hasFirstResponder(view) {
@@ -1259,7 +1259,7 @@ final class StoryItemSetContainerSendMessage {
         guard let inputPanelView = view.inputPanel.view as? MessageInputPanelComponent.View else {
             return
         }
-        inputPanelView.clearSendMessageInput()
+        inputPanelView.clearSendMessageInput(updateState: true)
     }
     
     enum AttachMenuSubject {

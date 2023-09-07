@@ -189,7 +189,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     var isRevealed = false
     var tapped: () -> Void = {}
     
-    init(enableAnimations: Bool) {
+    init(hasImageOverlay: Bool, enableAnimations: Bool) {
         self.blurredImageNode = TransformImageNode()
         self.blurredImageNode.contentAnimations = []
          
@@ -212,7 +212,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
                 
         super.init()
                 
-        self.addSubnode(self.blurredImageNode)
+        if hasImageOverlay {
+            self.addSubnode(self.blurredImageNode)
+        }
         self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
 
@@ -860,12 +862,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             
             let maxWidth: CGFloat
             if isSecretMedia {
-                maxWidth = 180.0
+                maxWidth = 200.0
             } else {
                 maxWidth = maxDimensions.width
-            }
-            if isSecretMedia {
-                let _ = PresentationResourcesChat.chatBubbleSecretMediaIcon(presentationData.theme.theme)
             }
             
             return (nativeSize, maxWidth, { constrainedSize, automaticPlayback, wideLayout, corners in
@@ -898,7 +897,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     switch sizeCalculation {
                         case .constrained:
                             if isSecretMedia {
-                                boundingSize = CGSize(width: maxWidth, height: maxWidth)
+                                boundingSize = CGSize(width: maxWidth, height: maxWidth / 5.0 * 3.0)
                                 drawingSize = nativeSize.aspectFilled(boundingSize)
                             } else {
                                 let fittedSize = nativeSize.fittedToWidthOrSmaller(boundingWidth)
@@ -1149,7 +1148,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad, _ in
-                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
+                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), ignoreFullSize: true)
                                 }
                             } else {
                                 updateImageSignal = { synchronousLoad, highQuality in
@@ -1764,7 +1763,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
         }
         
-        let radialStatusSize: CGFloat = wideLayout ? 50.0 : 32.0
+        var radialStatusSize: CGFloat
+        if isSecretMedia {
+            radialStatusSize = 48.0
+        } else {
+            radialStatusSize = wideLayout ? 50.0 : 32.0
+        }
         if progressRequired {
             if self.statusNode == nil {
                 let statusNode = RadialStatusNode(backgroundNodeColor: theme.chat.message.mediaOverlayControlColors.fillColor)
@@ -1782,14 +1786,21 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
         }
         
+        let messageTheme = theme.chat.message
+        
         var state: RadialStatusNodeState = .none
+        var backgroundColor = messageTheme.mediaOverlayControlColors.fillColor
         var badgeContent: ChatMessageInteractiveMediaBadgeContent?
         var mediaDownloadState: ChatMessageInteractiveMediaDownloadState?
-        let messageTheme = theme.chat.message
+        
+        if isSecretMedia {
+            backgroundColor = messageTheme.mediaDateAndStatusFillColor
+        }
+        
         if let invoice = invoice {
             if let extendedMedia = invoice.extendedMedia {
                 if case let .preview(_, _, maybeVideoDuration) = extendedMedia, let videoDuration = maybeVideoDuration {
-                    badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: stringForDuration(videoDuration, position: nil)))
+                    badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: stringForDuration(videoDuration, position: nil)), iconName: nil)
                 }
             } else {
                 let string = NSMutableAttributedString()
@@ -1808,7 +1819,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                     string.append(NSAttributedString(string: title))
                 }
-                badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string)
+                badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: string, iconName: nil)
             }
         }
         var animated = animated
@@ -1944,7 +1955,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     }
                                 } else {
                                     let progressString = String(format: "%d%%", Int(progress * 100.0))
-                                    badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: progressString))
+                                    badgeContent = .text(inset: message.flags.contains(.Unsent) ? 0.0 : 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: progressString), iconName: nil)
                                     mediaDownloadState = automaticPlayback ? .none : .compactFetching(progress: 0.0)
                                 }
                                 
@@ -1972,16 +1983,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 case .Local:
                     state = .none
-                    let secretProgressIcon: UIImage?
-                    if case .constrained = sizeCalculation {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme)
-                    } else {
-                        secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaCompactIcon(theme)
-                    }
-                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime {
-                        state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
-                    } else if isSecretMedia, let secretProgressIcon = secretProgressIcon {
-                        state = .customIcon(secretProgressIcon)
+                    if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, let beginTime = maybeBeginTime, Int32(timeout) != viewOnceTimeout {
+                        state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
+                    } else if isSecretMedia {
+                        state = .staticTimeout
                     } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         let isInlinePlayableVideo = file.isVideo && !isSecretMedia && (self.automaticPlayback ?? false)
                         if (!isInlinePlayableVideo || isStory) && file.isVideo {
@@ -2017,11 +2022,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             } else {
                                 if isMediaStreamable(message: message, media: file) {
                                     state = automaticPlayback ? .none : .play(messageTheme.mediaOverlayControlColors.foregroundColor)
-                                    badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString))
+                                    badgeContent = .text(inset: 12.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
                                     mediaDownloadState = .compactRemote
                                 } else {
                                     state = automaticPlayback ? .none : state
-                                    badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString))
+                                    badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: durationString), iconName: nil)
                                 }
                             }
                         }
@@ -2031,16 +2036,32 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             }
         }
         
-        if isSecretMedia, let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout {
-            let remainingTime: Int32
-            if let beginTime = maybeBeginTime {
-                let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
-                remainingTime = Int32(max(0.0, timeout - elapsedTime))
+        if isSecretMedia {
+            let remainingTime: Int32?
+            if let (maybeBeginTime, timeout) = secretBeginTimeAndTimeout, Int32(timeout) != viewOnceTimeout {
+                if let beginTime = maybeBeginTime {
+                    let elapsedTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970 - beginTime
+                    remainingTime = Int32(max(0.0, timeout - elapsedTime))
+                } else {
+                    remainingTime = Int32(timeout)
+                }
             } else {
-                remainingTime = Int32(timeout)
+                if let attribute = message.autoclearAttribute {
+                    remainingTime = attribute.timeout
+                } else if let attribute = message.autoremoveAttribute {
+                    remainingTime = attribute.timeout
+                } else {
+                    remainingTime = nil
+                }
             }
                         
-            badgeContent = .text(inset: 0.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: strings.MessageTimer_ShortSeconds(Int32(remainingTime))))
+            if let remainingTime {
+                if remainingTime == viewOnceTimeout {
+                    badgeContent = .text(inset: 10.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: "1"), iconName: "Chat/Message/SecretMediaOnce")
+                } else {
+                    badgeContent = .text(inset: 10.0, backgroundColor: messageTheme.mediaDateAndStatusFillColor, foregroundColor: messageTheme.mediaDateAndStatusTextColor, text: NSAttributedString(string: strings.MessageTimer_ShortSeconds(Int32(remainingTime))), iconName: "Chat/Message/SecretMediaPlay")
+                }
+            }
         }
         
         if let statusNode = self.statusNode {
@@ -2062,6 +2083,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     statusNode?.removeFromSupernode()
                 }
             })
+            statusNode.backgroundNodeColor = backgroundColor
         }
         if let badgeContent = badgeContent {
             if self.badgeNode == nil {
@@ -2100,11 +2122,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             displaySpoiler = true
         } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
             displaySpoiler = true
+        } else if isSecretMedia {
+            displaySpoiler = true
         }
     
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
-                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
+                let extendedMediaOverlayNode = ExtendedMediaOverlayNode(hasImageOverlay: !isSecretMedia, enableAnimations: self.context?.sharedContext.energyUsageSettings.fullTranslucency ?? true)
                 extendedMediaOverlayNode.tapped = { [weak self] in
                     self?.internallyVisible = true
                     self?.updateVisibility()
@@ -2115,11 +2139,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             self.extendedMediaOverlayNode?.frame = self.imageNode.frame
             
             var tappable = false
-            switch state {
-            case .play, .pause, .download, .none:
-                tappable = true
-            default:
-                break
+            if !isSecretMedia {
+                switch state {
+                case .play, .pause, .download, .none:
+                    tappable = true
+                default:
+                    break
+                }
             }
             
             self.extendedMediaOverlayNode?.isUserInteractionEnabled = tappable

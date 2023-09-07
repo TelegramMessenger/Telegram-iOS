@@ -5,6 +5,7 @@ import AsyncDisplayKit
 
 enum RadialStatusIcon {
     case custom(UIImage)
+    case timeout
     case play(UIColor)
     case pause(UIColor)
 }
@@ -22,14 +23,28 @@ private final class RadialStatusIconContentNodeParameters: NSObject {
 final class RadialStatusIconContentNode: RadialStatusContentNode {
     private let icon: RadialStatusIcon
     
+    private var animationNode: FireIconNode?
+    
     init(icon: RadialStatusIcon, synchronous: Bool) {
         self.icon = icon
         
         super.init()
         
         self.displaysAsynchronously = !synchronous
-        self.isLayerBacked = true
+//        self.isLayerBacked = true
         self.isOpaque = false
+        
+        if case .timeout = icon {
+            let animationNode = FireIconNode()
+            self.animationNode = animationNode
+            self.addSubnode(animationNode)
+        }
+    }
+    
+    override func layout() {
+        super.layout()
+        
+        self.animationNode?.frame = CGRect(x: 6.0, y: 2.0, width: 36.0, height: 36.0)
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
@@ -48,6 +63,8 @@ final class RadialStatusIconContentNode: RadialStatusContentNode {
         if let parameters = parameters as? RadialStatusIconContentNodeParameters {
             let diameter = min(bounds.size.width, bounds.size.height)
             switch parameters.icon {
+                case .timeout:
+                    break
                 case let .play(color):
                     context.setFillColor(color.cgColor)
                     

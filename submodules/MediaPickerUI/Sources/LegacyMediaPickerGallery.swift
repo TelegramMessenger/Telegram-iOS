@@ -229,6 +229,9 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
             var effectiveHasSchedule = hasSchedule
     
             if let editingContext = editingContext {
+                if let timer = editingContext.timer(for: item.asset)?.intValue, timer > 0 {
+                    effectiveHasSchedule = false
+                }
                 for item in selectionContext.selectedItems() {
                     if let editableItem = item as? TGMediaEditableItem, let timer = editingContext.timer(for: editableItem)?.intValue, timer > 0 {
                         effectiveHasSchedule = false
@@ -239,6 +242,9 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
             
             let sendWhenOnlineAvailable: Signal<Bool, NoError>
             if let peer {
+                if case .secretChat = peer {
+                    effectiveHasSchedule = false
+                }
                 sendWhenOnlineAvailable = context.account.viewTracker.peerView(peer.id)
                 |> take(1)
                 |> map { peerView -> Bool in
@@ -265,7 +271,7 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
             |> take(1)
             |> deliverOnMainQueue).start(next: { sendWhenOnlineAvailable in
                 let legacySheetController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
-                let sheetController = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSendWhenOnline: sendWhenOnlineAvailable, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: hasTimer)
+                let sheetController = TGMediaPickerSendActionSheetController(context: legacyController.context, isDark: true, sendButtonFrame: model.interfaceView.doneButtonFrame, canSendSilently: hasSilentPosting, canSendWhenOnline: sendWhenOnlineAvailable && effectiveHasSchedule, canSchedule: effectiveHasSchedule, reminder: reminder, hasTimer: false)
                 let dismissImpl = { [weak model] in
                     model?.dismiss(true, false)
                     dismissAll()

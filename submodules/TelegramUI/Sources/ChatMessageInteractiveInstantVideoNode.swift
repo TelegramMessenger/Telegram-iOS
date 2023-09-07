@@ -80,9 +80,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private var automaticDownload: Bool?
     var media: TelegramMediaFile?
     var appliedForwardInfo: (Peer?, String?)?
-    
-    private var secretProgressIcon: UIImage?
-    
+        
     private let fetchDisposable = MetaDisposable()
 
     private var durationBackgroundNode: NavigationBackgroundNode?
@@ -259,9 +257,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let theme = item.presentationData.theme
             let isSecretMedia = item.message.containsSecretMedia
-            var secretProgressIcon: UIImage?
             if isSecretMedia {
-                secretProgressIcon = PresentationResourcesChat.chatBubbleSecretMediaIcon(theme.theme)
                 secretVideoPlaceholderBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(theme.theme, wallpaper: !theme.wallpaper.isEmpty)
             }
             
@@ -575,7 +571,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.item = item
                     strongSelf.videoFrame = displayVideoFrame
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
-                    strongSelf.secretProgressIcon = secretProgressIcon
                     
                     strongSelf.automaticDownload = automaticDownload
                     
@@ -1155,11 +1150,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                         }
                     case .Local:
-                        if isSecretMedia && self.secretProgressIcon != nil {
+                        if isSecretMedia {
                             if let (beginTime, timeout) = secretBeginTimeAndTimeout {
-                                state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: secretProgressIcon, beginTime: beginTime, timeout: timeout, sparks: true)
+                                state = .secretTimeout(color: messageTheme.mediaOverlayControlColors.foregroundColor, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
                             } else {
-                                state = .customIcon(secretProgressIcon!)
+                                state = .staticTimeout
                             }
                         } else {
                             state = .none

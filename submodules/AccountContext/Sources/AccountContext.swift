@@ -1025,6 +1025,7 @@ public protocol AccountContext: AnyObject {
     
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
     
+    var isPremium: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
     
     func storeSecureIdPassword(password: String)

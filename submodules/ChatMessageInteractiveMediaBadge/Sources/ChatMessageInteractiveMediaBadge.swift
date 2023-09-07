@@ -18,13 +18,13 @@ public enum ChatMessageInteractiveMediaDownloadState: Equatable {
 }
 
 public enum ChatMessageInteractiveMediaBadgeContent: Equatable {
-    case text(inset: CGFloat, backgroundColor: UIColor, foregroundColor: UIColor, text: NSAttributedString)
+    case text(inset: CGFloat, backgroundColor: UIColor, foregroundColor: UIColor, text: NSAttributedString, iconName: String?)
     case mediaDownload(backgroundColor: UIColor, foregroundColor: UIColor, duration: String, size: String?, muted: Bool, active: Bool)
     
     public static func ==(lhs: ChatMessageInteractiveMediaBadgeContent, rhs: ChatMessageInteractiveMediaBadgeContent) -> Bool {
         switch lhs {
-            case let .text(lhsInset, lhsBackgroundColor, lhsForegroundColor, lhsText):
-                if case let .text(rhsInset, rhsBackgroundColor, rhsForegroundColor, rhsText) = rhs, lhsInset.isEqual(to: rhsInset), lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsText.isEqual(to: rhsText) {
+            case let .text(lhsInset, lhsBackgroundColor, lhsForegroundColor, lhsText, lhsIconName):
+                if case let .text(rhsInset, rhsBackgroundColor, rhsForegroundColor, rhsText, rhsIconName) = rhs, lhsInset.isEqual(to: rhsInset), lhsBackgroundColor.isEqual(rhsBackgroundColor), lhsForegroundColor.isEqual(rhsForegroundColor), lhsText.isEqual(to: rhsText), lhsIconName == rhsIconName  {
                     return true
                 } else {
                     return false
@@ -48,6 +48,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
     private var previousContentSize: CGSize?
     private var backgroundNodeColor: UIColor?
     private var foregroundColor: UIColor?
+    private var iconName: String?
     
     private let backgroundNode: ASImageNode
     private let durationNode: ASTextNode
@@ -107,14 +108,18 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                 }
                 
                 switch content {
-                    case let .text(inset, backgroundColor, foregroundColor, text):
+                    case let .text(inset, backgroundColor, foregroundColor, text, iconName):
                         transition = .immediate
                         
                         if self.backgroundNodeColor != backgroundColor {
                             self.backgroundNodeColor = backgroundColor
                             self.backgroundNode.image = generateStretchableFilledCircleImage(radius: 9.0, color: backgroundColor)
                         }
-                        let convertedText = NSMutableAttributedString(string: text.string, attributes: [.font: font, .foregroundColor: foregroundColor])
+                        var textFont = font
+                        if iconName != nil {
+                            textFont = boldFont
+                        }
+                        let convertedText = NSMutableAttributedString(string: text.string, attributes: [.font: textFont, .foregroundColor: foregroundColor])
                         text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: []) { attributes, range, _ in
                             if let _ = attributes[ChatTextInputAttributes.bold] {
                                 convertedText.addAttribute(.font, value: boldFont, range: range)
@@ -122,12 +127,33 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         }
                         self.durationNode.attributedText = convertedText
                         let durationSize = self.durationNode.measure(CGSize(width: 160.0, height: 160.0))
-                        self.durationNode.frame = CGRect(x: 7.0 + inset, y: 3.0, width: durationSize.width, height: durationSize.height)
+                        self.durationNode.frame = CGRect(x: 7.0 + inset, y: 2.0 + UIScreenPixel, width: durationSize.width, height: durationSize.height)
                         currentContentSize = CGSize(width: widthForString(text.string) + 14.0 + inset, height: 18.0)
                     
-                        if let iconNode = self.iconNode {
-                            transition.updateTransformScale(node: iconNode, scale: 0.001)
-                            transition.updateAlpha(node: iconNode, alpha: 0.0)
+                        if let iconName {
+                            let iconNode: ASImageNode
+                            if let current = self.iconNode {
+                                iconNode = current
+                            } else {
+                                iconNode = ASImageNode()
+                                self.iconNode = iconNode
+                                self.backgroundNode.addSubnode(iconNode)
+                            }
+                            
+                            if self.foregroundColor != foregroundColor || self.iconName != iconName {
+                                self.foregroundColor = foregroundColor
+                                self.iconName = iconName
+                                iconNode.image = generateTintedImage(image: UIImage(bundleImageName: iconName), color: foregroundColor)
+                            }
+                            transition.updateAlpha(node: iconNode, alpha: 1.0)
+                            transition.updateTransformScale(node: iconNode, scale: 1.0)
+                            
+                            iconNode.frame = CGRect(x: 3.0, y: 2.0, width: 12.0, height: 14.0)
+                        } else {
+                            if let iconNode = self.iconNode {
+                                transition.updateTransformScale(node: iconNode, scale: 0.001)
+                                transition.updateAlpha(node: iconNode, alpha: 0.0)
+                            }
                         }
                     case let .mediaDownload(backgroundColor, foregroundColor, duration, size, muted, active):
                         if self.backgroundNodeColor != backgroundColor {
@@ -209,7 +235,7 @@ public final class ChatMessageInteractiveMediaBadge: ASDisplayNode {
                         
                         let durationWidth = widthForString(duration)
                         transition.updatePosition(node: iconNode, position: CGPoint(x: (active ? 42.0 : 7.0) + durationWidth + 4.0 + 7.0, y: (active ? 8.0 : 4.0) + 5.0))
-                        
+                    
                         if muted {
                             transition.updateAlpha(node: iconNode, alpha: 1.0)
                             transition.updateTransformScale(node: iconNode, scale: 1.0)

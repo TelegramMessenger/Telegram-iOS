@@ -446,8 +446,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public var sendPressed: ((NSAttributedString?) -> Void)?
     public var focusUpdated: ((Bool) -> Void)?
     public var heightUpdated: ((Bool) -> Void)?
+    public var timerUpdated: ((NSNumber?) -> Void)?
     
-    public func updateLayoutSize(_ size: CGSize, sideInset: CGFloat, animated: Bool) -> CGFloat {
+    public func updateLayoutSize(_ size: CGSize, keyboardHeight: CGFloat, sideInset: CGFloat, animated: Bool) -> CGFloat {
         guard let presentationInterfaceState = self.presentationInterfaceState else {
             return 0.0
         }
@@ -458,6 +459,16 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.interfaceInteraction?.updateTextInputStateAndMode { state, inputMode in
             return (ChatTextInputState(inputText: caption ?? NSAttributedString()), inputMode)
         }
+    }
+    
+    public func setTimeout(_ timeout: Int32) {
+    }
+    
+    public func animate(_ view: UIView, frame: CGRect) {
+        
+    }
+    
+    public func onAnimateOut() {
     }
     
     public func dismissInput() {

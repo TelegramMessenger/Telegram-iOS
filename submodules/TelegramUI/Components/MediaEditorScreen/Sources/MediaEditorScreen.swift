@@ -407,7 +407,6 @@ final class MediaEditorScreenComponent: Component {
             guard let _ = self.inputPanel.view as? MessageInputPanelComponent.View else {
                 return
             }
-//            if view.canDeactivateInput() {
             self.currentInputMode = .text
             if hasFirstResponder(self) {
                 if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
@@ -421,12 +420,6 @@ final class MediaEditorScreenComponent: Component {
             } else {
                 self.state?.updated(transition: .spring(duration: 0.4).withUserData(TextFieldComponent.AnimationHint(kind: .textFocusChanged)))
             }
-//            } else {
-//                if let controller = self.environment?.controller() as? MediaEditorScreen {
-//                    controller.presentCaptionLimitPremiumSuggestion(isPremium: self.sta)
-//                }
-//                view.animateError()
-//            }
         }
         
         private var animatingButtons = false
@@ -498,7 +491,7 @@ final class MediaEditorScreenComponent: Component {
         
         func animateOut(to source: TransitionAnimationSource) {
             self.isDismissed = true
-            
+                        
             let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
             if let view = self.cancelButton.view {
                 transition.setAlpha(view: view, alpha: 0.0)
@@ -965,7 +958,6 @@ final class MediaEditorScreenComponent: Component {
             }
             
             var timeoutValue: String
-            let timeoutSelected: Bool
             switch component.privacy.timeout {
             case 21600:
                 timeoutValue = "6"
@@ -978,7 +970,6 @@ final class MediaEditorScreenComponent: Component {
             default:
                 timeoutValue = "24"
             }
-            timeoutSelected = false
             
             var inputPanelAvailableWidth = previewSize.width
             var inputPanelAvailableHeight = 103.0
@@ -1100,10 +1091,11 @@ final class MediaEditorScreenComponent: Component {
                     theme: environment.theme,
                     strings: environment.strings,
                     style: .editor,
-                    placeholder: environment.strings.Story_Editor_InputPlaceholderAddCaption,
+                    placeholder: .plain(environment.strings.Story_Editor_InputPlaceholderAddCaption),
                     maxLength: Int(component.context.userLimits.maxStoryCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
+                    resetInputContents: nil,
                     nextInputMode: { _ in  return nextInputMode },
                     areVoiceMessagesAvailable: false,
                     presentController: { [weak self] c in
@@ -1151,7 +1143,7 @@ final class MediaEditorScreenComponent: Component {
                             }
                         }
                     },
-                    timeoutAction: isEditingStory ? nil : { [weak self] view in
+                    timeoutAction: isEditingStory ? nil : { [weak self] view, gesture in
                         guard let self, let controller = self.environment?.controller() as? MediaEditorScreen else {
                             return
                         }
@@ -1164,7 +1156,7 @@ final class MediaEditorScreenComponent: Component {
                             } else {
                                 hasPremium = false
                             }
-                            controller?.presentTimeoutSetup(sourceView: view, hasPremium: hasPremium)
+                            controller?.presentTimeoutSetup(sourceView: view, gesture: gesture, hasPremium: hasPremium)
                         })
                     },
                     forwardAction: nil,
@@ -1217,18 +1209,30 @@ final class MediaEditorScreenComponent: Component {
                     hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
                     timeoutValue: timeoutValue,
-                    timeoutSelected: timeoutSelected,
+                    timeoutSelected: false,
                     displayGradient: false,
                     bottomInset: 0.0,
                     isFormattingLocked: !state.isPremium,
                     hideKeyboard: self.currentInputMode == .emoji,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil,
-                    storyId: nil
+                    isChannel: false,
+                    storyItem: nil,
+                    chatLocation: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: inputPanelAvailableWidth, height: inputPanelAvailableHeight)
             )
+            
+            if self.inputPanelExternalState.isEditing {
+                if let controller = self.environment?.controller() as? MediaEditorScreen {
+                    if controller.node.entitiesView.hasSelection {
+                        Queue.mainQueue().justDispatch {
+                            controller.node.entitiesView.selectEntity(nil)
+                        }
+                    }
+                }
+            }
             
             if self.inputPanelExternalState.isEditing {
                 if self.currentInputMode == .emoji || (inputHeight.isZero && keyboardWasHidden) {
@@ -1297,7 +1301,6 @@ final class MediaEditorScreenComponent: Component {
                 transition.setFrame(view: inputPanelView, frame: inputPanelFrame)
                 transition.setAlpha(view: inputPanelView, alpha: isEditingTextEntity || component.isDisplayingTool || component.isDismissing || component.isInteractingWithEntities ? 0.0 : 1.0)
             }
-            
             
             let displayTopButtons = !(self.inputPanelExternalState.isEditing || isEditingTextEntity || component.isDisplayingTool)
                 
@@ -2423,6 +2426,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             controller.statusBar.statusBarStyle = .Ignore
             self.isUserInteractionEnabled = false
             
+            if self.entitiesView.hasSelection {
+                self.entitiesView.selectEntity(nil)
+            }
+            
             let previousDimAlpha = self.backgroundDimView.alpha
             self.backgroundDimView.alpha = 0.0
             self.backgroundDimView.layer.animateAlpha(from: previousDimAlpha, to: 0.0, duration: 0.15)
@@ -2609,7 +2616,14 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
-            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: isMuted ? self.presentationData.strings.Story_Editor_TooltipMuted : self.presentationData.strings.Story_Editor_TooltipUnmuted), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
+            let text: String
+            if isMuted {
+                text = self.presentationData.strings.Story_Editor_TooltipMuted
+            } else {
+                text = self.presentationData.strings.Story_Editor_TooltipUnmuted
+            }
+            
+            let tooltipController = TooltipScreen(account: self.context.account, sharedContext: self.context.sharedContext, text: .plain(text: text), location: .point(location, .top), displayDuration: .default, inset: 16.0, shouldDismissOnTouch: { _, _ in
                 return .ignore
             })
             self.muteTooltip = tooltipController
@@ -2788,7 +2802,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     location = draft.location
                 }
             }
-            let locationController = storyLocationPickerController(context: self.context, location: location, completion: { [weak self] location, queryId, resultId, address, countryCode in
+            let locationController = storyLocationPickerController(
+                context: self.context,
+                location: location,
+                dismissed: { [weak self] in
+                    if let self {
+                        self.mediaEditor?.play()
+                    }
+                },
+                completion: { [weak self] location, queryId, resultId, address, countryCode in
                 if let self  {
                     let emojiFile: Signal<TelegramMediaFile?, NoError>
                     if let countryCode {
@@ -2897,8 +2919,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         }
         
-        private var drawingScreen: DrawingScreen?
-        private var stickerScreen: StickerPickerScreen?
+        fileprivate var drawingScreen: DrawingScreen?
+        fileprivate var stickerScreen: StickerPickerScreen?
         private var defaultToEmoji = false
         
         private var previousDrawingData: Data?
@@ -3000,36 +3022,36 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 case .sticker:
                                     self.mediaEditor?.stop()
                                     let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get(), defaultToEmoji: self.defaultToEmoji, hasGifs: true)
-                                    controller.completion = { [weak self] content in
-                                        if let self {
-                                            if let content {
-                                                let stickerEntity = DrawingStickerEntity(content: content)
-                                                let scale: CGFloat
-                                                if case .image = content {
-                                                    scale = 2.5
-                                                } else if case .video = content {
-                                                    scale = 2.5
-                                                } else {
-                                                    scale = 1.33
-                                                }
-                                                self.interaction?.insertEntity(stickerEntity, scale: scale)
-                                                
-                                                self.hasAnyChanges = true
-                                                self.controller?.isSavingAvailable = true
-                                                self.controller?.requestLayout(transition: .immediate)
-                                                
-                                                if case let .file(file) = content {
-                                                    if file.isCustomEmoji {
-                                                        self.defaultToEmoji = true
-                                                    } else {
-                                                        self.defaultToEmoji = false
-                                                    }
-                                                }
-                                            }
-                                            self.stickerScreen = nil
-                                            self.mediaEditor?.play()
-                                        }
-                                    }
+//                                    controller.completion = { [weak self] content in
+//                                        if let self {
+//                                            if let content {
+//                                                if case let .file(file, _) = content {
+//                                                    if file.isCustomEmoji {
+//                                                        self.defaultToEmoji = true
+//                                                    } else {
+//                                                        self.defaultToEmoji = false
+//                                                    }
+//                                                }
+//                                                                                                
+//                                                let stickerEntity = DrawingStickerEntity(content: content)
+//                                                let scale: CGFloat
+//                                                if case .image = content {
+//                                                    scale = 2.5
+//                                                } else if case .video = content {
+//                                                    scale = 2.5
+//                                                } else {
+//                                                    scale = 1.33
+//                                                }
+//                                                self.interaction?.insertEntity(stickerEntity, scale: scale)
+//                                                
+//                                                self.hasAnyChanges = true
+//                                                self.controller?.isSavingAvailable = true
+//                                                self.controller?.requestLayout(transition: .immediate)
+//                                            }
+//                                            self.stickerScreen = nil
+//                                            self.mediaEditor?.play()
+//                                        }
+//                                    }
                                     controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
                                         if let self, let controller {
                                             let transitionFactor = controller.modalStyleOverlayTransitionFactor
@@ -3053,6 +3075,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                     self.controller?.present(controller, in: .window(.root))
                                     return
                                 case .text:
+                                    self.mediaEditor?.stop()
                                     self.insertTextEntity()
                                     
                                     self.hasAnyChanges = true
@@ -3542,6 +3565,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     })
                 }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }
@@ -3593,6 +3622,12 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 editCategory: { _, _, _ in },
                 editBlockedPeers: { _, _, _ in }
             )
+            controller.customModalStyleOverlayTransitionFactorUpdated = { [weak self, weak controller] transition in
+                if let self, let controller {
+                    let transitionFactor = controller.modalStyleOverlayTransitionFactor
+                    self.node.updateModalTransitionFactor(transitionFactor, transition: transition)
+                }
+            }
             controller.dismissed = {
                 self.node.mediaEditor?.play()
             }
@@ -3600,7 +3635,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         })
     }
     
-    func presentTimeoutSetup(sourceView: UIView, hasPremium: Bool) {
+    func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?, hasPremium: Bool) {
         self.hapticFeedback.impact(.light)
         
         var items: [ContextMenuItem] = []
@@ -3615,7 +3650,6 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         let presentationData = self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme)
         let title = presentationData.strings.Story_Editor_ExpirationText
         let currentValue = self.state.privacy.timeout
-        let currentArchived = self.state.privacy.pin
         let emptyAction: ((ContextMenuActionItem.Action) -> Void)? = nil
         
         items.append(.action(ContextMenuActionItem(text: title, textLayout: .multiline, textFont: .small, icon: { _ in return nil }, action: emptyAction)))
@@ -3651,7 +3685,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         })))
         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Story_Editor_ExpirationValue(24), icon: { theme in
-            return currentValue == 86400 && !currentArchived ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
+            return currentValue == 86400 ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor) : nil
         }, action: { _, a in
             a(.default)
             
@@ -3673,7 +3707,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
         })))
         
-        let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: nil)
+        let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         self.present(contextController, in: .window(.root))
     }
     
@@ -3694,7 +3728,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         )
         self.present(controller, in: .current)
     }
-
+    
     fileprivate func presentCaptionLimitPremiumSuggestion(isPremium: Bool) {
         self.dismissAllTooltips()
         

@@ -22,15 +22,22 @@
 
 @property (nonatomic, readonly) UIView * _Nonnull view;
 
+- (void)setTimeout:(int32_t)timeout;
+
 - (NSAttributedString * _Nonnull)caption;
 - (void)setCaption:(NSAttributedString * _Nullable)caption;
 - (void)dismissInput;
 
+- (void)animateView:(UIView * _Nonnull)view frame:(CGRect)frame;
+
+- (void)onAnimateOut;
+
 @property (nonatomic, copy) void(^ _Nullable sendPressed)(NSAttributedString * _Nullable string);
 @property (nonatomic, copy) void(^ _Nullable focusUpdated)(BOOL focused);
 @property (nonatomic, copy) void(^ _Nullable heightUpdated)(BOOL animated);
+@property (nonatomic, copy) void(^ _Nullable timerUpdated)(NSNumber * _Nullable value);
 
-- (CGFloat)updateLayoutSize:(CGSize)size sideInset:(CGFloat)sideInset animated:(bool)animated;
+- (CGFloat)updateLayoutSize:(CGSize)size keyboardHeight:(CGFloat)keyboardHeight sideInset:(CGFloat)sideInset animated:(bool)animated;
 - (CGFloat)baseHeight;
 
 @end

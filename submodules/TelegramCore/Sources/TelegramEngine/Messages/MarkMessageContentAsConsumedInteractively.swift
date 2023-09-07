@@ -83,7 +83,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                 } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
                     if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
                         var timeout = attribute.timeout
-                        if let duration = message.secretMediaDuration {
+                        if let duration = message.secretMediaDuration, timeout != viewOnceTimeout {
                             timeout = max(timeout, Int32(duration))
                         }
                         updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
@@ -160,7 +160,7 @@ func _internal_markReactionsAsSeenInteractively(postbox: Postbox, messageId: Mes
     }
 }
 
-func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: MessageId) {
+func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: MessageId, consumeDate: Int32?) {
     if let message = transaction.getMessage(messageId) {
         var updateMessage = false
         var updatedAttributes = message.attributes
@@ -184,35 +184,41 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
         }
         
         let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        let countdownBeginTime = consumeDate ?? timestamp
+        
         for i in 0 ..< updatedAttributes.count {
             if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
                 if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
-                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                    updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
                     updateMessage = true
-                    
+                                 
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                     } else {
-                        for i in 0 ..< updatedMedia.count {
-                            if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                            } else if let _ = updatedMedia[i] as? TelegramMediaFile {
-                                updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                        if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
+                            for i in 0 ..< updatedMedia.count {
+                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                }
                             }
                         }
                     }
                 }
             } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
                 if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
-                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                    updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
                     updateMessage = true
                     
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                     } else {
                         for i in 0 ..< updatedMedia.count {
-                            if let _ = updatedMedia[i] as? TelegramMediaImage {
-                                updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
-                            } else if let _ = updatedMedia[i] as? TelegramMediaFile {
-                                updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                            if attribute.timeout == viewOnceTimeout || timestamp >= countdownBeginTime + attribute.timeout {
+                                if let _ = updatedMedia[i] as? TelegramMediaImage {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .image)
+                                } else if let _ = updatedMedia[i] as? TelegramMediaFile {
+                                    updatedMedia[i] = TelegramMediaExpiredContent(data: .file)
+                                }
                             }
                         }
                     }

@@ -111,6 +111,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
     private let text: TooltipScreen.Text
     private let textAlignment: TooltipScreen.Alignment
     private let balancedTextLayout: Bool
+    private let constrainWidth: CGFloat?
     private let tooltipStyle: TooltipScreen.Style
     private let arrowStyle: TooltipScreen.ArrowStyle
     private let icon: TooltipScreen.Icon?
@@ -159,6 +160,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         text: TooltipScreen.Text,
         textAlignment: TooltipScreen.Alignment,
         balancedTextLayout: Bool,
+        constrainWidth: CGFloat?,
         style: TooltipScreen.Style,
         arrowStyle: TooltipScreen.ArrowStyle,
         icon: TooltipScreen.Icon? = nil,
@@ -379,6 +381,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
         self.text = text
         self.textAlignment = textAlignment
         self.balancedTextLayout = balancedTextLayout
+        self.constrainWidth = constrainWidth
         
         self.animatedStickerNode = DefaultAnimatedStickerNodeImpl()
         switch icon {
@@ -477,7 +480,7 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             } else {
                 animationSize = CGSize(width: 32.0, height: 32.0)
             }
-            if animationName == "anim_autoremove_on" {
+            if ["anim_autoremove_on", "anim_autoremove_off"].contains(animationName) {
                 animationOffset = -3.0
             } else if animationName == "ChatListFoldersTooltip" {
                 animationInset = (70.0 - animationSize.width) / 2.0
@@ -491,7 +494,10 @@ private final class TooltipScreenNode: ViewControllerTracingNode {
             animationSpacing = 8.0
         }
         
-        let containerWidth = max(100.0, min(layout.size.width - sideInset * 2.0, 614.0))
+        var containerWidth = max(100.0, min(layout.size.width - sideInset * 2.0, 614.0))
+        if let constrainWidth = self.constrainWidth, constrainWidth > 100.0 {
+            containerWidth = constrainWidth
+        }
         
         var actionSize: CGSize = .zero
         
@@ -1001,6 +1007,7 @@ public final class TooltipScreen: ViewController {
     public let text: TooltipScreen.Text
     public let textAlignment: TooltipScreen.Alignment
     private let balancedTextLayout: Bool
+    private let constrainWidth: CGFloat?
     private let style: TooltipScreen.Style
     private let arrowStyle: TooltipScreen.ArrowStyle
     private let icon: TooltipScreen.Icon?
@@ -1039,6 +1046,7 @@ public final class TooltipScreen: ViewController {
         text: TooltipScreen.Text,
         textAlignment: TooltipScreen.Alignment = .natural,
         balancedTextLayout: Bool = false,
+        constrainWidth: CGFloat? = nil,
         style: TooltipScreen.Style = .default,
         arrowStyle: TooltipScreen.ArrowStyle = .default,
         icon: TooltipScreen.Icon? = nil,
@@ -1056,6 +1064,7 @@ public final class TooltipScreen: ViewController {
         self.text = text
         self.textAlignment = textAlignment
         self.balancedTextLayout = balancedTextLayout
+        self.constrainWidth = constrainWidth
         self.style = style
         self.arrowStyle = arrowStyle
         self.icon = icon
@@ -1123,7 +1132,7 @@ public final class TooltipScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
+        self.displayNode = TooltipScreenNode(context: self.context, account: self.account, sharedContext: self.sharedContext, text: self.text, textAlignment: self.textAlignment, balancedTextLayout: self.balancedTextLayout, constrainWidth: self.constrainWidth, style: self.style, arrowStyle: self.arrowStyle, icon: self.icon, action: self.action, location: self.location, displayDuration: self.displayDuration, inset: self.inset, cornerRadius: self.cornerRadius, shouldDismissOnTouch: self.shouldDismissOnTouch, requestDismiss: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
