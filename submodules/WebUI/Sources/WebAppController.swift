@@ -182,6 +182,7 @@ public struct WebAppParameters {
     let fromAttachMenu: Bool
     let isInline: Bool
     let isSimple: Bool
+    let forceHasSettings: Bool
     
     public init(
         peerId: PeerId,
@@ -195,7 +196,8 @@ public struct WebAppParameters {
         fromMenu: Bool,
         fromAttachMenu: Bool,
         isInline: Bool,
-        isSimple: Bool
+        isSimple: Bool,
+        forceHasSettings: Bool
     ) {
         self.peerId = peerId
         self.botId = botId
@@ -209,6 +211,7 @@ public struct WebAppParameters {
         self.fromAttachMenu = fromAttachMenu
         self.isInline = isInline
         self.isSimple = isSimple
+        self.forceHasSettings = forceHasSettings
     }
 }
 
@@ -1309,6 +1312,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let fromAttachMenu: Bool
     private let isInline: Bool
     private let isSimple: Bool
+    private let forceHasSettings: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
     private let threadId: Int64?
@@ -1335,6 +1339,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.fromAttachMenu = params.fromAttachMenu
         self.isInline = params.isInline
         self.isSimple = params.isSimple
+        self.forceHasSettings = params.forceHasSettings
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
         self.threadId = threadId
@@ -1446,6 +1451,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let peerId = self.peerId
         let botId = self.botId
+        let url = self.url
+        let forceHasSettings = self.forceHasSettings
         
         let items = context.engine.messages.attachMenuBots()
         |> take(1)
@@ -1454,7 +1461,18 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId})
             
-            if self?.url == nil, let attachMenuBot = attachMenuBot, attachMenuBot.flags.contains(.hasSettings) {
+            let hasSettings: Bool
+            if url == nil {
+                if forceHasSettings {
+                    hasSettings = true
+                } else {
+                    hasSettings = attachMenuBot?.flags.contains(.hasSettings) == true
+                }
+            } else {
+                hasSettings = false
+            }
+            
+            if hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Settings"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] c, _ in

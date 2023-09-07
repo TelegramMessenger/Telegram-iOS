@@ -4636,7 +4636,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        
         let proceed = { [weak self] in
             guard let self else {
                 return
@@ -4649,7 +4648,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let params = WebAppParameters(peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: true)
+                let params = WebAppParameters(peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: true, forceHasSettings: bot.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { _, _, _ in
@@ -4667,8 +4666,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }
         
         if bot.flags.contains(.showInSettingsDisclaimer) {
-            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: bot.peer, completion: {
-                proceed()
+            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: bot.peer, requestWriteAccess: bot.flags.contains(.requiresWriteAccess), completion: { [weak self] allowWrite in
+                guard let self else {
+                    return
+                }
+                if bot.flags.contains(.notActivated) {
+                    let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
+                    |> deliverOnMainQueue).start(error: { _ in
+                        
+                    }, completed: {
+                        proceed()
+                    })
+                } else {
+                    proceed()
+                }
             })
             controller.present(alertController, in: .window(.root))
         } else {

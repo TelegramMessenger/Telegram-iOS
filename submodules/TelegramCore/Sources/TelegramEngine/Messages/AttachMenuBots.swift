@@ -55,6 +55,7 @@ public final class AttachMenuBots: Equatable, Codable {
             public static let showInAttachMenu = Flags(rawValue: 1 << 2)
             public static let showInSettings = Flags(rawValue: 1 << 3)
             public static let showInSettingsDisclaimer = Flags(rawValue: 1 << 4)
+            public static let notActivated = Flags(rawValue: 1 << 5)
         }
         
         public struct PeerFlags: OptionSet, Codable {
@@ -320,6 +321,9 @@ func managedSynchronizeAttachMenuBots(accountPeerId: PeerId, postbox: Postbox, n
                                                 }
                                             }
                                             var flags: AttachMenuBots.Bot.Flags = []
+                                            if (apiFlags & (1 << 0)) != 0 {
+                                                flags.insert(.notActivated)
+                                            }
                                             if (apiFlags & (1 << 1)) != 0 {
                                                 flags.insert(.hasSettings)
                                             }
@@ -590,6 +594,7 @@ public final class BotApp: Equatable, Codable {
         
         public static let notActivated = Flags(rawValue: 1 << 0)
         public static let requiresWriteAccess = Flags(rawValue: 1 << 1)
+        public static let hasSettings = Flags(rawValue: 1 << 2)
     }
     
     public let id: Int64
@@ -718,7 +723,7 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
         }
         |> mapToSignal { result -> Signal<BotApp, GetBotAppError> in
             switch result {
-                case let .botApp(botAppFlags, app):
+            case let .botApp(botAppFlags, app):
                 switch app {
                 case let .botApp(flags, id, accessHash, shortName, title, description, photo, document, hash):
                     let _ = flags
@@ -729,10 +734,13 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
                     if (botAppFlags & (1 << 1)) != 0 {
                         appFlags.insert(.requiresWriteAccess)
                     }
+                    if (botAppFlags & (1 << 2)) != 0 {
+                        appFlags.insert(.hasSettings)
+                    }
                     return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))
-                case .botAppNotModified:
-                    return .complete()
-                }
+            case .botAppNotModified:
+                return .complete()
+            }
             }
         }
     }

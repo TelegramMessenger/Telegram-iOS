@@ -9913,3 +9913,9 @@ Sorry for the inconvenience.";
 
 "Gallery.ViewOncePhotoTooltip" = "This photo can only be viewed once.";
 "Gallery.ViewOnceVideoTooltip" = "This video can only be viewed once.";
+
+"WebApp.DisclaimerTitle" = "Warning";
+"WebApp.DisclaimerText" = "You are about to use a mini app operated by an independent party not affiliated with Telegram. You must agree to the Terms of Use of mini apps to continue.";
+"WebApp.DisclaimerAgree" = "I agree to the [Terms of Use]()";
+"WebApp.DisclaimerContinue" = "Continue";
+"WebApp.Disclaimer_URL" = "https://telegram.org/tos/mini-apps";
