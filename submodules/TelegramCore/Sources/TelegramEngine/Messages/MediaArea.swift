@@ -127,11 +127,15 @@ public enum MediaArea: Codable, Equatable {
         case venue
     }
     
+    public enum DecodingError: Error {
+        case generic
+    }
+    
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
         guard let type = MediaAreaType(rawValue: try container.decode(Int32.self, forKey: .type)) else {
-            fatalError()
+            throw DecodingError.generic
         }
         switch type {
         case .venue:
