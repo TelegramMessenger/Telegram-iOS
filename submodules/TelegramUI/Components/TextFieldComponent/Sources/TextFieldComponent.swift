@@ -913,9 +913,13 @@ public final class TextFieldComponent: Component {
                 )
                 if let view = self.ellipsisView.view {
                     if view.superview == nil {
+                        view.alpha = 0.0
                         self.textView.addSubview(view)
                     }
-                    transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: position.x - 11.0, y: position.y), size: ellipsisSize))
+                    let ellipsisFrame = CGRect(origin: CGPoint(x: position.x - 11.0, y: position.y), size: ellipsisSize)
+                    transition.setFrame(view: view, frame: ellipsisFrame)
+                    
+                    let hasMoreThanOneLine = ellipsisFrame.maxY < self.textView.contentSize.height - 12.0
                     
                     let ellipsisTransition: Transition
                     if isEditing {
@@ -923,7 +927,11 @@ public final class TextFieldComponent: Component {
                     } else {
                         ellipsisTransition = .easeInOut(duration: 0.3)
                     }
-                    ellipsisTransition.setAlpha(view: view, alpha: isEditing ? 0.0 : 1.0)
+                    ellipsisTransition.setAlpha(view: view, alpha: isEditing || !hasMoreThanOneLine ? 0.0 : 1.0)
+                }
+            } else {
+                if let view = self.ellipsisView.view {
+                    view.removeFromSuperview()
                 }
             }
             
