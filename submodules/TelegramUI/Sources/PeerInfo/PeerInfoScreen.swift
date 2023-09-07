@@ -4665,8 +4665,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }))
         }
         
-        if bot.flags.contains(.showInSettingsDisclaimer) {
-            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: bot.peer, requestWriteAccess: bot.flags.contains(.requiresWriteAccess), completion: { [weak self] allowWrite in
+        if bot.flags.contains(.notActivated) || bot.flags.contains(.showInSettingsDisclaimer) {
+            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, bot: bot, completion: { [weak self] allowWrite in
                 guard let self else {
                     return
                 }

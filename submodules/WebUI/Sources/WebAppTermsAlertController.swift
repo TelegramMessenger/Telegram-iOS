@@ -17,8 +17,8 @@ import TextFormat
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-private func formattedText(_ text: String, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
-    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { _ in return (TelegramTextAttributes.URL, "") }), textAlignment: textAlignment)
+private func formattedText(_ text: String, fontSize: CGFloat, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: color), bold: MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: color), link: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: linkColor), linkAttribute: { _ in return (TelegramTextAttributes.URL, "") }), textAlignment: textAlignment)
 }
 
 private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureRecognizerDelegate {
@@ -67,6 +67,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
         self.textNode.lineSpacing = 0.1
+        self.textNode.textAlignment = .center
         
         self.acceptTermsCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
         self.acceptTermsLabelNode = ImmediateTextNode()
@@ -177,7 +178,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
     
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = formattedText(self.text, fontSize: 13.0, color: theme.primaryColor, linkColor: theme.accentColor, textAlignment: .center)
 
         let attributedAgreeText = parseMarkdownIntoAttributedString(
             self.strings.WebApp_DisclaimerAgree,
@@ -328,8 +329,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
 public func webAppTermsAlertController(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
-    peer: EnginePeer,
-    requestWriteAccess: Bool,
+    bot: AttachMenuBot,
     completion: @escaping (Bool) -> Void
 ) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
@@ -350,7 +350,7 @@ public func webAppTermsAlertController(
     })]
     
     let title = presentationData.strings.WebApp_DisclaimerTitle
-    let text = presentationData.strings.WebApp_DisclaimerText
+    let text = presentationData.strings.WebApp_DisclaimerText(bot.peer.compactDisplayTitle).string
     
     let contentNode = WebAppTermsAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, actions: actions)
     contentNode.openTerms = {
