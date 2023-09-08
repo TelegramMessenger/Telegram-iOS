@@ -9886,3 +9886,16 @@ Sorry for the inconvenience.";
 
 "Gallery.ViewOncePhotoTooltip" = "This photo can only be viewed once.";
 "Gallery.ViewOnceVideoTooltip" = "This video can only be viewed once.";
+
+"ChatList.SessionReview.ConfirmToastTitle" = "New Login Allowed";
+"ChatList.SessionReview.ConfirmToastText" = "You can check the list of your active logins in [Settings > Devices]().";
+
+"ChatList.SessionReview.PanelTitle" = "Someone just got acess to your messages!";
+"ChatList.SessionReview.PanelText" = "We detected a new login to your account from %1$@, %2$@. Is it you?";
+"ChatList.SessionReview.PanelConfirm" = "Yes, it's me";
+"ChatList.SessionReview.PanelReject" = "No, it's not me!";
+
+"SessionReview.NoticeText" = "Never send your login code to anyone or you can lose your Telegram account!";
+"SessionReview.Title" = "New Login Prevented";
+"SessionReview.Text" = "We have terminated the login attempt from **%1$@**, **%2$@**";
+"SessionReview.OkAction" = "Got it";

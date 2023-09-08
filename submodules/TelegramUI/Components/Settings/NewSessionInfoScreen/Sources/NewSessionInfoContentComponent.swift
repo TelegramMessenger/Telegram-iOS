@@ -103,11 +103,10 @@ public final class NewSessionInfoContentComponent: Component {
             
             contentHeight += -14.0
             
-            //TODO:localize
             let noticeSize = self.notice.update(
                 transition: .immediate,
                 component: AnyComponent(BalancedTextComponent(
-                    text: .plain(NSAttributedString(string: "Never send your login code to anyone or you can lose your Telegram account!", font: Font.semibold(15.0), textColor: component.theme.list.itemDestructiveColor)),
+                    text: .plain(NSAttributedString(string: component.strings.SessionReview_NoticeText, font: Font.semibold(15.0), textColor: component.theme.list.itemDestructiveColor)),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
                     lineSpacing: 0.2
@@ -146,9 +145,8 @@ public final class NewSessionInfoContentComponent: Component {
             contentHeight += iconSize
             contentHeight += 16.0
             
-            //TODO:localize
             let titleString = NSMutableAttributedString()
-            titleString.append(NSAttributedString(string: "New Login Prevented", font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
+            titleString.append(NSAttributedString(string: component.strings.SessionReview_Title, font: Font.semibold(19.0), textColor: component.theme.list.itemPrimaryTextColor))
             let imageAttachment = NSTextAttachment()
             imageAttachment.image = self.iconBackground.image
             titleString.append(NSAttributedString(attachment: imageAttachment))
@@ -171,8 +169,7 @@ public final class NewSessionInfoContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 16.0
             
-            //TODO:localize
-            let text: String = "We have terminated the login attempt from **\(component.newSessionReview.device), \(component.newSessionReview.location)**"
+            let text: String = component.strings.SessionReview_Text(component.newSessionReview.device, component.newSessionReview.location).0
             
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
