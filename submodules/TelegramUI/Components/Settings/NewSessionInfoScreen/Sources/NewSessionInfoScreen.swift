@@ -96,11 +96,9 @@ private final class NewSessionInfoSheetContentComponent: Component {
             contentHeight += contentSize.height
             contentHeight += 30.0
             
-            //TODO:localize
-            
             var buttonContents: [AnyComponentWithIdentity<Empty>] = []
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                Text(text: "Got it", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
+                Text(text: environment.strings.SessionReview_OkAction, font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
             if self.remainingTimer > 0 {
                 buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(

@@ -280,6 +280,11 @@ public final class SecretMediaPreviewController: ViewController {
         self.controllerNode.dismiss = { [weak self] in
             self?._hiddenMedia.set(.single(nil))
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            
+            if let tooltipController = self?.tooltipController {
+                self?.tooltipController = nil
+                tooltipController.dismiss()
+            }
         }
         
         self.controllerNode.beginCustomDismiss = { [weak self] _ in
