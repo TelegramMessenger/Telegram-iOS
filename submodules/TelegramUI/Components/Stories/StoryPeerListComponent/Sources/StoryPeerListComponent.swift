@@ -472,10 +472,21 @@ public final class StoryPeerListComponent: Component {
             }
         }
         
+        public func cancelLoadingItem() {
+            self.loadingItemDisposable?.dispose()
+            self.loadingItemDisposable = nil
+            
+            if self.loadingItemId != nil {
+                self.loadingItemId = nil
+                self.state?.updated(transition: .immediate)
+            }
+        }
+        
         public func setLoadingItem(peerId: EnginePeer.Id, signal: Signal<Never, NoError>) {
             var applyLoadingItem = true
+            
             self.loadingItemDisposable?.dispose()
-            self.loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
+            let loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -483,6 +494,7 @@ public final class StoryPeerListComponent: Component {
                 applyLoadingItem = false
                 self.state?.updated(transition: .immediate)
             })
+            self.loadingItemDisposable = loadingItemDisposable
             
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
                 guard let self else {
@@ -1285,9 +1297,8 @@ public final class StoryPeerListComponent: Component {
                 titleContentOffset = collapsedTitleOffset
             } else {
                 titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
+                titleContentOffset += -expandBoundsFraction * 4.0
             }
-            
-            titleContentOffset += -expandBoundsFraction * 4.0
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {

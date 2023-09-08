@@ -1366,9 +1366,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             
+            if let storyPeerListView = self.chatListHeaderView()?.storyPeerListView() {
+                storyPeerListView.cancelLoadingItem()
+            }
+            
             switch subject {
             case .archive:
-                StoryContainerScreen.openArchivedStories(context: self.context, parentController: self, avatarNode: itemNode.avatarNode)
+                StoryContainerScreen.openArchivedStories(context: self.context, parentController: self, avatarNode: itemNode.avatarNode, sharedProgressDisposable: self.sharedOpenStoryProgressDisposable)
             case let .peer(peerId):
                 StoryContainerScreen.openPeerStories(context: self.context, peerId: peerId, parentController: self, avatarNode: itemNode.avatarNode, sharedProgressDisposable: self.sharedOpenStoryProgressDisposable)
             }
@@ -2487,6 +2491,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.fullScreenEffectView = nil
             fullScreenEffectView.removeFromSuperview()
         }
+        
+        self.sharedOpenStoryProgressDisposable.set(nil)
+        
+        if let storyPeerListView = self.chatListHeaderView()?.storyPeerListView() {
+            storyPeerListView.cancelLoadingItem()
+        }
     }
     
     func updateHeaderContent() -> (primaryContent: ChatListHeaderComponent.Content?, secondaryContent: ChatListHeaderComponent.Content?) {
@@ -2692,36 +2702,34 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         if let rootController = self.context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
-            let coordinator = rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: { [weak self] target in
-                guard let self, let target else {
-                    return nil
-                }
-                if let componentView = self.chatListHeaderView() {
-                    let peerId: EnginePeer.Id
-                    switch target {
-                    case .myStories:
-                        peerId = self.context.account.peerId
-                    case let .peer(id):
-                        peerId = id
-                    }
-                    
-                    if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
-                        return StoryCameraTransitionOut(
-                            destinationView: transitionView,
-                            destinationRect: transitionView.bounds,
-                            destinationCornerRadius: transitionView.bounds.height * 0.5
-                        )
-                    } else if let rightButtonView = componentView.rightButtonViews["story"] {
-                        return StoryCameraTransitionOut(
-                            destinationView: rightButtonView,
-                            destinationRect: rightButtonView.bounds,
-                            destinationCornerRadius: rightButtonView.bounds.height * 0.5
-                        )
-                    }
-                }
-                return nil
-            })
+            let coordinator = rootController.openStoryCamera(transitionIn: cameraTransitionIn, transitionedIn: {}, transitionOut: self.storyCameraTransitionOut())
             coordinator?.animateIn()
+        }
+    }
+    
+    public func storyCameraTransitionOut() -> (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut? {
+        return { [weak self] target, isArchived in
+            guard let self, let target else {
+                return nil
+            }
+            if let componentView = self.chatListHeaderView() {
+                let peerId: EnginePeer.Id
+                switch target {
+                case .myStories:
+                    peerId = self.context.account.peerId
+                case let .peer(id):
+                    peerId = id
+                }
+                
+                if let (transitionView, _) = componentView.storyPeerListView()?.transitionViewForItem(peerId: peerId) {
+                    return StoryCameraTransitionOut(
+                        destinationView: transitionView,
+                        destinationRect: transitionView.bounds,
+                        destinationCornerRadius: transitionView.bounds.height * 0.5
+                    )
+                }
+            }
+            return nil
         }
     }
     
@@ -3947,6 +3955,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return
                                 }
                                 if let componentView = self.chatListHeaderView() {
+                                    self.sharedOpenStoryProgressDisposable.set(nil)
                                     componentView.storyPeerListView()?.setLoadingItem(peerId: peerId, signal: signal)
                                 }
                             }
@@ -5667,7 +5676,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let current = self.storyCameraTransitionInCoordinator {
             coordinator = current
         } else {
-            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] target in
+            coordinator = rootController.openStoryCamera(transitionIn: nil, transitionedIn: {}, transitionOut: { [weak self] target, _ in
                 guard let self, let target else {
                     return nil
                 }

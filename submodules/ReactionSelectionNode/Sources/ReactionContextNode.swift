@@ -260,6 +260,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var isLeftAligned: Bool = true
     private var itemLayout: ItemLayout?
     
+    public var centerAligned: Bool {
+        return self.validLayout?.4 ?? false
+    }
+    
     private var customReactionSource: (view: UIView, rect: CGRect, layer: CALayer, item: ReactionItem)?
     
     public var reactionSelected: ((UpdateMessageReaction, Bool) -> Void)?

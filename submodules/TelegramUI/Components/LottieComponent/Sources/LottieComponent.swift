@@ -291,7 +291,7 @@ public final class LottieComponent: Component {
                 }
             }
             
-            if self.scheduledPlayOnce {
+            if self.scheduledPlayOnce && self.isEffectivelyVisible {
                 self.scheduledPlayOnce = false
                 self.playOnce()
             } else {

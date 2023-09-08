@@ -449,6 +449,7 @@ public final class StoryItemSetContainerComponent: Component {
         
         var reactionContextNode: ReactionContextNode?
         weak var disappearingReactionContextNode: ReactionContextNode?
+        weak var willDismissReactionContextNode: ReactionContextNode?
         var displayLikeReactions: Bool = false
         var tempReactionsGesture: ContextGesture?
         var waitingForReactionAnimateOutToLike: MessageReaction.Reaction?
@@ -711,7 +712,32 @@ public final class StoryItemSetContainerComponent: Component {
             return true
         }
         
+        func allowsInstantPauseOnTouch(point: CGPoint) -> Bool {
+            guard let component = self.component else {
+                return false
+            }
+            guard let visibleItem = self.visibleItems[component.slice.item.storyItem.id] else {
+                return false
+            }
+            guard let itemView = visibleItem.view.view as? StoryItemContentComponent.View else {
+                return false
+            }
+            
+            let localPoint = self.convert(point, to: itemView)
+            if itemView.bounds.contains(localPoint) {
+                if !itemView.allowsInstantPauseOnTouch(point: localPoint) {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        
         func isPointInsideContentArea(point: CGPoint) -> Bool {
+            if self.reactionContextNode != nil {
+                return false
+            }
+            
             if let inputPanelView = self.inputPanel.view, inputPanelView.alpha != 0.0 {
                 if inputPanelView.frame.contains(point) {
                     return false
@@ -874,6 +900,13 @@ public final class StoryItemSetContainerComponent: Component {
                 }
                 if self.displayLikeReactions {
                     self.displayLikeReactions = false
+                    self.sendMessageContext.currentInputMode = .text
+                    self.willDismissReactionContextNode = self.reactionContextNode
+                    
+                    if hasFirstResponder(self) {
+                        self.endEditing(true)
+                    }
+                    
                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                     self.updateIsProgressPaused()
                 } else if self.hasActiveDeactivateableInput() {
@@ -1239,6 +1272,8 @@ public final class StoryItemSetContainerComponent: Component {
                 if self.viewListDisplayState == .full {
                     return self
                 }
+                return self.itemsContainerView
+            } else if self.viewListDisplayState == .half && result.isDescendant(of: self.itemsContainerView) {
                 return self.itemsContainerView
             }
             
@@ -4078,18 +4113,17 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             let reactionsAnchorRect: CGRect
-            if self.displayLikeReactions, let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View, let likeButtonView = inputPanelView.likeButtonView {
+            
+            if self.inputPanelExternalState.isEditing, let inputPanelFrameValue {
+                reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrameValue.maxX - 40.0, y: inputPanelFrameValue.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
+            } else if let inputPanelView = self.inputPanel.view as? MessageInputPanelComponent.View, let likeButtonView = inputPanelView.likeButtonView {
                 var likeRect = likeButtonView.convert(likeButtonView.bounds, to: self)
                 likeRect.origin.y -= 15.0
                 likeRect.size.height += 15.0
                 likeRect.origin.x -= 30.0
                 reactionsAnchorRect = likeRect
             } else {
-                if let inputPanelFrameValue {
-                    reactionsAnchorRect = CGRect(origin: CGPoint(x: inputPanelFrameValue.maxX - 40.0, y: inputPanelFrameValue.minY + 9.0), size: CGSize(width: 32.0, height: 32.0)).insetBy(dx: -4.0, dy: -4.0)
-                } else {
-                    reactionsAnchorRect = CGRect()
-                }
+                reactionsAnchorRect = CGRect()
             }
             
             var effectiveDisplayReactions = false
@@ -4115,7 +4149,7 @@ public final class StoryItemSetContainerComponent: Component {
                 effectiveDisplayReactions = false
             }
             
-            if let reactionContextNode = self.reactionContextNode, (reactionContextNode.isReactionSearchActive && !reactionContextNode.isAnimatingOutToReaction && !reactionContextNode.isAnimatingOut) {
+            if let reactionContextNode = self.reactionContextNode, self.willDismissReactionContextNode !== reactionContextNode, (reactionContextNode.isReactionSearchActive && !reactionContextNode.isAnimatingOutToReaction && !reactionContextNode.isAnimatingOut) {
                 effectiveDisplayReactions = true
             }
             
@@ -4204,11 +4238,11 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     }
                     
-                    reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
-                        guard let self else {
+                    reactionContextNode.reactionSelected = { [weak self, weak reactionContextNode] updateReaction, _ in
+                        guard let self, let reactionContextNode else {
                             return
                         }
-                        let action: () -> Void = { [weak self] in
+                        let action: () -> Void = { [weak self, weak reactionContextNode] in
                             guard let self, let component = self.component else {
                                 return
                             }
@@ -4266,7 +4300,6 @@ public final class StoryItemSetContainerComponent: Component {
                                         }, completion: { [weak targetView, weak reactionContextNode] in
                                             targetView?.removeFromSuperview()
                                             if let reactionContextNode {
-                                                reactionContextNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, removeOnCompletion: false)
                                                 reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
                                                     reactionContextNode?.view.removeFromSuperview()
                                                 })
@@ -4487,7 +4520,7 @@ public final class StoryItemSetContainerComponent: Component {
             if let reactionContextNode = self.disappearingReactionContextNode {
                 if !reactionContextNode.isAnimatingOutToReaction {
                     transition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
-                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
+                    reactionContextNode.updateLayout(size: availableSize, insets: UIEdgeInsets(), anchorRect: reactionsAnchorRect, centerAligned: reactionContextNode.centerAligned, isCoveredByInput: false, isAnimatingOut: false, transition: transition.containedViewLayoutTransition)
                 }
             }
             
@@ -5853,6 +5886,51 @@ public final class StoryItemSetContainerComponent: Component {
                 })))
             }
             
+            var isHidden = false
+            if case let .channel(channel) = component.slice.peer, let storiesHidden = channel.storiesHidden {
+                isHidden = storiesHidden
+            }
+            items.append(.action(ContextMenuActionItem(text: isHidden ? component.strings.StoryFeed_ContextUnarchive : component.strings.StoryFeed_ContextArchive, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: isHidden ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak self] _, a in
+                a(.default)
+                
+                guard let self, let component = self.component else {
+                    return
+                }
+                
+                let _ = component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: !isHidden)
+                
+                let text = !isHidden ? component.strings.StoryFeed_TooltipArchive(component.slice.peer.compactDisplayTitle).string : component.strings.StoryFeed_TooltipUnarchive(component.slice.peer.compactDisplayTitle).string
+                let tooltipScreen = TooltipScreen(
+                    context: component.context,
+                    account: component.context.account,
+                    sharedContext: component.context.sharedContext,
+                    text: .markdown(text: text),
+                    style: .customBlur(UIColor(rgb: 0x1c1c1c), 0.0),
+                    icon: .peer(peer: component.slice.peer, isStory: true),
+                    action: TooltipScreen.Action(
+                        title: component.strings.Undo_Undo,
+                        action: {
+                            component.context.engine.peers.updatePeerStoriesHidden(id: component.slice.peer.id, isHidden: isHidden)
+                        }
+                    ),
+                    location: .bottom,
+                    shouldDismissOnTouch: { _, _ in return .dismiss(consume: false) }
+                )
+                tooltipScreen.willBecomeDismissed = { [weak self] _ in
+                    guard let self else {
+                        return
+                    }
+                    self.sendMessageContext.tooltipScreen = nil
+                    self.updateIsProgressPaused()
+                }
+                self.sendMessageContext.tooltipScreen?.dismiss()
+                self.sendMessageContext.tooltipScreen = tooltipScreen
+                self.updateIsProgressPaused()
+                component.controller()?.present(tooltipScreen, in: .current)
+            })))
+            
             if (component.slice.item.storyItem.isMy && channel.hasPermission(.postStories)) || channel.hasPermission(.deleteStories) {
                 items.append(.action(ContextMenuActionItem(text: component.strings.Story_ContextDeleteStory, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
@@ -6005,14 +6083,27 @@ public final class StoryItemSetContainerComponent: Component {
                             ), nil)
                         }
                     })))
-                    
-                    var isHidden = false
-                    if case let .user(user) = component.slice.peer, let storiesHidden = user.storiesHidden {
-                        isHidden = storiesHidden
-                    } else if case let .channel(channel) = component.slice.peer, let storiesHidden = channel.storiesHidden {
-                        isHidden = storiesHidden
+                }
+                
+                var isHidden = false
+                if case let .user(user) = component.slice.peer, let storiesHidden = user.storiesHidden {
+                    isHidden = storiesHidden
+                } else if case let .channel(channel) = component.slice.peer, let storiesHidden = channel.storiesHidden {
+                    isHidden = storiesHidden
+                }
+                
+                var canArchive = false
+                if isHidden {
+                    canArchive = true
+                } else {
+                    if case .user = component.slice.peer, !component.slice.peer.isService {
+                        canArchive = true
+                    } else if case .channel = component.slice.peer {
+                        canArchive = true
                     }
-                    
+                }
+                
+                if canArchive {
                     items.append(.action(ContextMenuActionItem(text: isHidden ? component.strings.StoryFeed_ContextUnarchive : component.strings.StoryFeed_ContextArchive, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: isHidden ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor)
                     }, action: { [weak self] _, a in

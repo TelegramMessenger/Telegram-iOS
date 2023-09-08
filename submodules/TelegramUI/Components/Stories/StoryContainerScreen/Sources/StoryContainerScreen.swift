@@ -91,7 +91,7 @@ private final class MuteMonitor {
 
 private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     var shouldBegin: ((UITouch) -> Bool)?
-    var updateIsTracking: ((Bool) -> Void)?
+    var updateIsTracking: ((CGPoint?) -> Void)?
     
     override var state: UIGestureRecognizer.State {
         didSet {
@@ -116,7 +116,7 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
         self.isValidated = false
         if self.isTracking {
             self.isTracking = false
-            self.updateIsTracking?(false)
+            self.updateIsTracking?(nil)
         }
     }
     
@@ -134,7 +134,7 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
             
             if !self.isTracking {
                 self.isTracking = true
-                self.updateIsTracking?(true)
+                self.updateIsTracking?(touches.first?.location(in: self.view))
             }
         }
     }
@@ -450,12 +450,38 @@ private final class StoryContainerScreenComponent: Component {
             
             let longPressRecognizer = StoryLongPressRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
-            longPressRecognizer.updateIsTracking = { [weak self] isTracking in
+            longPressRecognizer.updateIsTracking = { [weak self] point in
                 guard let self else {
                     return
                 }
-                self.isHoldingTouch = isTracking
-                self.state?.updated(transition: .immediate)
+                guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                    return
+                }
+                
+                var point = point
+                if let pointValue = point {
+                    if !itemSetComponentView.allowsInstantPauseOnTouch(point: self.convert(pointValue, to: itemSetComponentView)) {
+                        point = nil
+                    }
+                }
+                
+                if point != nil {
+                    if !self.isHoldingTouch {
+                        self.isHoldingTouch = true
+                        self.state?.updated(transition: .immediate)
+                    }
+                } else {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        
+                        if self.isHoldingTouch {
+                            self.isHoldingTouch = false
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                }
             }
             longPressRecognizer.shouldBegin = { [weak self] touch in
                 guard let self else {

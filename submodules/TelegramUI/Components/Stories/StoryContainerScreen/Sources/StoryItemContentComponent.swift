@@ -162,6 +162,13 @@ final class StoryItemContentComponent: Component {
             self.currentFetchPriority?.disposable.dispose()
         }
         
+        func allowsInstantPauseOnTouch(point: CGPoint) -> Bool {
+            if let _ = self.overlaysView.hitTest(self.convert(self.convert(point, to: self.overlaysView), to: self.overlaysView), with: nil) {
+                return false
+            }
+            return true
+        }
+        
         private func performActionAfterImageContentLoaded(update: Bool) {
             self.initializeVideoIfReady(update: update)
         }
