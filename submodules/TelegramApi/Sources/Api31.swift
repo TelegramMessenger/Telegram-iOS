@@ -8783,25 +8783,6 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func getStoriesMaxIDs(id: [Api.InputPeer]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Int32]>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-904087125)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(id.count))
-                    for item in id {
-                        item.serialize(buffer, true)
-                    }
-                    return (FunctionDescription(name: "stories.getStoriesMaxIDs", parameters: [("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Int32]? in
-                        let reader = BufferReader(buffer)
-                        var result: [Int32]?
-                        if let _ = reader.readInt32() {
-                            result = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.stories {
                 static func getStoriesViews(peer: Api.InputPeer, id: [Int32]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.StoryViews>) {
                     let buffer = Buffer()
                     buffer.appendInt32(685862088)
