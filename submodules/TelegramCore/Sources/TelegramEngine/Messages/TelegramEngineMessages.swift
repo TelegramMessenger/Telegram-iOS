@@ -531,6 +531,10 @@ public extension TelegramEngine {
             return _internal_removeBotFromAttachMenu(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId)
         }
         
+        public func acceptAttachMenuBotDisclaimer(botId: PeerId) -> Signal<Never, NoError> {
+            return _internal_acceptAttachMenuBotDisclaimer(postbox: self.account.postbox, botId: botId)
+        }
+        
         public func getAttachMenuBot(botId: PeerId, cached: Bool = false) -> Signal<AttachMenuBot, GetAttachMenuBotError> {
             return _internal_getAttachMenuBot(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId, cached: cached)
         }

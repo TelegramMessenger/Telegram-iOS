@@ -327,7 +327,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     
     private var maxCaptionLength: Int32?
     
-    public init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, isAttachment: Bool = false, presentController: @escaping (ViewController) -> Void, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    public init(context: AccountContext, presentationInterfaceState: ChatPresentationInterfaceState, isCaption: Bool = false, isAttachment: Bool = false, isScheduledMessages: Bool = false, presentController: @escaping (ViewController) -> Void, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
         self.presentationInterfaceState = presentationInterfaceState
         self.isCaption = isCaption
@@ -374,8 +374,13 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         
         super.init()
         
-        self.actionButtons.sendButtonLongPressed = { [weak self] node, gesture in
-            self?.interfaceInteraction?.displaySendMessageOptions(node, gesture)
+        if !isScheduledMessages {
+            self.actionButtons.sendButtonLongPressed = { [weak self] node, gesture in
+                self?.interfaceInteraction?.displaySendMessageOptions(node, gesture)
+            }
+            self.actionButtons.sendButtonLongPressEnabled = true
+        } else {
+            self.actionButtons.sendButtonLongPressEnabled = false
         }
         
         self.actionButtons.sendButton.addTarget(self, action: #selector(self.sendButtonPressed), forControlEvents: .touchUpInside)
@@ -727,8 +732,6 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                     }
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
-                
-                self.actionButtons.sendButtonLongPressEnabled = true
             }
             
             let sendButtonHasApplyIcon = self.isCaption || interfaceState.interfaceState.editMessage != nil

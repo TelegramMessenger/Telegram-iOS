@@ -17,6 +17,7 @@ import TooltipUI
 public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let context: AccountContext
     private let chatLocation: ChatLocation
+    private let isScheduledMessages: Bool
     private let present: (ViewController) -> Void
     private let presentInGlobalOverlay:  (ViewController) -> Void
         
@@ -35,11 +36,13 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     public init(
         context: AccountContext,
         chatLocation: ChatLocation,
+        isScheduledMessages: Bool,
         present: @escaping (ViewController) -> Void,
         presentInGlobalOverlay: @escaping (ViewController) -> Void
     ) {
         self.context = context
         self.chatLocation = chatLocation
+        self.isScheduledMessages = isScheduledMessages
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
         
@@ -164,7 +167,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     strings: presentationData.strings,
                     style: .media,
                     placeholder: .plain(presentationData.strings.MediaPicker_AddCaption),
-                    maxLength: 1024,
+                    maxLength: Int(self.context.userLimits.maxCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
                     resetInputContents: resetInputContents,
@@ -191,7 +194,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     likeAction: nil,
                     likeOptionsAction: nil,
                     inputModeAction: nil,
-                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView, gesture in
+                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser && !self.isScheduledMessages ? { [weak self] sourceView, gesture in
                         if let self {
                             self.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
                         }
