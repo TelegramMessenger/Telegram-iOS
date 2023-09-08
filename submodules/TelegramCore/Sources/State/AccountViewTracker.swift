@@ -1328,7 +1328,7 @@ public final class AccountViewTracker {
                                 slice.append(inputPeers[i])
                             }
                             startIndex += batchCount
-                            requests.append(account.network.request(Api.functions.users.getStoriesMaxIDs(id: slice.map(\.1)))
+                            requests.append(account.network.request(Api.functions.stories.getStoriesMaxIDs(id: slice.map(\.1)))
                             |> `catch` { _ -> Signal<[Int32], NoError> in
                                 return .single([])
                             }
