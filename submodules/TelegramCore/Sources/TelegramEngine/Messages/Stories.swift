@@ -1047,7 +1047,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                         if !peerIds.contains(toPeerId) {
                                                             peerIds.append(toPeerId)
                                                         }
-                                                        transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                                                        transaction.replaceAllStorySubscriptions(key: subscriptionsKey, state: state, peerIds: peerIds)
                                                     }
                                                 }
                                                 
@@ -1976,7 +1976,11 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
 }
 
-func _internal_updateStoryViewsForMyReaction(views: Stories.Item.Views?, previousReaction: MessageReaction.Reaction?, reaction: MessageReaction.Reaction?) -> Stories.Item.Views? {
+func _internal_updateStoryViewsForMyReaction(isChannel: Bool, views: Stories.Item.Views?, previousReaction: MessageReaction.Reaction?, reaction: MessageReaction.Reaction?) -> Stories.Item.Views? {
+    if !isChannel {
+        return views
+    }
+    
     var views = views ?? Stories.Item.Views(seenCount: 0, reactedCount: 0, forwardCount: 0, seenPeerIds: [], reactions: [], hasList: false)
     
     if let reaction {
@@ -2040,7 +2044,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
         var updatedItemValue: Stories.StoredItem?
         
         let updateViews: (Stories.Item.Views?, MessageReaction.Reaction?) -> Stories.Item.Views? = { views, previousReaction in
-            return _internal_updateStoryViewsForMyReaction(views: views, previousReaction: previousReaction, reaction: reaction)
+            return _internal_updateStoryViewsForMyReaction(isChannel: peerId.namespace == Namespaces.Peer.CloudChannel, views: views, previousReaction: previousReaction, reaction: reaction)
         }
         
         var currentItems = transaction.getStoryItems(peerId: peerId)

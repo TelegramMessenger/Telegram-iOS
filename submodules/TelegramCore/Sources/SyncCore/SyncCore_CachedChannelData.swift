@@ -23,10 +23,10 @@ public struct CachedChannelFlags: OptionSet {
 }
 
 public struct CachedChannelParticipantsSummary: PostboxCoding, Equatable {
-    public let memberCount: Int32?
-    public let adminCount: Int32?
-    public let bannedCount: Int32?
-    public let kickedCount: Int32?
+    public var memberCount: Int32?
+    public var adminCount: Int32?
+    public var bannedCount: Int32?
+    public var kickedCount: Int32?
     
     public init(memberCount: Int32?, adminCount: Int32?, bannedCount: Int32?, kickedCount: Int32?) {
         self.memberCount = memberCount

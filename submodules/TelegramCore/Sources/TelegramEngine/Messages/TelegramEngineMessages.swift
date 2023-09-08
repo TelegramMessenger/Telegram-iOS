@@ -839,6 +839,17 @@ public extension TelegramEngine {
                             guard let peer = peerView.peer else {
                                 continue
                             }
+                            
+                            var isPeerHidden = false
+                            if let user = peer as? TelegramUser {
+                                isPeerHidden = user.storiesHidden ?? false
+                            } else if let channel = peer as? TelegramChannel {
+                                isPeerHidden = channel.storiesHidden ?? false
+                            }
+                            if isPeerHidden != isHidden {
+                                continue
+                            }
+                            
                             guard let itemsView = views.views[PostboxViewKey.storyItems(peerId: peerId)] as? StoryItemsView else {
                                 continue
                             }
@@ -909,6 +920,16 @@ public extension TelegramEngine {
                                         continue
                                     }
                                     guard let peer = peerView.peer else {
+                                        continue
+                                    }
+                                    
+                                    var isPeerHidden = false
+                                    if let user = peer as? TelegramUser {
+                                        isPeerHidden = user.storiesHidden ?? false
+                                    } else if let channel = peer as? TelegramChannel {
+                                        isPeerHidden = channel.storiesHidden ?? false
+                                    }
+                                    if isPeerHidden != isHidden {
                                         continue
                                     }
                                     

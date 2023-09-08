@@ -809,6 +809,7 @@ private final class GroupHeaderLayer: UIView {
     func update(
         context: AccountContext,
         theme: PresentationTheme,
+        forceNeedsVibrancy: Bool,
         layoutType: EmojiPagerContentComponent.ItemLayoutType,
         hasTopSeparator: Bool,
         actionButtonTitle: String?,
@@ -830,7 +831,7 @@ private final class GroupHeaderLayer: UIView {
             themeUpdated = true
         }
         
-        let needsVibrancy = !theme.overallDarkAppearance
+        let needsVibrancy = !theme.overallDarkAppearance || forceNeedsVibrancy
         
         let textOffsetY: CGFloat
         if hasTopSeparator {
@@ -839,16 +840,22 @@ private final class GroupHeaderLayer: UIView {
             textOffsetY = 0.0
         }
         
+        let subtitleColor: UIColor
+        if theme.overallDarkAppearance && forceNeedsVibrancy {
+            subtitleColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.withMultipliedAlpha(0.2)
+        } else {
+            subtitleColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+        }
+        
         let color: UIColor
         let needsTintText: Bool
         if subtitle != nil {
             color = theme.chat.inputPanel.primaryTextColor
             needsTintText = false
         } else {
-            color = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+            color = subtitleColor
             needsTintText = true
         }
-        let subtitleColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
         
         let titleHorizontalOffset: CGFloat
         if isPremiumLocked {
@@ -903,7 +910,7 @@ private final class GroupHeaderLayer: UIView {
             tintClearIconLayer.isHidden = !needsVibrancy
             
             clearSize = clearIconLayer.bounds.size
-            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor) {
+            if updateImage, let image = PresentationResourcesChat.chatInputMediaPanelGridDismissImage(theme, color: subtitleColor) {
                 clearSize = image.size
                 clearIconLayer.contents = image.cgImage
             }
@@ -1144,7 +1151,7 @@ private final class GroupHeaderLayer: UIView {
                 self.separatorLayer = separatorLayer
                 self.layer.addSublayer(separatorLayer)
             }
-            separatorLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
+            separatorLayer.backgroundColor = subtitleColor.cgColor
             separatorLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: UIScreenPixel))
             
             let tintSeparatorLayer: SimpleLayer
@@ -1517,6 +1524,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     private struct Params: Equatable {
         var context: AccountContext
         var theme: PresentationTheme
+        var forceNeedsVibrancy: Bool
         var strings: PresentationStrings
         var text: String
         var useOpaqueTheme: Bool
@@ -1533,6 +1541,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 return false
             }
             if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.forceNeedsVibrancy != rhs.forceNeedsVibrancy {
                 return false
             }
             if lhs.strings !== rhs.strings {
@@ -1823,10 +1834,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             return
         }
         self.params = nil
-        self.update(context: params.context, theme: params.theme, strings: params.strings, text: params.text, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, canFocus: params.canFocus, searchCategories: params.searchCategories, searchState: params.searchState, transition: transition)
+        self.update(context: params.context, theme: params.theme, forceNeedsVibrancy: params.forceNeedsVibrancy, strings: params.strings, text: params.text, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, canFocus: params.canFocus, searchCategories: params.searchCategories, searchState: params.searchState, transition: transition)
     }
     
-    public func update(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, searchState: EmojiPagerContentComponent.SearchState, transition: Transition) {
+    public func update(context: AccountContext, theme: PresentationTheme, forceNeedsVibrancy: Bool, strings: PresentationStrings, text: String, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, canFocus: Bool, searchCategories: EmojiSearchCategories?, searchState: EmojiPagerContentComponent.SearchState, transition: Transition) {
         let textInputState: EmojiSearchSearchBarComponent.TextInputState
         if let textField = self.textField {
             textInputState = .active(hasText: !(textField.text ?? "").isEmpty)
@@ -1837,6 +1848,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         let params = Params(
             context: context,
             theme: theme,
+            forceNeedsVibrancy: forceNeedsVibrancy,
             strings: strings,
             text: text,
             useOpaqueTheme: useOpaqueTheme,
@@ -1880,7 +1892,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         let sideTextInset: CGFloat = sideInset + 4.0 + 24.0
         
-        if useOpaqueTheme {
+        if theme.overallDarkAppearance && forceNeedsVibrancy {
+            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.withMultipliedAlpha(0.3).cgColor
+            self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+        } else if useOpaqueTheme {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
             self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
         } else {
@@ -1891,12 +1906,19 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.backgroundLayer.cornerRadius = inputHeight * 0.5
         self.tintBackgroundLayer.cornerRadius = inputHeight * 0.5
         
+        let cancelColor: UIColor
+        if theme.overallDarkAppearance && forceNeedsVibrancy {
+            cancelColor = theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor.withMultipliedAlpha(0.3)
+        } else {
+            cancelColor = useOpaqueTheme ? theme.list.itemAccentColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+        }
+        
         let cancelTextSize = self.cancelButtonTitle.update(
             transition: .immediate,
             component: AnyComponent(Text(
                 text: strings.Common_Cancel,
                 font: Font.regular(17.0),
-                color: useOpaqueTheme ? theme.list.itemAccentColor : theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+                color: cancelColor
             )),
             environment: {},
             containerSize: CGSize(width: size.width - 32.0, height: 100.0)
@@ -1942,6 +1964,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             transition: transition,
             component: AnyComponent(EmojiSearchStatusComponent(
                 theme: theme,
+                forceNeedsVibrancy: forceNeedsVibrancy,
                 strings: strings,
                 useOpaqueTheme: useOpaqueTheme,
                 content: statusContent
@@ -1990,6 +2013,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             component: AnyComponent(EmojiSearchSearchBarComponent(
                 context: context,
                 theme: theme,
+                forceNeedsVibrancy: forceNeedsVibrancy,
                 strings: strings,
                 useOpaqueTheme: useOpaqueTheme,
                 textInputState: textInputState,
@@ -5426,6 +5450,7 @@ public final class EmojiPagerContentComponent: Component {
                     let (groupHeaderSize, centralContentWidth) = groupHeaderView.update(
                         context: component.context,
                         theme: keyboardChildEnvironment.theme,
+                        forceNeedsVibrancy: component.inputInteractionHolder.inputInteraction?.externalBackground != nil,
                         layoutType: itemLayout.layoutType,
                         hasTopSeparator: hasTopSeparator,
                         actionButtonTitle: actionButtonTitle,
@@ -5467,7 +5492,14 @@ public final class EmojiPagerContentComponent: Component {
                         self.scrollView.layer.insertSublayer(groupBorderLayer, at: 0)
                         self.mirrorContentScrollView.layer.addSublayer(groupBorderLayer.tintContainerLayer)
                         
-                        groupBorderLayer.strokeColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.cgColor
+                        let borderColor: UIColor
+                        if keyboardChildEnvironment.theme.overallDarkAppearance && component.inputInteractionHolder.inputInteraction?.externalBackground != nil {
+                            borderColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.withMultipliedAlpha(0.2)
+                        } else {
+                            borderColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+                        }
+                        
+                        groupBorderLayer.strokeColor = borderColor.cgColor
                         groupBorderLayer.tintContainerLayer.strokeColor = UIColor.white.cgColor
                         groupBorderLayer.lineWidth = 1.6
                         groupBorderLayer.lineCap = .round
@@ -6854,7 +6886,7 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
-                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, searchState: component.searchState, transition: transition)
+                visibleSearchHeader.update(context: component.context, theme: keyboardChildEnvironment.theme, forceNeedsVibrancy: component.inputInteractionHolder.inputInteraction?.externalBackground != nil, strings: keyboardChildEnvironment.strings, text: displaySearchWithPlaceholder, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, canFocus: !component.searchIsPlaceholderOnly, searchCategories: component.searchCategories, searchState: component.searchState, transition: transition)
        
                 transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
                 // Temporary workaround for status selection; use a separate search container (see GIF)

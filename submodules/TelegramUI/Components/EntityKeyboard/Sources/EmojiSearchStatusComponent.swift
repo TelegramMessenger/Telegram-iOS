@@ -70,17 +70,20 @@ final class EmojiSearchStatusComponent: Component {
     }
     
     let theme: PresentationTheme
+    let forceNeedsVibrancy: Bool
     let strings: PresentationStrings
     let useOpaqueTheme: Bool
     let content: Content
 
     init(
         theme: PresentationTheme,
+        forceNeedsVibrancy: Bool,
         strings: PresentationStrings,
         useOpaqueTheme: Bool,
         content: Content
     ) {
         self.theme = theme
+        self.forceNeedsVibrancy = forceNeedsVibrancy
         self.strings = strings
         self.useOpaqueTheme = useOpaqueTheme
         self.content = content
@@ -88,6 +91,9 @@ final class EmojiSearchStatusComponent: Component {
     
     static func ==(lhs: EmojiSearchStatusComponent, rhs: EmojiSearchStatusComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.forceNeedsVibrancy != rhs.forceNeedsVibrancy {
             return false
         }
         if lhs.strings !== rhs.strings {
@@ -430,7 +436,13 @@ final class EmojiSearchStatusComponent: Component {
             let displaySize = CGSize(width: availableSize.width * UIScreenScale, height: availableSize.height * UIScreenScale)
             self.displaySize = displaySize
             
-            let overlayColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            let overlayColor: UIColor
+            if component.theme.overallDarkAppearance && component.forceNeedsVibrancy {
+                overlayColor = component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor.withMultipliedAlpha(0.3)
+            } else {
+                overlayColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            }
+            
             let baseColor: UIColor = .white
             
             if self.contentView.tintColor != overlayColor {

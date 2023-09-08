@@ -266,7 +266,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     @discardableResult
-    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
+    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {
             return nil
         }
@@ -275,6 +275,8 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         let context = self.context
         
         var storyTarget: Stories.PendingTarget?
+        var isPeerArchived = false
+        var updatedTransitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?
         
         var presentImpl: ((ViewController) -> Void)?
         var returnToCameraImpl: (() -> Void)?
@@ -295,7 +297,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 }
             },
             transitionOut: { finished in
-                if let transitionOut = transitionOut(finished ? storyTarget : nil), let destinationView = transitionOut.destinationView {
+                if let transitionOut = (updatedTransitionOut ?? transitionOut)(finished ? storyTarget : nil, isPeerArchived), let destinationView = transitionOut.destinationView {
                     return CameraScreen.TransitionOut(
                         destinationView: destinationView,
                         destinationRect: transitionOut.destinationRect,
@@ -353,7 +355,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                     isEditing: false,
                     transitionIn: transitionIn,
                     transitionOut: { finished, isNew in
-                        if finished, let transitionOut = transitionOut(storyTarget), let destinationView = transitionOut.destinationView {
+                        if finished, let transitionOut = (updatedTransitionOut ?? transitionOut)(storyTarget, false), let destinationView = transitionOut.destinationView {
                             return MediaEditorScreen.TransitionOut(
                                 destinationView: destinationView,
                                 destinationRect: transitionOut.destinationRect,
@@ -375,13 +377,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             return
                         }
                         
-                        let context = self.context
-                        if let rootTabController = self.rootTabController {
-                            if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
-                                rootTabController.selectedIndex = index
-                            }
-                        }
-                        
                         let target: Stories.PendingTarget
                         let targetPeerId: EnginePeer.Id
                         if let sendAsPeerId = options.sendAsPeerId {
@@ -393,84 +388,118 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         }
                         storyTarget = target
                         
-                        let completionImpl: () -> Void = { [weak self] in
-                            guard let self else {
+                        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: targetPeerId))
+                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                            guard let self, let peer else {
                                 return
                             }
                             
-                            if let chatListController = self.chatListController as? ChatListControllerImpl {
-                                let _ = (chatListController.hasPendingStories
-                                |> filter { $0 }
-                                |> take(1)
-                                |> timeout(0.25, queue: .mainQueue(), alternate: .single(true))
-                                |> deliverOnMainQueue).start(completed: { [weak chatListController] in
-                                    guard let chatListController else {
-                                        return
-                                    }
+                            if case let .user(user) = peer {
+                                isPeerArchived = user.storiesHidden ?? false
+                            } else if case let .channel(channel) = peer {
+                                isPeerArchived = channel.storiesHidden ?? false
+                            }
+                            
+                            let context = self.context
+                            if let rootTabController = self.rootTabController {
+                                if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
+                                    rootTabController.selectedIndex = index
+                                }
+                            }
+                            
+                            let completionImpl: () -> Void = { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                
+                                var chatListController: ChatListControllerImpl?
+                                
+                                if isPeerArchived {
+                                    var viewControllers = self.viewControllers
                                     
-                                    chatListController.scrollToStories(peerId: targetPeerId)
+                                    let archiveController = ChatListControllerImpl(context: context, location: .chatList(groupId: .archive), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+                                    updatedTransitionOut = archiveController.storyCameraTransitionOut()
+                                    chatListController = archiveController
+                                    viewControllers.insert(archiveController, at: 1)
+                                    self.setViewControllers(viewControllers, animated: false)
+                                } else {
+                                    chatListController = self.chatListController as? ChatListControllerImpl
+                                }
+                                 
+                                if let chatListController {
+                                    let _ = (chatListController.hasPendingStories
+                                    |> filter { $0 }
+                                    |> take(1)
+                                    |> timeout(isPeerArchived ? 0.5 : 0.25, queue: .mainQueue(), alternate: .single(true))
+                                    |> deliverOnMainQueue).start(completed: { [weak chatListController] in
+                                        guard let chatListController else {
+                                            return
+                                        }
+                                        
+                                        chatListController.scrollToStories(peerId: targetPeerId)
+                                        Queue.mainQueue().justDispatch {
+                                            commit({})
+                                        }
+                                    })
+                                } else {
                                     Queue.mainQueue().justDispatch {
                                         commit({})
                                     }
-                                })
-                            } else {
-                                Queue.mainQueue().justDispatch {
-                                    commit({})
                                 }
                             }
-                        }
-                        
-                        if let _ = self.chatListController as? ChatListControllerImpl {
-                            switch mediaResult {
-                            case let .image(image, dimensions):
-                                if let imageData = compressImageToJPEG(image, quality: 0.7) {
-                                    let entities = generateChatInputTextEntities(caption)
-                                    Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
-                                    let _ = (context.engine.messages.uploadStory(target: target, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
-                                    |> deliverOnMainQueue).start(next: { stableId in
-                                        moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
-                                    })
-                                    
-                                    completionImpl()
-                                }
-                            case let .video(content, firstFrameImage, values, duration, dimensions):
-                                let adjustments: VideoMediaResourceAdjustments
-                                if let valuesData = try? JSONEncoder().encode(values) {
-                                    let data = MemoryBuffer(data: valuesData)
-                                    let digest = MemoryBuffer(data: data.md5Digest())
-                                    adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
-                                    
-                                    let resource: TelegramMediaResource
-                                    switch content {
-                                    case let .imageFile(path):
-                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                                    case let .videoFile(path):
-                                        resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
-                                    case let .asset(localIdentifier):
-                                        resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
+                            
+                            if let _ = self.chatListController as? ChatListControllerImpl {
+                                switch mediaResult {
+                                case let .image(image, dimensions):
+                                    if let imageData = compressImageToJPEG(image, quality: 0.7) {
+                                        let entities = generateChatInputTextEntities(caption)
+                                        Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
+                                        let _ = (context.engine.messages.uploadStory(target: target, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
+                                        |> deliverOnMainQueue).start(next: { stableId in
+                                            moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
+                                        })
+                                        
+                                        completionImpl()
                                     }
-                                    let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
-                                    let firstFrameFile = imageData.flatMap { data -> TempBoxFile? in
-                                        let file = TempBox.shared.tempFile(fileName: "image.jpg")
-                                        if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {
-                                            return file
-                                        } else {
-                                            return nil
+                                case let .video(content, firstFrameImage, values, duration, dimensions):
+                                    let adjustments: VideoMediaResourceAdjustments
+                                    if let valuesData = try? JSONEncoder().encode(values) {
+                                        let data = MemoryBuffer(data: valuesData)
+                                        let digest = MemoryBuffer(data: data.md5Digest())
+                                        adjustments = VideoMediaResourceAdjustments(data: data, digest: digest, isStory: true)
+                                        
+                                        let resource: TelegramMediaResource
+                                        switch content {
+                                        case let .imageFile(path):
+                                            resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                        case let .videoFile(path):
+                                            resource = LocalFileVideoMediaResource(randomId: Int64.random(in: .min ... .max), path: path, adjustments: adjustments)
+                                        case let .asset(localIdentifier):
+                                            resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                         }
+                                        let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
+                                        let firstFrameFile = imageData.flatMap { data -> TempBoxFile? in
+                                            let file = TempBox.shared.tempFile(fileName: "image.jpg")
+                                            if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {
+                                                return file
+                                            } else {
+                                                return nil
+                                            }
+                                        }
+                                        Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
+                                        let entities = generateChatInputTextEntities(caption)
+                                        let _ = (context.engine.messages.uploadStory(target: target, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
+                                        |> deliverOnMainQueue).start(next: { stableId in
+                                            moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
+                                        })
+                                        
+                                        completionImpl()
                                     }
-                                    Logger.shared.log("MediaEditor", "Calling uploadStory for video, randomId \(randomId)")
-                                    let entities = generateChatInputTextEntities(caption)
-                                    let _ = (context.engine.messages.uploadStory(target: target, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
-                                    |> deliverOnMainQueue).start(next: { stableId in
-                                        moveStorySource(engine: context.engine, peerId: context.account.peerId, from: randomId, to: Int64(stableId))
-                                    })
-                                    
-                                    completionImpl()
                                 }
                             }
-                        }
-                        
-                        dismissCameraImpl?()
+                            
+                            dismissCameraImpl?()
+                        })
                     } as (Int64, MediaEditorScreen.Result?, [MediaArea], NSAttributedString, MediaEditorResultPrivacy, [TelegramMediaFile], @escaping (@escaping () -> Void) -> Void) -> Void
                 )
                 controller.cancelled = { showDraftTooltip in

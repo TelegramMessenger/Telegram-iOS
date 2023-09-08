@@ -16,6 +16,6 @@ public final class CachedLocalizationInfos: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: StringCodingKey.self)
 
-        try container.encode(self.list, forKey: "l")
+        try container.encode(self.list, forKey: "t")
     }
 }

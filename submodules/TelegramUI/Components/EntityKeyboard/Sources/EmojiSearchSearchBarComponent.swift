@@ -99,6 +99,7 @@ final class EmojiSearchSearchBarComponent: Component {
     
     let context: AccountContext
     let theme: PresentationTheme
+    let forceNeedsVibrancy: Bool
     let strings: PresentationStrings
     let useOpaqueTheme: Bool
     let textInputState: TextInputState
@@ -109,6 +110,7 @@ final class EmojiSearchSearchBarComponent: Component {
     init(
         context: AccountContext,
         theme: PresentationTheme,
+        forceNeedsVibrancy: Bool,
         strings: PresentationStrings,
         useOpaqueTheme: Bool,
         textInputState: TextInputState,
@@ -118,6 +120,7 @@ final class EmojiSearchSearchBarComponent: Component {
     ) {
         self.context = context
         self.theme = theme
+        self.forceNeedsVibrancy = forceNeedsVibrancy
         self.strings = strings
         self.useOpaqueTheme = useOpaqueTheme
         self.textInputState = textInputState
@@ -128,6 +131,9 @@ final class EmojiSearchSearchBarComponent: Component {
     
     static func ==(lhs: EmojiSearchSearchBarComponent, rhs: EmojiSearchSearchBarComponent) -> Bool {
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.forceNeedsVibrancy != rhs.forceNeedsVibrancy {
             return false
         }
         if lhs.strings !== rhs.strings {
@@ -456,7 +462,10 @@ final class EmojiSearchSearchBarComponent: Component {
                     }
                     
                     let color: UIColor
-                    if component.useOpaqueTheme {
+                    if component.theme.overallDarkAppearance && component.forceNeedsVibrancy {
+                        let tempColor = self.selectedItem == AnyHashable(item.id) ? component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlaySelectedColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+                        color = tempColor.withMultipliedAlpha(0.3)
+                    } else if component.useOpaqueTheme {
                         color = self.selectedItem == AnyHashable(item.id) ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlaySelectedColor : component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor
                     } else {
                         color = self.selectedItem == AnyHashable(item.id) ? component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlaySelectedColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
@@ -541,10 +550,18 @@ final class EmojiSearchSearchBarComponent: Component {
                 self.visibleItemViews.removeValue(forKey: id)
             }
             
+            let selectedColor: UIColor
+            if component.theme.overallDarkAppearance && component.forceNeedsVibrancy {
+                let tempColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayHighlightColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayHighlightColor
+                selectedColor = tempColor.withMultipliedAlpha(0.3)
+            } else {
+                selectedColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayHighlightColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayHighlightColor
+            }
+            
             if let selectedItem = self.selectedItem, let index = items.firstIndex(where: { AnyHashable($0.id) == selectedItem }) {
                 let selectedItemCenter = itemLayout.frame(at: index).center
                 let selectionSize = CGSize(width: 28.0, height: 28.0)
-                self.selectedItemBackground.backgroundColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayHighlightColor.cgColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayHighlightColor.cgColor
+                self.selectedItemBackground.backgroundColor = selectedColor.cgColor
                 self.selectedItemTintBackground.backgroundColor = UIColor(white: 1.0, alpha: 0.15).cgColor
                 self.selectedItemBackground.cornerRadius = selectionSize.height * 0.5
                 self.selectedItemTintBackground.cornerRadius = selectionSize.height * 0.5
@@ -609,12 +626,19 @@ final class EmojiSearchSearchBarComponent: Component {
             self.component = component
             self.componentState = state
             
+            let textColor: UIColor
+            if component.theme.overallDarkAppearance && component.forceNeedsVibrancy {
+                textColor = component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor.withMultipliedAlpha(0.3)
+            } else {
+                textColor = component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+            }
+            
             let textSize = self.textView.update(
                 transition: .immediate,
                 component: AnyComponent(Text(
                     text: component.strings.Common_Search,
                     font: Font.regular(17.0),
-                    color: component.useOpaqueTheme ? component.theme.chat.inputMediaPanel.panelContentOpaqueSearchOverlayColor : component.theme.chat.inputMediaPanel.panelContentVibrantSearchOverlayColor
+                    color: textColor
                 )),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - 32.0, height: 100.0)

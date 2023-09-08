@@ -8,7 +8,7 @@ import Postbox
 import AvatarNode
 
 public extension StoryContainerScreen {
-    static func openArchivedStories(context: AccountContext, parentController: ViewController, avatarNode: AvatarNode) {
+    static func openArchivedStories(context: AccountContext, parentController: ViewController, avatarNode: AvatarNode, sharedProgressDisposable: MetaDisposable?) {
         let storyContent = StoryContentContextImpl(context: context, isHidden: true, focusedPeerId: nil, singlePeer: false)
         let signal = storyContent.state
         |> take(1)
@@ -82,7 +82,10 @@ public extension StoryContainerScreen {
         }
         |> ignoreValues
         
-        let _ = avatarNode.pushLoadingStatus(signal: signal)
+        let disposable = avatarNode.pushLoadingStatus(signal: signal)
+        if let sharedProgressDisposable {
+            sharedProgressDisposable.set(disposable)
+        }
     }
     
     static func openPeerStories(context: AccountContext, peerId: EnginePeer.Id, parentController: ViewController, avatarNode: AvatarNode?, sharedProgressDisposable: MetaDisposable? = nil) {

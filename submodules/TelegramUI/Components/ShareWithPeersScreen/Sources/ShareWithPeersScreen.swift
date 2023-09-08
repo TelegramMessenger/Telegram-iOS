@@ -718,7 +718,6 @@ final class ShareWithPeersScreenComponent: Component {
                             return result
                         }
                     } else {
-                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
                         return .complete()
                     }
                 }
@@ -2693,12 +2692,6 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
-                    
-                    for peer in peers {
-                        if case let .channel(channel) = peer, participants[channel.id] == nil {
-                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
-                        }
-                    }
 
                     self.readySubject.set(true)
                 })
@@ -2811,7 +2804,9 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     }
                     for channel in adminedChannels {
                         if case let .channel(channel) = channel, channel.hasPermission(.postStories) {
-                            sendAsPeers.append(contentsOf: adminedChannels)
+                            if !sendAsPeers.contains(where: { $0.id == channel.id }) {
+                                sendAsPeers.append(contentsOf: adminedChannels)
+                            }
                         }
                     }
 
@@ -2832,12 +2827,6 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
-                    
-                    for peer in adminedChannels {
-                        if case let .channel(channel) = peer, participants[channel.id] == nil {
-                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
-                        }
-                    }
 
                     self.readySubject.set(true)
                 })
@@ -2957,12 +2946,6 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
-                    
-                    for peer in state.peers {
-                        if case let .channel(channel) = peer, participants[channel.id] == nil {
-                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
-                        }
-                    }
                     
                     self.readySubject.set(true)
                 })
@@ -3106,12 +3089,6 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                     )
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
-                    
-                    for peer in state.peers {
-                        if case let .channel(channel) = peer, participants[channel.id] == nil {
-                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: channel.id).start()
-                        }
-                    }
                     
                     self.readySubject.set(true)
                 })
