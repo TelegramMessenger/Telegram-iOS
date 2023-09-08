@@ -922,7 +922,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
         return transaction.getPeer(toPeerId).flatMap(apiInputPeer)
     }
     |> mapToSignal { inputPeer -> Signal<StoryUploadResult, NoError> in
-        guard let inputPeer else {
+        guard let inputPeer = inputPeer else {
             return .single(.completed(nil))
         }
         
@@ -1983,7 +1983,7 @@ func _internal_updateStoryViewsForMyReaction(isChannel: Bool, views: Stories.Ite
     
     var views = views ?? Stories.Item.Views(seenCount: 0, reactedCount: 0, forwardCount: 0, seenPeerIds: [], reactions: [], hasList: false)
     
-    if let reaction {
+    if let reaction = reaction {
         if previousReaction == nil {
             views.reactedCount += 1
         }
@@ -2112,7 +2112,7 @@ func _internal_setStoryReaction(account: Account, peerId: EnginePeer.Id, id: Int
         return (updatedItemValue, inputPeer)
     }
     |> mapToSignal { storyItem, inputPeer -> Signal<Never, NoError> in
-        guard let storyItem, let inputPeer = inputPeer else {
+        guard let storyItem = storyItem, let inputPeer = inputPeer else {
             return .complete()
         }
         

@@ -1164,6 +1164,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         
                         if type.hasPrefix("auth") {
                             updatedState.authorizationListUpdated = true
+                            let string = type.dropFirst(4).components(separatedBy: "_")
+                            if string.count == 2, let hash = Int64(string[0]), let timestamp = Int32(string[1]) {
+                                attributes.append(AuthSessionInfoAttribute(hash: hash, timestamp: timestamp))
+                            }
                         }
                         
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)

@@ -191,6 +191,10 @@ public final class AttachMenuBots: Equatable, Codable {
             
             try container.encode(Int32(self.flags.rawValue), forKey: .flags)
         }
+        
+        func withUpdatedFlags(_ flags: Flags) -> Bot {
+            return Bot(peerId: self.peerId, name: self.name, icons: self.icons, peerTypes: self.peerTypes, flags: flags)
+        }
     }
     
     private enum CodingKeys: String, CodingKey {
@@ -442,6 +446,23 @@ func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, 
     |> switchToLatest
 }
 
+func _internal_acceptAttachMenuBotDisclaimer(postbox: Postbox, botId: PeerId) -> Signal<Never, NoError> {
+    return postbox.transaction { transaction in
+        if let attachMenuBots = cachedAttachMenuBots(transaction: transaction) {
+            var updatedAttachMenuBots = attachMenuBots
+            if let index = attachMenuBots.bots.firstIndex(where: { $0.peerId == botId }) {
+                var updatedFlags = attachMenuBots.bots[index].flags
+                updatedFlags.remove(.showInSettingsDisclaimer)
+                let updatedBot = attachMenuBots.bots[index].withUpdatedFlags(updatedFlags)
+                var updatedBots = attachMenuBots.bots
+                updatedBots[index] = updatedBot
+                updatedAttachMenuBots = AttachMenuBots(hash: attachMenuBots.hash, bots: updatedBots)
+            }
+            setCachedAttachMenuBots(transaction: transaction, attachMenuBots: updatedAttachMenuBots)
+        }
+    } |> ignoreValues
+}
+
 public struct AttachMenuBot {
     public let peer: EnginePeer
     public let shortName: String
@@ -449,7 +470,7 @@ public struct AttachMenuBot {
     public let peerTypes: AttachMenuBots.Bot.PeerFlags
     public let flags: AttachMenuBots.Bot.Flags
     
-    init(peer: EnginePeer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags, flags: AttachMenuBots.Bot.Flags) {
+    public init(peer: EnginePeer, shortName: String, icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile], peerTypes: AttachMenuBots.Bot.PeerFlags, flags: AttachMenuBots.Bot.Flags) {
         self.peer = peer
         self.shortName = shortName
         self.icons = icons

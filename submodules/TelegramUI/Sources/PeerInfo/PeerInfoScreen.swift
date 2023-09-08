@@ -4640,10 +4640,29 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return
             }
-            self.openBotAppDisposable.set(((self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
+            
+            let presentationData = self.presentationData
+            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                self?.controller?.present(controller, in: .window(.root))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.35, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            let signal: Signal<String, RequestSimpleWebViewError> = self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
             |> afterDisposed {
-//                updateProgress()
-            })
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            
+            self.openBotAppDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] url in
                 guard let self else {
                     return
@@ -4669,6 +4688,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, bot: bot, completion: { [weak self] allowWrite in
                 guard let self else {
                     return
+                }
+                if bot.flags.contains(.showInSettingsDisclaimer) {
+                    let _ = self.context.engine.messages.acceptAttachMenuBotDisclaimer(botId: bot.peer.id).start()
                 }
                 if bot.flags.contains(.notActivated) {
                     let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
