@@ -207,10 +207,10 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 spacing = 2.0
                 alignment = .center
                 
-                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: item.strings.ChatList.SessionReview_PanelTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
                 titleString = titleStringValue
                 
-                textString = NSAttributedString(string: item.strings.ChatList_SessionReview_PanelText(newSessionReview.device, newSessionReview.location).0, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
+                textString = NSAttributedString(string: item.strings.ChatList_SessionReview_PanelText(newSessionReview.device, newSessionReview.location).string, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
                 
                 okButtonLayout = makeOkButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelConfirm, font: titleFont, textColor: item.theme.list.itemAccentColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
                 cancelButtonLayout = makeCancelButtonTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelReject, font: titleFont, textColor: item.theme.list.itemDestructiveColor), maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - sideInset - rightInset, height: 100.0)))
