@@ -1175,6 +1175,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
+    dict[2061518568] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
+    dict[-1021889145] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostOk($0) }
+    dict[-1532908712] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1574486984] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
@@ -2053,6 +2056,10 @@ public extension Api {
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.BoostsStatus:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.CanApplyBoostResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.PeerStories:
                 _1.serialize(buffer, boxed)

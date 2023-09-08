@@ -1481,7 +1481,9 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         if strongSelf.actionAtEnd == .stop && strongSelf.isCentral == true {
                             strongSelf.isPlayingPromise.set(false)
                             strongSelf.isPlaying = false
-                            strongSelf.updateControlsVisibility(true)
+                            if !item.isSecret {
+                                strongSelf.updateControlsVisibility(true)
+                            }
                         }
                     }
                 }

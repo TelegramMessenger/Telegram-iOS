@@ -100,7 +100,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     }
     
     public func onAnimateOut() {
-        self.tooltipController?.dismiss()
+        self.dismissTimeoutTooltip()
     }
     
     public func baseHeight() -> CGFloat {

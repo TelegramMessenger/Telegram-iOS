@@ -384,6 +384,8 @@
             
             id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)strongSelf->_currentItem;
             [strongSelf->_editingContext setTimer:timeout forItem:galleryEditableItem.editableMediaItem];
+            
+            [strongSelf->_selectionContext setItem:(id<TGMediaSelectableItem>)galleryEditableItem.editableMediaItem selected:true animated:true sender:nil];
         };
         
         _captionMixin.stickersContext = stickersContext;
@@ -1328,6 +1330,7 @@
 
 - (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual
 {
+    [_captionMixin onAnimateOut];
     if (transitionOutProgress > FLT_EPSILON)
         [self setAllInterfaceHidden:true delay:0.0 animated:true];
     else if (!manual)
