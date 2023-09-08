@@ -240,7 +240,6 @@ private final class StoryStealthModeSheetContentComponent: Component {
             contentHeight += contentSize.height
             contentHeight += 41.0
             
-            //TODO:localize
             let buttonText: String
             let content: AnyComponentWithIdentity<Empty>
             switch component.mode {
