@@ -771,7 +771,7 @@ public extension TelegramEngine {
                         }
                         
                         var accountPendingItemCount = 0
-                        if let localState {
+                        if let localState = localState {
                             for item in localState.items {
                                 if case .myStories = item.target {
                                     accountPendingItemCount += 1
@@ -869,7 +869,7 @@ public extension TelegramEngine {
                                 }
                             }
                             var maxPendingTimestamp: Int32?
-                            if let localState {
+                            if let localState = localState {
                                 for item in localState.items {
                                     if case .peer(peerId) = item.target {
                                         if let maxPendingTimestampValue = maxPendingTimestamp {
@@ -882,7 +882,7 @@ public extension TelegramEngine {
                             }
                             
                             var lastItemTimestamp = lastEntry.timestamp
-                            if let maxPendingTimestamp, maxPendingTimestamp > lastItemTimestamp {
+                            if let maxPendingTimestamp = maxPendingTimestamp, maxPendingTimestamp > lastItemTimestamp {
                                 lastItemTimestamp = maxPendingTimestamp
                             }
                             let item = EngineStorySubscriptions.Item(
@@ -902,7 +902,7 @@ public extension TelegramEngine {
                             }
                         }
                         
-                        if let localState {
+                        if let localState = localState {
                             for item in localState.items {
                                 if case let .peer(peerId) = item.target, !items.contains(where: { $0.peer.id == peerId }) {
                                     guard let peerView = views.views[PostboxViewKey.basicPeer(peerId)] as? BasicPeerView else {
