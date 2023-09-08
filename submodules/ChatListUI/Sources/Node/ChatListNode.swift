@@ -1634,7 +1634,7 @@ public final class ChatListNode: ListView {
                     return true
                 }))
                 
-                let _ = self.context.engine.privacy.confirmNewSessionReview(id: newSessionReview.id)
+                let _ = self.context.engine.privacy.confirmNewSessionReview(id: newSessionReview.id).start()
             } else {
                 self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
                 
