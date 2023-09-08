@@ -1328,6 +1328,10 @@
     [_captionMixin onAnimateOut];
 }
 
+- (void)onDismiss {
+    [_captionMixin onAnimateOut];
+}
+
 - (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual
 {
     [_captionMixin onAnimateOut];

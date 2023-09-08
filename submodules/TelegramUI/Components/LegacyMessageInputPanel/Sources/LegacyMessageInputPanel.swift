@@ -13,6 +13,8 @@ import MessageInputPanelComponent
 import TelegramPresentationData
 import ContextUI
 import TooltipUI
+import LegacyMessageInputPanelInputView
+import UndoUI
 
 public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let context: AccountContext
@@ -20,7 +22,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let isScheduledMessages: Bool
     private let present: (ViewController) -> Void
     private let presentInGlobalOverlay:  (ViewController) -> Void
-        
+    private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
+    
     private let state = ComponentState()
     private let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
     private let inputPanel = ComponentView<Empty>()
@@ -31,6 +34,9 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     
     private let hapticFeedback = HapticFeedback()
     
+    private var inputView: LegacyMessageInputPanelInputView?
+    private var isEmojiKeyboardActive = false
+    
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, keyboardHeight: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, metrics: LayoutMetrics)?
     
     public init(
@@ -38,13 +44,15 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         chatLocation: ChatLocation,
         isScheduledMessages: Bool,
         present: @escaping (ViewController) -> Void,
-        presentInGlobalOverlay: @escaping (ViewController) -> Void
+        presentInGlobalOverlay: @escaping (ViewController) -> Void,
+        makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?
     ) {
         self.context = context
         self.chatLocation = chatLocation
         self.isScheduledMessages = isScheduledMessages
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
+        self.makeEntityInputView = makeEntityInputView
         
         super.init()
         
@@ -98,6 +106,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     
     public func dismissInput() {
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+            self.isEmojiKeyboardActive = false
+            self.inputView = nil
             view.deactivateInput()
         }
     }
@@ -171,8 +181,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
                     resetInputContents: resetInputContents,
-                    nextInputMode: { _ in
-                        return .emoji
+                    nextInputMode: { [weak self] _ in
+                        if self?.isEmojiKeyboardActive == true {
+                            return .text
+                        } else {
+                            return .emoji
+                        }
                     },
                     areVoiceMessagesAvailable: false,
                     presentController: self.present,
@@ -193,7 +207,11 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     myReaction: nil,
                     likeAction: nil,
                     likeOptionsAction: nil,
-                    inputModeAction: nil,
+                    inputModeAction: { [weak self] in
+                        if let self {
+                            self.toggleInputMode()
+                        }
+                    },
                     timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser && !self.isScheduledMessages ? { [weak self] sourceView, gesture in
                         if let self {
                             self.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
@@ -217,6 +235,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     bottomInset: 0.0,
                     isFormattingLocked: false,
                     hideKeyboard: false,
+                    customInputView: self.inputView,
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
                     isChannel: false,
@@ -246,6 +265,47 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         }
         
         return inputPanelSize.height - 8.0
+    }
+    
+    private func toggleInputMode() {
+        self.isEmojiKeyboardActive = !self.isEmojiKeyboardActive
+        
+        if self.isEmojiKeyboardActive {
+            let inputView = self.makeEntityInputView()
+            inputView?.insertText = { [weak self] text in
+                if let self {
+                    self.inputPanelExternalState.insertText(text)
+                }
+            }
+            inputView?.deleteBackwards = { [weak self] in
+                if let self {
+                    self.inputPanelExternalState.deleteBackward()
+                }
+            }
+            inputView?.switchToKeyboard = { [weak self] in
+                if let self {
+                    self.isEmojiKeyboardActive = false
+                    self.inputView = nil
+                    self.update(transition: .immediate)
+                }
+            }
+            inputView?.presentController = { [weak self] c in
+                if let self {
+                    if !(c is UndoOverlayController) {
+                        self.isEmojiKeyboardActive = false
+                        if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                            view.deactivateInput(force: true)
+                        }
+                    }
+                    self.present(c)
+                }
+            }
+            self.inputView = inputView
+            self.update(transition: .immediate)
+        } else {
+            self.inputView = nil
+            self.update(transition: .immediate)
+        }
     }
     
     private func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?) {

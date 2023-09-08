@@ -282,7 +282,9 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
                             dismissImpl()
                         })
                     }
-                    sheetController.sendSilently = {
+                    sheetController.sendSilently = { [weak model] in
+                        model?.interfaceView.onDismiss()
+                        
                         completed(item.asset, true, nil, {
                             dismissImpl()
                         })

@@ -1633,7 +1633,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation: chatLocation,
             isScheduledMessages: isScheduledMessages,
             present: present,
-            presentInGlobalOverlay: presentInGlobalOverlay
+            presentInGlobalOverlay: presentInGlobalOverlay,
+            makeEntityInputView: {
+                return EntityInputView(context: context, isDark: true, areCustomEmojiEnabled: customEmojiAvailable)
+            }
         )
         return inputPanelNode
     }
