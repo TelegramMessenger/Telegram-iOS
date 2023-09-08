@@ -169,7 +169,7 @@ public final class NewSessionInfoContentComponent: Component {
             contentHeight += titleSize.height
             contentHeight += 16.0
             
-            let text: String = component.strings.SessionReview_Text(component.newSessionReview.device, component.newSessionReview.location).0
+            let text: String = component.strings.SessionReview_Text(component.newSessionReview.device, component.newSessionReview.location).string
             
             let mainText = NSMutableAttributedString()
             mainText.append(parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
