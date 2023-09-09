@@ -53,9 +53,10 @@ public class WebAppCancelButtonNode: ASDisplayNode {
     private let strings: PresentationStrings
     
     public func updateColor(_ color: UIColor?, transition: ContainedViewLayoutTransition) {
+        let previousColor = self.color
         self.color = color
         
-        if case let .animated(duration, curve) = transition {
+        if case let .animated(duration, curve) = transition, previousColor != color {
             if let snapshotView = self.view.snapshotContentTree() {
                 snapshotView.frame = self.bounds
                 self.view.addSubview(snapshotView)
