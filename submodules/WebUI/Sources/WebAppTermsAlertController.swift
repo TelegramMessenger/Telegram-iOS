@@ -374,14 +374,7 @@ public func webAppTermsAlertController(
     
     let title = presentationData.strings.WebApp_DisclaimerTitle
     let text = presentationData.strings.WebApp_DisclaimerText
-    let additionalText: String?
-    if bot.flags.contains(.showInSettings) {
-        additionalText = presentationData.strings.WebApp_DisclaimerShortcutsSettingsText(bot.peer.compactDisplayTitle).string
-    } else if bot.flags.contains(.showInAttachMenu) {
-        additionalText = presentationData.strings.WebApp_DisclaimerShortcutsText(bot.peer.compactDisplayTitle).string
-    } else {
-        additionalText = nil
-    }
+    let additionalText: String? = nil
     
     let contentNode = WebAppTermsAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, additionalText: additionalText, actions: actions)
     contentNode.openTerms = {
