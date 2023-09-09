@@ -1412,7 +1412,7 @@ final class StoryItemSetContainerSendMessage {
                                 peerType.insert(.sameBot)
                                 peerType.remove(.bot)
                             }
-                            let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                            let button: AttachmentButtonType = .app(bot)
                             if !bot.peerTypes.intersection(peerType).isEmpty {
                                 buttons.insert(button, at: 1)
                                 
@@ -1784,7 +1784,7 @@ final class StoryItemSetContainerSendMessage {
                         }*/
                         //TODO:gift controller
                         break
-                    case let .app(bot, botName, _):
+                    case let .app(bot):
                         var payload: String?
                         var fromAttachMenu = true
                         /*if case let .bot(_, botPayload, _) = subject {
@@ -1793,7 +1793,7 @@ final class StoryItemSetContainerSendMessage {
                         }*/
                         payload = nil
                         fromAttachMenu = true
-                        let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
+                        let params = WebAppParameters(peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)

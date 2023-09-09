@@ -800,7 +800,20 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     if let settings = data.globalSettings {
         for bot in settings.bots {
             if bot.flags.contains(.showInSettings) {
-                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: bot.peer.compactDisplayTitle, icon: PresentationResourcesSettings.passport, action: {
+                let iconSignal: Signal<UIImage?, NoError>
+                if let peer = PeerReference(bot.peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
+                    let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
+                    iconSignal = instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true)
+                    |> map { generator -> UIImage? in
+                        let size = CGSize(width: 29.0, height: 29.0)
+                        let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
+                        return context?.generateImage()
+                    }
+                    let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).start()
+                } else {
+                    iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
+                }
+                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: bot.peer.compactDisplayTitle, icon: nil, iconSignal: iconSignal, action: {
                     interaction.openBotApp(bot)
                 }))
                 appIndex += 1
@@ -4636,12 +4649,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        let proceed = { [weak self] in
+        let presentationData = self.presentationData
+        let proceed: (Bool) -> Void = { [weak self] installed in
             guard let self else {
                 return
             }
             
-            let presentationData = self.presentationData
             let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 self?.controller?.present(controller, in: .window(.root))
@@ -4676,6 +4689,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
                 controller.navigationPresentation = .flatModal
                 self.controller?.push(controller)
+                
+                if installed {
+                    Queue.mainQueue().after(0.3, {
+                        let text: String
+                        if bot.flags.contains(.showInSettings) {
+                            text = presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.peer.compactDisplayTitle).string
+                        } else {
+                            text = presentationData.strings.WebApp_ShortcutsAdded(bot.peer.compactDisplayTitle).string
+                        }
+                        controller.present(
+                            UndoOverlayController(presentationData: presentationData, content: .succeed(text: text), elevatedLayout: false, action: { _ in return false }),
+                            in: .current
+                        )
+                    })
+                }
             }, error: { [weak self] error in
                 if let self {
                     self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
@@ -4697,15 +4725,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     |> deliverOnMainQueue).start(error: { _ in
                         
                     }, completed: {
-                        proceed()
+                        proceed(true)
                     })
                 } else {
-                    proceed()
+                    proceed(false)
                 }
             })
             controller.present(alertController, in: .window(.root))
         } else {
-            proceed()
+            proceed(false)
         }
     }
     

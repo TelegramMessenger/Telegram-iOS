@@ -29,13 +29,15 @@ private final class RadialStatusSecretTimeoutContentNodeParameters: NSObject {
     let progress: CGFloat
     let sparks: Bool
     let particles: [ContentParticle]
+    let alphaProgress: CGFloat
     
-    init(color: UIColor, icon: RadialStatusNodeState.SecretTimeoutIcon, progress: CGFloat, sparks: Bool, particles: [ContentParticle]) {
+    init(color: UIColor, icon: RadialStatusNodeState.SecretTimeoutIcon, progress: CGFloat, sparks: Bool, particles: [ContentParticle], alphaProgress: CGFloat) {
         self.color = color
         self.icon = icon
         self.progress = progress
         self.sparks = sparks
         self.particles = particles
+        self.alphaProgress = alphaProgress
     }
 }
 
@@ -51,14 +53,17 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     private let icon: RadialStatusNodeState.SecretTimeoutIcon
     private let sparks: Bool
     
+    private var animationBeginTime: Double?
+    
     private var progress: CGFloat = 0.0
+    private var alphaProgress: CGFloat = 0.0
     private var particles: [ContentParticle] = []
     
-    private let animationNode = FireIconNode()
+    private var animationNode: FireIconNode?
     
     private var displayLink: CADisplayLink?
     
-    init(color: UIColor, beginTime: Double, timeout: Double, icon: RadialStatusNodeState.SecretTimeoutIcon, sparks: Bool) {
+    init(color: UIColor, beginTime: Double, timeout: Double, icon: RadialStatusNodeState.SecretTimeoutIcon, sparks: Bool, animate: Bool = true) {
         self.color = color
         self.beginTime = beginTime
         self.timeout = timeout
@@ -85,7 +90,13 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         self.displayLink?.add(to: RunLoop.main, forMode: .common)
         
         if case .flame = icon {
-            self.addSubnode(self.animationNode)
+            if !animate {
+                self.animationBeginTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+            }
+            
+            let animationNode = FireIconNode(animate: animate)
+            self.animationNode = animationNode
+            self.addSubnode(animationNode)
         }
     }
     
@@ -103,7 +114,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             offset = 0.08
         }
         let size = floorToScreenPixels(self.bounds.width * factor)
-        self.animationNode.frame = CGRect(x: floorToScreenPixels((self.bounds.width - size) / 2.0), y: ceil(self.bounds.height * offset), width: size, height: size)
+        self.animationNode?.frame = CGRect(x: floorToScreenPixels((self.bounds.width - size) / 2.0), y: ceil(self.bounds.height * offset), width: size, height: size)
     }
     
     override func animateOut(to: RadialStatusNodeState, completion: @escaping () -> Void) {
@@ -132,12 +143,23 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             return
         }
         
+        
         let absoluteTimestamp = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
+        
+        let alphaProgress: CGFloat
+        if let animationBeginTime = self.animationBeginTime {
+            let fadeInDuration: Double = 0.4
+            alphaProgress = max(0.0, min(1.0, (absoluteTimestamp - animationBeginTime) / fadeInDuration))
+        } else {
+            alphaProgress = 1.0
+        }
+        
         var progress = min(1.0, CGFloat((absoluteTimestamp - self.beginTime) / self.timeout))
         if self.timeout == 0x7fffffff {
             progress = 0.0
         }
         self.progress = progress
+        self.alphaProgress = alphaProgress
         
         if self.sparks {
             let lineWidth: CGFloat = 1.75
@@ -193,7 +215,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
     }
     
     override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
-        return RadialStatusSecretTimeoutContentNodeParameters(color: self.color, icon: self.icon, progress: self.progress, sparks: self.sparks, particles: self.particles)
+        return RadialStatusSecretTimeoutContentNodeParameters(color: self.color, icon: self.icon, progress: self.progress, sparks: self.sparks, particles: self.particles, alphaProgress: self.alphaProgress)
     }
     
     @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
@@ -240,6 +262,8 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * parameters.progress
             
             if drawArc {
+                context.setAlpha(parameters.alphaProgress)
+                
                 let path = CGMutablePath()
                 path.addArc(center: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
                 context.addPath(path)
@@ -248,7 +272,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             
             for particle in parameters.particles {
                 let size: CGFloat = 1.3
-                context.setAlpha(particle.alpha)
+                context.setAlpha(particle.alpha * parameters.alphaProgress)
                 context.fillEllipse(in: CGRect(origin: CGPoint(x: particle.position.x - size / 2.0, y: particle.position.y - size / 2.0), size: CGSize(width: size, height: size)))
             }
         }
@@ -256,9 +280,13 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
 }
 
 final class FireIconNode: ManagedAnimationNode {    
-    init() {
+    init(animate: Bool) {
         super.init(size: CGSize(width: 100.0, height: 100.0))
         
-        self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0))
+        if animate {
+            self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 0, endFrame: 120), duration: 2.0))
+        } else {
+            self.trackTo(item: ManagedAnimationItem(source: .local("anim_autoremove_on"), frames: .range(startFrame: 120, endFrame: 120), duration: 0.001))
+        }
     }
 }

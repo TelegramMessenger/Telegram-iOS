@@ -117,11 +117,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
-        
-        if let firstAction = self.actionNodes.first {
-            firstAction.actionEnabled = false
-        }
-        
+                
         self.acceptTermsCheckNode.valueChanged = { [weak self] value in
             if let strongSelf = self {
                 strongSelf.acceptedTerms = !strongSelf.acceptedTerms
@@ -150,6 +146,10 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:)))
         tapGesture.delegate = self
         self.view.addGestureRecognizer(tapGesture)
+        
+        if let firstAction = self.actionNodes.first {
+            firstAction.actionEnabled = false
+        }
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -366,7 +366,7 @@ public func webAppTermsAlertController(
     
     var dismissImpl: ((Bool) -> Void)?
     let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_DisclaimerContinue, action: {
-        completion(false)
+        completion(true)
         dismissImpl?(true)
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)

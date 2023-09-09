@@ -1483,7 +1483,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuForward, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
-                    interfaceInteraction.forwardMessages(selectAll ? messages : [message])
+                    interfaceInteraction.forwardMessages(selectAll || isImage ? messages : [message])
                     f(.dismissWithoutContent)
                 })))
             }

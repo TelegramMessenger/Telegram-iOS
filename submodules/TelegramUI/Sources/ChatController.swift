@@ -13367,7 +13367,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         peerType.insert(.sameBot)
                         peerType.remove(.bot)
                     }
-                    let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                    let button: AttachmentButtonType = .app(bot)
                     if !bot.peerTypes.intersection(peerType).isEmpty {
                         buttons.insert(button, at: 1)
                         
@@ -13408,17 +13408,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if !premiumGiftOptions.isEmpty {
                 buttons.insert(.gift, at: 1)
             }
-            
+        
             guard let initialButton = initialButton else {
                 if case let .bot(botId, botPayload, botJustInstalled) = subject {
                     if let button = allButtons.first(where: { button in
-                        if case let .app(botPeer, _, _) = button, botPeer.id == botId {
+                        if case let .app(bot) = button, bot.peer.id == botId {
                             return true
                         } else {
                             return false
                         }
-                    }), case let .app(_, botName, _) = button {
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: botJustInstalled ? strongSelf.presentationData.strings.WebApp_AddToAttachmentSucceeded(botName).string : strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                    }), case let .app(bot) = button {
+                        let content: UndoOverlayContent
+                        if botJustInstalled {
+                            if bot.flags.contains(.showInSettings) {
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string)
+                            } else {
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string)
+                            }
+                        } else {
+                            content = .info(title: nil, text: strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError, timeout: nil)
+                        }
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, action: { _ in return false }), in: .current)
                     } else {
                         let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                         |> deliverOnMainQueue).start(next: { bot in
@@ -13746,14 +13756,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: context.sharedContext.accountManager, peerId: peer.id).start()
                     }
-                case let .app(bot, botName, _):
+                case let .app(bot):
                     var payload: String?
                     var fromAttachMenu = true
                     if case let .bot(_, botPayload, _) = subject {
                         payload = botPayload
                         fromAttachMenu = false
                     }
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
+                    let params = WebAppParameters(peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
                     controller.openUrl = { [weak self] url, concealed, commit in
@@ -13780,6 +13790,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attachmentController.navigationPresentation = .flatModal
                 strongSelf.push(attachmentController)
                 strongSelf.attachmentController = attachmentController
+                
+                if case let .bot(botId, _, botJustInstalled) = subject, botJustInstalled {
+                    if let button = allButtons.first(where: { button in
+                        if case let .app(bot) = button, bot.peer.id == botId {
+                            return true
+                        } else {
+                            return false
+                        }
+                    }), case let .app(bot) = button {
+                        Queue.mainQueue().after(0.3) {
+                            let content: UndoOverlayContent
+                            if bot.flags.contains(.showInSettings) {
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string)
+                            } else {
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string)
+                            }
+                            attachmentController.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, action: { _ in return false }), in: .current)
+                        }
+                    }
+                }
             }
             
             if inputIsActive {

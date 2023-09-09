@@ -54,6 +54,8 @@
 - (void)editorTransitionIn;
 - (void)editorTransitionOut;
 
+- (void)onDismiss;
+
 - (void)setTabBarUserInteractionEnabled:(bool)enabled;
 
 @end

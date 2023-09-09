@@ -32,6 +32,7 @@ import FeaturedStickersScreen
 import Pasteboard
 import StickerPackPreviewUI
 import EntityKeyboardGifContent
+import LegacyMessageInputPanelInputView
 
 public final class EmptyInputView: UIView, UIInputViewAudioFeedback {
     public var enableInputClicksWhenVisible: Bool {
@@ -2080,7 +2081,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputView, UIInputViewAudioFeedback {
+public final class EntityInputView: UIInputView, LegacyMessageInputPanelInputView, AttachmentTextInputPanelInputView, UIInputViewAudioFeedback {
     private let context: AccountContext
     
     public var insertText: ((NSAttributedString) -> Void)?

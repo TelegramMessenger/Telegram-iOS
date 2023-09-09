@@ -142,6 +142,7 @@ public final class MessageInputPanelComponent: Component {
     public let bottomInset: CGFloat
     public let isFormattingLocked: Bool
     public let hideKeyboard: Bool
+    public let customInputView: UIView?
     public let forceIsEditing: Bool
     public let disabledPlaceholder: String?
     public let isChannel: Bool
@@ -194,6 +195,7 @@ public final class MessageInputPanelComponent: Component {
         bottomInset: CGFloat,
         isFormattingLocked: Bool,
         hideKeyboard: Bool,
+        customInputView: UIView?,
         forceIsEditing: Bool,
         disabledPlaceholder: String?,
         isChannel: Bool,
@@ -245,6 +247,7 @@ public final class MessageInputPanelComponent: Component {
         self.bottomInset = bottomInset
         self.isFormattingLocked = isFormattingLocked
         self.hideKeyboard = hideKeyboard
+        self.customInputView = customInputView
         self.forceIsEditing = forceIsEditing
         self.disabledPlaceholder = disabledPlaceholder
         self.isChannel = isChannel
@@ -326,6 +329,9 @@ public final class MessageInputPanelComponent: Component {
             return false
         }
         if lhs.hideKeyboard != rhs.hideKeyboard {
+            return false
+        }
+        if lhs.customInputView !== rhs.customInputView {
             return false
         }
         if lhs.forceIsEditing != rhs.forceIsEditing {
@@ -713,6 +719,7 @@ public final class MessageInputPanelComponent: Component {
                     textColor: UIColor(rgb: 0xffffff),
                     insets: UIEdgeInsets(top: 9.0, left: 8.0, bottom: 10.0, right: 48.0),
                     hideKeyboard: component.hideKeyboard,
+                    customInputView: component.customInputView,
                     resetText: component.resetInputContents.flatMap { resetInputContents in
                         switch resetInputContents {
                         case let .text(value):

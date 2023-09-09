@@ -224,7 +224,11 @@ public enum RadialStatusNodeState: Equatable {
             case .staticTimeout:
                 return RadialStatusIconContentNode(icon: .timeout, synchronous: synchronous)
             case let .secretTimeout(color, icon, beginTime, timeout, sparks):
-                return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon, sparks: sparks)
+                var animate = true
+                if let current = current as? RadialStatusIconContentNode, case .timeout = current.icon {
+                    animate = false
+                }
+                return RadialStatusSecretTimeoutContentNode(color: color, beginTime: beginTime, timeout: timeout, icon: icon, sparks: sparks, animate: animate)
         }
     }
 }

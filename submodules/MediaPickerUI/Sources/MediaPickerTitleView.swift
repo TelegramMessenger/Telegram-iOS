@@ -50,6 +50,7 @@ final class MediaPickerTitleView: UIView {
                 transition.updateAlpha(node: self.arrowNode, alpha: self.segmentsHidden ? 1.0 : 0.0)
                 transition.updateAlpha(node: self.segmentedControlNode, alpha: self.segmentsHidden ? 0.0 : 1.0)
                 self.segmentedControlNode.isUserInteractionEnabled = !self.segmentsHidden
+                self.buttonNode.isUserInteractionEnabled = self.isEnabled && self.segmentsHidden
             }
         }
     }
