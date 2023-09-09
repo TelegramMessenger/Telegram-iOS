@@ -1473,7 +1473,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     hasSettings = attachMenuBot?.flags.contains(.hasSettings) == true
                 }
             } else {
-                hasSettings = false
+                hasSettings = forceHasSettings
             }
             
             if hasSettings {

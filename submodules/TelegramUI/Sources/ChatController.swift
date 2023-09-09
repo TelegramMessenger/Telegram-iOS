@@ -13185,7 +13185,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: false)
+                let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
