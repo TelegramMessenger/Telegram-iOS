@@ -617,7 +617,7 @@ func _internal_channelsForStories(account: Account) -> Signal<[Peer], NoError> {
             }
         }
         
-        if let cachedPeers {
+        if let cachedPeers = cachedPeers {
             return .single(cachedPeers) |> then(remote)
         } else {
             return remote
