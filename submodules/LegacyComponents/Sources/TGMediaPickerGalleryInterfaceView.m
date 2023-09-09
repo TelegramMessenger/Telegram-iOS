@@ -384,6 +384,8 @@
             
             id<TGModernGalleryEditableItem> galleryEditableItem = (id<TGModernGalleryEditableItem>)strongSelf->_currentItem;
             [strongSelf->_editingContext setTimer:timeout forItem:galleryEditableItem.editableMediaItem];
+            
+            [strongSelf->_selectionContext setItem:(id<TGMediaSelectableItem>)galleryEditableItem.editableMediaItem selected:true animated:true sender:nil];
         };
         
         _captionMixin.stickersContext = stickersContext;
@@ -836,7 +838,7 @@
             id<TGMediaEditAdjustments> adjustments = dict[@"adjustments"];
             NSNumber *timer = dict[@"timer"];
             
-            [strongSelf->_captionMixin setTimeout:[timer intValue]];
+            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo];
             
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
             {
@@ -1326,8 +1328,13 @@
     [_captionMixin onAnimateOut];
 }
 
+- (void)onDismiss {
+    [_captionMixin onAnimateOut];
+}
+
 - (void)setTransitionOutProgress:(CGFloat)transitionOutProgress manual:(bool)manual
 {
+    [_captionMixin onAnimateOut];
     if (transitionOutProgress > FLT_EPSILON)
         [self setAllInterfaceHidden:true delay:0.0 animated:true];
     else if (!manual)

@@ -22,11 +22,11 @@
 
 @property (nonatomic, readonly) UIView * _Nonnull view;
 
-- (void)setTimeout:(int32_t)timeout;
+- (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo;
 
 - (NSAttributedString * _Nonnull)caption;
 - (void)setCaption:(NSAttributedString * _Nullable)caption;
-- (void)dismissInput;
+- (bool)dismissInput;
 
 - (void)animateView:(UIView * _Nonnull)view frame:(CGRect)frame;
 

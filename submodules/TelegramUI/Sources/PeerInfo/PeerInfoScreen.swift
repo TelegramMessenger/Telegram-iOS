@@ -800,7 +800,20 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     if let settings = data.globalSettings {
         for bot in settings.bots {
             if bot.flags.contains(.showInSettings) {
-                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: bot.peer.compactDisplayTitle, icon: PresentationResourcesSettings.passport, action: {
+                let iconSignal: Signal<UIImage?, NoError>
+                if let peer = PeerReference(bot.peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
+                    let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
+                    iconSignal = instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true)
+                    |> map { generator -> UIImage? in
+                        let size = CGSize(width: 29.0, height: 29.0)
+                        let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
+                        return context?.generateImage()
+                    }
+                    let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).start()
+                } else {
+                    iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
+                }
+                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), text: bot.peer.compactDisplayTitle, icon: nil, iconSignal: iconSignal, action: {
                     interaction.openBotApp(bot)
                 }))
                 appIndex += 1
@@ -808,7 +821,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
+    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
         interaction.openSettings(.stories)
     }))
     
@@ -4070,6 +4083,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
                     infoUpdated = true
                 }
+                if let previousBots = previousData?.globalSettings?.bots, previousBots.count != (data.globalSettings?.bots ?? []).count {
+                    infoUpdated = true
+                }
             }
             if previousCallsPrivate != currentCallsPrivate || (previousVideoCallsAvailable != currentVideoCallsAvailable && currentVideoCallsAvailable != nil) {
                 infoUpdated = true
@@ -4604,20 +4620,38 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let controller = self.controller else {
             return
         }
-        
-        let proceed = { [weak self] in
+        let presentationData = self.presentationData
+        let proceed: (Bool) -> Void = { [weak self] installed in
             guard let self else {
                 return
             }
-            self.openBotAppDisposable.set(((self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
+            
+            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                self?.controller?.present(controller, in: .window(.root))
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.35, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            let signal: Signal<String, RequestSimpleWebViewError> = self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
             |> afterDisposed {
-//                updateProgress()
-            })
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            
+            self.openBotAppDisposable.set((signal
             |> deliverOnMainQueue).start(next: { [weak self] url in
                 guard let self else {
                     return
                 }
-                let params = WebAppParameters(peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: true)
+                let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { _, _, _ in
@@ -4626,6 +4660,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 })
                 controller.navigationPresentation = .flatModal
                 self.controller?.push(controller)
+                
+                if installed {
+                    Queue.mainQueue().after(0.3, {
+                        let text: String
+                        if bot.flags.contains(.showInSettings) {
+                            text = presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.peer.compactDisplayTitle).string
+                        } else {
+                            text = presentationData.strings.WebApp_ShortcutsAdded(bot.peer.compactDisplayTitle).string
+                        }
+                        controller.present(
+                            UndoOverlayController(presentationData: presentationData, content: .succeed(text: text, timeout: 5.0), elevatedLayout: false, position: .top, action: { _ in return false }),
+                            in: .current
+                        )
+                    })
+                }
             }, error: { [weak self] error in
                 if let self {
                     self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
@@ -4634,13 +4683,28 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }))
         }
         
-        if bot.flags.contains(.showInSettingsDisclaimer) {
-            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, peer: bot.peer, completion: {
-                proceed()
+        if bot.flags.contains(.notActivated) || bot.flags.contains(.showInSettingsDisclaimer) {
+            let alertController = webAppTermsAlertController(context: self.context, updatedPresentationData: controller.updatedPresentationData, bot: bot, completion: { [weak self] allowWrite in
+                guard let self else {
+                    return
+                }
+                if bot.flags.contains(.showInSettingsDisclaimer) {
+                    let _ = self.context.engine.messages.acceptAttachMenuBotDisclaimer(botId: bot.peer.id).start()
+                }
+                if bot.flags.contains(.notActivated) {
+                    let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
+                    |> deliverOnMainQueue).start(error: { _ in
+                        
+                    }, completed: {
+                        proceed(true)
+                    })
+                } else {
+                    proceed(false)
+                }
             })
             controller.present(alertController, in: .window(.root))
         } else {
-            proceed()
+            proceed(false)
         }
     }
     

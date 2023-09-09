@@ -290,6 +290,7 @@ final class StoryPreviewComponent: Component {
                     bottomInset: 0.0,
                     isFormattingLocked: false,
                     hideKeyboard: false,
+                    customInputView: nil,
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
                     isChannel: false,

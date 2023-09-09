@@ -1214,6 +1214,7 @@ final class MediaEditorScreenComponent: Component {
                     bottomInset: 0.0,
                     isFormattingLocked: !state.isPremium,
                     hideKeyboard: self.currentInputMode == .emoji,
+                    customInputView: nil,
                     forceIsEditing: self.currentInputMode == .emoji,
                     disabledPlaceholder: nil,
                     isChannel: false,

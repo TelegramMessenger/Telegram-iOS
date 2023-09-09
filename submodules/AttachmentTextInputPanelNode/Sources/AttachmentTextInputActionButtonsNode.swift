@@ -82,6 +82,7 @@ final class AttachmentTextInputActionButtonsNode: ASDisplayNode {
         super.didLoad()
         
         let gestureRecognizer = ContextGesture(target: nil, action: nil)
+        gestureRecognizer.isEnabled = self.sendButtonLongPressEnabled
         self.gestureRecognizer = gestureRecognizer
         self.sendButton.view.addGestureRecognizer(gestureRecognizer)
         gestureRecognizer.activated = { [weak self] recognizer, _ in

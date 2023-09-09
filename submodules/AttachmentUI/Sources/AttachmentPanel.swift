@@ -200,15 +200,15 @@ private final class AttachButtonComponent: CombinedComponent {
             case .gift:
                 name = strings.Attachment_Gift
                 imageName = "Chat/Attach Menu/Gift"
-            case let .app(peer, appName, appIcons):
-                botPeer = peer
-                name = appName
+            case let .app(bot):
+                botPeer = bot.peer
+                name = bot.shortName
                 imageName = ""
-                if let file = appIcons[.iOSAnimated] {
+                if let file = bot.icons[.iOSAnimated] {
                     animationFile = file
-                } else if let file = appIcons[.iOSStatic] {
+                } else if let file = bot.icons[.iOSStatic] {
                     imageFile = file
-                } else if let file = appIcons[.default] {
+                } else if let file = bot.icons[.default] {
                     imageFile = file
                 }
             case .standalone:
@@ -725,6 +725,7 @@ private final class MainButtonNode: HighlightTrackingButtonNode {
 
 final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private let isScheduledMessages: Bool
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
@@ -775,9 +776,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation?, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        self.isScheduledMessages = isScheduledMessages
         
         self.makeEntityInputView = makeEntityInputView
                 
@@ -1140,10 +1142,10 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             
             let type = self.buttons[i]
-            if case let .app(peer, _, iconFiles) = type {
-                for (name, file) in iconFiles {
-                    if [.default, .iOSAnimated, .placeholder].contains(name) {
-                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(peer._asPeer()) {
+            if case let .app(bot) = type {
+                for (name, file) in bot.icons {
+                    if [.default, .iOSAnimated, .iOSSettingsStatic, .placeholder].contains(name) {
+                        if self.iconDisposables[file.fileId] == nil, let peer = PeerReference(bot.peer._asPeer()) {
                             if case .placeholder = name {
                                 let account = self.context.account
                                 let path = account.postbox.mediaBox.cachedRepresentationCompletePath(file.resource.id, representation: CachedPreparedSvgRepresentation())
@@ -1212,8 +1214,8 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 accessibilityTitle = self.presentationData.strings.Attachment_Poll
             case .gift:
                 accessibilityTitle = self.presentationData.strings.Attachment_Gift
-            case let .app(_, appName, _):
-                accessibilityTitle = appName
+            case let .app(bot):
+                accessibilityTitle = bot.shortName
             case .standalone:
                 accessibilityTitle = ""
             }
@@ -1248,7 +1250,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private func loadTextNodeIfNeeded() {
         if let _ = self.textInputPanelNode {
         } else {
-            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, isAttachment: true, presentController: { [weak self] c in
+            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, isAttachment: true, isScheduledMessages: self.isScheduledMessages, presentController: { [weak self] c in
                 if let strongSelf = self {
                     strongSelf.present(c)
                 }

@@ -19,7 +19,7 @@ public enum AttachmentButtonType: Equatable {
     case location
     case contact
     case poll
-    case app(EnginePeer, String, [AttachMenuBots.Bot.IconName: TelegramMediaFile])
+    case app(AttachMenuBot)
     case gift
     case standalone
     
@@ -55,8 +55,8 @@ public enum AttachmentButtonType: Equatable {
                 } else {
                     return false
                 }
-            case let .app(lhsPeer, lhsTitle, lhsIcons):
-                if case let .app(rhsPeer, rhsTitle, rhsIcons) = rhs, lhsPeer == rhsPeer, lhsTitle == rhsTitle, lhsIcons == rhsIcons {
+            case let .app(lhsBot):
+                if case let .app(rhsBot) = rhs, lhsBot.peer.id == rhsBot.peer.id {
                     return true
                 } else {
                     return false
@@ -179,6 +179,7 @@ public class AttachmentController: ViewController {
     private let context: AccountContext
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private let chatLocation: ChatLocation?
+    private let isScheduledMessages: Bool
     private let buttons: [AttachmentButtonType]
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
@@ -294,7 +295,7 @@ public class AttachmentController: ViewController {
             
             self.container = AttachmentContainer()
             self.container.canHaveKeyboardFocus = true
-            self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
+            self.panel = AttachmentPanel(context: controller.context, chatLocation: controller.chatLocation, isScheduledMessages: controller.isScheduledMessages, updatedPresentationData: controller.updatedPresentationData, makeEntityInputView: makeEntityInputView)
             self.panel.fromMenu = controller.fromMenu
             self.panel.isStandalone = controller.isStandalone
             
@@ -445,9 +446,9 @@ public class AttachmentController: ViewController {
             
             if let controller = self.controller {
                 let _ = self.switchToController(controller.initialButton)
-                if case let .app(bot, _, _) = controller.initialButton {
+                if case let .app(bot) = controller.initialButton {
                     if let index = controller.buttons.firstIndex(where: {
-                        if case let .app(otherBot, _, _) = $0, otherBot.id == bot.id {
+                        if case let .app(otherBot) = $0, otherBot.peer.id == bot.peer.id {
                             return true
                         } else {
                             return false
@@ -907,10 +908,11 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation
+        self.isScheduledMessages = isScheduledMessages
         self.buttons = buttons
         self.initialButton = initialButton
         self.fromMenu = fromMenu

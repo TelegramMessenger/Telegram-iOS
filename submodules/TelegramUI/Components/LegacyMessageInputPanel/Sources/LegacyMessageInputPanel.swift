@@ -13,13 +13,17 @@ import MessageInputPanelComponent
 import TelegramPresentationData
 import ContextUI
 import TooltipUI
+import LegacyMessageInputPanelInputView
+import UndoUI
 
 public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private let context: AccountContext
     private let chatLocation: ChatLocation
+    private let isScheduledMessages: Bool
     private let present: (ViewController) -> Void
     private let presentInGlobalOverlay:  (ViewController) -> Void
-        
+    private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
+    
     private let state = ComponentState()
     private let inputPanelExternalState = MessageInputPanelComponent.ExternalState()
     private let inputPanel = ComponentView<Empty>()
@@ -27,21 +31,29 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private var currentTimeout: Int32?
     private var currentIsEditing = false
     private var currentHeight: CGFloat?
+    private var currentIsVideo = false
     
     private let hapticFeedback = HapticFeedback()
+    
+    private var inputView: LegacyMessageInputPanelInputView?
+    private var isEmojiKeyboardActive = false
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, keyboardHeight: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, metrics: LayoutMetrics)?
     
     public init(
         context: AccountContext,
         chatLocation: ChatLocation,
+        isScheduledMessages: Bool,
         present: @escaping (ViewController) -> Void,
-        presentInGlobalOverlay: @escaping (ViewController) -> Void
+        presentInGlobalOverlay: @escaping (ViewController) -> Void,
+        makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?
     ) {
         self.context = context
         self.chatLocation = chatLocation
+        self.isScheduledMessages = isScheduledMessages
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
+        self.makeEntityInputView = makeEntityInputView
         
         super.init()
         
@@ -84,23 +96,34 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         transition.setFrame(view: view, frame: frame)
     }
     
-    public func setTimeout(_ timeout: Int32) {
+    public func setTimeout(_ timeout: Int32, isVideo: Bool) {
         self.dismissTimeoutTooltip()
         var timeout: Int32? = timeout
         if timeout == 0 {
             timeout = nil
         }
         self.currentTimeout = timeout
+        self.currentIsVideo = isVideo
     }
     
-    public func dismissInput() {
+    public func dismissInput() -> Bool {
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-            view.deactivateInput()
+            if view.canDeactivateInput() {
+                self.isEmojiKeyboardActive = false
+                self.inputView = nil
+                view.deactivateInput(force: true)
+                return true
+            } else {
+                view.animateError()
+                return false
+            }
+        } else {
+            return true
         }
     }
     
     public func onAnimateOut() {
-        self.tooltipController?.dismiss()
+        self.dismissTimeoutTooltip()
     }
     
     public func baseHeight() -> CGFloat {
@@ -145,6 +168,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         var maxInputPanelHeight = maxHeight
         if keyboardHeight.isZero {
             maxInputPanelHeight = 60.0
+        } else {
+            maxInputPanelHeight = maxHeight - keyboardHeight - 100.0
         }
         
         var resetInputContents: MessageInputPanelComponent.SendMessageInput?
@@ -164,12 +189,16 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     strings: presentationData.strings,
                     style: .media,
                     placeholder: .plain(presentationData.strings.MediaPicker_AddCaption),
-                    maxLength: 1024,
+                    maxLength: Int(self.context.userLimits.maxCaptionLength),
                     queryTypes: [.mention],
                     alwaysDarkWhenHasText: false,
                     resetInputContents: resetInputContents,
-                    nextInputMode: { _ in
-                        return .emoji
+                    nextInputMode: { [weak self] _ in
+                        if self?.isEmojiKeyboardActive == true {
+                            return .text
+                        } else {
+                            return .emoji
+                        }
                     },
                     areVoiceMessagesAvailable: false,
                     presentController: self.present,
@@ -177,7 +206,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     sendMessageAction: { [weak self] in
                         if let self {
                             self.sendPressed?(self.caption())
-                            self.dismissInput()
+                            let _ = self.dismissInput()
                         }
                     },
                     sendMessageOptionsAction: nil,
@@ -190,8 +219,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     myReaction: nil,
                     likeAction: nil,
                     likeOptionsAction: nil,
-                    inputModeAction: nil,
-                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser ? { [weak self] sourceView, gesture in
+                    inputModeAction: { [weak self] in
+                        if let self {
+                            self.toggleInputMode()
+                        }
+                    },
+                    timeoutAction: self.chatLocation.peerId?.namespace == Namespaces.Peer.CloudUser && !self.isScheduledMessages ? { [weak self] sourceView, gesture in
                         if let self {
                             self.presentTimeoutSetup(sourceView: sourceView, gesture: gesture)
                         }
@@ -214,6 +247,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     bottomInset: 0.0,
                     isFormattingLocked: false,
                     hideKeyboard: false,
+                    customInputView: self.inputView,
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
                     isChannel: false,
@@ -245,6 +279,47 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         return inputPanelSize.height - 8.0
     }
     
+    private func toggleInputMode() {
+        self.isEmojiKeyboardActive = !self.isEmojiKeyboardActive
+        
+        if self.isEmojiKeyboardActive {
+            let inputView = self.makeEntityInputView()
+            inputView?.insertText = { [weak self] text in
+                if let self {
+                    self.inputPanelExternalState.insertText(text)
+                }
+            }
+            inputView?.deleteBackwards = { [weak self] in
+                if let self {
+                    self.inputPanelExternalState.deleteBackward()
+                }
+            }
+            inputView?.switchToKeyboard = { [weak self] in
+                if let self {
+                    self.isEmojiKeyboardActive = false
+                    self.inputView = nil
+                    self.update(transition: .immediate)
+                }
+            }
+            inputView?.presentController = { [weak self] c in
+                if let self {
+                    if !(c is UndoOverlayController) {
+                        self.isEmojiKeyboardActive = false
+                        if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+                            view.deactivateInput(force: true)
+                        }
+                    }
+                    self.present(c)
+                }
+            }
+            self.inputView = inputView
+            self.update(transition: .immediate)
+        } else {
+            self.inputView = nil
+            self.update(transition: .immediate)
+        }
+    }
+    
     private func presentTimeoutSetup(sourceView: UIView, gesture: ContextGesture?) {
         self.hapticFeedback.impact(.light)
         
@@ -252,10 +327,13 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
 
         let updateTimeout: (Int32?) -> Void = { [weak self] timeout in
             if let self {
+                let previousTimeout = self.currentTimeout
                 self.currentTimeout = timeout
                 self.timerUpdated?(timeout as? NSNumber)
                 self.update(transition: .immediate)
-                self.presentTimeoutTooltip(sourceView: sourceView, timeout: timeout)
+                if previousTimeout != timeout {
+                    self.presentTimeoutTooltip(sourceView: sourceView, timeout: timeout)
+                }
             }
         }
                 
@@ -317,7 +395,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
         let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 2.0), size: CGSize())
         
-        let isVideo = !"".isEmpty
+        let isVideo = self.currentIsVideo
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let text: String
         let iconName: String

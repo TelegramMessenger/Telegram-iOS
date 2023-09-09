@@ -4192,10 +4192,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             case let .message(message, _, _, _, _):
                 for media in message.media {
                     if let action = media as? TelegramMediaAction {
-                        if case .phoneCall = action.action { } else {
+                        if case .phoneCall = action.action {
+                        } else {
                             canHaveSelection = false
                             break
                         }
+                    } else if media is TelegramMediaExpiredContent {
+                        canHaveSelection = false
                     }
                 }
                 if message.adAttribute != nil {

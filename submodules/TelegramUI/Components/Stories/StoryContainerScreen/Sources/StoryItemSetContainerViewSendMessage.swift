@@ -1401,7 +1401,7 @@ final class StoryItemSetContainerSendMessage {
                                 peerType.insert(.sameBot)
                                 peerType.remove(.bot)
                             }
-                            let button: AttachmentButtonType = .app(bot.peer, bot.shortName, bot.icons)
+                            let button: AttachmentButtonType = .app(bot)
                             if !bot.peerTypes.intersection(peerType).isEmpty {
                                 buttons.insert(button, at: 1)
                                 
@@ -1773,16 +1773,8 @@ final class StoryItemSetContainerSendMessage {
                         }*/
                         //TODO:gift controller
                         break
-                    case let .app(bot, botName, _):
-                        var payload: String?
-                        var fromAttachMenu = true
-                        /*if case let .bot(_, botPayload, _) = subject {
-                            payload = botPayload
-                            fromAttachMenu = false
-                        }*/
-                        payload = nil
-                        fromAttachMenu = true
-                        let params = WebAppParameters(peerId: peer.id, botId: bot.id, botName: botName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false)
+                    case let .app(bot):
+                        let params = WebAppParameters(source: .attachMenu, peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: false)
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)
@@ -2290,7 +2282,7 @@ final class StoryItemSetContainerSendMessage {
             return nil
         }
         //TODO:self.presentationInterfaceState.customEmojiAvailable
-        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), customEmojiAvailable: true, present: { [weak view] c in
+        return component.context.sharedContext.makeGalleryCaptionPanelView(context: component.context, chatLocation: .peer(id: peer.id), isScheduledMessages: false, customEmojiAvailable: true, present: { [weak view] c in
             guard let view else {
                 return
             }

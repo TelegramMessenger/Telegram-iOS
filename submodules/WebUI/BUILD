@@ -32,6 +32,7 @@ swift_library(
         "//submodules/InstantPageUI:InstantPageUI",
         "//submodules/CheckNode:CheckNode",
         "//submodules/Markdown:Markdown",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

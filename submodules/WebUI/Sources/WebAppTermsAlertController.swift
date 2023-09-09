@@ -12,24 +12,27 @@ import AppBundle
 import AvatarNode
 import CheckNode
 import Markdown
+import TextFormat
 
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-private func formattedText(_ text: String, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
-    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: color), bold: MarkdownAttributeSet(font: boldTextFont, textColor: color), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { _ in return nil}), textAlignment: textAlignment)
+private func formattedText(_ text: String, fontSize: CGFloat, color: UIColor, linkColor: UIColor, textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
+    return parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: color), bold: MarkdownAttributeSet(font: Font.semibold(fontSize), textColor: color), link: MarkdownAttributeSet(font: Font.regular(fontSize), textColor: linkColor), linkAttribute: { _ in return (TelegramTextAttributes.URL, "") }), textAlignment: textAlignment)
 }
 
-private final class WebAppTermsAlertContentNode: AlertContentNode {
+private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureRecognizerDelegate {
     private let strings: PresentationStrings
     private let title: String
     private let text: String
+    private let additionalText: String?
     
     private let titleNode: ImmediateTextNode
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
+    private let additionalTextNode: ImmediateTextNode
         
     private let acceptTermsCheckNode: InteractiveCheckNode
-    private let acceptTermsLabelNode: ASTextNode
+    private let acceptTermsLabelNode: ImmediateTextNode
     
     private let actionNodesSeparator: ASDisplayNode
     private let actionNodes: [TextAlertContentActionNode]
@@ -50,24 +53,34 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
         }
     }
     
-    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, actions: [TextAlertAction]) {
+    var openTerms: () -> Void = {}
+    
+    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, title: String, text: String, additionalText: String?, actions: [TextAlertAction]) {
         self.strings = strings
         self.title = title
         self.text = text
+        self.additionalText = additionalText
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.textAlignment = .center
         
-        self.textNode = ASTextNode()
-        self.textNode.displaysAsynchronously = false
+        self.textNode = ImmediateTextNode()
         self.textNode.maximumNumberOfLines = 0
+        self.textNode.displaysAsynchronously = false
+        self.textNode.lineSpacing = 0.1
+        self.textNode.textAlignment = .center
+        
+        self.additionalTextNode = ImmediateTextNode()
+        self.additionalTextNode.maximumNumberOfLines = 0
+        self.additionalTextNode.displaysAsynchronously = false
+        self.additionalTextNode.lineSpacing = 0.1
+        self.additionalTextNode.textAlignment = .center
         
         self.acceptTermsCheckNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
-        self.acceptTermsLabelNode = ASTextNode()
+        self.acceptTermsLabelNode = ImmediateTextNode()
         self.acceptTermsLabelNode.maximumNumberOfLines = 4
-        self.acceptTermsLabelNode.isUserInteractionEnabled = true
        
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -90,6 +103,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
         
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.additionalTextNode)
 
         self.addSubnode(self.acceptTermsCheckNode)
         self.addSubnode(self.acceptTermsLabelNode)
@@ -103,14 +117,23 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
-        
-        if let firstAction = self.actionNodes.first {
-            firstAction.actionEnabled = false
-        }
-        
+                
         self.acceptTermsCheckNode.valueChanged = { [weak self] value in
             if let strongSelf = self {
                 strongSelf.acceptedTerms = !strongSelf.acceptedTerms
+            }
+        }
+        
+        self.acceptTermsLabelNode.highlightAttributeAction = { attributes in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+            } else {
+                return nil
+            }
+        }
+        self.acceptTermsLabelNode.tapAttributeAction = { [weak self] attributes, _ in
+            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                self?.openTerms()
             }
         }
         
@@ -120,21 +143,72 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
     override func didLoad() {
         super.didLoad()
         
-        self.acceptTermsLabelNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:))))
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:)))
+        tapGesture.delegate = self
+        self.view.addGestureRecognizer(tapGesture)
+        
+        if let firstAction = self.actionNodes.first {
+            firstAction.actionEnabled = false
+        }
+    }
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        let location = gestureRecognizer.location(in: self.acceptTermsLabelNode.view)
+        if self.acceptTermsLabelNode.bounds.contains(location) {
+            return true
+        }
+        return false
+    }
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
+        
+        if let (_, attributes) = self.acceptTermsLabelNode.attributesAtPoint(self.view.convert(point, to: self.acceptTermsLabelNode.view)) {
+            if attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] == nil {
+                return self.view
+            }
+        }
+        
+        return super.hitTest(point, with: event)
     }
     
     @objc private func acceptTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        let location = gestureRecognizer.location(in: self.acceptTermsLabelNode.view)
         if self.acceptTermsCheckNode.isUserInteractionEnabled {
+            if let attributes = self.acceptTermsLabelNode.attributesAtPoint(location)?.1 {
+                if attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] != nil {
+                    return
+                }
+            }
             self.acceptedTerms = !self.acceptedTerms
         }
     }
     
     override func updateTheme(_ theme: AlertControllerTheme) {
         self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.semibold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = formattedText(self.text, fontSize: 13.0, color: theme.primaryColor, linkColor: theme.accentColor, textAlignment: .center)
+        if let additionalText = self.additionalText {
+            self.additionalTextNode.attributedText = formattedText(additionalText, fontSize: 13.0, color: theme.primaryColor, linkColor: theme.accentColor, textAlignment: .center)
+        } else {
+            self.additionalTextNode.attributedText = nil
+        }
 
-        let text = "I agree to the [Terms of Use]()"
-        self.acceptTermsLabelNode.attributedText = formattedText(text, color: theme.primaryColor, linkColor: theme.accentColor)
+        let attributedAgreeText = parseMarkdownIntoAttributedString(
+            self.strings.WebApp_DisclaimerAgree,
+            attributes: MarkdownAttributes(
+                body: MarkdownAttributeSet(font: textFont, textColor: theme.primaryColor),
+                bold: MarkdownAttributeSet(font: boldTextFont, textColor: theme.primaryColor),
+                link: MarkdownAttributeSet(font: textFont, textColor: theme.accentColor),
+                linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
+                }
+            )
+        )
+        
+        self.acceptTermsLabelNode.attributedText = attributedAgreeText
+        self.acceptTermsLabelNode.linkHighlightColor = theme.accentColor.withAlphaComponent(0.2)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -163,7 +237,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
         
         var entriesHeight: CGFloat = 0.0
         
-        let textSize = self.textNode.measure(CGSize(width: size.width - 48.0, height: size.height))
+        let textSize = self.textNode.updateLayout(CGSize(width: size.width - 48.0, height: size.height))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
         origin.y += textSize.height
         
@@ -175,7 +249,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
             let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
             
             let spacing: CGFloat = 12.0
-            let acceptTermsSize = self.acceptTermsLabelNode.measure(condensedSize)
+            let acceptTermsSize = self.acceptTermsLabelNode.updateLayout(condensedSize)
             let acceptTermsTotalWidth = checkSize.width + spacing + acceptTermsSize.width
             let acceptTermsOriginX = floorToScreenPixels((size.width - acceptTermsTotalWidth) / 2.0)
             
@@ -183,6 +257,14 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
             transition.updateFrame(node: self.acceptTermsLabelNode, frame: CGRect(origin: CGPoint(x: acceptTermsOriginX + checkSize.width + spacing, y: origin.y), size: acceptTermsSize))
             origin.y += acceptTermsSize.height
             entriesHeight += acceptTermsSize.height
+            origin.y += 21.0
+        }
+        
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: size.width - 48.0, height: size.height))
+        transition.updateFrame(node: self.additionalTextNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - additionalTextSize.width) / 2.0), y: origin.y), size: additionalTextSize))
+        origin.y += additionalTextSize.height
+        if additionalTextSize.height > 0.0 {
+            entriesHeight += 20.0
         }
         
         let actionButtonHeight: CGFloat = 44.0
@@ -216,7 +298,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
                 actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
         }
         
-        let resultSize = CGSize(width: contentWidth, height: titleSize.height + textSize.height + entriesHeight + actionsHeight + 3.0 + insets.top + insets.bottom)
+        let resultSize = CGSize(width: contentWidth, height: titleSize.height + textSize.height + additionalTextSize.height + entriesHeight + actionsHeight + 3.0 + insets.top + insets.bottom)
         
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
@@ -267,7 +349,12 @@ private final class WebAppTermsAlertContentNode: AlertContentNode {
     }
 }
 
-public func webAppTermsAlertController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peer: EnginePeer, completion: @escaping () -> Void) -> AlertController {
+public func webAppTermsAlertController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
+    bot: AttachMenuBot,
+    completion: @escaping (Bool) -> Void
+) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
     let presentationData: PresentationData
     if let updatedPresentationData {
@@ -278,18 +365,22 @@ public func webAppTermsAlertController(context: AccountContext, updatedPresentat
     let strings = presentationData.strings
     
     var dismissImpl: ((Bool) -> Void)?
-    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: "Continue", action: {
-        completion()
+    let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_DisclaimerContinue, action: {
+        completion(true)
         dismissImpl?(true)
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
     })]
     
-    let title = "Warning"
-    let text = "You are about to use a mini app operated by an independent party not affiliated with Telegram. You must agree to the Terms of Use of mini apps to continue."
+    let title = presentationData.strings.WebApp_DisclaimerTitle
+    let text = presentationData.strings.WebApp_DisclaimerText
+    let additionalText: String? = nil
     
-    let contentNode = WebAppTermsAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, actions: actions)
-    
+    let contentNode = WebAppTermsAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, additionalText: additionalText, actions: actions)
+    contentNode.openTerms = {
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.WebApp_Disclaimer_URL, forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {
+        })
+    }
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
     dismissImpl = { [weak controller] animated in
         if animated {

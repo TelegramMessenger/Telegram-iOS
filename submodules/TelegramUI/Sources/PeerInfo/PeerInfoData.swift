@@ -489,6 +489,25 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     }
     |> distinctUntilChanged
     
+    let botsKey = ValueBoxKey(length: 8)
+    botsKey.setInt64(0, value: 0)
+    let bots = context.engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.attachMenuBots, id: botsKey))
+    |> mapToSignal { entry -> Signal<[AttachMenuBot], NoError> in
+        let bots: [AttachMenuBots.Bot] = entry?.get(AttachMenuBots.self)?.bots ?? []
+        return context.engine.data.subscribe(
+            EngineDataMap(bots.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Peer.init))
+        )
+        |> map { peersMap -> [AttachMenuBot] in
+            var result: [AttachMenuBot] = []
+            for bot in bots {
+                if let maybePeer = peersMap[bot.peerId], let peer = maybePeer {
+                    result.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
+                }
+            }
+            return result
+        }
+    }
+    
     return combineLatest(
         context.account.viewTracker.peerView(peerId, updateData: true),
         accountsAndPeers,
@@ -512,7 +531,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         }
         |> distinctUntilChanged,
         hasStories,
-        context.engine.messages.attachMenuBots()
+        bots
     )
     |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, hasPassword, isPowerSavingEnabled, hasStories, bots -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications

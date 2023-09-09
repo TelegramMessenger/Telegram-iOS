@@ -377,7 +377,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                             text = nil
                         }
                         if let text = text {
-                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: text), elevatedLayout: false, action: { _ in return false }))
+                            presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: text, timeout: nil), elevatedLayout: false, action: { _ in return false }))
                         }
                     }))
             }
@@ -426,7 +426,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_ContactsReset_ContactsDeleted), elevatedLayout: false, action: { _ in return false }))
+                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_ContactsReset_ContactsDeleted, timeout: nil), elevatedLayout: false, action: { _ in return false }))
                 }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -476,7 +476,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                                     return state
                                 }
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_DeleteDrafts_DraftsDeleted), elevatedLayout: false, action: { _ in return false }))
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Privacy_DeleteDrafts_DraftsDeleted, timeout: nil), elevatedLayout: false, action: { _ in return false }))
                             }))
                     }
                     dismissAction()
