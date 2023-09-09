@@ -108,7 +108,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
             self.isEmojiKeyboardActive = false
             self.inputView = nil
-            view.deactivateInput()
+            view.deactivateInput(force: true)
         }
     }
     
@@ -158,6 +158,8 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         var maxInputPanelHeight = maxHeight
         if keyboardHeight.isZero {
             maxInputPanelHeight = 60.0
+        } else {
+            maxInputPanelHeight = maxHeight - keyboardHeight - 100.0
         }
         
         var resetInputContents: MessageInputPanelComponent.SendMessageInput?

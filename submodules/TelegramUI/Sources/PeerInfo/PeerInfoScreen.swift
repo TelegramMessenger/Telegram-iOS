@@ -813,7 +813,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 } else {
                     iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
                 }
-                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: bot.peer.compactDisplayTitle, icon: nil, iconSignal: iconSignal, action: {
+                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), text: bot.peer.compactDisplayTitle, icon: nil, iconSignal: iconSignal, action: {
                     interaction.openBotApp(bot)
                 }))
                 appIndex += 1
@@ -821,7 +821,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
         }
     }
     
-    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: appIndex, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
+    items[.apps]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyStories, icon: PresentationResourcesSettings.stories, action: {
         interaction.openSettings(.stories)
     }))
     
@@ -4115,6 +4115,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 if let previousSuggestPasswordConfirmation = previousData?.globalSettings?.suggestPasswordConfirmation, previousSuggestPasswordConfirmation != data.globalSettings?.suggestPasswordConfirmation {
                     infoUpdated = true
                 }
+                if let previousBots = previousData?.globalSettings?.bots, previousBots.count != (data.globalSettings?.bots ?? []).count {
+                    infoUpdated = true
+                }
             }
             if previousCallsPrivate != currentCallsPrivate || (previousVideoCallsAvailable != currentVideoCallsAvailable && currentVideoCallsAvailable != nil) {
                 infoUpdated = true
@@ -4680,7 +4683,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
-                let params = WebAppParameters(peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: true, forceHasSettings: bot.flags.contains(.hasSettings))
+                let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { _, _, _ in
@@ -4699,7 +4702,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             text = presentationData.strings.WebApp_ShortcutsAdded(bot.peer.compactDisplayTitle).string
                         }
                         controller.present(
-                            UndoOverlayController(presentationData: presentationData, content: .succeed(text: text), elevatedLayout: false, action: { _ in return false }),
+                            UndoOverlayController(presentationData: presentationData, content: .succeed(text: text, timeout: 5.0), elevatedLayout: false, position: .top, action: { _ in return false }),
                             in: .current
                         )
                     })

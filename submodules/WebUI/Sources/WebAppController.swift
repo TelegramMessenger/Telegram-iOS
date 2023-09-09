@@ -170,6 +170,24 @@ public class WebAppCancelButtonNode: ASDisplayNode {
 }
 
 public struct WebAppParameters {
+    public enum Source {
+        case generic
+        case menu
+        case attachMenu
+        case inline
+        case simple
+        case settings
+        
+        var isSimple: Bool {
+            if [.simple, .inline, .settings].contains(self) {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
+    let source: Source
     let peerId: PeerId
     let botId: PeerId
     let botName: String
@@ -178,13 +196,10 @@ public struct WebAppParameters {
     let payload: String?
     let buttonText: String?
     let keepAliveSignal: Signal<Never, KeepWebViewError>?
-    let fromMenu: Bool
-    let fromAttachMenu: Bool
-    let isInline: Bool
-    let isSimple: Bool
     let forceHasSettings: Bool
     
     public init(
+        source: Source,
         peerId: PeerId,
         botId: PeerId,
         botName: String,
@@ -193,12 +208,9 @@ public struct WebAppParameters {
         payload: String?,
         buttonText: String?,
         keepAliveSignal: Signal<Never, KeepWebViewError>?,
-        fromMenu: Bool,
-        fromAttachMenu: Bool,
-        isInline: Bool,
-        isSimple: Bool,
         forceHasSettings: Bool
     ) {
+        self.source = source
         self.peerId = peerId
         self.botId = botId
         self.botName = botName
@@ -207,10 +219,6 @@ public struct WebAppParameters {
         self.payload = payload
         self.buttonText = buttonText
         self.keepAliveSignal = keepAliveSignal
-        self.fromMenu = fromMenu
-        self.fromAttachMenu = fromAttachMenu
-        self.isInline = isInline
-        self.isSimple = isSimple
         self.forceHasSettings = forceHasSettings
     }
 }
@@ -393,7 +401,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             })
                 
-            if let url = controller.url, !controller.fromMenu {
+            if let url = controller.url, controller.source != .menu {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
                     self.webView?.load(URLRequest(url: parsedUrl))
@@ -412,7 +420,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -707,11 +715,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     }
                 case "web_app_data_send":
-                    if controller.isSimple, let eventData = body["eventData"] as? String {
+                    if controller.source.isSimple, let eventData = body["eventData"] as? String {
                         self.handleSendData(data: eventData)
                     }
                 case "web_app_setup_main_button":
-                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil && controller.fromAttachMenu {
+                    if let webView = self.webView, !webView.didTouchOnce && controller.url == nil && controller.source == .attachMenu {
                         self.delayedScriptMessage = message
                     } else if let json = json {
                         if var isVisible = json["is_visible"] as? Bool {
@@ -1301,6 +1309,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let moreButtonNode: MoreButtonNode
     
     private let context: AccountContext
+    private let source: WebAppParameters.Source
     private let peerId: PeerId
     private let botId: PeerId
     private let botName: String
@@ -1308,10 +1317,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let queryId: Int64?
     private let payload: String?
     private let buttonText: String?
-    private let fromMenu: Bool
-    private let fromAttachMenu: Bool
-    private let isInline: Bool
-    private let isSimple: Bool
     private let forceHasSettings: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
@@ -1328,6 +1333,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?, threadId: Int64?) {
         self.context = context
+        self.source = params.source
         self.peerId = params.peerId
         self.botId = params.botId
         self.botName = params.botName
@@ -1335,10 +1341,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.queryId = params.queryId
         self.payload = params.payload
         self.buttonText = params.buttonText
-        self.fromMenu = params.fromMenu
-        self.fromAttachMenu = params.fromAttachMenu
-        self.isInline = params.isInline
-        self.isSimple = params.isSimple
         self.forceHasSettings = params.forceHasSettings
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
@@ -1454,12 +1456,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
         let url = self.url
         let forceHasSettings = self.forceHasSettings
         
+        let source = self.source
+        
         let items = context.engine.messages.attachMenuBots()
         |> take(1)
         |> map { [weak self] attachMenuBots -> ContextController.Items in
             var items: [ContextMenuItem] = []
             
-            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId})
+            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
             
             let hasSettings: Bool
             if url == nil {
@@ -1517,7 +1521,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self?.controllerNode.webView?.reload()
             })))
             
-            if let _ = attachMenuBot, self?.url == nil {
+            if let _ = attachMenuBot, [.attachMenu, .settings].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] c, _ in
@@ -1672,7 +1676,7 @@ public func standaloneWebAppController(
     didDismiss: @escaping () -> Void = {},
     getNavigationController: @escaping () -> NavigationController? = { return nil },
     getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.source == .menu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
     controller.getInputContainerNode = getInputContainerNode

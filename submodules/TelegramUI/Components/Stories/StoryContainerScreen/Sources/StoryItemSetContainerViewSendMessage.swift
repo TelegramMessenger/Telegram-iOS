@@ -1785,15 +1785,7 @@ final class StoryItemSetContainerSendMessage {
                         //TODO:gift controller
                         break
                     case let .app(bot):
-                        var payload: String?
-                        var fromAttachMenu = true
-                        /*if case let .bot(_, botPayload, _) = subject {
-                            payload = botPayload
-                            fromAttachMenu = false
-                        }*/
-                        payload = nil
-                        fromAttachMenu = true
-                        let params = WebAppParameters(peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
+                        let params = WebAppParameters(source: .attachMenu, peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: false)
                         let theme = component.theme
                         let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), component.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
                         let controller = WebAppController(context: component.context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: nil)

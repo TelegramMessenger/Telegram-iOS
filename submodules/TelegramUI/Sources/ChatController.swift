@@ -4220,7 +4220,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return state.updatedShowWebView(true).updatedForceInputCommandsHidden(true)
                     }
                     
-                    let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: true, fromAttachMenu: false, isInline: false, isSimple: false, forceHasSettings: false)
+                    let params = WebAppParameters(source: .menu, peerId: peerId, botId: peerId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false)
                     let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                         self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                     }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -4291,7 +4291,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: isInline, isSimple: true, forceHasSettings: false)
+                        let params = WebAppParameters(source: isInline ? .inline : .simple, peerId: peerId, botId: botId, botName: botName, url: url, queryId: nil, payload: nil, buttonText: buttonText, keepAliveSignal: nil, forceHasSettings: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                             self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                         }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -4331,7 +4331,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false, forceHasSettings: false)
+                        let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botName, url: result.url, queryId: result.queryId, payload: nil, buttonText: buttonText, keepAliveSignal: result.keepAliveSignal, forceHasSettings: false)
                         let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                             self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                         }, completion: { [weak self] in
@@ -10453,7 +10453,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
             
-            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone), elevatedLayout: false, action: { _ in return false }), in: .current)
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
         }, scrollToTop: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -12937,7 +12937,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
                                     if let strongSelf = self, let _ = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }))
 
@@ -13185,7 +13185,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                let params = WebAppParameters(peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, fromMenu: false, fromAttachMenu: false, isInline: false, isSimple: false, forceHasSettings: false)
+                let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: false)
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -13421,14 +13421,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let content: UndoOverlayContent
                         if botJustInstalled {
                             if bot.flags.contains(.showInSettings) {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0)
                             } else {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
                             }
                         } else {
                             content = .info(title: nil, text: strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError, timeout: nil)
                         }
-                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, action: { _ in return false }), in: .current)
+                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                     } else {
                         let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                         |> deliverOnMainQueue).start(next: { bot in
@@ -13584,7 +13584,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     contactsController.navigationPresentation = .modal
                     completion(contactsController, contactsController.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set((contactsController.result
-                                                                   |> deliverOnMainQueue).start(next: { [weak self] peers in
+                    |> deliverOnMainQueue).start(next: { [weak self] peers in
                         if let strongSelf = self, let (peers, _, silent, scheduleTime, text) = peers {
                             var textEnqueueMessage: EnqueueMessage?
                             if let text = text, text.length > 0 {
@@ -13763,7 +13763,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         payload = botPayload
                         fromAttachMenu = false
                     }
-                    let params = WebAppParameters(peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, fromMenu: false, fromAttachMenu: fromAttachMenu, isInline: false, isSimple: false, forceHasSettings: false)
+                    let params = WebAppParameters(source: fromAttachMenu ? .attachMenu : .generic, peerId: peer.id, botId: bot.peer.id, botName: bot.shortName, url: nil, queryId: nil, payload: payload, buttonText: nil, keepAliveSignal: nil, forceHasSettings: false)
                     let replyMessageId = strongSelf.presentationInterfaceState.interfaceState.replyMessageId
                     let controller = WebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, replyToMessageId: replyMessageId, threadId: strongSelf.chatLocation.threadId)
                     controller.openUrl = { [weak self] url, concealed, commit in
@@ -13802,11 +13802,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         Queue.mainQueue().after(0.3) {
                             let content: UndoOverlayContent
                             if bot.flags.contains(.showInSettings) {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0)
                             } else {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
                             }
-                            attachmentController.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: true, action: { _ in return false }), in: .current)
+                            attachmentController.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                         }
                     }
                 }

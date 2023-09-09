@@ -426,6 +426,8 @@ func _internal_addBotToAttachMenu(accountPeerId: PeerId, postbox: Postbox, netwo
 }
 
 func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
+    let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId).start()
+    
     return postbox.transaction { transaction -> Signal<Bool, NoError> in
         guard let peer = transaction.getPeer(botId), let inputUser = apiInputUser(peer) else {
             return .complete()
@@ -445,7 +447,7 @@ func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, 
         |> afterCompleted {
             let _ = (managedSynchronizeAttachMenuBots(accountPeerId: accountPeerId, postbox: postbox, network: network, force: true)
             |> take(1)).start(completed: {
-                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId)
+                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId).start()
             })
         }
     }

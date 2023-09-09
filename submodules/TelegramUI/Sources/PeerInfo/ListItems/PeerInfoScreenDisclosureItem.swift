@@ -167,7 +167,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
                 self.iconNode.image = icon
                 iconSize = icon.size
             } else if let iconSignal = item.iconSignal {
-                if previousItem == nil {
+                if previousItem?.text != item.text {
+                    self.iconNode.image = nil
                     self.iconDisposable = (iconSignal
                     |> deliverOnMainQueue).start(next: { [weak self] icon in
                         if let self {
