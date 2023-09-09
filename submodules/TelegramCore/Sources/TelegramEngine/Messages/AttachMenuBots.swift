@@ -18,6 +18,7 @@ public final class AttachMenuBots: Equatable, Codable {
             case `default` = 0
             case iOSStatic
             case iOSAnimated
+            case macOSStaticSettings
             case macOSAnimated
             case placeholder
             
@@ -31,6 +32,8 @@ public final class AttachMenuBots: Equatable, Codable {
                         self = .iOSAnimated
                     case "macos_animated":
                         self = .macOSAnimated
+                    case "macos_side_menu_static":
+                        self = .macOSStaticSettings
                     case "placeholder_static":
                         self = .placeholder
                     default:
