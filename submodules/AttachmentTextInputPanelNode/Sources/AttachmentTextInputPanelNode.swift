@@ -466,7 +466,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         }
     }
     
-    public func setTimeout(_ timeout: Int32) {
+    public func setTimeout(_ timeout: Int32, isVideo: Bool) {
     }
     
     public func animate(_ view: UIView, frame: CGRect) {

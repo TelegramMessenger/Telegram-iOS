@@ -838,7 +838,7 @@
             id<TGMediaEditAdjustments> adjustments = dict[@"adjustments"];
             NSNumber *timer = dict[@"timer"];
             
-            [strongSelf->_captionMixin setTimeout:[timer intValue]];
+            [strongSelf->_captionMixin setTimeout:[timer intValue] isVideo:editableMediaItem.isVideo];
             
             if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]])
             {

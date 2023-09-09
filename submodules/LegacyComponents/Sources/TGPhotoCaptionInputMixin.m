@@ -141,8 +141,8 @@
     [_inputPanel setCaption:caption];
 }
 
-- (void)setTimeout:(int32_t)timeout {
-    [_inputPanel setTimeout:timeout];
+- (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo {
+    [_inputPanel setTimeout:timeout isVideo:isVideo];
 }
 
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)__unused animated

@@ -321,11 +321,13 @@ public final class SecretMediaPreviewController: ViewController {
                             }
                         }
                         
+                        var timerStarted = false
                         let isOutgoing = !message.flags.contains(.Incoming)
                         if let attribute = message.autoclearAttribute {
                             strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
                             
                             if let countdownBeginTime = attribute.countdownBeginTime {
+                                timerStarted = true
                                 if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
                                     beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                                 } else {
@@ -338,6 +340,7 @@ public final class SecretMediaPreviewController: ViewController {
                             strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
                             
                             if let countdownBeginTime = attribute.countdownBeginTime {
+                                timerStarted = true
                                 if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
                                     beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                                 } else {
@@ -370,12 +373,12 @@ public final class SecretMediaPreviewController: ViewController {
                             strongSelf.controllerNode.beginTimeAndTimeout = beginTimeAndTimeout
                         }
                         
-                        if strongSelf.currentNodeMessageIsVideo {
+                        if message.flags.contains(.Incoming) || strongSelf.currentNodeMessageIsVideo {
                             if let node = strongSelf.controllerNode.pager.centralItemNode() {
                                 strongSelf.footerContentNode.set(node.footerContent())
                             }
-                        } else if !message.flags.contains(.Incoming) {
-                            if let _ = beginTimeAndTimeout {
+                        } else {
+                            if timerStarted {
                                 strongSelf.controllerNode.updatePresentationState({
                                     $0.withUpdatedFooterContentNode(nil)
                                 }, transition: .immediate)

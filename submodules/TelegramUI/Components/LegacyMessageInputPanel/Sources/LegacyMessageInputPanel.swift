@@ -31,6 +31,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
     private var currentTimeout: Int32?
     private var currentIsEditing = false
     private var currentHeight: CGFloat?
+    private var currentIsVideo = false
     
     private let hapticFeedback = HapticFeedback()
     
@@ -95,13 +96,14 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         transition.setFrame(view: view, frame: frame)
     }
     
-    public func setTimeout(_ timeout: Int32) {
+    public func setTimeout(_ timeout: Int32, isVideo: Bool) {
         self.dismissTimeoutTooltip()
         var timeout: Int32? = timeout
         if timeout == 0 {
             timeout = nil
         }
         self.currentTimeout = timeout
+        self.currentIsVideo = isVideo
     }
     
     public func dismissInput() {
@@ -317,10 +319,13 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
 
         let updateTimeout: (Int32?) -> Void = { [weak self] timeout in
             if let self {
+                let previousTimeout = self.currentTimeout
                 self.currentTimeout = timeout
                 self.timerUpdated?(timeout as? NSNumber)
                 self.update(transition: .immediate)
-                self.presentTimeoutTooltip(sourceView: sourceView, timeout: timeout)
+                if previousTimeout != timeout {
+                    self.presentTimeoutTooltip(sourceView: sourceView, timeout: timeout)
+                }
             }
         }
                 
@@ -382,7 +387,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         let absoluteFrame = sourceView.convert(sourceView.bounds, to: nil).offsetBy(dx: -parentFrame.minX, dy: 0.0)
         let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.minY - 2.0), size: CGSize())
         
-        let isVideo = !"".isEmpty
+        let isVideo = self.currentIsVideo
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let text: String
         let iconName: String
