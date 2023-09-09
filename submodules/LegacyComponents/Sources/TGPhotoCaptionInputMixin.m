@@ -170,13 +170,14 @@
     if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
         return;
     
-    _editing = false;
-    
-    [self.inputPanel dismissInput];
-    [_dismissView removeFromSuperview];
-    
-    if (self.finishedWithCaption != nil)
-        self.finishedWithCaption([_inputPanel caption]);
+    if ([self.inputPanel dismissInput]) {
+        _editing = false;
+        
+        [_dismissView removeFromSuperview];
+        
+        if (self.finishedWithCaption != nil)
+            self.finishedWithCaption([_inputPanel caption]);
+    }
 }
 
 #pragma mark - Input Panel Delegate

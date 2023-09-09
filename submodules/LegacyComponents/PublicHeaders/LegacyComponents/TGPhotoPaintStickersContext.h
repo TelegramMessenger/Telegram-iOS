@@ -26,7 +26,7 @@
 
 - (NSAttributedString * _Nonnull)caption;
 - (void)setCaption:(NSAttributedString * _Nullable)caption;
-- (void)dismissInput;
+- (bool)dismissInput;
 
 - (void)animateView:(UIView * _Nonnull)view frame:(CGRect)frame;
 

@@ -476,8 +476,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
     public func onAnimateOut() {
     }
     
-    public func dismissInput() {
+    public func dismissInput() -> Bool {
         self.ensureUnfocused()
+        return true
     }
     
     public func baseHeight() -> CGFloat {
@@ -1695,7 +1696,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
             }
         }
         if let sendPressed = self.sendPressed, let presentationInterfaceState = self.effectivePresentationInterfaceState?() {
-            self.dismissInput()
+            let _ = self.dismissInput()
             let effectiveInputText = presentationInterfaceState.interfaceState.composeInputState.inputText
             sendPressed(effectiveInputText)
             return

@@ -106,11 +106,19 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         self.currentIsVideo = isVideo
     }
     
-    public func dismissInput() {
+    public func dismissInput() -> Bool {
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
-            self.isEmojiKeyboardActive = false
-            self.inputView = nil
-            view.deactivateInput(force: true)
+            if view.canDeactivateInput() {
+                self.isEmojiKeyboardActive = false
+                self.inputView = nil
+                view.deactivateInput(force: true)
+                return true
+            } else {
+                view.animateError()
+                return false
+            }
+        } else {
+            return true
         }
     }
     
@@ -198,7 +206,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     sendMessageAction: { [weak self] in
                         if let self {
                             self.sendPressed?(self.caption())
-                            self.dismissInput()
+                            let _ = self.dismissInput()
                         }
                     },
                     sendMessageOptionsAction: nil,
