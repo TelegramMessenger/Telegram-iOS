@@ -825,9 +825,13 @@ public final class TextFieldComponent: Component {
             var rightmostX = lineRect.maxX + padding
             let rightmostY = lineRect.minY + self.textView.textContainerInset.top
             
-            let stringIndex = self.textView.text.index(self.textView.text.startIndex, offsetBy: lineRange.location + lineRange.length - 1)
-            if self.textView.text[stringIndex] == " " {
-                rightmostX -= 3.0
+            let nsString = (self.textView.text as NSString)
+            let firstLineEndRange = NSMakeRange(lineRange.location + lineRange.length - 1, 1)
+            if nsString.length > firstLineEndRange.location + firstLineEndRange.length {
+                let lastChar = nsString.substring(with: firstLineEndRange)
+                if lastChar == " " {
+                    rightmostX -= 2.0
+                }
             }
             
             return CGPoint(x: rightmostX, y: rightmostY)
