@@ -1690,6 +1690,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 self.hideStatusNodeUntilCentrality = false
                 self.statusButtonNode.isHidden = self.hideStatusNodeUntilCentrality || self.statusNodeShouldBeHidden
                 videoNode.playOnceWithSound(playAndRecord: false, seek: seek, actionAtEnd: self.actionAtEnd)
+                
+                Queue.mainQueue().after(1.0, {
+                    if let item = self.item, item.isSecret, !self.isPlaying {
+                        videoNode.playOnceWithSound(playAndRecord: false, seek: .start, actionAtEnd: self.actionAtEnd)
+                    }
+                })
             }
         }
     }

@@ -9967,3 +9967,5 @@ Sorry for the inconvenience.";
 "SessionReview.Title" = "New Login Prevented";
 "SessionReview.Text" = "We have terminated the login attempt from **%1$@**, **%2$@**";
 "SessionReview.OkAction" = "Got it";
+
+"WebApp.RemoveAllConfirmationText" = "This will remove **%@** shortcuts from all menus.";
