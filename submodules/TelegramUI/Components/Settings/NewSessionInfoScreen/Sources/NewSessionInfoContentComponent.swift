@@ -9,6 +9,7 @@ import AppBundle
 import BundleIconComponent
 import Markdown
 import TelegramCore
+import LottieComponent
 
 public final class NewSessionInfoContentComponent: Component {
     public let theme: PresentationTheme
@@ -41,7 +42,7 @@ public final class NewSessionInfoContentComponent: Component {
     public final class View: UIView {
         private let scrollView: UIScrollView
         private let iconBackground: UIImageView
-        private let iconForeground: UIImageView
+        private let iconForeground = ComponentView<Empty>()
         
         private let notice = ComponentView<Empty>()
         private let noticeBackground: SimpleLayer
@@ -58,7 +59,6 @@ public final class NewSessionInfoContentComponent: Component {
             self.noticeBackground.cornerRadius = 10.0
             
             self.iconBackground = UIImageView()
-            self.iconForeground = UIImageView()
             
             super.init(frame: frame)
             
@@ -77,7 +77,6 @@ public final class NewSessionInfoContentComponent: Component {
             
             self.scrollView.layer.addSublayer(self.noticeBackground)
             self.scrollView.addSubview(self.iconBackground)
-            self.scrollView.addSubview(self.iconForeground)
         }
         
         required init(coder: NSCoder) {
@@ -135,11 +134,23 @@ public final class NewSessionInfoContentComponent: Component {
             let iconBackgroundFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize) * 0.5), y: contentHeight), size: CGSize(width: iconSize, height: iconSize))
             transition.setFrame(view: self.iconBackground, frame: iconBackgroundFrame)
             
-            if self.iconForeground.image == nil {
-                self.iconForeground.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/ArchiveIconLarge"), color: .white)
-            }
-            if let image = self.iconForeground.image {
-                transition.setFrame(view: self.iconForeground, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - image.size.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - image.size.height) * 0.5)), size: image.size))
+            let iconForegroundSize = self.iconForeground.update(
+                transition: transition,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: "SessionReviewIcon"),
+                    color: .white
+                )),
+                environment: {},
+                containerSize: CGSize(width: 70.0, height: 70.0)
+            )
+            if let iconForegroundView = self.iconForeground.view as? LottieComponent.View {
+                if iconForegroundView.superview == nil {
+                    self.scrollView.addSubview(iconForegroundView)
+                    DispatchQueue.main.async {
+                        iconForegroundView.playOnce()
+                    }
+                }
+                transition.setFrame(view: iconForegroundView, frame: CGRect(origin: CGPoint(x: iconBackgroundFrame.minX + floor((iconBackgroundFrame.width - iconForegroundSize.width) * 0.5), y: iconBackgroundFrame.minY + floor((iconBackgroundFrame.height - iconForegroundSize.height) * 0.5)), size: iconForegroundSize))
             }
             
             contentHeight += iconSize
