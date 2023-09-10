@@ -143,6 +143,10 @@ public final class NavigationBackgroundNode: ASDisplayNode {
 
     public var effectView: UIVisualEffectView?
     private let backgroundNode: ASDisplayNode
+    
+    public var backgroundView: UIView {
+        return self.backgroundNode.view
+    }
 
     private var validLayout: (CGSize, CGFloat)?
     

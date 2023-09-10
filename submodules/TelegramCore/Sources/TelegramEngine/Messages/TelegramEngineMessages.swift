@@ -1213,8 +1213,8 @@ public extension TelegramEngine {
             return _internal_editStoryPrivacy(account: self.account, id: id, privacy: privacy)
         }
         
-        public func checkStoriesUploadAvailability() -> Signal<StoriesUploadAvailability, NoError> {
-            return _internal_checkStoriesUploadAvailability(account: self.account)
+        public func checkStoriesUploadAvailability(target: Stories.PendingTarget) -> Signal<StoriesUploadAvailability, NoError> {
+            return _internal_checkStoriesUploadAvailability(account: self.account, target: target)
         }
         
         public func deleteStories(peerId: EnginePeer.Id, ids: [Int32]) -> Signal<Never, NoError> {

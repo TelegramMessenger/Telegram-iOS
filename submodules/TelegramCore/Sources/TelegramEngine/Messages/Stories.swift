@@ -1281,7 +1281,7 @@ public enum StoriesUploadAvailability {
     case unknownLimit
 }
 
-func _internal_checkStoriesUploadAvailability(account: Account) -> Signal<StoriesUploadAvailability, NoError> {
+func _internal_checkStoriesUploadAvailability(account: Account, target: Stories.PendingTarget) -> Signal<StoriesUploadAvailability, NoError> {
     return account.network.request(Api.functions.stories.canSendStory(peer: .inputPeerSelf))
     |> map { result -> StoriesUploadAvailability in
         if result == .boolTrue {

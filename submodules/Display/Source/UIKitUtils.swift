@@ -757,6 +757,10 @@ public extension CALayer {
     static func blur() -> NSObject? {
         return makeBlurFilter()
     }
+    
+    static func luminanceToAlpha() -> NSObject? {
+        return makeLuminanceToAlphaFilter()
+    }
 }
 
 public extension CALayer {
