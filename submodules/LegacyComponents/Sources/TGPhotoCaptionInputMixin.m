@@ -141,8 +141,8 @@
     [_inputPanel setCaption:caption];
 }
 
-- (void)setTimeout:(int32_t)timeout {
-    [_inputPanel setTimeout:timeout];
+- (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo {
+    [_inputPanel setTimeout:timeout isVideo:isVideo];
 }
 
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)__unused animated
@@ -170,13 +170,14 @@
     if (gestureRecognizer.state != UIGestureRecognizerStateRecognized)
         return;
     
-    _editing = false;
-    
-    [self.inputPanel dismissInput];
-    [_dismissView removeFromSuperview];
-    
-    if (self.finishedWithCaption != nil)
-        self.finishedWithCaption([_inputPanel caption]);
+    if ([self.inputPanel dismissInput]) {
+        _editing = false;
+        
+        [_dismissView removeFromSuperview];
+        
+        if (self.finishedWithCaption != nil)
+            self.finishedWithCaption([_inputPanel caption]);
+    }
 }
 
 #pragma mark - Input Panel Delegate

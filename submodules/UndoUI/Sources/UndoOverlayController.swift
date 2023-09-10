@@ -11,7 +11,7 @@ public enum UndoOverlayContent {
     case archivedChat(peerId: Int64, title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String, undo: Bool)
     case revealedArchive(title: String, text: String, undo: Bool)
-    case succeed(text: String)
+    case succeed(text: String, timeout: Double?)
     case info(title: String?, text: String, timeout: Double?)
     case emoji(name: String, text: String)
     case swipeToReply(title: String, text: String)

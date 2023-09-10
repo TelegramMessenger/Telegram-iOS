@@ -117,11 +117,7 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         for separatorNode in self.actionVerticalSeparators {
             self.addSubnode(separatorNode)
         }
-        
-        if let firstAction = self.actionNodes.first {
-            firstAction.actionEnabled = false
-        }
-        
+                
         self.acceptTermsCheckNode.valueChanged = { [weak self] value in
             if let strongSelf = self {
                 strongSelf.acceptedTerms = !strongSelf.acceptedTerms
@@ -150,6 +146,10 @@ private final class WebAppTermsAlertContentNode: AlertContentNode, UIGestureReco
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(self.acceptTap(_:)))
         tapGesture.delegate = self
         self.view.addGestureRecognizer(tapGesture)
+        
+        if let firstAction = self.actionNodes.first {
+            firstAction.actionEnabled = false
+        }
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -366,7 +366,7 @@ public func webAppTermsAlertController(
     
     var dismissImpl: ((Bool) -> Void)?
     let actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.WebApp_DisclaimerContinue, action: {
-        completion(false)
+        completion(true)
         dismissImpl?(true)
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
@@ -374,14 +374,7 @@ public func webAppTermsAlertController(
     
     let title = presentationData.strings.WebApp_DisclaimerTitle
     let text = presentationData.strings.WebApp_DisclaimerText
-    let additionalText: String?
-    if bot.flags.contains(.showInSettings) {
-        additionalText = presentationData.strings.WebApp_DisclaimerShortcutsSettingsText(bot.peer.compactDisplayTitle).string
-    } else if bot.flags.contains(.showInAttachMenu) {
-        additionalText = presentationData.strings.WebApp_DisclaimerShortcutsText(bot.peer.compactDisplayTitle).string
-    } else {
-        additionalText = nil
-    }
+    let additionalText: String? = nil
     
     let contentNode = WebAppTermsAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, title: title, text: text, additionalText: additionalText, actions: actions)
     contentNode.openTerms = {

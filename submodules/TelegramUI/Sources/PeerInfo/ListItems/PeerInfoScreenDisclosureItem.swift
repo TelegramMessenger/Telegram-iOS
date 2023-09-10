@@ -1,5 +1,6 @@
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramPresentationData
 
 final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
@@ -31,13 +32,15 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     let label: Label
     let text: String
     let icon: UIImage?
+    let iconSignal: Signal<UIImage?, NoError>?
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, text: String, icon: UIImage? = nil, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
         self.id = id
         self.label = label
         self.text = text
         self.icon = icon
+        self.iconSignal = iconSignal
         self.action = action
     }
     
@@ -56,6 +59,8 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let arrowNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
     private let activateArea: AccessibilityAreaNode
+    
+    private var iconDisposable: Disposable?
     
     private var item: PeerInfoScreenDisclosureItem?
     
@@ -109,6 +114,10 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.activateArea)
     }
     
+    deinit {
+        self.iconDisposable?.dispose()
+    }
+    
     override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenDisclosureItem else {
             return 10.0
@@ -120,9 +129,9 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
-        let leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        let leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)
         let rightInset = sideInset + 18.0
-        let separatorInset = item.icon == nil ? sideInset : leftInset - 1.0
+        let separatorInset = item.icon == nil && item.iconSignal == nil ? sideInset : leftInset - 1.0
         let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -149,12 +158,29 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         
         let height = textSize.height + 24.0
         
-        if let icon = item.icon {
+        if item.icon != nil || item.iconSignal != nil {
             if self.iconNode.supernode == nil {
                 self.addSubnode(self.iconNode)
             }
-            self.iconNode.image = icon
-            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
+            let iconSize: CGSize
+            if let icon = item.icon {
+                self.iconNode.image = icon
+                iconSize = icon.size
+            } else if let iconSignal = item.iconSignal {
+                if previousItem?.text != item.text {
+                    self.iconNode.image = nil
+                    self.iconDisposable = (iconSignal
+                    |> deliverOnMainQueue).start(next: { [weak self] icon in
+                        if let self {
+                            self.iconNode.image = icon
+                        }
+                    })
+                }
+                iconSize = CGSize(width: 29.0, height: 29.0)
+            } else {
+                iconSize = CGSize(width: 29.0, height: 29.0)
+            }
+            let iconFrame = CGRect(origin: CGPoint(x: sideInset, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
         } else if self.iconNode.supernode != nil {
             self.iconNode.image = nil

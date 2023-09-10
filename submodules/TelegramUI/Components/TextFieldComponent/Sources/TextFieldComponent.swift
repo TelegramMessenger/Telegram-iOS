@@ -90,6 +90,7 @@ public final class TextFieldComponent: Component {
     public let textColor: UIColor
     public let insets: UIEdgeInsets
     public let hideKeyboard: Bool
+    public let customInputView: UIView?
     public let resetText: NSAttributedString?
     public let isOneLineWhenUnfocused: Bool
     public let formatMenuAvailability: FormatMenuAvailability
@@ -105,6 +106,7 @@ public final class TextFieldComponent: Component {
         textColor: UIColor,
         insets: UIEdgeInsets,
         hideKeyboard: Bool,
+        customInputView: UIView?,
         resetText: NSAttributedString?,
         isOneLineWhenUnfocused: Bool,
         formatMenuAvailability: FormatMenuAvailability,
@@ -119,6 +121,7 @@ public final class TextFieldComponent: Component {
         self.textColor = textColor
         self.insets = insets
         self.hideKeyboard = hideKeyboard
+        self.customInputView = customInputView
         self.resetText = resetText
         self.isOneLineWhenUnfocused = isOneLineWhenUnfocused
         self.formatMenuAvailability = formatMenuAvailability
@@ -144,6 +147,9 @@ public final class TextFieldComponent: Component {
             return false
         }
         if lhs.hideKeyboard != rhs.hideKeyboard {
+            return false
+        }
+        if lhs.customInputView !== rhs.customInputView {
             return false
         }
         if lhs.resetText != rhs.resetText {
@@ -816,8 +822,17 @@ public final class TextFieldComponent: Component {
             } while glyphIndexForStringStart < NSMaxRange(glyphRange) && !NSLocationInRange(glyphRange.location, lineRange)
                 
             let padding = self.textView.textContainerInset.left
-            let rightmostX = lineRect.maxX + padding
+            var rightmostX = lineRect.maxX + padding
             let rightmostY = lineRect.minY + self.textView.textContainerInset.top
+            
+            let nsString = (self.textView.text as NSString)
+            let firstLineEndRange = NSMakeRange(lineRange.location + lineRange.length - 1, 1)
+            if nsString.length > firstLineEndRange.location + firstLineEndRange.length {
+                let lastChar = nsString.substring(with: firstLineEndRange)
+                if lastChar == " " {
+                    rightmostX -= 2.0
+                }
+            }
             
             return CGPoint(x: rightmostX, y: rightmostY)
         }
@@ -882,7 +897,14 @@ public final class TextFieldComponent: Component {
             component.externalState.isEditing = isEditing
             component.externalState.textLength = self.textStorage.string.count
             
-            if component.hideKeyboard {
+            if let inputView = component.customInputView {
+                if self.textView.inputView == nil {
+                    self.textView.inputView = inputView
+                    if self.textView.isFirstResponder {
+                        self.textView.reloadInputViews()
+                    }
+                }
+            } else if component.hideKeyboard {
                 if self.textView.inputView == nil {
                     self.textView.inputView = EmptyInputView()
                     if self.textView.isFirstResponder {
@@ -916,7 +938,7 @@ public final class TextFieldComponent: Component {
                         view.alpha = 0.0
                         self.textView.addSubview(view)
                     }
-                    let ellipsisFrame = CGRect(origin: CGPoint(x: position.x - 11.0, y: position.y), size: ellipsisSize)
+                    let ellipsisFrame = CGRect(origin: CGPoint(x: position.x - 8.0, y: position.y), size: ellipsisSize)
                     transition.setFrame(view: view, frame: ellipsisFrame)
                     
                     let hasMoreThanOneLine = ellipsisFrame.maxY < self.textView.contentSize.height - 12.0

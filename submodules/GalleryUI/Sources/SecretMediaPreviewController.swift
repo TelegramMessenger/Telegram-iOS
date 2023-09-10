@@ -60,16 +60,20 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
         
-    var beginTimeAndTimeout: (Double, Double)? {
+    var beginTimeAndTimeout: (Double, Double, Bool)? {
         didSet {
-            if let (beginTime, timeout) = self.beginTimeAndTimeout {
+            if let (beginTime, timeout, isOutgoing) = self.beginTimeAndTimeout {
                 var beginTime = beginTime
                 if self.timeoutNode == nil {
                     let timeoutNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.5))
                     self.timeoutNode = timeoutNode
                     let icon: RadialStatusNodeState.SecretTimeoutIcon
                     let timeoutValue = Int32(timeout)
-                    if timeoutValue == viewOnceTimeout {
+                    
+                    let state: RadialStatusNodeState
+                    if timeoutValue == 0 && isOutgoing {
+                        state = .staticTimeout
+                    } else if timeoutValue == viewOnceTimeout {
                         beginTime = CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970
                         
                         if let image = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ViewOnce"), color: .white) {
@@ -77,10 +81,11 @@ private final class SecretMediaPreviewControllerNode: GalleryControllerNode {
                         } else {
                             icon = .flame
                         }
+                        state = .secretTimeout(color: .white, icon: icon, beginTime: beginTime, timeout: timeout, sparks: isOutgoing ? false : true)
                     } else {
-                        icon = .flame
+                        state = .secretTimeout(color: .white, icon: .flame, beginTime: beginTime, timeout: timeout, sparks: true)
                     }
-                    timeoutNode.transitionToState(.secretTimeout(color: .white, icon: icon, beginTime: beginTime, timeout: timeout, sparks: true), completion: {})
+                    timeoutNode.transitionToState(state, completion: {})
                     self.addSubnode(timeoutNode)
   
                     timeoutNode.addTarget(self, action: #selector(self.statusTapGesture), forControlEvents: .touchUpInside)
@@ -308,7 +313,7 @@ public final class SecretMediaPreviewController: ViewController {
                 var hiddenItem: (MessageId, Media)?
                 if let _ = index {
                     if let message = strongSelf.messageView?.message, let media = mediaForMessage(message: message) {
-                        var beginTimeAndTimeout: (Double, Double)?
+                        var beginTimeAndTimeout: (Double, Double, Bool)?
                         var videoDuration: Double?
                         for media in message.media {
                             if let file = media as? TelegramMediaFile {
@@ -316,26 +321,34 @@ public final class SecretMediaPreviewController: ViewController {
                             }
                         }
                         
+                        var timerStarted = false
+                        let isOutgoing = !message.flags.contains(.Incoming)
                         if let attribute = message.autoclearAttribute {
                             strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
                             
                             if let countdownBeginTime = attribute.countdownBeginTime {
+                                timerStarted = true
                                 if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                                 } else {
-                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout), isOutgoing)
                                 }
+                            } else if isOutgoing {
+                                beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, attribute.timeout != viewOnceTimeout ? 0.0 : Double(viewOnceTimeout), isOutgoing)
                             }
                         } else if let attribute = message.autoremoveAttribute {
                             strongSelf.currentNodeMessageIsViewOnce = attribute.timeout == viewOnceTimeout
                             
                             if let countdownBeginTime = attribute.countdownBeginTime {
+                                timerStarted = true
                                 if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
-                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)))
+                                    beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                                 } else {
-                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                                    beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout), isOutgoing)
                                 }
-                            }
+                            } else if isOutgoing {
+                               beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, attribute.timeout != viewOnceTimeout ? 0.0 : Double(viewOnceTimeout), isOutgoing)
+                           }
                         }
                         
                         if let file = media as? TelegramMediaFile {
@@ -360,12 +373,12 @@ public final class SecretMediaPreviewController: ViewController {
                             strongSelf.controllerNode.beginTimeAndTimeout = beginTimeAndTimeout
                         }
                         
-                        if strongSelf.currentNodeMessageIsVideo {
+                        if message.flags.contains(.Incoming) || strongSelf.currentNodeMessageIsVideo {
                             if let node = strongSelf.controllerNode.pager.centralItemNode() {
                                 strongSelf.footerContentNode.set(node.footerContent())
                             }
-                        } else if !message.flags.contains(.Incoming) {
-                            if let _ = beginTimeAndTimeout {
+                        } else {
+                            if timerStarted {
                                 strongSelf.controllerNode.updatePresentationState({
                                     $0.withUpdatedFooterContentNode(nil)
                                 }, transition: .immediate)
@@ -537,28 +550,34 @@ public final class SecretMediaPreviewController: ViewController {
                 self._ready.set(ready |> map { true })
                 self.markMessageAsConsumedDisposable.set(self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: message.id).start())
             } else {
-                var beginTimeAndTimeout: (Double, Double)?
+                var beginTimeAndTimeout: (Double, Double, Bool)?
                 var videoDuration: Double?
                 for media in message.media {
                     if let file = media as? TelegramMediaFile {
                         videoDuration = file.duration
                     }
                 }
+                
+                let isOutgoing = !message.flags.contains(.Incoming)
                 if let attribute = message.autoclearAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                         } else {
-                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout), isOutgoing)
                         }
+                    } else if isOutgoing {
+                        beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, attribute.timeout != viewOnceTimeout ? 0.0 : Double(viewOnceTimeout), isOutgoing)
                     }
                 } else if let attribute = message.autoremoveAttribute {
                     if let countdownBeginTime = attribute.countdownBeginTime {
                         if let videoDuration = videoDuration, attribute.timeout != viewOnceTimeout {
-                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)))
+                            beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, max(videoDuration, Double(attribute.timeout)), isOutgoing)
                         } else {
-                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout))
+                            beginTimeAndTimeout = (Double(countdownBeginTime), Double(attribute.timeout), isOutgoing)
                         }
+                    } else if isOutgoing {
+                        beginTimeAndTimeout = (CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970, attribute.timeout != viewOnceTimeout ? 0.0 : Double(viewOnceTimeout), isOutgoing)
                     }
                 }
                 
@@ -617,6 +636,7 @@ public final class SecretMediaPreviewController: ViewController {
             location: .point(location, .top),
             displayDuration: .default,
             inset: 8.0,
+            cornerRadius: 8.0,
             shouldDismissOnTouch: { _, _ in
                 return .ignore
             }

@@ -18,7 +18,9 @@ public final class AttachMenuBots: Equatable, Codable {
             case `default` = 0
             case iOSStatic
             case iOSAnimated
+            case iOSSettingsStatic
             case macOSAnimated
+            case macOSSettingsStatic
             case placeholder
             
             init?(string: String) {
@@ -29,6 +31,10 @@ public final class AttachMenuBots: Equatable, Codable {
                         self = .iOSStatic
                     case "ios_animated":
                         self = .iOSAnimated
+                    case "ios_side_menu_static":
+                        self = .iOSSettingsStatic
+                    case "macos_side_menu_static":
+                        self = .macOSSettingsStatic
                     case "macos_animated":
                         self = .macOSAnimated
                     case "placeholder_static":
@@ -420,6 +426,8 @@ func _internal_addBotToAttachMenu(accountPeerId: PeerId, postbox: Postbox, netwo
 }
 
 func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, network: Network, botId: PeerId) -> Signal<Bool, NoError> {
+    let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId).start()
+    
     return postbox.transaction { transaction -> Signal<Bool, NoError> in
         guard let peer = transaction.getPeer(botId), let inputUser = apiInputUser(peer) else {
             return .complete()
@@ -439,7 +447,7 @@ func _internal_removeBotFromAttachMenu(accountPeerId: PeerId, postbox: Postbox, 
         |> afterCompleted {
             let _ = (managedSynchronizeAttachMenuBots(accountPeerId: accountPeerId, postbox: postbox, network: network, force: true)
             |> take(1)).start(completed: {
-                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId)
+                let _ = removeCachedAttachMenuBot(postbox: postbox, botId: botId).start()
             })
         }
     }

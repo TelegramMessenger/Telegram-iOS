@@ -36,7 +36,7 @@
 - (void)setCaption:(NSAttributedString *)caption animated:(bool)animated;
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)animated;
 
-- (void)setTimeout:(int32_t)timeout;
+- (void)setTimeout:(int32_t)timeout isVideo:(bool)isVideo;
 
 - (void)updateLayoutWithFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets animated:(bool)animated;
 

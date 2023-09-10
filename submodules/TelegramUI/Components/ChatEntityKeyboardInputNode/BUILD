@@ -30,7 +30,6 @@ swift_library(
         "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
         "//submodules/GalleryUI:GalleryUI",
-        "//submodules/AttachmentTextInputPanelNode:AttachmentTextInputPanelNode",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/StickerPeekUI:StickerPeekUI",
@@ -40,6 +39,7 @@ swift_library(
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
         "//submodules/StickerPackPreviewUI",
         "//submodules/TelegramUI/Components/EntityKeyboardGifContent:EntityKeyboardGifContent",
+        "//submodules/TelegramUI/Components/LegacyMessageInputPanelInputView:LegacyMessageInputPanelInputView",
     ],
     visibility = [
         "//visibility:public",

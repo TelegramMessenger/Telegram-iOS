@@ -2928,6 +2928,7 @@ public final class StoryItemSetContainerComponent: Component {
                         bottomInset: component.inputHeight != 0.0 || inputNodeVisible ? 0.0 : bottomContentInset,
                         isFormattingLocked: false,
                         hideKeyboard: self.sendMessageContext.currentInputMode == .media,
+                        customInputView: nil,
                         forceIsEditing: self.sendMessageContext.currentInputMode == .media,
                         disabledPlaceholder: disabledPlaceholder,
                         isChannel: isChannel,
