@@ -320,13 +320,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             self.webView = webView
             
+            self.addSubnode(self.backgroundNode)
+            self.addSubnode(self.headerBackgroundNode)
+            
             let placeholderNode = ShimmerEffectNode()
             placeholderNode.allowsGroupOpacity = true
             self.addSubnode(placeholderNode)
             self.placeholderNode = placeholderNode
-            
-            self.addSubnode(self.backgroundNode)
-            self.addSubnode(self.headerBackgroundNode)
             
             let placeholder: Signal<(FileMediaReference, Bool)?, NoError>
             if durgerKingBotIds.contains(controller.botId.id._internalGetInt64Value()) {
@@ -421,28 +421,40 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
-                |> deliverOnMainQueue).start(next: { [weak self] result in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let parsedUrl = URL(string: result.url) {
-                        strongSelf.queryId = result.queryId
-                        strongSelf.webView?.load(URLRequest(url: parsedUrl))
-                        
-                        strongSelf.keepAliveDisposable = (result.keepAliveSignal
-                        |> deliverOnMainQueue).start(error: { [weak self] _ in
-                            if let strongSelf = self {
-                                strongSelf.controller?.dismiss()
-                            }
-                        }, completed: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.controller?.completion()
-                                strongSelf.controller?.dismiss()
-                            }
-                        })
-                    }
-                })
+                if controller.source.isSimple {
+                    let _ = (context.engine.messages.requestSimpleWebView(botId: controller.botId, url: nil, source: .settings, themeParams: generateWebAppThemeParams(presentationData.theme))
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let parsedUrl = URL(string: result) {
+                            strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                        }
+                    })
+                } else {
+                    let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let parsedUrl = URL(string: result.url) {
+                            strongSelf.queryId = result.queryId
+                            strongSelf.webView?.load(URLRequest(url: parsedUrl))
+                            
+                            strongSelf.keepAliveDisposable = (result.keepAliveSignal
+                            |> deliverOnMainQueue).start(error: { [weak self] _ in
+                                if let strongSelf = self {
+                                    strongSelf.controller?.dismiss()
+                                }
+                            }, completed: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.controller?.completion()
+                                    strongSelf.controller?.dismiss()
+                                }
+                            })
+                        }
+                    })
+                }
             }
         }
         

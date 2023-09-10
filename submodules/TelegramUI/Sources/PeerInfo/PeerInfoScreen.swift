@@ -4647,7 +4647,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }))
     }
     
-    private let openBotAppDisposable = MetaDisposable()
     private func openBotApp(_ bot: AttachMenuBot) {
         guard let controller = self.controller else {
             return
@@ -4658,61 +4657,30 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             
-            let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                self?.controller?.present(controller, in: .window(.root))
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
+            let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: nil, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings))
+            let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
+                self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
+            }, requestSwitchInline: { _, _, _ in
+            }, getNavigationController: { [weak self] in
+                return self?.controller?.navigationController as? NavigationController
+            })
+            controller.navigationPresentation = .flatModal
+            self.controller?.push(controller)
+            
+            if installed {
+                Queue.mainQueue().after(0.3, {
+                    let text: String
+                    if bot.flags.contains(.showInSettings) {
+                        text = presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.peer.compactDisplayTitle).string
+                    } else {
+                        text = presentationData.strings.WebApp_ShortcutsAdded(bot.peer.compactDisplayTitle).string
                     }
-                }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.35, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            let signal: Signal<String, RequestSimpleWebViewError> = self.context.engine.messages.requestSimpleWebView(botId: bot.peer.id, url: nil, source: .settings, themeParams: generateWebAppThemeParams(self.presentationData.theme))
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
-                }
-            }
-            
-            self.openBotAppDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { [weak self] url in
-                guard let self else {
-                    return
-                }
-                let params = WebAppParameters(source: .settings, peerId: self.context.account.peerId, botId: bot.peer.id, botName: bot.peer.compactDisplayTitle, url: url, queryId: nil, payload: nil, buttonText: nil, keepAliveSignal: nil, forceHasSettings: bot.flags.contains(.hasSettings))
-                let controller = standaloneWebAppController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, params: params, threadId: nil, openUrl: { [weak self] url, concealed, commit in
-                    self?.openUrl(url: url, concealed: concealed, external: false, forceExternal: true, commit: commit)
-                }, requestSwitchInline: { _, _, _ in
-                }, getNavigationController: { [weak self] in
-                    return self?.controller?.navigationController as? NavigationController
+                    controller.present(
+                        UndoOverlayController(presentationData: presentationData, content: .succeed(text: text, timeout: 5.0), elevatedLayout: false, position: .top, action: { _ in return false }),
+                        in: .current
+                    )
                 })
-                controller.navigationPresentation = .flatModal
-                self.controller?.push(controller)
-                
-                if installed {
-                    Queue.mainQueue().after(0.3, {
-                        let text: String
-                        if bot.flags.contains(.showInSettings) {
-                            text = presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.peer.compactDisplayTitle).string
-                        } else {
-                            text = presentationData.strings.WebApp_ShortcutsAdded(bot.peer.compactDisplayTitle).string
-                        }
-                        controller.present(
-                            UndoOverlayController(presentationData: presentationData, content: .succeed(text: text, timeout: 5.0), elevatedLayout: false, position: .top, action: { _ in return false }),
-                            in: .current
-                        )
-                    })
-                }
-            }, error: { [weak self] error in
-                if let self {
-                    self.controller?.present(textAlertController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, title: nil, text: self.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                    })]), in: .window(.root))
-                }
-            }))
+            }
         }
         
         if bot.flags.contains(.notActivated) || bot.flags.contains(.showInSettingsDisclaimer) {
