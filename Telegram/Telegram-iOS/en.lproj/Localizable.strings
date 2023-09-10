@@ -9855,6 +9855,15 @@ Sorry for the inconvenience.";
 "Location.TypeStreet" = "Street";
 "Location.TypeLocation" = "Location";
 
+"WebApp.DisclaimerTitle" = "Terms of Use";
+"WebApp.DisclaimerText" = "You are about to use a mini app operated by an independent party not affiliated with Telegram. You must agree to the Terms of Use of mini apps to continue.";
+"WebApp.DisclaimerAgree" = "I agree to the [Terms of Use]()";
+"WebApp.DisclaimerContinue" = "Continue";
+"WebApp.Disclaimer_URL" = "https://telegram.org/tos/mini-apps";
+
+"WebApp.ShortcutsAdded" = "**%@** shortcut added in attachment menu.";
+"WebApp.ShortcutsSettingsAdded" = "**%@** shortcut added in attachment menu and Settings.";
+
 "WebApp.AllowWriteTitle" = "Allow Sending Messages?";
 "WebApp.AllowWriteConfirmation" = "This will allow the bot **%@** to message you on Telegram.";
 
