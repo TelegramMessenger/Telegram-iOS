@@ -1638,7 +1638,10 @@ public final class ChatListNode: ListView {
             } else {
                 self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
                 
+                //#if DEBUG
+                //#else
                 let _ = self.context.engine.privacy.terminateAnotherSession(id: newSessionReview.id).start()
+                //#endif
             }
         }, openChatFolderUpdates: { [weak self] in
             guard let self else {

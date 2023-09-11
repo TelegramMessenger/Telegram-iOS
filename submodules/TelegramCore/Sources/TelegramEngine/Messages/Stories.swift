@@ -1279,28 +1279,45 @@ public enum StoriesUploadAvailability {
     case expiringLimit
     case premiumRequired
     case unknownLimit
+    case channelBoostRequired
 }
 
-func _internal_checkStoriesUploadAvailability(account: Account) -> Signal<StoriesUploadAvailability, NoError> {
-    return account.network.request(Api.functions.stories.canSendStory(peer: .inputPeerSelf))
-    |> map { result -> StoriesUploadAvailability in
-        if result == .boolTrue {
-            return .available
-        } else {
-            return .unknownLimit
+func _internal_checkStoriesUploadAvailability(account: Account, target: Stories.PendingTarget) -> Signal<StoriesUploadAvailability, NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        switch target {
+        case .myStories:
+            return .inputPeerSelf
+        case let .peer(peerId):
+            return transaction.getPeer(peerId).flatMap(apiInputPeer)
         }
     }
-    |> `catch` { error -> Signal<StoriesUploadAvailability, NoError> in
-        if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_WEEKLY_") {
-            return .single(.weeklyLimit)
-        } else if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_MONTHLY_") {
-            return .single(.monthlyLimit)
-        } else if error.errorDescription.hasPrefix("PREMIUM_ACCOUNT_REQUIRED") {
-            return .single(.premiumRequired)
-        } else if error.errorDescription.hasPrefix("STORIES_TOO_MUCH") {
-            return .single(.expiringLimit)
+    |> mapToSignal { inputPeer -> Signal<StoriesUploadAvailability, NoError> in
+        guard let inputPeer = inputPeer else {
+            return .single(.unknownLimit)
         }
-        return .single(.unknownLimit)
+        
+        return account.network.request(Api.functions.stories.canSendStory(peer: inputPeer))
+        |> map { result -> StoriesUploadAvailability in
+            if result == .boolTrue {
+                return .available
+            } else {
+                return .unknownLimit
+            }
+        }
+        |> `catch` { error -> Signal<StoriesUploadAvailability, NoError> in
+            if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_WEEKLY_") {
+                return .single(.weeklyLimit)
+            } else if error.errorDescription.hasPrefix("STORY_SEND_FLOOD_MONTHLY_") {
+                return .single(.monthlyLimit)
+            } else if error.errorDescription.hasPrefix("PREMIUM_ACCOUNT_REQUIRED") {
+                return .single(.premiumRequired)
+            } else if error.errorDescription.hasPrefix("STORIES_TOO_MUCH") {
+                return .single(.expiringLimit)
+            } else if error.errorDescription.hasPrefix("BOOSTS_REQUIRED") {
+                return .single(.channelBoostRequired)
+            }
+            return .single(.unknownLimit)
+        }
     }
 }
 

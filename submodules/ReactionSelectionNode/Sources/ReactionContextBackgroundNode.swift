@@ -151,6 +151,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             }
             
             self.backgroundView.updateColor(color: theme.contextMenu.backgroundColor, transition: .immediate)
+            //self.backgroundView.updateColor(color: UIColor(white: 1.0, alpha: 0.0), forceKeepBlur: true, transition: .immediate)
             
             let shadowColor = UIColor(white: 0.0, alpha: 0.4)
             

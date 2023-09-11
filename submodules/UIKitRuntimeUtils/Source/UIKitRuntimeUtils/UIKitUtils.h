@@ -26,3 +26,4 @@ void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer);
 UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition);
 
 NSObject * _Nullable makeBlurFilter();
+NSObject * _Nullable makeLuminanceToAlphaFilter();

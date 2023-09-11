@@ -1188,6 +1188,14 @@ public extension TelegramEngine {
         public func updatePeerStoriesHidden(id: PeerId, isHidden: Bool) {
             let _ = _internal_updatePeerStoriesHidden(account: self.account, id: id, isHidden: isHidden).start()
         }
+        
+        public func getChannelBoostStatus(peerId: EnginePeer.Id) -> Signal<ChannelBoostStatus?, NoError> {
+            return _internal_getChannelBoostStatus(account: self.account, peerId: peerId)
+        }
+
+        public func canApplyChannelBoost(peerId: EnginePeer.Id) -> Signal<CanApplyBoostStatus?, NoError> {
+            return _internal_canApplyChannelBoost(account: self.account, peerId: peerId)
+        }
     }
 }
 
