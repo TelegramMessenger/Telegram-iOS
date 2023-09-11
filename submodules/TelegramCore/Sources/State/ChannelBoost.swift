@@ -67,13 +67,13 @@ public enum CanApplyBoostStatus {
     case error(ErrorReason)
 }
 
-func _internal_canApplyChannelBoost(account: Account, peerId: PeerId) -> Signal<CanApplyBoostStatus?, NoError> {
+func _internal_canApplyChannelBoost(account: Account, peerId: PeerId) -> Signal<CanApplyBoostStatus, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<CanApplyBoostStatus?, NoError> in
+    |> mapToSignal { inputPeer -> Signal<CanApplyBoostStatus, NoError> in
         guard let inputPeer = inputPeer else {
-            return .single(nil)
+            return .single(.error(.generic))
         }
         return account.network.request(Api.functions.stories.canApplyBoost(peer: inputPeer), automaticFloodWait: false)
         |> map { result -> (Api.stories.CanApplyBoostResult?, CanApplyBoostStatus.ErrorReason?) in
@@ -93,12 +93,12 @@ func _internal_canApplyChannelBoost(account: Account, peerId: PeerId) -> Signal<
 
             return .single((nil, reason))
         }
-        |> mapToSignal { result, errorReason -> Signal<CanApplyBoostStatus?, NoError> in
+        |> mapToSignal { result, errorReason -> Signal<CanApplyBoostStatus, NoError> in
             guard let result = result else {
                 return .single(.error(errorReason ?? .generic))
             }
             
-            return account.postbox.transaction { transaction -> CanApplyBoostStatus? in
+            return account.postbox.transaction { transaction -> CanApplyBoostStatus in
                 switch result {
                 case .canApplyBoostOk:
                     return .ok
@@ -108,7 +108,7 @@ func _internal_canApplyChannelBoost(account: Account, peerId: PeerId) -> Signal<
                     if let peer = transaction.getPeer(currentBoost.peerId) {
                         return .replace(currentBoost: EnginePeer(peer))
                     } else {
-                        return nil
+                        return .error(.generic)
                     }
                 }
             }
