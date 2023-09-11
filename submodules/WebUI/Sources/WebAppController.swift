@@ -1534,7 +1534,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 self?.controllerNode.webView?.reload()
             })))
             
-            if let _ = attachMenuBot, [.attachMenu, .settings].contains(source) {
+            if let _ = attachMenuBot, [.attachMenu, .settings, .generic].contains(source) {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_RemoveBot, textColor: .destructive, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor)
                 }, action: { [weak self] c, _ in

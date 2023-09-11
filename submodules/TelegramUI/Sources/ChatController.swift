@@ -13185,7 +13185,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                let params = WebAppParameters(source: .generic, peerId: peerId, botId: peerId, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings))
+                let params = WebAppParameters(source: .generic, peerId: peerId, botId: botPeer.id, botName: botApp.title, url: url, queryId: 0, payload: payload, buttonText: "", keepAliveSignal: nil, forceHasSettings: botApp.flags.contains(.hasSettings))
                 let controller = standaloneWebAppController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, params: params, threadId: strongSelf.chatLocation.threadId, openUrl: { [weak self] url, concealed, commit in
                     self?.openUrl(url, concealed: concealed, forceExternal: true, commit: commit)
                 }, requestSwitchInline: { [weak self] query, chatTypes, completion in
@@ -13220,28 +13220,83 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
         }
         
-        let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id)
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        let _ = combineLatest(
+            queue: Queue.mainQueue(),
+            ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id),
+            self.context.engine.messages.attachMenuBots(),
+            self.context.engine.messages.getAttachMenuBot(botId: botPeer.id, cached: true)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<AttachMenuBot?, NoError> in
+                return .single(nil)
+            }
+        ).start(next: { [weak self] value, attachMenuBots, attachMenuBot in
             guard let self else {
                 return
             }
-
-            if !value || concealed || botApp.flags.contains(.notActivated) {
-                let context = self.context
-                                
-                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
-                    let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
-                    openBotApp(allowWrite)
-                }, showMore: { [weak self] in
-                    if let self {
-                        self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
+            
+            var isAttachMenuBotInstalled: Bool?
+            if let _ = attachMenuBot {
+                if let _ = attachMenuBots.first(where: { $0.peer.id == botPeer.id && !$0.flags.contains(.notActivated) }) {
+                    isAttachMenuBotInstalled = true
+                } else {
+                    isAttachMenuBotInstalled = false
+                }
+            }
+            
+            let context = self.context
+            if !value || concealed || botApp.flags.contains(.notActivated) || isAttachMenuBotInstalled == false {
+                if let isAttachMenuBotInstalled, let attachMenuBot {
+                    if !isAttachMenuBotInstalled {
+                        let controller = webAppTermsAlertController(context: context, updatedPresentationData: self.updatedPresentationData, bot: attachMenuBot, completion: { allowWrite in
+                            let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
+                            let _ = (context.engine.messages.addBotToAttachMenu(botId: botPeer.id, allowWrite: allowWrite)
+                            |> deliverOnMainQueue).start(error: { _ in
+                            }, completed: {
+                                openBotApp(allowWrite)
+                            })
+                        })
+                        self.present(controller, in: .window(.root))
+                    } else {
+                        openBotApp(false)
                     }
-                })
-                self.present(controller, in: .window(.root))
+                } else {
+                    let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                        let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
+                        openBotApp(allowWrite)
+                    }, showMore: { [weak self] in
+                        if let self {
+                            self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
+                        }
+                    })
+                    self.present(controller, in: .window(.root))
+                }
             } else {
                 openBotApp(false)
             }
         })
+        
+//        let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id)
+//        |> deliverOnMainQueue).start(next: { [weak self] value in
+//            guard let self else {
+//                return
+//            }
+//
+//            if !value || concealed || botApp.flags.contains(.notActivated) {
+//
+//
+//                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+//                    let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
+//                    openBotApp(allowWrite)
+//                }, showMore: { [weak self] in
+//                    if let self {
+//                        self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
+//                    }
+//                })
+//                self.present(controller, in: .window(.root))
+//            } else {
+//                openBotApp(false)
+//            }
+//        })
     }
     
     private func presentAttachmentPremiumGift() {
