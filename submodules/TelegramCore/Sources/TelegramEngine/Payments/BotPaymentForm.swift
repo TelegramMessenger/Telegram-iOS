@@ -47,6 +47,7 @@ public struct BotPaymentInvoice : Equatable {
     
     public struct RecurrentInfo: Equatable {
         public var termsUrl: String
+        public var isRecurrent: Bool
     }
 
     public let isTest: Bool
@@ -54,7 +55,7 @@ public struct BotPaymentInvoice : Equatable {
     public let currency: String
     public let prices: [BotPaymentPrice]
     public let tip: Tip?
-    public let recurrentInfo: RecurrentInfo?
+    public let termsInfo: RecurrentInfo?
 }
 
 public struct BotPaymentNativeProvider : Equatable {
@@ -144,7 +145,7 @@ public enum BotPaymentFormRequestError {
 extension BotPaymentInvoice {
     init(apiInvoice: Api.Invoice) {
         switch apiInvoice {
-        case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, recurrentTermsUrl):
+        case let .invoice(flags, currency, prices, maxTipAmount, suggestedTipAmounts, termsUrl):
             var fields = BotPaymentInvoiceFields()
             if (flags & (1 << 1)) != 0 {
                 fields.insert(.name)
@@ -167,9 +168,10 @@ extension BotPaymentInvoice {
             if (flags & (1 << 7)) != 0 {
                 fields.insert(.emailAvailableToProvider)
             }
-            var recurrentInfo: BotPaymentInvoice.RecurrentInfo?
-            if let recurrentTermsUrl = recurrentTermsUrl {
-                recurrentInfo = BotPaymentInvoice.RecurrentInfo(termsUrl: recurrentTermsUrl)
+            let isRecurrent = (flags & (1 << 9)) != 0
+            var termsInfo: BotPaymentInvoice.RecurrentInfo?
+            if let termsUrl = termsUrl {
+                termsInfo = BotPaymentInvoice.RecurrentInfo(termsUrl: termsUrl, isRecurrent: isRecurrent)
             }
             var parsedTip: BotPaymentInvoice.Tip?
             if let maxTipAmount = maxTipAmount, let suggestedTipAmounts = suggestedTipAmounts {
@@ -180,7 +182,7 @@ extension BotPaymentInvoice {
                 case let .labeledPrice(label, amount):
                     return BotPaymentPrice(label: label, amount: amount)
                 }
-            }, tip: parsedTip, recurrentInfo: recurrentInfo)
+            }, tip: parsedTip, termsInfo: termsInfo)
         }
     }
 }

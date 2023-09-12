@@ -1937,7 +1937,7 @@ public final class StoryItemSetContainerComponent: Component {
             return nil
         }
         
-        func animateIn(transitionIn: StoryContainerScreen.TransitionIn) {
+        func animateIn(transitionIn: StoryContainerScreen.TransitionIn, completion: @escaping () -> Void) {
             if let inputPanelView = self.inputPanel.view {
                 inputPanelView.layer.animatePosition(
                     from: CGPoint(x: 0.0, y: self.bounds.height - inputPanelView.frame.minY),
@@ -1998,7 +1998,9 @@ public final class StoryItemSetContainerComponent: Component {
                 if let closeFriendIcon = self.privacyIcon?.view {
                     closeFriendIcon.layer.animateAlpha(from: 0.0, to: closeFriendIcon.alpha, duration: 0.25)
                 }
-                self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                self.closeButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                    completion()
+                })
                 
                 self.topContentGradientView.layer.animateAlpha(from: 0.0, to: self.topContentGradientView.alpha, duration: 0.25)
                 
@@ -2057,6 +2059,8 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     visibleItemView.layer.animateScale(from: innerScale, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 }
+            } else {
+                completion()
             }
         }
         
@@ -3998,6 +4002,13 @@ public final class StoryItemSetContainerComponent: Component {
                     self.captionItem = captionItem
                 }
                 
+                var enableEntities = true
+                if case .user = component.slice.peer {
+                    if !component.slice.peer.isService && !component.slice.peer.isPremium {
+                        enableEntities = false
+                    }
+                }
+                
                 let captionSize = captionItem.view.update(
                     transition: captionItemTransition,
                     component: AnyComponent(StoryContentCaptionComponent(
@@ -4006,7 +4017,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         theme: component.theme,
                         text: component.slice.item.storyItem.text,
-                        entities: component.slice.peer.isPremium ? component.slice.item.storyItem.entities : [],
+                        entities: enableEntities ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
                             guard let self, let component = self.component else {

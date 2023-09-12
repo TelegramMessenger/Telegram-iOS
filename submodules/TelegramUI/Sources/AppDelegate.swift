@@ -1476,6 +1476,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let _ = self.urlSession(identifier: "\(baseAppBundleId).backroundSession")
         
+        var previousReportedMemoryConsumption = 0
+        let _ = Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true, block: { _ in
+            let value = getMemoryConsumption()
+            if abs(value - previousReportedMemoryConsumption) > 1 * 1024 * 1024 {
+                previousReportedMemoryConsumption = value
+                Logger.shared.log("App \(self.episodeId)", "Memory consumption: \(value / (1024 * 1024)) MB")
+            }
+        })
+        
         return true
     }
     
@@ -2833,4 +2842,23 @@ private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
             }
         }
     }
+}
+
+private func getMemoryConsumption() -> Int {
+    guard let memory_offset = MemoryLayout.offset(of: \task_vm_info_data_t.min_address) else {
+        return 0
+    }
+    let TASK_VM_INFO_COUNT = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+    let TASK_VM_INFO_REV1_COUNT = mach_msg_type_number_t(memory_offset / MemoryLayout<integer_t>.size)
+    var info = task_vm_info_data_t()
+    var count = TASK_VM_INFO_COUNT
+    let kr = withUnsafeMutablePointer(to: &info) { infoPtr in
+        infoPtr.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { intPtr in
+            task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), intPtr, &count)
+        }
+    }
+    guard kr == KERN_SUCCESS, count >= TASK_VM_INFO_REV1_COUNT else {
+        return 0
+    }
+    return Int(info.phys_footprint)
 }
