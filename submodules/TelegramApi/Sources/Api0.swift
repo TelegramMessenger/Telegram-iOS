@@ -73,6 +73,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1834973166] = { return Api.BaseTheme.parse_baseThemeTinted($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
+    dict[245261184] = { return Api.Booster.parse_booster($0) }
     dict[-1778593322] = { return Api.BotApp.parse_botApp($0) }
     dict[1571189943] = { return Api.BotApp.parse_botAppNotModified($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -419,7 +420,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-193992412] = { return Api.InputWebFileLocation.parse_inputWebFileAudioAlbumThumbLocation($0) }
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[-1036396922] = { return Api.InputWebFileLocation.parse_inputWebFileLocation($0) }
-    dict[1048946971] = { return Api.Invoice.parse_invoice($0) }
+    dict[1572428309] = { return Api.Invoice.parse_invoice($0) }
     dict[-1059185703] = { return Api.JSONObjectValue.parse_jsonObjectValue($0) }
     dict[-146520221] = { return Api.JSONValue.parse_jsonArray($0) }
     dict[-952869270] = { return Api.JSONValue.parse_jsonBool($0) }
@@ -1175,9 +1176,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
-    dict[2061518568] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
+    dict[-203604707] = { return Api.stories.BoostersList.parse_boostersList($0) }
+    dict[1726619631] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
     dict[-1021889145] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostOk($0) }
-    dict[-1532908712] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
+    dict[1898726997] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1574486984] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
@@ -1286,6 +1288,8 @@ public extension Api {
             case let _1 as Api.BaseTheme:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.Booster:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotApp:
                 _1.serialize(buffer, boxed)
@@ -2056,6 +2060,8 @@ public extension Api {
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stories.BoostersList:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.BoostsStatus:
                 _1.serialize(buffer, boxed)

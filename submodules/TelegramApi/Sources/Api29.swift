@@ -281,27 +281,93 @@ public extension Api.stories {
     }
 }
 public extension Api.stories {
-    enum BoostsStatus: TypeConstructorDescription {
-        case boostsStatus(flags: Int32, level: Int32, boosts: Int32, nextLevelBoosts: Int32?)
+    enum BoostersList: TypeConstructorDescription {
+        case boostersList(flags: Int32, count: Int32, boosters: [Api.Booster], nextOffset: String?, users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .boostsStatus(let flags, let level, let boosts, let nextLevelBoosts):
+                case .boostersList(let flags, let count, let boosters, let nextOffset, let users):
                     if boxed {
-                        buffer.appendInt32(2061518568)
+                        buffer.appendInt32(-203604707)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(level, buffer: buffer, boxed: false)
-                    serializeInt32(boosts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(boosters.count))
+                    for item in boosters {
+                        item.serialize(buffer, true)
+                    }
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(nextOffset!, buffer: buffer, boxed: false)}
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .boostsStatus(let flags, let level, let boosts, let nextLevelBoosts):
-                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any)])
+                case .boostersList(let flags, let count, let boosters, let nextOffset, let users):
+                return ("boostersList", [("flags", flags as Any), ("count", count as Any), ("boosters", boosters as Any), ("nextOffset", nextOffset as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_boostersList(_ reader: BufferReader) -> BoostersList? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: [Api.Booster]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Booster.self)
+            }
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            var _5: [Api.User]?
+            if let _ = reader.readInt32() {
+                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.stories.BoostersList.boostersList(flags: _1!, count: _2!, boosters: _3!, nextOffset: _4, users: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.stories {
+    enum BoostsStatus: TypeConstructorDescription {
+        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience):
+                    if boxed {
+                        buffer.appendInt32(1726619631)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(level, buffer: buffer, boxed: false)
+                    serializeInt32(currentLevelBoosts, buffer: buffer, boxed: false)
+                    serializeInt32(boosts, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {premiumAudience!.serialize(buffer, true)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience):
+                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any)])
     }
     }
     
@@ -313,13 +379,21 @@ public extension Api.stories {
             var _3: Int32?
             _3 = reader.readInt32()
             var _4: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt32() }
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
+            var _6: Api.StatsPercentValue?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.StatsPercentValue
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, boosts: _3!, nextLevelBoosts: _4)
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, nextLevelBoosts: _5, premiumAudience: _6)
             }
             else {
                 return nil
@@ -343,7 +417,7 @@ public extension Api.stories {
                     break
                 case .canApplyBoostReplace(let currentBoost, let chats):
                     if boxed {
-                        buffer.appendInt32(-1532908712)
+                        buffer.appendInt32(1898726997)
                     }
                     currentBoost.serialize(buffer, true)
                     buffer.appendInt32(481674261)
