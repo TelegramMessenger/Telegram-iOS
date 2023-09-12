@@ -8665,6 +8665,23 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
+                static func getBoostersList(peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.BoostersList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(863959424)
+                    peer.serialize(buffer, true)
+                    serializeString(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stories.getBoostersList", parameters: [("peer", String(describing: peer)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.BoostersList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stories.BoostersList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stories.BoostersList
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stories {
                 static func getBoostsStatus(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.BoostsStatus>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1279562866)

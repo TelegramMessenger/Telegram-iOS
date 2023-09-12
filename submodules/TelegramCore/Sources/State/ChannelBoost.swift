@@ -5,23 +5,36 @@ import SwiftSignalKit
 
 public final class ChannelBoostStatus: Equatable {
     public let level: Int
+    public let currentLevelBoosts: Int
     public let boosts: Int
     public let nextLevelBoosts: Int?
+    public let premiumAudience: StatsPercentValue?
     
-    public init(level: Int, boosts: Int, nextLevelBoosts: Int?) {
+    public init(level: Int, currentLevelBoosts: Int, boosts: Int, nextLevelBoosts: Int?, premiumAudience: StatsPercentValue?) {
         self.level = level
+        self.currentLevelBoosts = currentLevelBoosts
         self.boosts = boosts
         self.nextLevelBoosts = nextLevelBoosts
+        self.premiumAudience = premiumAudience
     }
     
     public static func ==(lhs: ChannelBoostStatus, rhs: ChannelBoostStatus) -> Bool {
         if lhs.level != rhs.level {
             return false
         }
+        if lhs.currentLevelBoosts != rhs.currentLevelBoosts {
+            return false
+        }
         if lhs.boosts != rhs.boosts {
             return false
         }
         if lhs.nextLevelBoosts != rhs.nextLevelBoosts {
+            return false
+        }
+        if lhs.premiumAudience != rhs.premiumAudience {
+            return false
+        }
+        if lhs.premiumAudience != rhs.premiumAudience {
             return false
         }
         return true
@@ -47,8 +60,10 @@ func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal
             }
             
             switch result {
-            case let .boostsStatus(_, level, boosts, nextLevelBoosts):
-                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init))
+            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience):
+                return ChannelBoostStatus(level: Int(level), currentLevelBoosts: Int(currentLevelBoosts), boosts: Int(boosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap { value in
+                    return StatsPercentValue(apiPercentValue: value)
+                })
             }
         }
     }

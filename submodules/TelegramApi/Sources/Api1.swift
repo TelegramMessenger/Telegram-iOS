@@ -893,6 +893,46 @@ public extension Api {
     }
 }
 public extension Api {
+    enum Booster: TypeConstructorDescription {
+        case booster(userId: Int64, expires: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .booster(let userId, let expires):
+                    if boxed {
+                        buffer.appendInt32(245261184)
+                    }
+                    serializeInt64(userId, buffer: buffer, boxed: false)
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .booster(let userId, let expires):
+                return ("booster", [("userId", userId as Any), ("expires", expires as Any)])
+    }
+    }
+    
+        public static func parse_booster(_ reader: BufferReader) -> Booster? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.Booster.booster(userId: _1!, expires: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum BotApp: TypeConstructorDescription {
         case botApp(flags: Int32, id: Int64, accessHash: Int64, shortName: String, title: String, description: String, photo: Api.Photo, document: Api.Document?, hash: Int64)
         case botAppNotModified
