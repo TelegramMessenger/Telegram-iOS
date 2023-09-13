@@ -1188,13 +1188,13 @@ public class Account {
             },
             self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { uploadingPeerMedia in
                 if !uploadingPeerMedia.isEmpty {
-                    print("updatingMessageMedia: true")
+                    print("uploadingPeerMedia: true")
                 }
                 return !uploadingPeerMedia.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
             },
             self.accountPresenceManager.isPerformingUpdate() |> map { presenceUpdate in
                 if presenceUpdate {
-                    print("updatingMessageMedia: true")
+                    print("accountPresenceManager isPerformingUpdate: true")
                     return []
                 }
                 return presenceUpdate ? AccountRunningImportantTasks.other : []

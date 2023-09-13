@@ -381,6 +381,8 @@ private final class StoryContainerScreenComponent: Component {
         
         private let sharedViewListsContext = StoryItemSetViewListComponent.SharedListsContext()
         
+        private var didAnimateIn: Bool = false
+        
         private var isAnimatingOut: Bool = false
         private var didAnimateOut: Bool = false
         private var isDismissedExlusively: Bool = false
@@ -428,25 +430,6 @@ private final class StoryContainerScreenComponent: Component {
                 return [.left, .right]
             })
             self.addGestureRecognizer(horizontalPanRecognizer)
-            
-            //TODO:move dismiss pan
-            /*let verticalPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.dismissPanGesture(_:)), allowedDirections: { [weak self] point in
-                guard let self, let component = self.component, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
-                    return []
-                }
-                if let environment = self.environment, case .regular = environment.metrics.widthClass {
-                } else {
-                    if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
-                        return []
-                    }
-                }
-                if !itemSetComponentView.allowsVerticalPanGesture() {
-                    return []
-                }
-                
-                return [.down]
-            })
-            self.addGestureRecognizer(verticalPanRecognizer)*/
             
             let longPressRecognizer = StoryLongPressRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longPressRecognizer.delegate = self
@@ -809,74 +792,6 @@ private final class StoryContainerScreenComponent: Component {
             }
         }
         
-        /*@objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
-            switch recognizer.state {
-            case .began:
-                self.dismissAllTooltips()
-                
-                if let component = self.component, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
-                    if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                        if itemSetComponentView.hasActiveDeactivateableInput() {
-                            itemSetComponentView.deactivateInput()
-                            recognizer.isEnabled = false
-                            recognizer.isEnabled = true
-                            return
-                        }
-                    }
-                }
-                
-                self.verticalPanState = ItemSetPanState(fraction: 0.0, didBegin: true)
-                self.state?.updated(transition: .immediate)
-            case .changed:
-                let translation = recognizer.translation(in: self)
-                self.verticalPanState = ItemSetPanState(fraction: max(-1.0, min(1.0, translation.y / self.bounds.height)), didBegin: true)
-                self.state?.updated(transition: .immediate)
-                
-                if translation.y < -40.0 {
-                    if let component = self.component, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
-                        if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                            if let activateInputWhileDragging = itemSetComponentView.activateInputWhileDragging() {
-                                activateInputWhileDragging()
-                                
-                                self.verticalPanState = nil
-                                recognizer.state = .cancelled
-                                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                            }
-                        }
-                    }
-                }
-            case .cancelled, .ended:
-                if self.verticalPanState != nil {
-                    let translation = recognizer.translation(in: self)
-                    let velocity = recognizer.velocity(in: self)
-                    
-                    self.verticalPanState = nil
-                    var updateState = true
-                    
-                    if translation.y > 200.0 || (translation.y > 5.0 && velocity.y > 200.0) {
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                        self.environment?.controller()?.dismiss()
-                    } else if translation.y < -200.0 || (translation.y < -100.0 && velocity.y < -100.0) {
-                        if let component = self.component, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
-                            if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                                if itemSetComponentView.activateInput() {
-                                    updateState = false
-                                }
-                            }
-                        }
-                        
-                        if updateState || "".isEmpty {
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                        }
-                    } else {
-                        self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
-                    }
-                }
-            default:
-                break
-            }
-        }*/
-        
         @objc private func longPressGesture(_ recognizer: StoryLongPressRecognizer) {
             switch recognizer.state {
             case .began:
@@ -963,13 +878,33 @@ private final class StoryContainerScreenComponent: Component {
                 
                 if let transitionIn = self.component?.transitionIn, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
                     if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
-                        itemSetComponentView.animateIn(transitionIn: transitionIn)
+                        itemSetComponentView.animateIn(transitionIn: transitionIn, completion: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            
+                            self.didAnimateIn = true
+                            self.state?.updated(transition: .immediate)
+                        })
+                    } else {
+                        self.didAnimateIn = true
+                        self.state?.updated(transition: .immediate)
                     }
+                } else {
+                    self.didAnimateIn = true
+                    self.state?.updated(transition: .immediate)
                 }
             } else {
                 self.layer.allowsGroupOpacity = true
                 self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { [weak self] _ in
-                    self?.layer.allowsGroupOpacity = false
+                    guard let self else {
+                        return
+                    }
+                    
+                    self.layer.allowsGroupOpacity = false
+                    
+                    self.didAnimateIn = true
+                    self.state?.updated(transition: .immediate)
                 })
             }
             
@@ -1416,6 +1351,15 @@ private final class StoryContainerScreenComponent: Component {
                         }
                     }
                     
+                    if self.didAnimateIn && self.itemSetPanState == nil {
+                        if i == focusedIndex - 1 {
+                            isItemVisible = true
+                        }
+                        if i == focusedIndex + 1 {
+                            isItemVisible = true
+                        }
+                    }
+                    
                     if isItemVisible {
                         validIds.append(slice.peer.id)
                         
@@ -1449,6 +1393,8 @@ private final class StoryContainerScreenComponent: Component {
                         }
                         
                         itemSetView.view.parentState = self.state
+                        
+                        let startTime = CFAbsoluteTimeGetCurrent()
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -1592,6 +1538,7 @@ private final class StoryContainerScreenComponent: Component {
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
+                                print("init time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                             }
                             if itemSetComponentView.superview == nil {
                                 itemSetView.tintLayer.isDoubleSided = false

@@ -7778,6 +7778,7 @@ Sorry for the inconvenience.";
 "WebApp.Settings" = "Settings";
 
 "Bot.AccepRecurrentInfo" = "I accept the [Terms of Service]() of **%1$@**";
+"Bot.AcceptTermsInfo" = "I accept the [Terms of Service]() of **%1$@**";
 
 "Chat.AudioTranscriptionRateAction" = "Rate Transcription";
 "Chat.AudioTranscriptionFeedbackTip" = "Thank you for your feedback.";
