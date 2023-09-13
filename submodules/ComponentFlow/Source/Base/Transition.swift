@@ -409,6 +409,29 @@ public struct Transition {
         }
     }
     
+    public func setAnchorPoint(layer: CALayer, anchorPoint: CGPoint, completion: ((Bool) -> Void)? = nil) {
+        if layer.anchorPoint == anchorPoint {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            layer.anchorPoint = anchorPoint
+            layer.removeAnimation(forKey: "anchorPoint")
+            completion?(true)
+        case .curve:
+            let previousAnchorPoint: CGPoint
+            if layer.animation(forKey: "anchorPoint") != nil, let presentation = layer.presentation() {
+                previousAnchorPoint = presentation.anchorPoint
+            } else {
+                previousAnchorPoint = layer.anchorPoint
+            }
+            layer.anchorPoint = anchorPoint
+
+            self.animateAnchorPoint(layer: layer, from: previousAnchorPoint, to: layer.anchorPoint, completion: completion)
+        }
+    }
+    
     public func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
         switch self.animation {
         case .none:
@@ -738,6 +761,26 @@ public struct Transition {
             )
         }
     }
+    
+    public func animateAnchorPoint(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            completion?(true)
+        case let .curve(duration, curve):
+            layer.animate(
+                from: NSValue(cgPoint: fromValue),
+                to: NSValue(cgPoint: toValue),
+                keyPath: "anchorPoint",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: additive,
+                completion: completion
+            )
+        }
+    }
+
 
     public func animateBounds(layer: CALayer, from fromValue: CGRect, to toValue: CGRect, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {

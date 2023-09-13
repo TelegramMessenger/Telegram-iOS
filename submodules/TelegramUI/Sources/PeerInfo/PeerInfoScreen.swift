@@ -8440,6 +8440,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         let controller = PremiumLimitScreen(context: strongSelf.context, subject: .accounts, count: Int32(count), action: {
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .accounts)
                             replaceImpl?(controller)
+                            return true
                         })
                         replaceImpl = { [weak controller] c in
                             controller?.replace(with: c)

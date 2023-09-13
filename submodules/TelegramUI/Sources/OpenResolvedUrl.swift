@@ -835,5 +835,92 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }), nil)
                 }
             })
+        case let .boost(peerId, status, canApplyStatus):
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer, let status else {
+                    return
+                }
+                
+                var boosted = false
+                if case let .error(error) = canApplyStatus, case .peerBoostAlreadyActive = error {
+                    boosted = true
+                }
+                
+                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: boosted)
+                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: true)
+                let nextCount = Int32(status.boosts + 1)
+                
+                var updateImpl: (() -> Void)?
+                var dismissImpl: (() -> Void)?
+                let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), action: {
+                    if boosted {
+                        return true
+                    }
+                    var dismiss = false
+                    switch canApplyStatus {
+                    case .ok:
+                        updateImpl?()
+                    case let .replace(previousPeer):
+                        let text = "You currently boost **\(previousPeer.compactDisplayTitle)**. Do you want to boost **\(peer.compactDisplayTitle)** instead?"
+                        let controller = replaceBoostConfirmationController(context: context, fromPeer: previousPeer, toPeer: peer, text: text, commit: {
+                            updateImpl?()
+                        })
+                        present(controller, nil)
+                    case let .error(error):
+                        let title: String?
+                        let text: String
+                        
+                        var actions: [TextAlertAction] = [
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                        
+                        switch error {
+                        case .generic:
+                            title = nil
+                            text = presentationData.strings.Login_UnknownError
+                        case let .floodWait(timeout):
+                            title = "Can't Boost Too Often"
+                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
+                            text = "You can change the channel you boost only once a day. Next time you can boost is in **\(valueText)**."
+                            dismiss = true
+                        case .peerBoostAlreadyActive:
+                            title = "Already Boosted"
+                            text = "You are already boosting this channel."
+                        case .premiumRequired:
+                            title = "Premium Needed"
+                            text = "Only **Telegram Premium** subscribers can boost channels. Do you want to subscribe to **Telegram Premium**?"
+                            actions = [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                    dismissImpl?()
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: false, dismissed: nil)
+                                    navigationController?.pushViewController(controller)
+                                })
+                            ]
+                        case .giftedPremiumNotAllowed:
+                            title = "Can't Boost with Gifted Premium"
+                            text = "Because your **Telegram Premium** subscription was gifted to you, you can't use it to boost channels."
+                            dismiss = true
+                        }
+                        
+                        let controller = textAlertController(sharedContext: context.sharedContext, title: title, text: text, actions: actions, parseMarkdown: true)
+                        present(controller, nil)
+                    }
+                    return dismiss
+                },
+                openPeer: { peer in
+                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                })
+                navigationController?.pushViewController(controller)
+                
+                updateImpl = { [weak controller] in
+                    let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
+                    controller?.updateSubject(nextSubject, count: nextCount)
+                }
+                dismissImpl = { [weak controller] in
+                    controller?.dismiss()
+                }
+            })
     }
 }

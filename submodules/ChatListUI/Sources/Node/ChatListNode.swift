@@ -1433,10 +1433,14 @@ public final class ChatListNode: ListView {
                         case let .limitExceeded(count, _):
                             if isPremium {
                                 if case .filter = location {
-                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {})
+                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                        return true
+                                    })
                                     strongSelf.push?(controller)
                                 } else {
-                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                        return true
+                                    })
                                     strongSelf.push?(controller)
                                 }
                             } else {
@@ -1445,6 +1449,7 @@ public final class ChatListNode: ListView {
                                     let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
                                         let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
                                         replaceImpl?(premiumScreen)
+                                        return true
                                     })
                                     strongSelf.push?(controller)
                                     replaceImpl = { [weak controller] c in
@@ -1455,6 +1460,7 @@ public final class ChatListNode: ListView {
                                     let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
                                         let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
                                         replaceImpl?(premiumScreen)
+                                        return true
                                     })
                                     strongSelf.push?(controller)
                                     replaceImpl = { [weak controller] c in

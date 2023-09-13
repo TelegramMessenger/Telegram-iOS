@@ -1418,6 +1418,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
                     let controller = PremiumIntroScreen(context: context, source: .folders)
                     replaceImpl?(controller)
+                    return true
                 })
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
@@ -1533,6 +1534,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
                                     let controller = PremiumIntroScreen(context: context, source: .folders)
                                     replaceImpl?(controller)
+                                    return true
                                 })
                                 replaceImpl = { [weak controller] c in
                                     controller?.replace(with: c)
@@ -1576,6 +1578,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
                                         let controller = PremiumIntroScreen(context: context, source: .folders)
                                         replaceImpl?(controller)
+                                        return true
                                     })
                                     replaceImpl = { [weak controller] c in
                                         controller?.replace(with: c)
@@ -1604,7 +1607,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                 let premiumLimit = premiumLimits.maxFolderChatsCount
                                                 
                                                 if data.includePeers.peers.count >= premiumLimit {
-                                                    let controller = PremiumLimitScreen(context: strongSelf.context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {})
+                                                    let controller = PremiumLimitScreen(context: strongSelf.context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {
+                                                        return true
+                                                    })
                                                     strongSelf.push(controller)
                                                     f(.dismissWithoutContent)
                                                     return
@@ -1613,6 +1618,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                                     let controller = PremiumLimitScreen(context: strongSelf.context, subject: .chatsPerFolder, count: Int32(data.includePeers.peers.count), action: {
                                                         let controller = PremiumIntroScreen(context: strongSelf.context, source: .chatsPerFolder)
                                                         replaceImpl?(controller)
+                                                        return true
                                                     })
                                                     replaceImpl = { [weak controller] c in
                                                         controller?.replace(with: c)
@@ -2134,6 +2140,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
                 let controller = PremiumIntroScreen(context: context, source: .folders)
                 replaceImpl?(controller)
+                return true
             })
             replaceImpl = { [weak controller] c in
                 controller?.replace(with: c)
@@ -2607,6 +2614,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = PremiumLimitScreen(context: context, subject: .expiringStories, count: Int32(storiesCount), action: {
                 let controller = PremiumIntroScreen(context: context, source: .stories)
                 replaceImpl?(controller)
+                return true
             })
             replaceImpl = { [weak controller] c in
                 controller?.replace(with: c)
@@ -5631,6 +5639,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             let controller = PremiumLimitScreen(context: context, subject: .folders, count: strongSelf.tabContainerNode.filtersCount, action: {
                                 let controller = PremiumIntroScreen(context: context, source: .folders)
                                 replaceImpl?(controller)
+                                return true
                             })
                             replaceImpl = { [weak controller] c in
                                 controller?.replace(with: c)

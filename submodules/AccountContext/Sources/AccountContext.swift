@@ -300,6 +300,7 @@ public enum ResolvedUrl {
     case premiumOffer(reference: String?)
     case chatFolder(slug: String)
     case story(peerId: PeerId, id: Int32)
+    case boost(peerId: PeerId, status: ChannelBoostStatus?, canApplyStatus: CanApplyBoostStatus)
 }
 
 public enum NavigateToChatKeepStack {
@@ -896,7 +897,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
-    func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Void) -> ViewController
+    func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
@@ -953,6 +954,7 @@ public enum PremiumIntroSource {
     case storiesFormatting
     case storiesExpirationDurations
     case storiesSuggestedReactions
+    case channelBoost(EnginePeer.Id)
 }
 
 public enum PremiumDemoSubject {
@@ -985,7 +987,7 @@ public enum PremiumLimitSubject {
     case expiringStories
     case storiesWeekly
     case storiesMonthly
-    case storiesChannelBoost(level: Int32, link: String?)
+    case storiesChannelBoost(peer: EnginePeer, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, boosted: Bool)
 }
 
 public protocol ComposeController: ViewController {

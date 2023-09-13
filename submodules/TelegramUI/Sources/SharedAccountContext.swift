@@ -1712,6 +1712,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesExpirationDurations
         case .storiesSuggestedReactions:
             mappedSource = .storiesSuggestedReactions
+        case let .channelBoost(peerId):
+            mappedSource = .channelBoost(peerId)
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed
@@ -1755,7 +1757,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
-    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Void) -> ViewController {
+    public func makePremiumLimitController(context: AccountContext, subject: PremiumLimitSubject, count: Int32, forceDark: Bool, cancel: @escaping () -> Void, action: @escaping () -> Bool) -> ViewController {
         let mappedSubject: PremiumLimitScreen.Subject
         switch subject {
         case .folders:
@@ -1780,8 +1782,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .storiesWeekly
         case .storiesMonthly:
             mappedSubject = .storiesMonthly
-        case let .storiesChannelBoost(level, link):
-            mappedSubject = .storiesChannelBoost(level: level, link: link)
+        case let .storiesChannelBoost(peer, level, currentLevelBoosts, nextLevelBoosts, link, boosted):
+            mappedSubject = .storiesChannelBoost(peer: peer, level: level, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: link, boosted: boosted)
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }

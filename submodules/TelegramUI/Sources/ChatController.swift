@@ -13128,7 +13128,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         self.attachmentController?.dismiss(animated: true, completion: nil)
         
-        let openBotApp = { [weak self] allowWrite in
+        let openBotApp: (Bool, Bool) -> Void = { [weak self] allowWrite, justInstalled in
             guard let strongSelf = self else {
                 return
             }
@@ -13212,6 +13212,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller.navigationPresentation = .flatModal
                 strongSelf.currentWebAppController = controller
                 strongSelf.push(controller)
+                
+                if justInstalled {
+                    let content: UndoOverlayContent
+//                    if bot.flags.contains(.showInSettings) {
+                    content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0)
+//                    } else {
+//                        content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
+//                    }
+                    controller.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
+                }
             }, error: { [weak self] error in
                 if let strongSelf = self {
                     strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
@@ -13252,17 +13262,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let _ = (context.engine.messages.addBotToAttachMenu(botId: botPeer.id, allowWrite: allowWrite)
                             |> deliverOnMainQueue).start(error: { _ in
                             }, completed: {
-                                openBotApp(allowWrite)
+                                openBotApp(allowWrite, true)
                             })
                         })
                         self.present(controller, in: .window(.root))
                     } else {
-                        openBotApp(false)
+                        openBotApp(false, false)
                     }
                 } else {
                     let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
                         let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
-                        openBotApp(allowWrite)
+                        openBotApp(allowWrite, false)
                     }, showMore: { [weak self] in
                         if let self {
                             self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
@@ -13271,32 +13281,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.present(controller, in: .window(.root))
                 }
             } else {
-                openBotApp(false)
+                openBotApp(false, false)
             }
         })
-        
-//        let _ = (ApplicationSpecificNotice.getBotGameNotice(accountManager: self.context.sharedContext.accountManager, peerId: botPeer.id)
-//        |> deliverOnMainQueue).start(next: { [weak self] value in
-//            guard let self else {
-//                return
-//            }
-//
-//            if !value || concealed || botApp.flags.contains(.notActivated) {
-//
-//
-//                let controller = webAppLaunchConfirmationController(context: context, updatedPresentationData: self.updatedPresentationData, peer: botPeer, requestWriteAccess: botApp.flags.contains(.notActivated) && botApp.flags.contains(.requiresWriteAccess), completion: { allowWrite in
-//                    let _ = ApplicationSpecificNotice.setBotGameNotice(accountManager: context.sharedContext.accountManager, peerId: botPeer.id).start()
-//                    openBotApp(allowWrite)
-//                }, showMore: { [weak self] in
-//                    if let self {
-//                        self.openResolved(result: .peer(botPeer._asPeer(), .info), sourceMessageId: nil)
-//                    }
-//                })
-//                self.present(controller, in: .window(.root))
-//            } else {
-//                openBotApp(false)
-//            }
-//        })
     }
     
     private func presentAttachmentPremiumGift() {
@@ -14208,6 +14195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if let item = item {
                                     if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
                                         let controller = PremiumLimitScreen(context: strongSelf.context, subject: .files, count: 4, action: {
+                                            return true
                                         })
                                         strongSelf.push(controller)
                                         return
@@ -14216,6 +14204,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         var replaceImpl: ((ViewController) -> Void)?
                                         let controller = PremiumLimitScreen(context: context, subject: .files, count: 2, action: {
                                             replaceImpl?(PremiumIntroScreen(context: context, source: .upload))
+                                            return true
                                         })
                                         replaceImpl = { [weak controller] c in
                                             controller?.replace(with: c)

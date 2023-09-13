@@ -2098,6 +2098,7 @@ final class StoryItemSetContainerSendMessage {
                                 if let item = item {
                                     if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
                                         let controller = PremiumLimitScreen(context: component.context, subject: .files, count: 4, action: {
+                                            return true
                                         })
                                         component.controller()?.push(controller)
                                         return
@@ -2106,6 +2107,7 @@ final class StoryItemSetContainerSendMessage {
                                         var replaceImpl: ((ViewController) -> Void)?
                                         let controller = PremiumLimitScreen(context: context, subject: .files, count: 2, action: {
                                             replaceImpl?(PremiumIntroScreen(context: context, source: .upload))
+                                            return true
                                         })
                                         replaceImpl = { [weak controller] c in
                                             controller?.replace(with: c)

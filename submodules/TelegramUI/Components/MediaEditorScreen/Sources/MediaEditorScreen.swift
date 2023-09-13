@@ -4435,22 +4435,54 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     }
         
     private var didComplete = false
-    func requestCompletion(animated: Bool) {
+    func requestCompletion(animated: Bool, skipSendCheck: Bool = false) {
         guard let mediaEditor = self.node.mediaEditor, let subject = self.node.subject, !self.didComplete else {
             return
         }
         
-//        if "".isEmpty { // let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
-//            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(level: 0, link: "t.me/channel?boost"), count: 5, forceDark: true, cancel: {}, action: { [weak self] in
-//                guard let self else {
-//                    return
-//                }
-//                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-//                self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-//            })
-//            self.push(controller)
-//            return
-//        }
+        if !skipSendCheck, let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
+            let _ = (self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(sendAsPeerId))
+            |> deliverOnMainQueue).start(next: { [weak self] status in
+                guard let self else {
+                    return
+                }
+                switch status {
+                case .available:
+                    self.requestCompletion(animated: animated, skipSendCheck: true)
+                case .channelBoostRequired:
+                    let _ = combineLatest(
+                        queue: Queue.mainQueue(),
+                        self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: sendAsPeerId)),
+                        self.context.engine.peers.getChannelBoostStatus(peerId: sendAsPeerId)
+                    ).start(next: { [weak self] peer, status in
+                        guard let self, let peer, let status else {
+                            return
+                        }
+                        
+                        let link: String
+                        if let addressName = peer.addressName, !addressName.isEmpty {
+                            link = "t.me/\(peer.addressName ?? "")?boost"
+                        } else {
+                            link = "t.me/boost?=\(peer.id.id._internalGetInt64Value())"
+                        }
+                        
+                        let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak self] in
+                            guard let self else {
+                                return true
+                            }
+                            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                            self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            UIPasteboard.general.string = "https://\(link)"
+                            return true
+                        })
+                        self.push(controller)
+                    })
+                default:
+                    break
+                }
+            })
+            return
+        }
         
         self.didComplete = true
         

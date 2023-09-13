@@ -304,7 +304,9 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let limit = limits.maxFoldersCount
             let premiumLimit = premiumLimits.maxFoldersCount
             if filters.count >= premiumLimit {
-                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {})
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
+                    return true
+                })
                 pushControllerImpl?(controller)
                 return
             } else if filters.count >= limit && !isPremium {
@@ -312,6 +314,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
                     let controller = PremiumIntroScreen(context: context, source: .folders)
                     replaceImpl?(controller)
+                    return true
                 })
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)
@@ -353,7 +356,9 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             let limit = limits.maxFoldersCount
             let premiumLimit = premiumLimits.maxFoldersCount
             if filters.count >= premiumLimit {
-                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {})
+                let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
+                    return true
+                })
                 pushControllerImpl?(controller)
                 return
             } else if filters.count >= limit && !isPremium {
@@ -361,6 +366,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 let controller = PremiumLimitScreen(context: context, subject: .folders, count: Int32(filters.count), action: {
                     let controller = PremiumIntroScreen(context: context, source: .folders)
                     replaceImpl?(controller)
+                    return true
                 })
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)

@@ -20,6 +20,10 @@ extension GroupStats: PeerStats {
     
 }
 
+extension ChannelBoostStatus: PeerStats {
+    
+}
+
 class StatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let stats: PeerStats
@@ -223,7 +227,41 @@ class StatsOverviewItemNode: ListViewItemNode {
                 return (abs(deltaPercentage) > 0.0 ? String(format: "%@ (%.02f%%)", delta, deltaPercentage * 100.0) : "", deltaValue > 0.0, abs(deltaValue) > 0.0)
             }
             
-            if let stats = item.stats as? ChannelStats {
+            if let stats = item.stats as? ChannelBoostStatus {
+                topLeftValueLabelLayoutAndApply = makeTopLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.level)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                                 
+                topRightValueLabelLayoutAndApply = makeTopRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(Int(stats.premiumAudience?.value ?? 0))", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                bottomLeftValueLabelLayoutAndApply = makeBottomLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.boosts)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.nextLevelBoosts ?? 0)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                topLeftTitleLabelLayoutAndApply = makeTopLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Level", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                                
+                topRightTitleLabelLayoutAndApply = makeTopRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Premium Subscribers", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                bottomLeftTitleLabelLayoutAndApply = makeBottomLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Existing boosts", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                bottomRightTitleLabelLayoutAndApply = makeBottomRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Boosts to level up", font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                             
+                
+                topLeftDeltaLabelLayoutAndApply = nil
+                
+                var premiumSubscribers: Double = 0.0
+                if let premiumAudience = stats.premiumAudience, premiumAudience.total > 0 {
+                    premiumSubscribers = premiumAudience.value / premiumAudience.total
+                }
+                
+                topRightDeltaLabelLayoutAndApply = makeTopRightDeltaLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: String(format: "%.02f%%", premiumSubscribers * 100.0), font: deltaFont, textColor: item.presentationData.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                
+                bottomLeftDeltaLabelLayoutAndApply = nil
+                bottomRightDeltaLabelLayoutAndApply = nil
+                
+                height += topRightValueLabelLayoutAndApply!.0.size.height + topRightTitleLabelLayoutAndApply!.0.size.height
+                                
+                height += verticalSpacing
+                height += bottomRightValueLabelLayoutAndApply!.0.size.height + bottomRightTitleLabelLayoutAndApply!.0.size.height
+            } else if let stats = item.stats as? ChannelStats {
                 let viewsPerPostDelta = deltaText(stats.viewsPerPost)
                 let sharesPerPostDelta = deltaText(stats.sharesPerPost)
                 

@@ -73,6 +73,7 @@ public enum ParsedInternalPeerUrlParameter {
     case voiceChat(String?)
     case appStart(String, String?)
     case story(Int32)
+    case boost
 }
 
 public enum ParsedInternalUrl {
@@ -272,6 +273,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     }
                                 }
                                 return .peer(.name(peerName), .groupBotStart("", botAdminRights))
+                            } else if queryItem.name == "boost" {
+                                return .peer(.name(peerName), .boost)
                             }
                         }
                     }
@@ -713,6 +716,14 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 |> map { _ -> ResolvedUrl? in
                                 }
                                 |> then(.single(.story(peerId: peer.id, id: id)))
+                            case .boost:
+                                return combineLatest(
+                                    context.engine.peers.getChannelBoostStatus(peerId: peer.id),
+                                    context.engine.peers.canApplyChannelBoost(peerId: peer.id)
+                                )
+                                |> map { boostStatus, canApplyStatus -> ResolvedUrl? in
+                                    return .boost(peerId: peer.id, status: boostStatus, canApplyStatus: canApplyStatus)
+                                }
                         }
                     } else {
                         return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))

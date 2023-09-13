@@ -2476,6 +2476,7 @@ public class CameraScreen: ViewController {
                         })
                     })
                     replaceImpl?(controller)
+                    return true
                 })
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)

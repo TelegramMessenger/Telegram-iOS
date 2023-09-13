@@ -15,6 +15,8 @@ import BundleIconComponent
 import SolidRoundedButtonComponent
 import Markdown
 import BalancedTextComponent
+import ConfettiEffect
+import AvatarNode
 
 func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -134,16 +136,16 @@ public class PremiumLimitDisplayComponent: Component {
     public final class View: UIView {
         private var component: PremiumLimitDisplayComponent?
         
-        private let container: SimpleLayer
+        private let container: UIView
         private let inactiveBackground: SimpleLayer
         
         private let inactiveTitleLabel = ComponentView<Empty>()
         private let inactiveValueLabel = ComponentView<Empty>()
         
-        private let inactiveRightTitleLabel = ComponentView<Empty>()
-        private let inactiveRightValueLabel = ComponentView<Empty>()
+        private let innerLeftTitleLabel = ComponentView<Empty>()
+        private let innerRightTitleLabel = ComponentView<Empty>()
         
-        private let activeContainer: SimpleLayer
+        private let activeContainer: UIView
         private let activeBackground: SimpleLayer
                 
         private let activeTitleLabel = ComponentView<Empty>()
@@ -151,6 +153,7 @@ public class PremiumLimitDisplayComponent: Component {
         
         private let badgeView: UIView
         private let badgeMaskView: UIView
+        private let badgeMaskClippingView: UIView
         private let badgeMaskBackgroundView: UIView
         private let badgeMaskArrowView: UIImageView
         private let badgeMaskArrowFillerView: UIView
@@ -161,20 +164,23 @@ public class PremiumLimitDisplayComponent: Component {
         private let hapticFeedback = HapticFeedback()
         
         override init(frame: CGRect) {
-            self.container = SimpleLayer()
-            self.container.masksToBounds = true
-            self.container.cornerRadius = 6.0
+            self.container = UIView()
+            self.container.clipsToBounds = true
+            self.container.layer.cornerRadius = 6.0
             
             self.inactiveBackground = SimpleLayer()
             
-            self.activeContainer = SimpleLayer()
-            self.activeContainer.masksToBounds = true
+            self.activeContainer = UIView()
+            self.activeContainer.clipsToBounds = true
             
             self.activeBackground = SimpleLayer()
             self.activeBackground.anchorPoint = CGPoint()
             
             self.badgeView = UIView()
             self.badgeView.alpha = 0.0
+            
+            self.badgeMaskClippingView = UIView()
+            self.badgeMaskClippingView.clipsToBounds = true
             
             self.badgeMaskBackgroundView = UIView()
             self.badgeMaskBackgroundView.backgroundColor = .white
@@ -197,7 +203,8 @@ public class PremiumLimitDisplayComponent: Component {
             
             self.badgeMaskView = UIView()
             self.badgeMaskView.addSubview(self.badgeMaskBackgroundView)
-            self.badgeMaskView.addSubview(self.badgeMaskArrowView)
+            self.badgeMaskView.addSubview(self.badgeMaskClippingView)
+            self.badgeMaskClippingView.addSubview(self.badgeMaskArrowView)
             self.badgeMaskArrowView.addSubview(self.badgeMaskArrowFillerView)
             self.badgeMaskView.layer.rasterizationScale = UIScreenScale
             self.badgeMaskView.layer.shouldRasterize = true
@@ -215,10 +222,10 @@ public class PremiumLimitDisplayComponent: Component {
             
             super.init(frame: frame)
             
-            self.layer.addSublayer(self.container)
-            self.container.addSublayer(self.inactiveBackground)
-            self.container.addSublayer(self.activeContainer)
-            self.activeContainer.addSublayer(self.activeBackground)
+            self.addSubview(self.container)
+            self.container.layer.addSublayer(self.inactiveBackground)
+            self.container.addSubview(self.activeContainer)
+            self.activeContainer.layer.addSublayer(self.activeBackground)
             
             self.addSubview(self.badgeView)
             self.badgeView.layer.addSublayer(self.badgeForeground)
@@ -234,13 +241,16 @@ public class PremiumLimitDisplayComponent: Component {
         
         private var didPlayAppearanceAnimation = false
         func playAppearanceAnimation(component: PremiumLimitDisplayComponent, availableSize: CGSize, from: CGFloat? = nil) {
-            self.badgeView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
-                        
+            if from == nil {
+                self.badgeView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+            }
+            
             let positionAnimation = CABasicAnimation(keyPath: "position.x")
             positionAnimation.fromValue = NSValue(cgPoint: CGPoint(x: from ?? 0.0, y: 0.0))
             positionAnimation.toValue = NSValue(cgPoint: self.badgeView.center)
             positionAnimation.duration = 0.5
             positionAnimation.fillMode = .forwards
+            positionAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             self.badgeView.layer.add(positionAnimation, forKey: "appearance1")
            
             Queue.mainQueue().after(0.5, {
@@ -269,11 +279,13 @@ public class PremiumLimitDisplayComponent: Component {
                 }
             })
             
-            self.badgeView.alpha = 1.0
-            self.badgeView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            if from == nil {
+                self.badgeView.alpha = 1.0
+                self.badgeView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            }
             
             if let badgeText = component.badgeText {
-                self.badgeCountLabel.configure(with: badgeText)
+                self.badgeCountLabel.configure(with: badgeText, duration: from != nil ? 0.3 : 0.9)
             }
         }
         
@@ -299,7 +311,7 @@ public class PremiumLimitDisplayComponent: Component {
             let leftTextColor: UIColor
             let rightTextColor: UIColor
             if component.invertProgress {
-                leftTextColor = component.activeTitleColor
+                leftTextColor = component.inactiveTitleColor
                 rightTextColor = component.inactiveTitleColor
             } else {
                 leftTextColor = component.inactiveTitleColor
@@ -307,6 +319,54 @@ public class PremiumLimitDisplayComponent: Component {
             }
             
             if !component.isPremiumDisabled {
+                if component.invertProgress {
+                    let innerLeftTitleSize = self.innerLeftTitleLabel.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            MultilineTextComponent(
+                                text: .plain(
+                                    NSAttributedString(
+                                        string: component.inactiveTitle,
+                                        font: Font.semibold(15.0),
+                                        textColor: component.activeTitleColor
+                                    )
+                                )
+                            )
+                        ),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    if let view = self.innerLeftTitleLabel.view {
+                        if view.superview == nil {
+                            self.activeContainer.addSubview(view)
+                        }
+                        view.frame = CGRect(origin: CGPoint(x: 12.0, y: floorToScreenPixels((lineHeight - innerLeftTitleSize.height) / 2.0)), size: innerLeftTitleSize)
+                    }
+                    
+                    let innerRightTitleSize = self.innerRightTitleLabel.update(
+                        transition: .immediate,
+                        component: AnyComponent(
+                            MultilineTextComponent(
+                                text: .plain(
+                                    NSAttributedString(
+                                        string: component.activeValue,
+                                        font: Font.semibold(15.0),
+                                        textColor: component.activeTitleColor
+                                    )
+                                )
+                            )
+                        ),
+                        environment: {},
+                        containerSize: availableSize
+                    )
+                    if let view = self.innerRightTitleLabel.view {
+                        if view.superview == nil {
+                            self.activeContainer.addSubview(view)
+                        }
+                        view.frame = CGRect(origin: CGPoint(x: containerFrame.width - 12.0 - innerRightTitleSize.width, y: floorToScreenPixels((lineHeight - innerRightTitleSize.height) / 2.0)), size: innerRightTitleSize)
+                    }
+                }
+                
                 let inactiveTitleSize = self.inactiveTitleLabel.update(
                     transition: .immediate,
                     component: AnyComponent(
@@ -325,9 +385,9 @@ public class PremiumLimitDisplayComponent: Component {
                 )
                 if let view = self.inactiveTitleLabel.view {
                     if view.superview == nil {
-                        self.addSubview(view)
+                        self.container.addSubview(view)
                     }
-                    view.frame = CGRect(origin: CGPoint(x: 12.0, y: containerFrame.minY + floorToScreenPixels((lineHeight - inactiveTitleSize.height) / 2.0)), size: inactiveTitleSize)
+                    view.frame = CGRect(origin: CGPoint(x: 12.0, y: floorToScreenPixels((lineHeight - inactiveTitleSize.height) / 2.0)), size: inactiveTitleSize)
                 }
                 
                 let inactiveValueSize = self.inactiveValueLabel.update(
@@ -348,9 +408,9 @@ public class PremiumLimitDisplayComponent: Component {
                 )
                 if let view = self.inactiveValueLabel.view {
                     if view.superview == nil {
-                        self.addSubview(view)
+                        self.container.addSubview(view)
                     }
-                    view.frame = CGRect(origin: CGPoint(x: activityPosition - 12.0 - inactiveValueSize.width, y: containerFrame.minY + floorToScreenPixels((lineHeight - inactiveValueSize.height) / 2.0)), size: inactiveValueSize)
+                    view.frame = CGRect(origin: CGPoint(x: activityPosition - 12.0 - inactiveValueSize.width, y: floorToScreenPixels((lineHeight - inactiveValueSize.height) / 2.0)), size: inactiveValueSize)
                 }
                 
                 let activeTitleSize = self.activeTitleLabel.update(
@@ -371,9 +431,9 @@ public class PremiumLimitDisplayComponent: Component {
                 )
                 if let view = self.activeTitleLabel.view {
                     if view.superview == nil {
-                        self.addSubview(view)
+                        self.container.addSubview(view)
                     }
-                    view.frame = CGRect(origin: CGPoint(x: activityPosition + 12.0, y: containerFrame.minY + floorToScreenPixels((lineHeight - activeTitleSize.height) / 2.0)), size: activeTitleSize)
+                    view.frame = CGRect(origin: CGPoint(x: activityPosition + 12.0, y: floorToScreenPixels((lineHeight - activeTitleSize.height) / 2.0)), size: activeTitleSize)
                 }
                 
                 let activeValueSize = self.activeValueLabel.update(
@@ -394,32 +454,29 @@ public class PremiumLimitDisplayComponent: Component {
                 )
                 if let view = self.activeValueLabel.view {
                     if view.superview == nil {
-                        self.addSubview(view)
+                        self.container.addSubview(view)
+                        
+                        if component.invertProgress {
+                            self.container.bringSubviewToFront(self.activeContainer)
+                        }
                     }
-                    view.frame = CGRect(origin: CGPoint(x: containerFrame.maxX - 12.0 - activeValueSize.width, y: containerFrame.minY + floorToScreenPixels((lineHeight - activeValueSize.height) / 2.0)), size: activeValueSize)
+                    view.frame = CGRect(origin: CGPoint(x: containerFrame.width - 12.0 - activeValueSize.width, y: floorToScreenPixels((lineHeight - activeValueSize.height) / 2.0)), size: activeValueSize)
                 }
             }
-            
-            //                var inactiveTitleOpacity: CGFloat = 1.0
-            //                var inactiveValueOpacity: CGFloat = 1.0
-            //
-            //                if 12.0 + inactiveValue.size.width + 4.0 + inactiveTitle.size.width + 12.0 >= activityPosition - 8.0 {
-            //                    inactiveTitleOpacity = 0.0
-            //                    if 12.0 + inactiveValue.size.width + 12.0 >= activityPosition - 8.0 {
-            //                        inactiveValueOpacity = 0.0
-            //                    }
-            //                }
-
-            
+                        
+            var progressTransition: Transition = .immediate
+            if !transition.animation.isImmediate {
+                progressTransition = .easeInOut(duration: 0.5)
+            }
             if !component.isPremiumDisabled {
                 if component.invertProgress {
-                    self.inactiveBackground.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: size.width - activityPosition, height: lineHeight))
-                    self.activeContainer.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
-                    self.activeBackground.frame = CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight))
+                    progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: size.width - activityPosition, height: lineHeight)))
+                    progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
+                    progressTransition.setFrame(layer: self.activeBackground, frame: CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
                 } else {
-                    self.inactiveBackground.frame = CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight))
-                    self.activeContainer.frame = CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight))
-                    self.activeBackground.frame = CGRect(origin: CGPoint(x: -activityPosition, y: 0.0), size: CGSize(width: containerFrame.width * 1.35, height: lineHeight))
+                    progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
+                    progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight)))
+                    progressTransition.setFrame(layer: self.activeBackground, frame: CGRect(origin: CGPoint(x: -activityPosition, y: 0.0), size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
                 }
                 if self.activeBackground.animation(forKey: "movement") == nil {
                     self.activeBackground.position = CGPoint(x: -self.activeContainer.frame.width * 0.35, y: lineHeight / 2.0)
@@ -443,22 +500,25 @@ public class PremiumLimitDisplayComponent: Component {
             } else {
                 countWidth = 51.0
             }
-            let badgeWidth: CGFloat = countWidth + 62.0
+            let badgeWidth: CGFloat = countWidth + 54.0
             
             let badgeSize = CGSize(width: badgeWidth, height: 48.0 + 12.0)
             self.badgeMaskView.frame = CGRect(origin: .zero, size: badgeSize)
             self.badgeMaskBackgroundView.frame = CGRect(origin: .zero, size: CGSize(width: badgeSize.width, height: 48.0))
-           
+            self.badgeMaskClippingView.frame = CGRect(origin: .zero, size: CGSize(width: badgeSize.width, height: 60.0))
+            
             self.badgeView.bounds = CGRect(origin: .zero, size: badgeSize)
+            
+            let currentBadgeX = self.badgeView.center.x
             
             var badgePosition = component.badgePosition
             if component.isPremiumDisabled {
                 badgePosition = 0.5
             }
             if badgePosition > 1.0 - .ulpOfOne {
-                self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: badgeSize.width - 24.0, y: badgeSize.height - 15.0), size: CGSize(width: 44.0, height: 12.0))
-                self.badgeView.layer.anchorPoint = CGPoint(x: 1.0, y: 1.0)
-                self.badgeMaskArrowFillerView.frame = CGRect(x: -7.0, y: -21.0, width: 31.0, height: 24.0)
+                progressTransition.setFrame(view: self.badgeMaskArrowView, frame: CGRect(origin: CGPoint(x: badgeSize.width - 24.0, y: badgeSize.height - 15.0), size: CGSize(width: 44.0, height: 12.0)))
+                progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 1.0, y: 1.0))
+                progressTransition.setFrame(view: self.badgeMaskArrowFillerView, frame: CGRect(x: -12.0, y: -21.0, width: 36.0, height: 24.0))
                 
                 self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
                 
@@ -467,10 +527,22 @@ public class PremiumLimitDisplayComponent: Component {
                 } else {
                     self.badgeView.center = CGPoint(x: 3.0 + (size.width - 6.0) * badgePosition + 3.0, y: 82.0)
                 }
+            } else if badgePosition < .ulpOfOne {
+                progressTransition.setFrame(view: self.badgeMaskArrowView, frame: CGRect(origin: CGPoint(x: -20.0, y: badgeSize.height - 15.0), size: CGSize(width: 44.0, height: 12.0)))
+                progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.0, y: 1.0))
+                progressTransition.setFrame(view: self.badgeMaskArrowFillerView, frame: CGRect(x: 20.0, y: -21.0, width: 36.0, height: 24.0))
+                
+                self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
+                
+                if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
+                    
+                } else {
+                    self.badgeView.center = CGPoint(x: (size.width - 6.0) * badgePosition, y: 82.0)
+                }
             } else {
-                self.badgeMaskArrowView.frame = CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0 - UIScreenPixel), size: CGSize(width: 44.0, height: 12.0))
-                self.badgeView.layer.anchorPoint = CGPoint(x: 0.5, y: 1.0)
-                self.badgeMaskArrowFillerView.frame = CGRect(x: 14.0, y: -21.0, width: 8.0, height: 24.0)
+                progressTransition.setFrame(view: self.badgeMaskArrowView, frame: CGRect(origin: CGPoint(x: (badgeSize.width - 44.0) / 2.0, y: badgeSize.height - 12.0 - UIScreenPixel), size: CGSize(width: 44.0, height: 12.0)))
+                progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.5, y: 1.0))
+                progressTransition.setFrame(view: self.badgeMaskArrowFillerView, frame: CGRect(x: 14.0, y: -21.0, width: 8.0, height: 24.0))
                 
                 self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
                 
@@ -494,7 +566,7 @@ public class PremiumLimitDisplayComponent: Component {
                 self.badgeForeground.position = CGPoint(x: badgeSize.width * 3.0 / 2.0 - self.badgeForeground.frame.width * 0.35, y: badgeSize.height / 2.0)
             }
     
-            self.badgeIcon.frame = CGRect(x: 15.0, y: 9.0, width: 30.0, height: 30.0)
+            self.badgeIcon.frame = CGRect(x: 10.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeCountLabel.frame = CGRect(x: badgeSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
             
             if component.isPremiumDisabled {
@@ -506,9 +578,20 @@ public class PremiumLimitDisplayComponent: Component {
                         self.badgeCountLabel.configure(with: badgeText, duration: 0.3)
                     }
                 }
-            } else if !self.didPlayAppearanceAnimation {
+            } else if !self.didPlayAppearanceAnimation || !transition.animation.isImmediate {
                 self.didPlayAppearanceAnimation = true
-                self.playAppearanceAnimation(component: component, availableSize: size, from: 0.0)
+                if transition.animation.isImmediate {
+                    if component.badgePosition.isZero {
+                        self.badgeView.alpha = 1.0
+                        if let badgeText = component.badgeText {
+                            self.badgeCountLabel.configure(with: badgeText, duration: 0.001)
+                        }
+                    } else {
+                        self.playAppearanceAnimation(component: component, availableSize: size)
+                    }
+                } else {
+                    self.playAppearanceAnimation(component: component, availableSize: size, from: currentBadgeX)
+                }
             }
             
             if self.previousAvailableSize != availableSize {
@@ -592,242 +675,6 @@ public class PremiumLimitDisplayComponent: Component {
     }
 }
 
-//public final class PremiumLimitDisplayComponent: CombinedComponent {
-//    let inactiveColor: UIColor
-//    let activeColors: [UIColor]
-//    let inactiveTitle: String
-//    let inactiveValue: String
-//    let inactiveTitleColor: UIColor
-//    let activeTitle: String
-//    let activeValue: String
-//    let activeTitleColor: UIColor
-//    let badgeIconName: String?
-//    let badgeText: String?
-//    let badgePosition: CGFloat
-//    let badgeGraphPosition: CGFloat
-//    let invertProgress: Bool
-//    let isPremiumDisabled: Bool
-//
-//    public init(
-//        inactiveColor: UIColor,
-//        activeColors: [UIColor],
-//        inactiveTitle: String,
-//        inactiveValue: String,
-//        inactiveTitleColor: UIColor,
-//        activeTitle: String,
-//        activeValue: String,
-//        activeTitleColor: UIColor,
-//        badgeIconName: String?,
-//        badgeText: String?,
-//        badgePosition: CGFloat,
-//        badgeGraphPosition: CGFloat,
-//        invertProgress: Bool = false,
-//        isPremiumDisabled: Bool
-//    ) {
-//        self.inactiveColor = inactiveColor
-//        self.activeColors = activeColors
-//        self.inactiveTitle = inactiveTitle
-//        self.inactiveValue = inactiveValue
-//        self.inactiveTitleColor = inactiveTitleColor
-//        self.activeTitle = activeTitle
-//        self.activeValue = activeValue
-//        self.activeTitleColor = activeTitleColor
-//        self.badgeIconName = badgeIconName
-//        self.badgeText = badgeText
-//        self.badgePosition = badgePosition
-//        self.badgeGraphPosition = badgeGraphPosition
-//        self.invertProgress = invertProgress
-//        self.isPremiumDisabled = isPremiumDisabled
-//    }
-//
-//    public static func ==(lhs: PremiumLimitDisplayComponent, rhs: PremiumLimitDisplayComponent) -> Bool {
-//        if lhs.inactiveColor != rhs.inactiveColor {
-//            return false
-//        }
-//        if lhs.activeColors != rhs.activeColors {
-//            return false
-//        }
-//        if lhs.inactiveTitle != rhs.inactiveTitle {
-//            return false
-//        }
-//        if lhs.inactiveValue != rhs.inactiveValue {
-//            return false
-//        }
-//        if lhs.inactiveTitleColor != rhs.inactiveTitleColor {
-//            return false
-//        }
-//        if lhs.activeTitle != rhs.activeTitle {
-//            return false
-//        }
-//        if lhs.activeValue != rhs.activeValue {
-//            return false
-//        }
-//        if lhs.activeTitleColor != rhs.activeTitleColor {
-//            return false
-//        }
-//        if lhs.badgeIconName != rhs.badgeIconName {
-//            return false
-//        }
-//        if lhs.badgeText != rhs.badgeText {
-//            return false
-//        }
-//        if lhs.badgePosition != rhs.badgePosition {
-//            return false
-//        }
-//        if lhs.badgeGraphPosition != rhs.badgeGraphPosition {
-//            return false
-//        }
-//        if lhs.invertProgress != rhs.invertProgress {
-//            return false
-//        }
-//        if lhs.isPremiumDisabled != rhs.isPremiumDisabled {
-//            return false
-//        }
-//        return true
-//    }
-//
-//    public static var body: Body {
-//        let inactiveTitle = Child(MultilineTextComponent.self)
-//        let inactiveValue = Child(MultilineTextComponent.self)
-//        let activeTitle = Child(MultilineTextComponent.self)
-//        let activeValue = Child(MultilineTextComponent.self)
-//        let animation = Child(PremiumLimitAnimationComponent.self)
-//
-//        return { context in
-//            let component = context.component
-//
-//            let height: CGFloat = 120.0
-//            let lineHeight: CGFloat = 30.0
-//
-//            let leftTextColor: UIColor
-//            let rightTextColor: UIColor
-//            if component.invertProgress {
-//                leftTextColor = component.activeTitleColor
-//                rightTextColor = component.inactiveTitleColor
-//            } else {
-//                leftTextColor = component.inactiveTitleColor
-//                rightTextColor = component.activeTitleColor
-//            }
-//
-//            let animation = animation.update(
-//                component: PremiumLimitAnimationComponent(
-//                    iconName: component.badgeIconName,
-//                    inactiveColor: component.inactiveColor,
-//                    activeColors: component.activeColors,
-//                    inactiveTextColor: component.inactiveTitleColor,
-//                    inactiveTitle: component.inactiveTitle,
-//                    inactiveValue: component.inactiveValue,
-//                    activeTextColor: component.activeTitleColor,
-//                    activeTitle: component.activeTitle,
-//                    activeValue: component.activeValue,
-//                    badgeTextColor: component.activeTitleColor,
-//                    badgeText: component.badgeText,
-//                    badgePosition: component.badgePosition,
-//                    badgeGraphPosition: component.badgeGraphPosition,
-//                    invertProgress: component.invertProgress,
-//                    isPremiumDisabled: component.isPremiumDisabled
-//                ),
-//                availableSize: CGSize(width: context.availableSize.width, height: height),
-//                transition: context.transition
-//            )
-//
-//            context.add(animation
-//                .position(CGPoint(x: context.availableSize.width / 2.0, y: height / 2.0))
-//            )
-//
-//            if !component.isPremiumDisabled {
-//                let inactiveTitle = inactiveTitle.update(
-//                    component: MultilineTextComponent(
-//                        text: .plain(
-//                            NSAttributedString(
-//                                string: component.inactiveTitle,
-//                                font: Font.semibold(15.0),
-//                                textColor: leftTextColor
-//                            )
-//                        )
-//                    ),
-//                    availableSize: context.availableSize,
-//                    transition: context.transition
-//                )
-//
-//                let inactiveValue = inactiveValue.update(
-//                    component: MultilineTextComponent(
-//                        text: .plain(
-//                            NSAttributedString(
-//                                string: component.inactiveValue,
-//                                font: Font.semibold(15.0),
-//                                textColor: leftTextColor
-//                            )
-//                        )
-//                    ),
-//                    availableSize: context.availableSize,
-//                    transition: context.transition
-//                )
-//
-//                let activeTitle = activeTitle.update(
-//                    component: MultilineTextComponent(
-//                        text: .plain(
-//                            NSAttributedString(
-//                                string: component.activeTitle,
-//                                font: Font.semibold(15.0),
-//                                textColor: rightTextColor
-//                            )
-//                        )
-//                    ),
-//                    availableSize: context.availableSize,
-//                    transition: context.transition
-//                )
-//
-//                let activeValue = activeValue.update(
-//                    component: MultilineTextComponent(
-//                        text: .plain(
-//                            NSAttributedString(
-//                                string: component.activeValue,
-//                                font: Font.semibold(15.0),
-//                                textColor: rightTextColor
-//                            )
-//                        )
-//                    ),
-//                    availableSize: context.availableSize,
-//                    transition: context.transition
-//                )
-//
-//                let activityPosition = floor(context.availableSize.width * component.badgeGraphPosition)
-//
-//                var inactiveTitleOpacity: CGFloat = 1.0
-//                var inactiveValueOpacity: CGFloat = 1.0
-//
-//                if 12.0 + inactiveValue.size.width + 4.0 + inactiveTitle.size.width + 12.0 >= activityPosition - 8.0 {
-//                    inactiveTitleOpacity = 0.0
-//                    if 12.0 + inactiveValue.size.width + 12.0 >= activityPosition - 8.0 {
-//                        inactiveValueOpacity = 0.0
-//                    }
-//                }
-//
-//                context.add(inactiveTitle
-//                    .position(CGPoint(x: inactiveTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
-//                    .opacity(inactiveTitleOpacity)
-//                )
-//
-//                context.add(inactiveValue
-//                    .position(CGPoint(x: activityPosition - inactiveValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
-//                    .opacity(inactiveValueOpacity)
-//                )
-//
-//                context.add(activeTitle
-//                    .position(CGPoint(x: activityPosition + activeTitle.size.width / 2.0 + 12.0, y: height - lineHeight / 2.0))
-//                )
-//
-//                context.add(activeValue
-//                    .position(CGPoint(x: context.availableSize.width - activeValue.size.width / 2.0 - 12.0, y: height - lineHeight / 2.0))
-//                )
-//            }
-//
-//            return CGSize(width: context.availableSize.width, height: height)
-//        }
-//    }
-//}
-
 private final class LimitSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -835,16 +682,18 @@ private final class LimitSheetContent: CombinedComponent {
     let subject: PremiumLimitScreen.Subject
     let count: Int32
     let cancel: () -> Void
-    let action: () -> Void
+    let action: () -> Bool
     let dismiss: () -> Void
+    let openPeer: (EnginePeer) -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Void, dismiss: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, dismiss: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.subject = subject
         self.count = count
         self.cancel = cancel
         self.action = action
         self.dismiss = dismiss
+        self.openPeer = openPeer
     }
     
     static func ==(lhs: LimitSheetContent, rhs: LimitSheetContent) -> Bool {
@@ -868,6 +717,8 @@ private final class LimitSheetContent: CombinedComponent {
         var limits: EngineConfiguration.UserLimits
         var premiumLimits: EngineConfiguration.UserLimits
         var isPremium = false
+        
+        var boosted = false
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
@@ -907,9 +758,11 @@ private final class LimitSheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(BalancedTextComponent.self)
+        let alternateText = Child(BalancedTextComponent.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
         let linkButton = Child(SolidRoundedButtonComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
+        let peerShortcut = Child(Button.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -948,9 +801,15 @@ private final class LimitSheetContent: CombinedComponent {
             context.add(closeButton
                 .position(CGPoint(x: context.availableSize.width - environment.safeInsets.left - closeButton.size.width, y: 28.0))
             )
+            
+            var boostUpdated = false
              
+            var peerShortcutChild: _UpdatedChildComponent?
+            
+            var useAlternateText = false
             var titleText = strings.Premium_LimitReached
             var actionButtonText: String?
+            var actionButtonHasGloss = true
             var buttonAnimationName: String? = "premium_x2"
             var buttonIconName: String?
             let iconName: String
@@ -1168,29 +1027,83 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
                 }
                 buttonAnimationName = nil
-            case let .storiesChannelBoost(level, link):
-                let limit = 2
-//                let premiumLimit = 1
+            case let .storiesChannelBoost(peer, level, currentLevelBoosts, nextLevelBoosts, link, boosted):
+                if link == nil, state.initialized {
+                    peerShortcutChild = peerShortcut.update(
+                        component: Button(
+                            content: AnyComponent(
+                                PeerShortcutComponent(
+                                    context: component.context,
+                                    theme: environment.theme,
+                                    peer: peer
+                                )
+                            ),
+                            action: {
+                                component.dismiss()
+                                Queue.mainQueue().after(0.35) {
+                                    component.openPeer(peer)
+                                }
+                            }
+                        ),
+                        availableSize: context.availableSize,
+                        transition: .immediate
+                    )
+                }
+                
+                if boosted && state.boosted != boosted {
+                    state.boosted = boosted
+                    boostUpdated = true
+                }
+                useAlternateText = boosted
+                
                 iconName = "Premium/Boost"
-                badgeText = "\(limit)"
+                badgeText = "\(component.count)"
             
+                var remaining: Int32?
+                if let nextLevelBoosts {
+                    remaining = nextLevelBoosts - component.count
+                }
+                
                 if let _ = link {
-                    if level == 0 {
-                        titleText = "Enable Stories"
-                        string = "Your channel needs **2** more boosts to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                    if let remaining {
+                        let valueString: String
+                        if remaining == 1 {
+                            valueString = "**\(remaining)** more boost"
+                        } else {
+                            valueString = "**\(remaining)** more boosts"
+                        }
+                        if level == 0 {
+                            titleText = "Enable Stories"
+                            string = "Your channel needs \(valueString) to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                        } else {
+                            titleText = "Increase Story Limit"
+                            string = "Your channel needs \(valueString) to post **\(level + 1)** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                        }
                     } else {
                         titleText = "Increase Story Limit"
-                        string = "Your channel needs **1** more boosts to post **2** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                        string = "Your channel needs **0** more boosts to post **2** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
                     }
                     actionButtonText = "Copy Link"
                     buttonIconName = "Premium/CopyLink"
+                    actionButtonHasGloss = false
                 } else {
-                    if level == 0 {
-                        titleText = "Enable Stories for Channel"
-                        string = "Channel needs **1** more boosts to enable posting stories. Help make it possible!"
+                    if let remaining {
+                        let valueString: String
+                        if remaining == 1 {
+                            valueString = "**\(remaining)** more boost"
+                        } else {
+                            valueString = "**\(remaining)** more boosts"
+                        }
+                        if level == 0 {
+                            titleText = "Enable Stories for The Channel"
+                            string = "**\(peer.compactDisplayTitle)** needs \(valueString) to enable posting stories. Help make it possible!"
+                        } else {
+                            titleText = "Help Upgrade Channel"
+                            string = "**\(peer.compactDisplayTitle)** needs \(valueString) to be able to post **\(level + 1)** stories per day."
+                        }
                     } else {
                         titleText = "Help Upgrade Channel"
-                        string = "**Channel** needs **2** more boosts to be able to post **2** stories per day."
+                        string = "**\(peer.compactDisplayTitle)** needs **0** more boosts to be able to post **\(level + 1)** stories per day."
                     }
                     actionButtonText = "Boost Channel"
                     buttonIconName = "Premium/BoostChannel"
@@ -1202,8 +1115,48 @@ private final class LimitSheetContent: CombinedComponent {
                 
                 premiumTitle = ""
                 
-                badgePosition = 1.0
-                badgeGraphPosition = badgePosition
+                if boosted {
+                    buttonIconName = nil
+                    actionButtonText = environment.strings.Common_OK
+                    
+                    if let remaining {
+                        let valueString: String
+                        if remaining == 1 {
+                            valueString = "**\(remaining)** more boost"
+                        } else {
+                            valueString = "**\(remaining)** more boosts"
+                        }
+                        if level == 0 {
+                            titleText = "Enable Stories for The Channel"
+                            if remaining == 0 {
+                                string = "**You boosted this channel**.\nThis allowed it to post stories."
+                            } else {
+                                string = "**You boosted this channel**.\n\(valueString) needed to enable stories."
+                            }
+                        } else {
+                            titleText = "Help Upgrade Channel"
+                            if remaining == 0 {
+                                string = "**You boosted this channel**.\nThis allowed it to post \(level + 1) stories per day."
+                            } else {
+                                string = "**You boosted this channel**.\n\(valueString) needed to be able to post **\(level + 1)** stories per day."
+                            }
+                        }
+                    }
+                }
+                
+                let progress: CGFloat
+                if let nextLevelBoosts {
+                    if !"".isEmpty {
+                        progress = 1.0
+                    } else {
+                        progress = CGFloat(component.count - currentLevelBoosts) / CGFloat(nextLevelBoosts - currentLevelBoosts)
+                    }
+                } else {
+                    progress = 1.0
+                }
+                
+                badgePosition = progress
+                badgeGraphPosition = progress
                 
                 invertProgress = true
             }
@@ -1236,16 +1189,40 @@ private final class LimitSheetContent: CombinedComponent {
                     return nil
                 })
                 
-                let text = text.update(
-                    component: BalancedTextComponent(
-                        text: .markdown(text: string, attributes: markdownAttributes),
-                        horizontalAlignment: .center,
-                        maximumNumberOfLines: 0,
-                        lineSpacing: 0.0
-                    ),
-                    availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
-                    transition: .immediate
-                )
+                
+                var textChild: _UpdatedChildComponent?
+                var alternateTextChild: _UpdatedChildComponent?
+                if useAlternateText {
+                    alternateTextChild = alternateText.update(
+                        component: BalancedTextComponent(
+                            text: .markdown(text: string, attributes: markdownAttributes),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.0
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                } else {
+                    textChild = text.update(
+                        component: BalancedTextComponent(
+                            text: .markdown(text: string, attributes: markdownAttributes),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.0
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                }
+                
+                var topOffset: CGFloat = 0.0
+                if let peerShortcutChild {
+                    context.add(peerShortcutChild
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: 64.0))
+                    )
+                    topOffset += 38.0
+                }
                 
                 let gradientColors: [UIColor]
                 if isPremiumDisabled {
@@ -1260,6 +1237,11 @@ private final class LimitSheetContent: CombinedComponent {
                         UIColor(rgb: 0x8878ff),
                         UIColor(rgb: 0xe46ace)
                     ]
+                }
+                
+                var limitTransition: Transition = .immediate
+                if boostUpdated {
+                    limitTransition = .easeInOut(duration: 0.35)
                 }
                 
                 let limit = limit.update(
@@ -1280,10 +1262,10 @@ private final class LimitSheetContent: CombinedComponent {
                         isPremiumDisabled: isPremiumDisabled
                     ),
                     availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
-                    transition: .immediate
+                    transition: limitTransition
                 )
                 context.add(limit
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: limit.size.height / 2.0 + 44.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: limit.size.height / 2.0 + 44.0 + topOffset))
                 )
             
                 let isIncreaseButton = !reachedMaximumLimit && !isPremiumDisabled
@@ -1299,14 +1281,17 @@ private final class LimitSheetContent: CombinedComponent {
                         fontSize: 17.0,
                         height: 50.0,
                         cornerRadius: 10.0,
-                        gloss: isIncreaseButton,
+                        gloss: isIncreaseButton && actionButtonHasGloss,
                         iconName: buttonIconName,
                         animationName: isIncreaseButton ? buttonAnimationName : nil,
                         iconPosition: buttonIconName != nil ? .left : .right,
                         action: {
-                            component.dismiss()
                             if isIncreaseButton {
-                                component.action()
+                                if component.action() {
+                                    component.dismiss()
+                                }
+                            } else {
+                                component.dismiss()
                             }
                         }
                     ),
@@ -1315,12 +1300,13 @@ private final class LimitSheetContent: CombinedComponent {
                 )
                 
                 var buttonOffset: CGFloat = 0.0
-                var textOffset: CGFloat = 228.0
-                if case let .storiesChannelBoost(level, link) = component.subject {
-                    if let _ = link {
+                var textOffset: CGFloat = 228.0 + topOffset
+                                
+                if case let .storiesChannelBoost(_, _, _, _, link, _) = component.subject {
+                    if let link {
                         let linkButton = linkButton.update(
                             component: SolidRoundedButtonComponent(
-                                title: "t.me/channel?boost",
+                                title: link,
                                 theme: SolidRoundedButtonComponent.Theme(
                                     backgroundColor: UIColor(rgb: 0x343436),
                                     backgroundColors: [],
@@ -1337,11 +1323,11 @@ private final class LimitSheetContent: CombinedComponent {
                         )
                         buttonOffset += 66.0
                                                 
-                        let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + 24.0), size: linkButton.size)
+                        let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil((textChild?.size ?? .zero).height / 2.0) + 24.0), size: linkButton.size)
                         context.add(linkButton
                             .position(CGPoint(x: linkFrame.midX, y: linkFrame.midY))
                         )
-                    } else if link == nil, level > 0 {
+                    } else {
                         textOffset -= 26.0
                     }
                 }
@@ -1352,11 +1338,43 @@ private final class LimitSheetContent: CombinedComponent {
                 context.add(title
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: 28.0))
                 )
-                context.add(text
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
-                )
                 
-                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(text.size.height / 2.0) + buttonOffset + 24.0), size: button.size)
+                var textSize: CGSize
+                if let textChild {
+                    textSize = textChild.size
+                    context.add(textChild
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
+                        .appear(Transition.Appear({ _, view, transition in
+                            transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 44.0), to: .zero, additive: true)
+                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                        }))
+                        .disappear(Transition.Disappear({ view, transition, completion in
+                            transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -44.0), additive: true)
+                            transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                                completion()
+                            })
+                        }))
+                    )
+                } else if let alternateTextChild {
+                    textSize = alternateTextChild.size
+                    context.add(alternateTextChild
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
+                        .appear(Transition.Appear({ _, view, transition in
+                            transition.animatePosition(view: view, from: CGPoint(x: 0.0, y: 44.0), to: .zero, additive: true)
+                            transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                        }))
+                        .disappear(Transition.Disappear({ view, transition, completion in
+                            transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -44.0), additive: true)
+                            transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                                completion()
+                            })
+                        }))
+                    )
+                } else {
+                    textSize = .zero
+                }
+                
+                let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil(textSize.height / 2.0) + buttonOffset + 24.0), size: button.size)
                 context.add(button
                     .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
                 )
@@ -1368,11 +1386,11 @@ private final class LimitSheetContent: CombinedComponent {
                     height -= 78.0
                 }
                 
-                if case let .storiesChannelBoost(_, link) = component.subject {
+                if case let .storiesChannelBoost(_, _, _, _, link, _) = component.subject {
                     if link != nil {
                         height += 66.0
                     } else {
-                        height -= 53.0
+                        height -= 53.0 - 32.0
                     }
                 }
                 
@@ -1391,14 +1409,16 @@ private final class LimitSheetComponent: CombinedComponent {
     let subject: PremiumLimitScreen.Subject
     let count: Int32
     let cancel: () -> Void
-    let action: () -> Void
+    let action: () -> Bool
+    let openPeer: (EnginePeer) -> Void
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.subject = subject
         self.count = count
         self.cancel = cancel
         self.action = action
+        self.openPeer = openPeer
     }
     
     static func ==(lhs: LimitSheetComponent, rhs: LimitSheetComponent) -> Bool {
@@ -1435,7 +1455,8 @@ private final class LimitSheetComponent: CombinedComponent {
                                     controller.dismiss(completion: nil)
                                 }
                             })
-                        }
+                        },
+                        openPeer: context.component.openPeer
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: animateOut
@@ -1489,23 +1510,35 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        case storiesChannelBoost(level: Int32, link: String?)
+        case storiesChannelBoost(peer: EnginePeer, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, boosted: Bool)
     }
     
-    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Void) {
-        var actionImpl: (() -> Void)?
+    private let context: AccountContext
+    private var action: (() -> Bool)?
+    private let openPeer: (EnginePeer) -> Void
+    
+    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }) {
+        self.context = context
+        self.openPeer = openPeer
+        
+        var actionImpl: (() -> Bool)?
         super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, cancel: {}, action: {
-            actionImpl?()
-        }), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
+            return actionImpl?() ?? true
+        }, openPeer: openPeer), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
         
         self.wasDismissed = cancel
         
         actionImpl = { [weak self] in
-            self?.wasDismissed = nil
-            action()
+            if action() {
+                self?.wasDismissed = nil
+                return true
+            } else {
+                return false
+            }
         }
+        self.action = actionImpl
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -1516,5 +1549,109 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         super.viewDidLoad()
         
         self.view.disablesInteractiveModalDismiss = true
+    }
+    
+    public func updateSubject(_ subject: Subject, count: Int32) {
+        let component = LimitSheetComponent(context: self.context, subject: subject, count: count, cancel: {}, action: {
+            return true
+        }, openPeer: self.openPeer)
+        self.updateComponent(component: AnyComponent(component), transition: .easeInOut(duration: 0.2))
+        
+        self.view.addSubview(ConfettiView(frame: self.view.bounds))
+    }
+}
+
+private final class PeerShortcutComponent: Component {
+    let context: AccountContext
+    let theme: PresentationTheme
+    let peer: EnginePeer
+
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+        self.context = context
+        self.theme = theme
+        self.peer = peer
+    }
+
+    static func ==(lhs: PeerShortcutComponent, rhs: PeerShortcutComponent) -> Bool {
+        if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.peer != rhs.peer {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let avatarNode: AvatarNode
+        private let text = ComponentView<Empty>()
+        
+        private var component: PeerShortcutComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 18.0))
+            
+            super.init(frame: frame)
+            
+            self.clipsToBounds = true
+            self.layer.cornerRadius = 16.0
+            
+            self.addSubnode(self.avatarNode)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: PeerShortcutComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+            
+            self.backgroundColor = component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5)
+                        
+            
+
+            self.avatarNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: 30.0, height: 30.0))
+            self.avatarNode.setPeer(
+                context: component.context,
+                theme: component.context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                peer: component.peer,
+                synchronousLoad: true
+            )
+            
+            let textSize = self.text.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.medium(15.0), textColor: component.theme.list.itemPrimaryTextColor, paragraphAlignment: .left))
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let size = CGSize(width: 30.0 + textSize.width + 20.0, height: 32.0)
+            if let view = self.text.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                let textFrame = CGRect(origin: CGPoint(x: 38.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
+                view.frame = textFrame
+            }
+            
+            return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

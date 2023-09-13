@@ -1147,36 +1147,40 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                                     case let .dialogFilterLimitExceeded(limit, _):
                                         let limitController = PremiumLimitScreen(context: component.context, subject: .folders, count: limit, action: { [weak navigationController] in
                                             guard let navigationController else {
-                                                return
+                                                return true
                                             }
                                             navigationController.pushViewController(PremiumIntroScreen(context: context, source: .folders))
+                                            return true
                                         })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     case let .sharedFolderLimitExceeded(limit, _):
                                         let limitController = PremiumLimitScreen(context: component.context, subject: .membershipInSharedFolders, count: limit, action: { [weak navigationController] in
                                             guard let navigationController else {
-                                                return
+                                                return true
                                             }
                                             navigationController.pushViewController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
+                                            return true
                                         })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     case let .tooManyChannels(limit, _):
                                         let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: { [weak navigationController] in
                                             guard let navigationController else {
-                                                return
+                                                return true
                                             }
                                             navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .chatsPerFolder))
+                                            return true
                                         })
                                         controller.push(limitController)
                                         controller.dismiss()
                                     case let .tooManyChannelsInAccount(limit, _):
                                         let limitController = PremiumLimitScreen(context: component.context, subject: .channels, count: limit, action: { [weak navigationController] in
                                             guard let navigationController else {
-                                                return
+                                                return true
                                             }
                                             navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .groupsAndChannels))
+                                            return true
                                         })
                                         controller.push(limitController)
                                         controller.dismiss()
@@ -1409,9 +1413,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case let .sharedFolderLimitExceeded(limit, _):
                                 let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .membershipInSharedFolders, count: limit, forceDark: false, cancel: {}, action: {  [weak navigationController] in
                                     guard let navigationController else {
-                                        return
+                                        return true
                                     }
                                     navigationController.pushViewController(PremiumIntroScreen(context: context, source: .membershipInSharedFolders))
+                                    return true
                                 })
                                 
                                 controller.push(limitController)
@@ -1420,9 +1425,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case let .limitExceeded(limit, _):
                                 let limitController = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .linksPerSharedFolder, count: limit, forceDark: false, cancel: {}, action: {  [weak navigationController] in
                                     guard let navigationController else {
-                                        return
+                                        return true
                                     }
                                     navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .linksPerSharedFolder))
+                                    return true
                                 })
                                 controller.push(limitController)
                                 
@@ -1430,9 +1436,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case let .tooManyChannels(limit, _):
                                 let limitController = PremiumLimitScreen(context: component.context, subject: .chatsPerFolder, count: limit, action: { [weak navigationController] in
                                     guard let navigationController else {
-                                        return
+                                        return true
                                     }
                                     navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .chatsPerFolder))
+                                    return true
                                 })
                                 controller.push(limitController)
                                 controller.dismiss()
@@ -1441,9 +1448,10 @@ private final class ChatFolderLinkPreviewScreenComponent: Component {
                             case let .tooManyChannelsInAccount(limit, _):
                                 let limitController = PremiumLimitScreen(context: component.context, subject: .channels, count: limit, action: { [weak navigationController] in
                                     guard let navigationController else {
-                                        return
+                                        return true
                                     }
                                     navigationController.pushViewController(PremiumIntroScreen(context: component.context, source: .groupsAndChannels))
+                                    return true
                                 })
                                 controller.push(limitController)
                                 controller.dismiss()
