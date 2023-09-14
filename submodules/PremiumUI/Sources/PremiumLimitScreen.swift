@@ -774,7 +774,12 @@ private final class LimitSheetContent: CombinedComponent {
             let subject = component.subject
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
-            let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+            let isPremiumDisabled: Bool
+            if case .storiesChannelBoost = subject {
+                isPremiumDisabled = false
+            } else {
+                isPremiumDisabled = premiumConfiguration.isPremiumDisabled
+            }
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 32.0 + environment.safeInsets.left
@@ -1027,8 +1032,8 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
                 }
                 buttonAnimationName = nil
-            case let .storiesChannelBoost(peer, level, currentLevelBoosts, nextLevelBoosts, link, boosted):
-                if link == nil, state.initialized {
+            case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, boosted):
+                if link == nil, !isCurrent, state.initialized {
                     peerShortcutChild = peerShortcut.update(
                         component: Button(
                             content: AnyComponent(
@@ -1246,7 +1251,7 @@ private final class LimitSheetContent: CombinedComponent {
                 
                 let limit = limit.update(
                     component: PremiumLimitDisplayComponent(
-                        inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5),
+                        inactiveColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                         activeColors: gradientColors,
                         inactiveTitle: defaultTitle,
                         inactiveValue: defaultValue,
@@ -1302,7 +1307,7 @@ private final class LimitSheetContent: CombinedComponent {
                 var buttonOffset: CGFloat = 0.0
                 var textOffset: CGFloat = 228.0 + topOffset
                                 
-                if case let .storiesChannelBoost(_, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject {
                     if let link {
                         let linkButton = linkButton.update(
                             component: SolidRoundedButtonComponent(
@@ -1316,7 +1321,11 @@ private final class LimitSheetContent: CombinedComponent {
                                 fontSize: 17.0,
                                 height: 50.0,
                                 cornerRadius: 10.0,
-                                action: {}
+                                action: {
+                                    if component.action() {
+                                        component.dismiss()
+                                    }
+                                }
                             ),
                             availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
                             transition: context.transition
@@ -1386,11 +1395,15 @@ private final class LimitSheetContent: CombinedComponent {
                     height -= 78.0
                 }
                 
-                if case let .storiesChannelBoost(_, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, isCurrent, _, _, _, link, _) = component.subject {
                     if link != nil {
                         height += 66.0
                     } else {
-                        height -= 53.0 - 32.0
+                        if isCurrent {
+                            height -= 53.0
+                        } else {
+                            height -= 53.0 - 32.0
+                        }
                     }
                 }
                 
@@ -1510,7 +1523,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        case storiesChannelBoost(peer: EnginePeer, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, boosted: Bool)
+        case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, boosted: Bool)
     }
     
     private let context: AccountContext
@@ -1611,10 +1624,8 @@ private final class PeerShortcutComponent: Component {
             self.component = component
             self.state = state
             
-            self.backgroundColor = component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.5)
+            self.backgroundColor = component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3)
                         
-            
-
             self.avatarNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: 30.0, height: 30.0))
             self.avatarNode.setPeer(
                 context: component.context,

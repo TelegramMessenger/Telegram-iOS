@@ -4463,10 +4463,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         if let addressName = peer.addressName, !addressName.isEmpty {
                             link = "t.me/\(peer.addressName ?? "")?boost"
                         } else {
-                            link = "t.me/boost?=\(peer.id.id._internalGetInt64Value())"
+                            link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
                         }
                         
-                        let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak self] in
+                        let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak self] in
                             guard let self else {
                                 return true
                             }
@@ -4476,6 +4476,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             return true
                         })
                         self.push(controller)
+                        
+                        self.hapticFeedback.impact(.light)
                     })
                 default:
                     break
