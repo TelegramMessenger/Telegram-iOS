@@ -20,6 +20,8 @@ import AnimatedCountLabelNode
 import MessageInputActionButtonComponent
 import ContextReferenceButtonComponent
 
+private var sharedIsReduceTransparencyEnabled = UIAccessibility.isReduceTransparencyEnabled
+
 private let timeoutButtonTag = GenericComponentViewTag()
 
 public final class MessageInputPanelComponent: Component {
@@ -433,6 +435,9 @@ public final class MessageInputPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.fieldBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
+            if sharedIsReduceTransparencyEnabled {
+                
+            }
             
             let style: UIBlurEffect.Style = .dark
             let blurEffect = UIBlurEffect(style: style)
@@ -840,16 +845,17 @@ public final class MessageInputPanelComponent: Component {
                 if placeholderView.superview == nil {
                     placeholderView.isUserInteractionEnabled = false
                     placeholderView.layer.anchorPoint = CGPoint()
-                    self.fieldBackgroundView.addSubview(placeholderView)
+                    self.addSubview(placeholderView)
                 }
-                transition.setPosition(view: placeholderView, position: placeholderFrame.origin)
+                transition.setPosition(view: placeholderView, position: placeholderFrame.origin.offsetBy(dx: self.fieldBackgroundView.frame.minX, dy: self.fieldBackgroundView.frame.minY))
                 placeholderView.bounds = CGRect(origin: CGPoint(), size: placeholderFrame.size)
                 
                 transition.setAlpha(view: placeholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
-                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
+                transition.setAlpha(view: vibrancyPlaceholderView, alpha: (hasMediaRecording || hasMediaEditing || component.disabledPlaceholder != nil || component.isChannel) || sharedIsReduceTransparencyEnabled ? 0.0 : 1.0)
             }
             
-            transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : 1.0)
+            let fieldAlpha = sharedIsReduceTransparencyEnabled ? 0.09 : 1.0
+            transition.setAlpha(view: self.fieldBackgroundView, alpha: (component.disabledPlaceholder != nil || component.isChannel) ? 0.0 : fieldAlpha)
             
             let size = CGSize(width: availableSize.width, height: textFieldSize.height + insets.top + insets.bottom)
             
