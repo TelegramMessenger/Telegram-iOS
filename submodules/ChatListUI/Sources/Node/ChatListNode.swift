@@ -1289,7 +1289,7 @@ public final class ChatListNode: ListView {
         super.init()
         
         if case .internal = context.sharedContext.applicationBindings.appBuildType {
-            self.useMainQueueTransactions = true
+            //self.useMainQueueTransactions = true
         }
         
         self.verticalScrollIndicatorColor = theme.list.scrollIndicatorColor
