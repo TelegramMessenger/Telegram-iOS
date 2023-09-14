@@ -225,19 +225,14 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                     return
                 }
                 
-                topController.beginAppearanceTransition(false, animated: true)
-                //topController.viewWillDisappear(true)
-                
+                topController.viewWillDisappear(true)
                 let topNode = topController.displayNode
                 var bottomControllerLayout = layout
                 if bottomController.view.disableAutomaticKeyboardHandling.isEmpty {
                     bottomControllerLayout = bottomControllerLayout.withUpdatedInputHeight(nil)
                 }
                 bottomController.containerLayoutUpdated(bottomControllerLayout, transition: .immediate)
-                
-                bottomController.beginAppearanceTransition(true, animated: true)
-                //bottomController.viewWillAppear(true)
-                
+                bottomController.viewWillAppear(true)
                 let bottomNode = bottomController.displayNode
                 
                 let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, isFlat: self.isFlat, container: self, topNode: topNode, topNavigationBar: topController.transitionNavigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.transitionNavigationBar, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
@@ -296,12 +291,9 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                             return
                         }
                         strongSelf.state.transition = nil
-                        
-                        top.value.endAppearanceTransition()
-                        //top.value.viewDidAppear(true)
-                        
-                        transition.previous.value.endAppearanceTransition()
-                        //transition.previous.value.viewDidDisappear(true)
+                            
+                        top.value.viewDidAppear(true)
+                        transition.previous.value.viewDidDisappear(true)
                     })
                 }
             }
@@ -460,13 +452,8 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
             }
             
             fromValue.value.viewWillLeaveNavigation()
-            
-            fromValue.value.beginAppearanceTransition(false, animated: true)
-            //fromValue.value.viewWillDisappear(true)
-            
-            toValue.value.beginAppearanceTransition(true, animated: true)
-            //toValue.value.viewWillAppear(true)
-            
+            fromValue.value.viewWillDisappear(true)
+            toValue.value.viewWillAppear(true)
             toValue.value.setIgnoreAppearanceMethodInvocations(true)
             if let layout = self.state.layout {
                 toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -530,16 +517,11 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                     topTransition.previous.value.displayNode.removeFromSupernode()
                     topTransition.previous.value.setIgnoreAppearanceMethodInvocations(false)
                 }
-                
-                topTransition.previous.value.endAppearanceTransition()
-                //topTransition.previous.value.viewDidDisappear(true)
-                
+                topTransition.previous.value.viewDidDisappear(true)
                 if let toValue = strongSelf.state.top, let layout = strongSelf.state.layout {
                     toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                     strongSelf.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
-                    
-                    toValue.value.endAppearanceTransition()
-                    //toValue.value.viewDidAppear(true)
+                    toValue.value.viewDidAppear(true)
                 }
                 
                 strongSelf.ignoreInputHeight = false
@@ -551,33 +533,24 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 }
                 
                 fromValue.value.viewWillLeaveNavigation()
-                
-                fromValue.value.beginAppearanceTransition(false, animated: false)
-                //fromValue.value.viewWillDisappear(false)
+                fromValue.value.viewWillDisappear(false)
                 
                 self.keyboardViewManager?.dismissEditingWithoutAnimation(view: fromValue.value.view)
                 
                 fromValue.value.setIgnoreAppearanceMethodInvocations(true)
                 fromValue.value.displayNode.removeFromSupernode()
                 fromValue.value.setIgnoreAppearanceMethodInvocations(false)
-                
-                fromValue.value.endAppearanceTransition()
-                //fromValue.value.viewDidDisappear(false)
+                fromValue.value.viewDidDisappear(false)
             }
             if let toValue = toValue {
                 self.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
                 toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-                
-                toValue.value.beginAppearanceTransition(true, animated: false)
-                //toValue.value.viewWillAppear(false)
-                
+                toValue.value.viewWillAppear(false)
                 toValue.value.setIgnoreAppearanceMethodInvocations(true)
                 self.addSubnode(toValue.value.displayNode)
                 toValue.value.setIgnoreAppearanceMethodInvocations(false)
                 toValue.value.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                
-                toValue.value.endAppearanceTransition()
-                //toValue.value.viewDidAppear(false)
+                toValue.value.viewDidAppear(false)
             }
             self.ignoreInputHeight = false
         }
