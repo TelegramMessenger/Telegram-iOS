@@ -627,7 +627,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 if let addressName = peer.addressName, !addressName.isEmpty {
                     link = "t.me/\(addressName)?boost"
                 } else {
-                    link = "t.me/boost?=\(peer.id.id._internalGetInt64Value())"
+                    link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
                 }
                 entries.append(.boostLink(presentationData.theme, link))
             }

@@ -218,11 +218,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         self.accountSettingsController = accountSettingsController
         self.rootTabController = tabBarController
         self.pushViewController(tabBarController, animated: false)
-        
-//        Queue.mainQueue().after(0.5) {
-//            let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(title: "MYChannel", level: 0, currentLevelBoosts: 0, nextLevelBoosts: 1, link: "t.me/mychannel?boost"), count: 0, forceDark: true, cancel: {}, action: {})
-//            chatListController.present(controller, in: .window(.root))
-//        }
     }
         
     public func updateRootControllers(showCallsTab: Bool) {

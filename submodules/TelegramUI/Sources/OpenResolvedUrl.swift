@@ -847,8 +847,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     boosted = true
                 }
                 
-                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: boosted)
-                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: true)
+                var isCurrent = false
+                if case let .chat(chatPeerId, _) = urlContext, chatPeerId == peerId {
+                    isCurrent = true
+                }
+                
+                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: boosted)
+                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: true)
                 let nextCount = Int32(status.boosts + 1)
                 
                 var updateImpl: (() -> Void)?

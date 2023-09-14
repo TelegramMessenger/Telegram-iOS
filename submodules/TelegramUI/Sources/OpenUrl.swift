@@ -876,7 +876,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         if let domain {
                             convertedUrl = "https://t.me/\(domain)?boost"
                         } else if let channel {
-                            convertedUrl = "https://t.me/boost?channel=\(channel)"
+                            convertedUrl = "https://t.me/c/\(channel)?boost"
                         }
                     }
                 }
