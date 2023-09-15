@@ -527,6 +527,9 @@ public final class MediaEditorValues: Codable, Equatable {
         if !self.toolValues.isEmpty {
             return true
         }
+        if self.audioTrack != nil {
+            return true
+        }
         return false
     }
 }
