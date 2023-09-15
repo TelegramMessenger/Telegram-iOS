@@ -55,7 +55,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
     private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, storiesInset: CGFloat)?
     private var scrollingOffset: (navigationHeight: CGFloat, offset: CGFloat)?
     
-    init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void, autoSetReady: Bool) {
+    init(context: AccountContext, controller: ChatListControllerImpl?, location: ChatListControllerLocation, filter: ChatListFilter?, chatListMode: ChatListNodeMode, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void, openArchiveSettings: @escaping () -> Void, autoSetReady: Bool, isMainTab: Bool?) {
         self.context = context
         self.controller = controller
         self.location = location
@@ -68,7 +68,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
         self.openArchiveSettings = openArchiveSettings
         self.isInlineMode = isInlineMode
         
-        self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady)
+        self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: chatListMode, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true, isInlineMode: isInlineMode, autoSetReady: autoSetReady, isMainTab: isMainTab)
         
         if let controller, case .chatList(groupId: .root) = controller.location {
             self.listNode.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight + ChatListNavigationBar.storiesScrollHeight

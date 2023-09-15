@@ -1276,7 +1276,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 animationData: animationData,
                                 content: .animation(animationData),
                                 itemFile: itemFile, subgroupId: nil,
-                                icon: .none,
+                                icon: itemFile.isPremiumSticker ? .premium : .none,
                                 tintMode: animationData.isTemplate ? .primary : .none
                             )
                             items.append(item)

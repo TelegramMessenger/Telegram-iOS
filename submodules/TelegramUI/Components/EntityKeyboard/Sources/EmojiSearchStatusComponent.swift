@@ -43,10 +43,10 @@ private final class LottieDirectContent: LottieComponent.Content {
         return true
     }
     
-    override func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
+    override func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: self.path)) {
             let result = TGGUnzipData(data, 2 * 1024 * 1024) ?? data
-            f(result, nil)
+            f(.animation(data: result, cacheKey: nil))
         }
         
         return EmptyDisposable

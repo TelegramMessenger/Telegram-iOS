@@ -212,7 +212,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.chatListNode = nil
         } else {
             self.mainContainerNode = nil
-            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true)
+            self.chatListNode = ChatListNode(context: context, location: chatListLocation, previewing: false, fillPreloadItems: false, mode: chatListMode, theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false, autoSetReady: true, isMainTab: false)
         }
     
         super.init()

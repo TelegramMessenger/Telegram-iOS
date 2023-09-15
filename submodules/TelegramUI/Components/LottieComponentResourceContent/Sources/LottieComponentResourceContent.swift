@@ -10,6 +10,7 @@ public extension LottieComponent {
         private let context: AccountContext
         private let file: TelegramMediaFile
         private let attemptSynchronously: Bool
+        private let providesPlaceholder: Bool
         
         override public var frameRange: Range<Double> {
             return 0.0 ..< 1.0
@@ -18,11 +19,13 @@ public extension LottieComponent {
         public init(
             context: AccountContext,
             file: TelegramMediaFile,
-            attemptSynchronously: Bool
+            attemptSynchronously: Bool,
+            providesPlaceholder: Bool = false
         ) {
             self.context = context
             self.file = file
             self.attemptSynchronously = attemptSynchronously
+            self.providesPlaceholder = providesPlaceholder
             
             super.init()
         }
@@ -37,13 +40,17 @@ public extension LottieComponent {
             if self.attemptSynchronously != other.attemptSynchronously {
                 return false
             }
+            if self.providesPlaceholder != other.providesPlaceholder {
+                return false
+            }
             return true
         }
         
-        override public func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
+        override public func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
             let attemptSynchronously = self.attemptSynchronously
             let file = self.file
             let mediaBox = self.context.account.postbox.mediaBox
+            let providesPlaceholder = self.providesPlaceholder
             return Signal<Data?, NoError> { subscriber in
                 if attemptSynchronously {
                     if let path = mediaBox.completedResourcePath(file.resource), let contents = try? Data(contentsOf: URL(fileURLWithPath: path)) {
@@ -56,11 +63,15 @@ public extension LottieComponent {
                 }
                 
                 let dataDisposable = (mediaBox.resourceData(file.resource)
-                |> filter { data in return data.complete }).start(next: { data in
-                    if let contents = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                        let result = TGGUnzipData(contents, 2 * 1024 * 1024) ?? contents
-                        subscriber.putNext(result)
-                        subscriber.putCompletion()
+                ).start(next: { data in
+                    if data.complete {
+                        if let contents = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                            let result = TGGUnzipData(contents, 2 * 1024 * 1024) ?? contents
+                            subscriber.putNext(result)
+                            subscriber.putCompletion()
+                        } else {
+                            subscriber.putNext(nil)
+                        }
                     } else {
                         subscriber.putNext(nil)
                     }
@@ -73,9 +84,12 @@ public extension LottieComponent {
                 }
             }.start(next: { data in
                 guard let data else {
+                    if providesPlaceholder, let immediateThumbnailData = file.immediateThumbnailData {
+                        f(.placeholder(data: immediateThumbnailData))
+                    }
                     return
                 }
-                f(data, nil)
+                f(.animation(data: data, cacheKey: nil))
             })
         }
     }

@@ -24,6 +24,7 @@ import SolidRoundedButtonComponent
 import EmojiTextAttachmentView
 import EmojiStatusComponent
 import TelegramNotices
+import GenerateStickerPlaceholderImage
 
 private let premiumBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
 private let featuredBadgeIcon: UIImage? = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/PanelBadgeAdd"), color: .white)

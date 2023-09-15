@@ -440,7 +440,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
             self?.secondaryEmptyAction()
         }, openArchiveSettings: { [weak self] in
             self?.openArchiveSettings()
-        }, autoSetReady: true)
+        }, autoSetReady: true, isMainTab: nil)
         self.itemNodes[.all] = itemNode
         self.addSubnode(itemNode)
         
@@ -784,7 +784,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     self?.secondaryEmptyAction()
                 }, openArchiveSettings: { [weak self] in
                     self?.openArchiveSettings()
-                }, autoSetReady: !animated)
+                }, autoSetReady: !animated, isMainTab: index == 0)
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
                 
@@ -930,7 +930,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                         self?.secondaryEmptyAction()
                     }, openArchiveSettings: { [weak self] in
                         self?.openArchiveSettings()
-                    }, autoSetReady: false)
+                    }, autoSetReady: false, isMainTab: i == 0)
                     itemNode.listNode.tempTopInset = self.tempTopInset
                     self.itemNodes[id] = itemNode
                 }
@@ -969,6 +969,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                     }
                 }
                 
+                itemNode.listNode.isMainTab.set(self.availableFilters.firstIndex(where: { $0.id == id }) == 0 ? true : false)
                 itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: itemInlineNavigationTransitionFraction, storiesInset: storiesInset, transition: nodeTransition)
                 if let scrollingOffset = self.scrollingOffset {
                     itemNode.updateScrollingOffset(navigationHeight: scrollingOffset.navigationHeight, offset: scrollingOffset.offset, transition: nodeTransition)

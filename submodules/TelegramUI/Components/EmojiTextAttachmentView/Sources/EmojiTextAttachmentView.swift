@@ -16,6 +16,7 @@ import MultiAnimationRenderer
 import ShimmerEffect
 import TextFormat
 import TelegramUIPreferences
+import GenerateStickerPlaceholderImage
 
 public func generateTopicIcon(title: String, backgroundColors: [UIColor], strokeColors: [UIColor], size: CGSize) -> UIImage? {
     let realSize = size

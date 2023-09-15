@@ -448,6 +448,16 @@ final class StoryContentCaptionComponent: Component {
                                 }
                             }
                         }
+                    } else {
+                        if case .tap = gesture {
+                            if component.externalState.isSelectingText {
+                                self.cancelTextSelection()
+                            } else if self.isExpanded {
+                                self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else {
+                                self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        }
                     }
                 }
             default:

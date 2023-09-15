@@ -50,7 +50,10 @@ public final class MediaEditor {
     private var player: AVPlayer?
     private var additionalPlayer: AVPlayer?
     private var audioPlayer: AVPlayer?
+    
     private var timeObserver: Any?
+    private weak var timeObserverPlayer: AVPlayer?
+    
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
     private weak var previewView: MediaEditorPreviewView?
@@ -354,12 +357,10 @@ public final class MediaEditor {
     
     private func destroyTimeObservers() {
         if let timeObserver = self.timeObserver {
-            if self.sourceIsVideo {
-                self.player?.removeTimeObserver(timeObserver)
-            } else {
-                self.audioPlayer?.removeTimeObserver(timeObserver)
-            }
+            self.timeObserverPlayer?.removeTimeObserver(timeObserver)
+            
             self.timeObserver = nil
+            self.timeObserverPlayer = nil
         }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
@@ -616,6 +617,7 @@ public final class MediaEditor {
         }
         
         if self.timeObserver == nil {
+            self.timeObserverPlayer = observedPlayer
             self.timeObserver = observedPlayer.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self, weak observedPlayer] time in
                 guard let self, let observedPlayer, let duration = observedPlayer.currentItem?.duration.seconds else {
                     return

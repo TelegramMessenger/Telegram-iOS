@@ -901,21 +901,30 @@ public final class TextFieldComponent: Component {
                 if self.textView.inputView == nil {
                     self.textView.inputView = inputView
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             } else if component.hideKeyboard {
                 if self.textView.inputView == nil {
                     self.textView.inputView = EmptyInputView()
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             } else {
                 if self.textView.inputView != nil {
                     self.textView.inputView = nil
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             }

@@ -203,11 +203,15 @@ class ChatListStorageInfoItemNode: ItemListRevealOptionsItemNode {
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_PremiumRestoreDiscountText, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)
-            case let .reviewLogin(newSessionReview):
+            case let .reviewLogin(newSessionReview, totalCount):
                 spacing = 2.0
                 alignment = .center
                 
-                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: item.strings.ChatList_SessionReview_PanelTitle, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
+                var rawTitleString = item.strings.ChatList_SessionReview_PanelTitle
+                if totalCount > 1 {
+                    rawTitleString = "1/\(totalCount) \(rawTitleString)"
+                }
+                let titleStringValue = NSMutableAttributedString(attributedString: NSAttributedString(string: rawTitleString, font: titleFont, textColor: item.theme.rootController.navigationBar.primaryTextColor))
                 titleString = titleStringValue
                 
                 textString = NSAttributedString(string: item.strings.ChatList_SessionReview_PanelText(newSessionReview.device, newSessionReview.location).string, font: textFont, textColor: item.theme.rootController.navigationBar.secondaryTextColor)

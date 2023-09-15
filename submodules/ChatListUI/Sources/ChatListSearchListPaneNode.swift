@@ -2358,6 +2358,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     break
                 }
             }
+            storyStatsIds.removeAll(where: { $0 == context.account.peerId })
             
             return context.engine.data.subscribe(
                 EngineDataMap(
@@ -2551,6 +2552,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> map { stats -> ([RecentlySearchedPeer], [EnginePeer.Id: PeerStoryStats]) in
                     var mappedStats: [EnginePeer.Id: PeerStoryStats] = [:]
                     for (id, value) in stats {
+                        if id == context.account.peerId {
+                            continue
+                        }
                         if let value {
                             mappedStats[id] = value
                         }

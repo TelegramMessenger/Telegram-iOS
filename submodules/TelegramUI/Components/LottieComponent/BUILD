@@ -17,6 +17,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/AppBundle",
         "//submodules/GZip",
+        "//submodules/TelegramUI/Components/Utils/GenerateStickerPlaceholderImage",
     ],
     visibility = [
         "//visibility:public",

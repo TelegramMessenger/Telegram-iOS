@@ -415,11 +415,13 @@ final class StoryItemOverlaysView: UIView {
                     if file.isCustomTemplateEmoji {
                         color = flags.contains(.isDark) ? .white : .black
                     }
+                    let placeholderColor = flags.contains(.isDark) ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1)
                     let _ = directStickerView.update(
                         transition: .immediate,
                         component: AnyComponent(LottieComponent(
-                            content: LottieComponent.ResourceContent(context: context, file: file, attemptSynchronously: synchronous),
+                            content: LottieComponent.ResourceContent(context: context, file: file, attemptSynchronously: synchronous, providesPlaceholder: true),
                             color: color,
+                            placeholderColor: placeholderColor,
                             renderingScale: 2.0,
                             loop: true
                         )),

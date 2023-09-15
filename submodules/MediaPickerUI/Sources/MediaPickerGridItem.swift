@@ -18,6 +18,34 @@ import FastBlur
 import MediaEditor
 import RadialStatusNode
 
+private let leftShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: -1.0, y: 1.0)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let rightShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
     case media(MediaPickerScreen.Subject.Media, Int)
@@ -78,19 +106,6 @@ final class MediaPickerGridItem: GridItem {
     }
 }
 
-private let maskImage = generateImage(CGSize(width: 1.0, height: 36.0), opaque: false, rotatedContext: { size, context in
-    let bounds = CGRect(origin: CGPoint(), size: size)
-    context.clear(bounds)
-    
-    let gradientColors = [UIColor.black.withAlphaComponent(0.0).cgColor, UIColor.black.withAlphaComponent(0.45).cgColor] as CFArray
-    
-    var locations: [CGFloat] = [0.0, 1.0]
-    let colorSpace = CGColorSpaceCreateDeviceRGB()
-    let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors, locations: &locations)!
-
-    context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
-})
-
 final class MediaPickerGridItemNode: GridItemNode {
     var currentMediaState: (TGMediaSelectableItem, Int)?
     var currentAssetState: (PHFetchResult<PHAsset>, Int)?
@@ -104,7 +119,8 @@ final class MediaPickerGridItemNode: GridItemNode {
     private let backgroundNode: ASImageNode
     private let imageNode: ImageNode
     private var checkNode: InteractiveCheckNode?
-    private let gradientNode: ASImageNode
+    private let leftShadowNode: ASImageNode
+    private let rightShadowNode: ASImageNode
     private let typeIconNode: ASImageNode
     private let durationNode: ImmediateTextNode
     private let draftNode: ImmediateTextNode
@@ -135,11 +151,17 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.imageNode.isLayerBacked = true
         self.imageNode.animateFirstTransition = false
         
-        self.gradientNode = ASImageNode()
-        self.gradientNode.displaysAsynchronously = false
-        self.gradientNode.displayWithoutProcessing = true
-        self.gradientNode.image = maskImage
-        self.gradientNode.isLayerBacked = true
+        self.leftShadowNode = ASImageNode()
+        self.leftShadowNode.displaysAsynchronously = false
+        self.leftShadowNode.displayWithoutProcessing = true
+        self.leftShadowNode.image = leftShadowImage
+        self.leftShadowNode.isLayerBacked = true
+        
+        self.rightShadowNode = ASImageNode()
+        self.rightShadowNode.displaysAsynchronously = false
+        self.rightShadowNode.displayWithoutProcessing = true
+        self.rightShadowNode.image = rightShadowImage
+        self.rightShadowNode.isLayerBacked = true
         
         self.typeIconNode = ASImageNode()
         self.typeIconNode.displaysAsynchronously = false
@@ -148,6 +170,8 @@ final class MediaPickerGridItemNode: GridItemNode {
         
         self.durationNode = ImmediateTextNode()
         self.durationNode.isLayerBacked = true
+        self.durationNode.textShadowColor = UIColor(white: 0.0, alpha: 0.4)
+        self.durationNode.textShadowBlur = 4.0
         self.draftNode = ImmediateTextNode()
         
         self.activateAreaNode = AccessibilityAreaNode()
@@ -248,7 +272,8 @@ final class MediaPickerGridItemNode: GridItemNode {
         if animateCheckNode {
             self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
-        self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.leftShadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.rightShadowNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         self.draftNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -322,10 +347,10 @@ final class MediaPickerGridItemNode: GridItemNode {
             if draft.isVideo {
                 self.typeIconNode.image = UIImage(bundleImageName: "Media Editor/MediaVideo")
                 
-                self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(draft.duration ?? 0.0)), font: Font.semibold(12.0), textColor: .white)
+                self.durationNode.attributedText = NSAttributedString(string: stringForDuration(Int32(draft.duration ?? 0.0)), font: Font.semibold(11.0), textColor: .white)
                 
                 if self.typeIconNode.supernode == nil {
-                    self.addSubnode(self.gradientNode)
+                    self.addSubnode(self.rightShadowNode)
                     self.addSubnode(self.typeIconNode)
                     self.addSubnode(self.durationNode)
                     self.setNeedsLayout()
@@ -337,8 +362,11 @@ final class MediaPickerGridItemNode: GridItemNode {
                 if self.durationNode.supernode != nil {
                     self.durationNode.removeFromSupernode()
                 }
-                if self.gradientNode.supernode != nil {
-                    self.gradientNode.removeFromSupernode()
+                if self.leftShadowNode.supernode != nil {
+                    self.leftShadowNode.removeFromSupernode()
+                }
+                if self.rightShadowNode.supernode != nil {
+                    self.rightShadowNode.removeFromSupernode()
                 }
             }
             
@@ -537,12 +565,20 @@ final class MediaPickerGridItemNode: GridItemNode {
                 duration = stringForDuration(Int32(asset.duration))
             }
             
-            if typeIcon != nil || duration != nil {
-                if self.gradientNode.supernode == nil {
-                    self.addSubnode(self.gradientNode)
+            if typeIcon != nil {
+                if self.leftShadowNode.supernode == nil {
+                    self.addSubnode(self.leftShadowNode)
                 }
-            } else if self.gradientNode.supernode != nil {
-                self.gradientNode.removeFromSupernode()
+            } else if self.leftShadowNode.supernode != nil {
+                self.leftShadowNode.removeFromSupernode()
+            }
+            
+            if duration != nil {
+                if self.rightShadowNode.supernode == nil {
+                    self.addSubnode(self.rightShadowNode)
+                }
+            } else if self.rightShadowNode.supernode != nil {
+                self.rightShadowNode.removeFromSupernode()
             }
             
             if let typeIcon {
@@ -555,7 +591,7 @@ final class MediaPickerGridItemNode: GridItemNode {
             }
             
             if let duration {
-                self.durationNode.attributedText = NSAttributedString(string: duration, font: Font.semibold(12.0), textColor: .white)
+                self.durationNode.attributedText = NSAttributedString(string: duration, font: Font.semibold(11.0), textColor: .white)
                 if self.durationNode.supernode == nil {
                     self.addSubnode(self.durationNode)
                 }
@@ -608,13 +644,14 @@ final class MediaPickerGridItemNode: GridItemNode {
         let backgroundSize = CGSize(width: self.bounds.width, height: floorToScreenPixels(self.bounds.height / 9.0 * 16.0))
         self.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((self.bounds.height - backgroundSize.height) / 2.0)), size: backgroundSize)
         self.imageNode.frame = self.bounds
-        self.gradientNode.frame = CGRect(x: 0.0, y: self.bounds.height - 36.0, width: self.bounds.width, height: 36.0)
+        self.leftShadowNode.frame = CGRect(x: 0.0, y: self.bounds.height - leftShadowImage.size.height, width: min(leftShadowImage.size.width, self.bounds.width), height: leftShadowImage.size.height)
+        self.rightShadowNode.frame = CGRect(x: self.bounds.width - min(rightShadowImage.size.width, self.bounds.width), y: self.bounds.height - rightShadowImage.size.height, width: min(rightShadowImage.size.width, self.bounds.width), height: rightShadowImage.size.height)
         self.typeIconNode.frame = CGRect(x: 0.0, y: self.bounds.height - 20.0, width: 19.0, height: 19.0)
         self.activateAreaNode.frame = self.bounds
         
         if self.durationNode.supernode != nil {
             let durationSize = self.durationNode.updateLayout(self.bounds.size)
-            self.durationNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - durationSize.width - 7.0, y: self.bounds.height - durationSize.height - 5.0), size: durationSize)
+            self.durationNode.frame = CGRect(origin: CGPoint(x: self.bounds.size.width - durationSize.width - 6.0, y: self.bounds.height - durationSize.height - 6.0), size: durationSize)
         }
         
         if self.draftNode.supernode != nil {

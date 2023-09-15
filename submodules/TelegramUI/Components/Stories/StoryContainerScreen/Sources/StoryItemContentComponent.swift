@@ -779,7 +779,7 @@ final class StoryItemContentComponent: Component {
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
                 } else {
-                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, borderAlpha: 0.2, duration: 1.0, hasCustomBorder: true, playOnce: false)
+                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, borderAlpha: 0.2, duration: 1.0, hasCustomBorder: false, playOnce: false)
                     self.loadingEffectView = loadingEffectView
                     self.addSubview(loadingEffectView)
                 }
