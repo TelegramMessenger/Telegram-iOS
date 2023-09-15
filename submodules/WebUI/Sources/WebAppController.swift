@@ -260,6 +260,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         fileprivate var webView: WebAppWebView?
         private var placeholderIcon: (UIImage, Bool)?
         private var placeholderNode: ShimmerEffectNode?
+        
+        private var scheduledBackgroundColor: UIColor?
     
         fileprivate let loadingProgressPromise = Promise<CGFloat?>(nil)
         
@@ -528,6 +530,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
             transition.updateAlpha(layer: webView.layer, alpha: 1.0)
+            
+            if let color = self.scheduledBackgroundColor {
+                self.scheduledBackgroundColor = nil
+                transition.updateBackgroundColor(node: self.backgroundNode, color: color)
+            }
+            self.updateHeaderBackgroundColor(transition: transition)
+            
             if let placeholderNode = self.placeholderNode {
                 self.placeholderNode = nil
                 transition.updateAlpha(node: placeholderNode, alpha: 0.0, completion: { [weak placeholderNode] _ in
@@ -867,8 +876,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_set_background_color":
                     if let json = json, let colorValue = json["color"] as? String, let color = UIColor(hexString: colorValue) {
-                        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-                        transition.updateBackgroundColor(node: self.backgroundNode, color: color)
+                        if self.placeholderNode != nil {
+                            self.scheduledBackgroundColor = color
+                        } else {
+                            let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
+                            transition.updateBackgroundColor(node: self.backgroundNode, color: color)
+                        }
                     }
                 case "web_app_set_header_color":
                     if let json = json {
@@ -879,7 +892,9 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.headerColor = color
                             self.headerColorKey = nil
                         }
-                        self.updateHeaderBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
+                        if self.placeholderNode == nil {
+                            self.updateHeaderBackgroundColor(transition: .animated(duration: 0.2, curve: .linear))
+                        }
                     }
                 case "web_app_open_popup":
                     if let json = json, let message = json["message"] as? String, let buttons = json["buttons"] as? [Any] {

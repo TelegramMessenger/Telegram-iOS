@@ -435,9 +435,6 @@ public final class MessageInputPanelComponent: Component {
         
         override init(frame: CGRect) {
             self.fieldBackgroundView = BlurredBackgroundView(color: UIColor(white: 0.0, alpha: 0.5), enableBlur: true)
-            if sharedIsReduceTransparencyEnabled {
-                
-            }
             
             let style: UIBlurEffect.Style = .dark
             let blurEffect = UIBlurEffect(style: style)

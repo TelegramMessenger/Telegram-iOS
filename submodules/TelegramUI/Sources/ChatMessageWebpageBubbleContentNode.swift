@@ -339,6 +339,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 subtitle = nil
                             }
                             actionTitle = item.presentationData.strings.Chat_OpenStory
+                        case "telegram_channel_boost":
+                            actionTitle = item.presentationData.strings.Conversation_BoostChannel
                         default:
                             break
                     }

@@ -842,9 +842,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return
                 }
                 
-                var boosted = false
+                var isBoosted = false
                 if case let .error(error) = canApplyStatus, case .peerBoostAlreadyActive = error {
-                    boosted = true
+                    isBoosted = true
                 }
                 
                 var isCurrent = false
@@ -852,14 +852,24 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     isCurrent = true
                 }
                 
-                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: boosted)
-                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: nil, boosted: true)
+                var currentLevel = Int32(status.level)
+                var currentLevelBoosts = Int32(status.currentLevelBoosts)
+                var nextLevelBoosts = status.nextLevelBoosts.flatMap(Int32.init)
+                
+                if isBoosted && status.boosts == currentLevelBoosts {
+                    currentLevel = max(0, currentLevel - 1)
+                    nextLevelBoosts = currentLevelBoosts
+                    currentLevelBoosts = max(0, currentLevelBoosts - 1)
+                }
+                
+                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: isBoosted)
+                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: true)
                 let nextCount = Int32(status.boosts + 1)
                 
                 var updateImpl: (() -> Void)?
                 var dismissImpl: (() -> Void)?
                 let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), action: {
-                    if boosted {
+                    if isBoosted {
                         return true
                     }
                     var dismiss = false

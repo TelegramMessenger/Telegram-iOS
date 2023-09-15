@@ -2513,9 +2513,11 @@ public final class StoryItemSetContainerComponent: Component {
                 #endif*/
             }
             
+            var isFirstItem = false
             var itemChanged = false
             var resetInputContents: MessageInputPanelComponent.SendMessageInput?
             if self.component?.slice.item.storyItem.id != component.slice.item.storyItem.id {
+                isFirstItem = self.component == nil
                 itemChanged = self.component != nil
                 self.initializedOffset = false
                 
@@ -3722,6 +3724,16 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                 }
                 self.currentSoundButtonState = soundButtonState
+            }
+            
+            if isVideo && !isSilentVideo && component.isAudioMuted && (isFirstItem || itemChanged) {
+                if isFirstItem {
+                    Queue.mainQueue().after(0.4) {
+                        self.maybeDisplayUnmuteVideoTooltip()
+                    }
+                } else {
+                    self.maybeDisplayUnmuteVideoTooltip()
+                }
             }
             
             let storyPrivacyIcon: StoryPrivacyIconComponent.Privacy?
@@ -6331,6 +6343,26 @@ public final class StoryItemSetContainerComponent: Component {
             self.sendMessageContext.tooltipScreen = tooltipScreen
             self.updateIsProgressPaused()
             component.controller()?.present(tooltipScreen, in: .current)
+        }
+        
+        func maybeDisplayUnmuteVideoTooltip() {
+            guard let component = self.component, component.visibilityFraction == 1.0 else {
+                return
+            }
+            guard let soundButtonView = self.soundButton.view else {
+                return
+            }
+                        
+            let tooltipScreen = TooltipScreen(
+                account: component.context.account,
+                sharedContext: component.context.sharedContext,
+                text: .plain(text: component.strings.Story_TooltipUnmuteVideoSound), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .default, shouldDismissOnTouch: { _, _ in
+                    return .dismiss(consume: false)
+                }
+            )
+            component.controller()?.present(tooltipScreen, in: .current)
+            
+            let _ = ApplicationSpecificNotice.setDisplayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager).start()
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {

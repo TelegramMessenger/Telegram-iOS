@@ -592,11 +592,20 @@ public final class MediaEditor {
                  
                     self.setupTimeObservers()
                     Queue.mainQueue().justDispatch {
-                        player.playImmediately(atRate: 1.0)
-                        additionalPlayer?.playImmediately(atRate: 1.0)
-                        self.audioPlayer?.playImmediately(atRate: 1.0)
-                        self.onPlaybackAction(.play)
-                        self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                        let startPlayback = {
+                            player.playImmediately(atRate: 1.0)
+                            additionalPlayer?.playImmediately(atRate: 1.0)
+                            self.audioPlayer?.playImmediately(atRate: 1.0)
+                            self.onPlaybackAction(.play)
+                            self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                        }
+                        if let audioPlayer = self.audioPlayer, audioPlayer.status != .readyToPlay {
+                            Queue.mainQueue().after(0.1) {
+                                startPlayback()
+                            }
+                        } else {
+                            startPlayback()
+                        }
                     }
                 }
             }
@@ -1099,6 +1108,9 @@ public final class MediaEditor {
             }
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
             self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+            if !self.sourceIsVideo {
+                self.audioPlayer?.play()
+            }
         }
     }
     
