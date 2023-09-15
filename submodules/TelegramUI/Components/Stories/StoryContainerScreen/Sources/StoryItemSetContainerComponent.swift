@@ -6352,17 +6352,26 @@ public final class StoryItemSetContainerComponent: Component {
             guard let soundButtonView = self.soundButton.view else {
                 return
             }
-                        
-            let tooltipScreen = TooltipScreen(
-                account: component.context.account,
-                sharedContext: component.context.sharedContext,
-                text: .plain(text: component.strings.Story_TooltipUnmuteVideoSound), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .default, shouldDismissOnTouch: { _, _ in
-                    return .dismiss(consume: false)
-                }
-            )
-            component.controller()?.present(tooltipScreen, in: .current)
             
-            let _ = ApplicationSpecificNotice.setDisplayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager).start()
+            let _ = (ApplicationSpecificNotice.displayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager)
+            |> delay(0.3, queue: .mainQueue())
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let self, let component = self.component else {
+                    return
+                }
+                if !value {
+                    let tooltipScreen = TooltipScreen(
+                        account: component.context.account,
+                        sharedContext: component.context.sharedContext,
+                        text: .plain(text: component.strings.Story_TooltipUnmuteVideoSound), style: .default, location: TooltipScreen.Location.point(soundButtonView.convert(soundButtonView.bounds, to: nil).offsetBy(dx: 1.0, dy: -10.0), .top), displayDuration: .default, shouldDismissOnTouch: { _, _ in
+                            return .dismiss(consume: false)
+                        }
+                    )
+                    component.controller()?.present(tooltipScreen, in: .current)
+                    
+                    let _ = ApplicationSpecificNotice.setDisplayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager).start()
+                }
+            })
         }
         
         func updateModalTransitionFactor(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
