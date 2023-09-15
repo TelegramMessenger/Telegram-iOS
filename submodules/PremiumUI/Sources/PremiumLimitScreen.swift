@@ -515,7 +515,8 @@ public class PremiumLimitDisplayComponent: Component {
             if component.isPremiumDisabled {
                 badgePosition = 0.5
             }
-            if badgePosition > 1.0 - .ulpOfOne {
+                        
+            if badgePosition > 1.0 - 0.15 {
                 progressTransition.setFrame(view: self.badgeMaskArrowView, frame: CGRect(origin: CGPoint(x: badgeSize.width - 24.0, y: badgeSize.height - 15.0), size: CGSize(width: 44.0, height: 12.0)))
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 1.0, y: 1.0))
                 progressTransition.setFrame(view: self.badgeMaskArrowFillerView, frame: CGRect(x: -12.0, y: -21.0, width: 36.0, height: 24.0))
@@ -527,7 +528,7 @@ public class PremiumLimitDisplayComponent: Component {
                 } else {
                     self.badgeView.center = CGPoint(x: 3.0 + (size.width - 6.0) * badgePosition + 3.0, y: 82.0)
                 }
-            } else if badgePosition < .ulpOfOne {
+            } else if badgePosition < 0.15 {
                 progressTransition.setFrame(view: self.badgeMaskArrowView, frame: CGRect(origin: CGPoint(x: -20.0, y: badgeSize.height - 15.0), size: CGSize(width: 44.0, height: 12.0)))
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.0, y: 1.0))
                 progressTransition.setFrame(view: self.badgeMaskArrowFillerView, frame: CGRect(x: 20.0, y: -21.0, width: 36.0, height: 24.0))
@@ -581,7 +582,7 @@ public class PremiumLimitDisplayComponent: Component {
             } else if !self.didPlayAppearanceAnimation || !transition.animation.isImmediate {
                 self.didPlayAppearanceAnimation = true
                 if transition.animation.isImmediate {
-                    if component.badgePosition.isZero {
+                    if component.badgePosition < 0.1 {
                         self.badgeView.alpha = 1.0
                         if let badgeText = component.badgeText {
                             self.badgeCountLabel.configure(with: badgeText, duration: 0.001)
@@ -1071,52 +1072,42 @@ private final class LimitSheetContent: CombinedComponent {
                 
                 if let _ = link {
                     if let remaining {
-                        let valueString: String
-                        if remaining == 1 {
-                            valueString = "**\(remaining)** more boost"
-                        } else {
-                            valueString = "**\(remaining)** more boosts"
-                        }
+                        let valueString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
-                            titleText = "Enable Stories"
-                            string = "Your channel needs \(valueString) to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                            titleText = strings.ChannelBoost_EnableStories
+                            string = strings.ChannelBoost_EnableStoriesText(valueString).string
                         } else {
-                            titleText = "Increase Story Limit"
-                            string = "Your channel needs \(valueString) to post **\(level + 1)** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
+                            titleText = strings.ChannelBoost_IncreaseLimit
+                            string = strings.ChannelBoost_IncreaseLimitText(valueString, "\(level + 1)").string
                         }
                     } else {
-                        titleText = "Increase Story Limit"
+                        titleText = strings.ChannelBoost_IncreaseLimit
                         string = "Your channel needs **0** more boosts to post **2** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
                     }
-                    actionButtonText = "Copy Link"
+                    actionButtonText = strings.ChannelBoost_CopyLink
                     buttonIconName = "Premium/CopyLink"
                     actionButtonHasGloss = false
                 } else {
                     if let remaining {
-                        let valueString: String
-                        if remaining == 1 {
-                            valueString = "**\(remaining)** more boost"
-                        } else {
-                            valueString = "**\(remaining)** more boosts"
-                        }
+                        let valueString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
-                            titleText = "Enable Stories for The Channel"
-                            string = "**\(peer.compactDisplayTitle)** needs \(valueString) to enable posting stories. Help make it possible!"
+                            titleText = isCurrent ? strings.ChannelBoost_EnableStoriesForChannel : strings.ChannelBoost_EnableStoriesForOtherChannel
+                            string = strings.ChannelBoost_EnableStoriesForChannelText(peer.compactDisplayTitle, valueString).string
                         } else {
-                            titleText = "Help Upgrade Channel"
-                            string = "**\(peer.compactDisplayTitle)** needs \(valueString) to be able to post **\(level + 1)** stories per day."
+                            titleText = strings.ChannelBoost_HelpUpgradeChannel
+                            string = strings.ChannelBoost_HelpUpgradeChannelText(peer.compactDisplayTitle, valueString, "\(level + 1)").string
                         }
                     } else {
-                        titleText = "Help Upgrade Channel"
+                        titleText = strings.ChannelBoost_HelpUpgradeChannel
                         string = "**\(peer.compactDisplayTitle)** needs **0** more boosts to be able to post **\(level + 1)** stories per day."
                     }
-                    actionButtonText = "Boost Channel"
+                    actionButtonText = strings.ChannelBoost_BoostChannel
                     buttonIconName = "Premium/BoostChannel"
                 }
                 buttonAnimationName = nil
-                defaultTitle = "Level \(level)"
+                defaultTitle = strings.ChannelBoost_Level("\(level)").string
                 defaultValue = ""
-                premiumValue = "Level \(level + 1)"
+                premiumValue = strings.ChannelBoost_Level("\(level + 1)").string
                 
                 premiumTitle = ""
                 
@@ -1125,21 +1116,15 @@ private final class LimitSheetContent: CombinedComponent {
                     actionButtonText = environment.strings.Common_OK
                     
                     if let remaining {
-                        let valueString: String
-                        if remaining == 1 {
-                            valueString = "**\(remaining)** more boost"
-                        } else {
-                            valueString = "**\(remaining)** more boosts"
-                        }
+                        titleText = isCurrent ? strings.ChannelBoost_YouBoostedChannel(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannel
+                        let valueString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
-                            titleText = "Enable Stories for The Channel"
                             if remaining == 0 {
-                                string = "**You boosted this channel**.\nThis allowed it to post stories."
+                                string = strings.ChannelBoost_EnabledStoriesForChannelText
                             } else {
-                                string = "**You boosted this channel**.\n\(valueString) needed to enable stories."
+                                string = strings.ChannelBoost_EnableStoriesMoreRequired(valueString).string
                             }
                         } else {
-                            titleText = "Help Upgrade Channel"
                             if remaining == 0 {
                                 string = "**You boosted this channel**.\nThis allowed it to post \(level + 1) stories per day."
                             } else {
@@ -1203,7 +1188,7 @@ private final class LimitSheetContent: CombinedComponent {
                             text: .markdown(text: string, attributes: markdownAttributes),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0,
-                            lineSpacing: 0.0
+                            lineSpacing: 0.1
                         ),
                         availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                         transition: .immediate
@@ -1214,7 +1199,7 @@ private final class LimitSheetContent: CombinedComponent {
                             text: .markdown(text: string, attributes: markdownAttributes),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0,
-                            lineSpacing: 0.0
+                            lineSpacing: 0.1
                         ),
                         availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                         transition: .immediate

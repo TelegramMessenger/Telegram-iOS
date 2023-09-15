@@ -9970,3 +9970,36 @@ Sorry for the inconvenience.";
 "SessionReview.OkAction" = "Got it";
 
 "WebApp.RemoveAllConfirmationText" = "This will remove **%@** shortcuts from all menus.";
+
+
+"ChannelBoost.Level" = "Level %@";
+"ChannelBoost.EnableStories" = "Enable Stories";
+"ChannelBoost.EnableStoriesText" = "Your channel needs %1$@ to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+
+"ChannelBoost.IncreaseLimit" = "Increase Story Limit";
+"ChannelBoost.IncreaseLimitText" = "Your channel needs %1$@ to post **%2$@** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+
+"ChannelBoost.EnableStoriesForChannel" = "Enable Stories for This Channel";
+"ChannelBoost.EnableStoriesForOtherChannel" = "Enable Stories for The Channel";
+"ChannelBoost.EnableStoriesForChannelText" = "**%1$@** needs %2$@ to enable posting stories. Help make it possible!";
+
+"ChannelBoost.EnabledStoriesForChannelText" = "This channel reached **Level 1** and can now post stories.";
+"ChannelBoost.EnableStoriesMoreRequired" = "This channel needs **%1$@** to enable stories.";
+
+"ChannelBoost.HelpUpgradeChannel" = "Help Upgrade This Channel";
+"ChannelBoost.HelpUpgradeChannelText" = "**%1$@** needs %2$@ to be able to post **%3$@** stories per day.";
+
+"ChannelBoost.YouBoostedChannel" = "You Boosted %1$@!";
+"ChannelBoost.YouBoostedOtherChannel" = "You Boosted The Channel";
+
+"ChannelBoost.MoreBoosts_1" = "**%@** more boost";
+"ChannelBoost.MoreBoosts_any" = "**%@** more boosts";
+
+"ChannelBoost.CopyLink" = "Copy Link";
+"ChannelBoost.BoostChannel" = "Boost Channel";
+
+"Story.TooltipUnmuteVideoSound" = "Tap here to enable sound";
+
+"Conversation.BoostChannel" = "BOOST";
+
+"MediaEditor.Audio" = "Audio";

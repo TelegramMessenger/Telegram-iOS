@@ -19,6 +19,9 @@ import ItemListPeerItem
 import InviteLinksUI
 import UndoUI
 import ShareController
+import ItemListPeerActionItem
+
+private let maxUsersDisplayedLimit: Int32 = 50
 
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
@@ -27,14 +30,18 @@ private final class ChannelStatsControllerArguments {
     let contextAction: (MessageId, ASDisplayNode, ContextGesture?) -> Void
     let copyBoostLink: (String) -> Void
     let shareBoostLink: (String) -> Void
+    let openPeer: (EnginePeer) -> Void
+    let expandBoosters: () -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
         self.contextAction = contextAction
         self.copyBoostLink = copyBoostLink
         self.shareBoostLink = shareBoostLink
+        self.openPeer = openPeer
+        self.expandBoosters = expandBoosters
     }
 }
 
@@ -98,6 +105,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostersTitle(PresentationTheme, String)
     case boostersPlaceholder(PresentationTheme, String)
     case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
+    case boostersExpand(PresentationTheme, String)
     case boostersInfo(PresentationTheme, String)
     
     case boostLinkTitle(PresentationTheme, String)
@@ -132,7 +140,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.boostLevel.rawValue
             case .boostOverviewTitle, .boostOverview:
                 return StatsSection.boostOverview.rawValue
-            case .boostersTitle, .boostersPlaceholder, .booster, .boostersInfo:
+        case .boostersTitle, .boostersPlaceholder, .booster, .boostersExpand, .boostersInfo:
                 return StatsSection.boosters.rawValue
             case .boostLinkTitle, .boostLink, .boostLinkInfo:
                 return StatsSection.boostLink.rawValue
@@ -197,14 +205,16 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2004
             case let .booster(index, _, _, _, _):
                 return 2005 + index
-            case .boostersInfo:
+            case .boostersExpand:
                 return 10000
-            case .boostLinkTitle:
+            case .boostersInfo:
                 return 10001
-            case .boostLink:
+            case .boostLinkTitle:
                 return 10002
-            case .boostLinkInfo:
+            case .boostLink:
                 return 10003
+            case .boostLinkInfo:
+                return 10004
         }
     }
     
@@ -378,6 +388,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .boostersExpand(lhsTheme, lhsText):
+                if case let .boostersExpand(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .boostersInfo(lhsTheme, lhsText):
                 if case let .boostersInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -459,11 +475,15 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .booster(_, _, dateTimeFormat, peer, expires):
                 let expiresValue = stringForFullDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text("Boost expires on \(expiresValue)", .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: false, sectionId: self.section, action: {
-                
+                    arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            case let .boostersExpand(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.expandBoosters()
+                })
             case let .boostLevel(_, count, level, position):
-                let inactiveText = "Level \(level)"
-                let activeText = "Level \(level + 1)"
+                let inactiveText = presentationData.strings.ChannelBoost_Level("\(level)").string
+                let activeText = presentationData.strings.ChannelBoost_Level("\(level + 1)").string
                 return BoostLevelHeaderItem(theme: presentationData.theme, count: count, position: position, activeText: activeText, inactiveText: inactiveText, sectionId: self.section)
             case let .boostOverview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
@@ -487,24 +507,34 @@ private struct ChannelStatsControllerState: Equatable {
     }
     
     let section: Section
+    let boostersExpanded: Bool
   
     init() {
         self.section = .stats
+        self.boostersExpanded = false
     }
     
-    init(section: Section) {
+    init(section: Section, boostersExpanded: Bool) {
         self.section = section
+        self.boostersExpanded = boostersExpanded
     }
     
     static func ==(lhs: ChannelStatsControllerState, rhs: ChannelStatsControllerState) -> Bool {
         if lhs.section != rhs.section {
             return false
         }
+        if lhs.boostersExpanded != rhs.boostersExpanded {
+            return false
+        }
         return true
     }
     
     func withUpdatedSection(_ section: Section) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: section)
+        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded)
+    }
+    
+    func withUpdatedBoostersExpanded(_ boostersExpanded: Bool) -> ChannelStatsControllerState {
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded)
     }
 }
 
@@ -585,7 +615,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             } else {
                 progress = 1.0
             }
-            entries.append(.boostLevel(presentationData.theme, Int32(boostData.level), Int32(boostData.boosts), progress))
+            entries.append(.boostLevel(presentationData.theme, Int32(boostData.boosts), Int32(boostData.level), progress))
             
             entries.append(.boostOverviewTitle(presentationData.theme, "OVERVIEW"))
             entries.append(.boostOverview(presentationData.theme, boostData))
@@ -610,9 +640,22 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             
             if let boostersState {
                 var boosterIndex: Int32 = 0
-                for booster in boostersState.boosters {
+                
+                var boosters: [ChannelBoostersContext.State.Booster] = boostersState.boosters
+                var effectiveExpanded = state.boostersExpanded
+                if boosters.count > maxUsersDisplayedLimit && !state.boostersExpanded {
+                    boosters = Array(boosters.prefix(Int(maxUsersDisplayedLimit)))
+                } else {
+                    effectiveExpanded = true
+                }
+                
+                for booster in boosters {
                     entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster.peer, booster.expires))
                     boosterIndex += 1
+                }
+                
+                if !effectiveExpanded {
+                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.PeopleNearby_ShowMorePeople(Int32(boostersState.count) - maxUsersDisplayedLimit)))
                 }
             }
             
@@ -678,6 +721,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let boostersContext = ChannelBoostersContext(account: context.account, peerId: peerId)
     
     var presentImpl: ((ViewController) -> Void)?
+    var navigateToProfileImpl: ((EnginePeer) -> Void)?
     
     let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
@@ -733,6 +777,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
         }
         presentImpl?(shareController)
+    },
+    openPeer: { peer in
+        navigateToProfileImpl?(peer)
+    },
+    expandBoosters: {
+        updateState { $0.withUpdatedBoostersExpanded(true) }
     })
     
     let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
@@ -802,6 +852,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             }
         })
     }
+    controller.visibleBottomContentOffsetChanged = { offset in
+        let state = stateValue.with { $0 }
+        if case let .known(value) = offset, value < 100.0, case .boosts = state.section, state.boostersExpanded {
+            boostersContext.loadMore()
+        }
+    }
     controller.titleControlValueChanged = { value in
         updateState { $0.withUpdatedSection(value == 1 ? .boosts : .stats) }
     }
@@ -839,6 +895,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     presentImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
+    }
+    navigateToProfileImpl = { [weak controller] peer in
+        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
+            navigationController.pushViewController(controller)
+        }
     }
     return controller
 }

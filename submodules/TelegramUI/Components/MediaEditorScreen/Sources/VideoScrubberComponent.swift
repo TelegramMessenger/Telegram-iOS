@@ -166,6 +166,7 @@ final class VideoScrubberComponent: Component {
         private let audioTitle = ComponentView<Empty>()
                 
         private let audioWaveform = ComponentView<Empty>()
+        private let waveformCloneLayer = AudioWaveformComponent.View.CloneLayer()
         
         private let trimView = TrimView(frame: .zero)
         private let ghostTrimView = TrimView(frame: .zero)
@@ -222,6 +223,8 @@ final class VideoScrubberComponent: Component {
             self.audioContentContainerView.mask = self.audioContentMaskView
             
             self.audioIconView = UIImageView(image: UIImage(bundleImageName: "Media Editor/SmallAudio"))
+            
+            self.waveformCloneLayer.opacity = 0.3
             
             super.init(frame: frame)
             
@@ -343,6 +346,12 @@ final class VideoScrubberComponent: Component {
             component.audioOffsetUpdated(offset, done)
         }
         
+        var isDragging = false
+        func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+            self.isDragging = true
+            self.state?.updated(transition: .easeInOut(duration: 0.25))
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             self.updateAudioOffset(done: false)
         }
@@ -350,11 +359,15 @@ final class VideoScrubberComponent: Component {
         func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
             if !decelerate {
                 self.updateAudioOffset(done: true)
+                self.isDragging = false
+                self.state?.updated(transition: .easeInOut(duration: 0.25))
             }
         }
         
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             self.updateAudioOffset(done: true)
+            self.isDragging = false
+            self.state?.updated(transition: .easeInOut(duration: 0.25))
         }
         
         @objc private func longPressed(_ gestureRecognizer: UILongPressGestureRecognizer) {
@@ -397,7 +410,10 @@ final class VideoScrubberComponent: Component {
             let length = end - start
             let fraction = (location.x - start) / length
             
-            let position = max(component.startPosition, min(component.endPosition, trimDuration * fraction))
+            var position = max(component.startPosition, min(component.endPosition, trimDuration * fraction))
+            if component.audioOnly, let offset = component.audioData?.offset {
+                position += offset
+            }
             let transition: Transition = .immediate
             switch gestureRecognizer.state {
             case .began, .changed:
@@ -443,6 +459,10 @@ final class VideoScrubberComponent: Component {
             
             let updatedPosition: Double
             if let (start, from, to, _) = self.positionAnimation {
+                var from = from
+                if let offset = component.audioData?.offset {
+                    from -= offset
+                }
                 let duration = to - from
                 let fraction = duration > 0.0 ? (timestamp - start) / duration : 0.0
                 updatedPosition = max(component.startPosition, min(component.endPosition, from + (to - from) * fraction))
@@ -450,8 +470,12 @@ final class VideoScrubberComponent: Component {
                     self.positionAnimation = (start, from, to, true)
                 }
             } else {
+                var position = component.position
+                if let offset = component.audioData?.offset {
+                    position -= offset
+                }
                 let advance = component.isPlaying ? timestamp - component.generationTimestamp : 0.0
-                updatedPosition = max(component.startPosition, min(component.endPosition, component.position + advance))
+                updatedPosition = max(component.startPosition, min(component.endPosition, position + advance))
             }
             let cursorHeight: CGFloat = component.audioData != nil ? 80.0 : 50.0
             self.cursorView.frame = cursorFrame(size: scrubberSize, height: cursorHeight, position: updatedPosition, duration: trimDuration)
@@ -588,7 +612,8 @@ final class VideoScrubberComponent: Component {
                     components.append(title)
                 }
                 if components.isEmpty {
-                    components.append("Audio")
+                    let strings = component.context.sharedContext.currentPresentationData.with { $0 }.strings
+                    components.append(strings.MediaEditor_Audio)
                 }
                 trackTitle = components.joined(separator: " • ")
             }
@@ -635,16 +660,26 @@ final class VideoScrubberComponent: Component {
             if let audioData = component.audioData {
                 let samples = audioData.samples ?? Data()
                 
-                if let view = self.audioWaveform.view, previousComponent?.audioData?.samples == nil && audioData.samples != nil, let snapshotView = view.snapshotContentTree() {
+                if let view = self.audioWaveform.view, previousComponent?.audioData?.samples == nil && audioData.samples != nil, let vibrancySnapshotView = view.snapshotContentTree(), let snapshotView = self.waveformCloneLayer.snapshotContentTreeAsView() {
+                    vibrancySnapshotView.frame = view.frame
+                    snapshotView.alpha = 0.3
                     snapshotView.frame = view.frame
-                    self.audioVibrancyContainer.addSubview(snapshotView)
+                    self.audioVibrancyContainer.addSubview(vibrancySnapshotView)
+                    self.audioContainerView.addSubview(snapshotView)
                     
-                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
-                        snapshotView.removeFromSuperview()
+                    vibrancySnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        vibrancySnapshotView.removeFromSuperview()
+                    })
+                    
+                    snapshotView.layer.animateAlpha(from: 0.3, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        vibrancySnapshotView.removeFromSuperview()
                     })
                     
                     view.layer.animateScaleY(from: 0.01, to: 1.0, duration: 0.2)
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    
+                    self.waveformCloneLayer.animateScaleY(from: 0.01, to: 1.0, duration: 0.2)
+                    self.waveformCloneLayer.animateAlpha(from: 0.0, to: 0.3, duration: 0.2)
                 }
                 let audioWaveformSize = self.audioWaveform.update(
                     transition: transition,
@@ -664,11 +699,15 @@ final class VideoScrubberComponent: Component {
                     environment: {},
                     containerSize: CGSize(width: audioContainerFrame.width, height: scrubberHeight)
                 )
-                if let view = self.audioWaveform.view {
+                if let view = self.audioWaveform.view as? AudioWaveformComponent.View {
                     if view.superview == nil {
+                        view.cloneLayer = self.waveformCloneLayer
                         self.audioVibrancyContainer.addSubview(view)
+                        self.audioContainerView.layer.addSublayer(self.waveformCloneLayer)
                     }
                     audioTransition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected || component.audioOnly ? 0.0 : 6.0), size: audioWaveformSize))
+                    
+                    audioTransition.setFrame(layer: self.waveformCloneLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isAudioSelected || component.audioOnly ? 0.0 : 6.0), size: audioWaveformSize))
                 }
             }
             
@@ -746,16 +785,23 @@ final class VideoScrubberComponent: Component {
                 containerRightEdge = ghostRightHandleFrame.minX
             }
             
-            transition.setAlpha(view: self.cursorView, alpha: self.trimView.isPanningTrimHandle || self.ghostTrimView.isPanningTrimHandle ? 0.0 : 1.0)
+            let isDraggingAudio = self.isDragging && component.audioOnly
+            let isCursorHidden = isDraggingAudio || self.trimView.isPanningTrimHandle || self.ghostTrimView.isPanningTrimHandle
+            var cursorTransition = transition
+            if isCursorHidden {
+                cursorTransition = .immediate
+            }
+            cursorTransition.setAlpha(view: self.cursorView, alpha: isCursorHidden ? 0.0 : 1.0)
+            
             if self.isPanningPositionHandle || !component.isPlaying {
                 self.positionAnimation = nil
                 self.displayLink?.isPaused = true
                 
                 let cursorHeight: CGFloat = component.audioData != nil ? 80.0 : 50.0
-                let cursorPosition = component.position
-//                if self.cursorView.alpha.isZero {
-//                    cursorPosition = component.startPosition
-//                }
+                var cursorPosition = component.position
+                if component.audioOnly, let audioOffset = component.audioData?.offset {
+                    cursorPosition -= audioOffset
+                }
                 videoTransition.setFrame(view: self.cursorView, frame: cursorFrame(size: scrubberSize, height: cursorHeight, position: cursorPosition, duration: trimDuration))
             } else {
                 if let (_, _, end, ended) = self.positionAnimation {
