@@ -2288,7 +2288,8 @@ final class ShareWithPeersScreenComponent: Component {
                                 badge: badge,
                                 textColor: environment.theme.list.itemCheckColors.foregroundColor,
                                 badgeBackground: environment.theme.list.itemCheckColors.foregroundColor,
-                                badgeForeground: environment.theme.list.itemCheckColors.fillColor
+                                badgeForeground: environment.theme.list.itemCheckColors.fillColor,
+                                combinedAlignment: true
                             ))
                         ),
                         isEnabled: true,

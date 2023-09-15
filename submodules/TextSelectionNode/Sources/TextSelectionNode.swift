@@ -220,7 +220,7 @@ public final class TextSelectionNode: ASDisplayNode {
     public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
     public var updateRange: ((NSRange?) -> Void)?
     private let present: (ViewController, Any?) -> Void
-    private weak var rootNode: ASDisplayNode?
+    private let rootNode: () -> ASDisplayNode?
     private let performAction: (NSAttributedString, TextSelectionAction) -> Void
     private var highlightOverlay: LinkHighlightingNode?
     private let leftKnob: ASImageNode
@@ -240,7 +240,7 @@ public final class TextSelectionNode: ASDisplayNode {
         return self.recognizer?.didRecognizeTap ?? false
     }
     
-    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
+    public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: @escaping () -> ASDisplayNode?, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
         self.strings = strings
         self.textNode = textNode
@@ -312,7 +312,7 @@ public final class TextSelectionNode: ASDisplayNode {
                 
                 if let scrollView = findScrollView(view: strongSelf.view) {
                     let scrollPoint = strongSelf.view.convert(point, to: scrollView)
-                    scrollView.scrollRectToVisible(CGRect(origin: CGPoint(x: scrollPoint.x, y: scrollPoint.y - 30.0), size: CGSize(width: 1.0, height: 60.0)), animated: false)
+                    scrollView.scrollRectToVisible(CGRect(origin: CGPoint(x: scrollPoint.x, y: scrollPoint.y - 50.0), size: CGSize(width: 1.0, height: 100.0)), animated: false)
                 }
             }
         }
@@ -596,7 +596,7 @@ public final class TextSelectionNode: ASDisplayNode {
         }))
         
         self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
-            guard let strongSelf = self, let rootNode = strongSelf.rootNode else {
+            guard let strongSelf = self, let rootNode = strongSelf.rootNode() else {
                 return nil
             }
             return (strongSelf, completeRect, rootNode, rootNode.bounds)

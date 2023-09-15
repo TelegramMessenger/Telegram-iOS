@@ -227,6 +227,8 @@ class WebSearchGalleryController: ViewController {
                 strongSelf.replaceRootController(controller, ready)
             }
         }, editMedia: { _ in
+        }, controller: { [weak self] in
+            return self
         })
         self.displayNode = GalleryControllerNode(controllerInteraction: controllerInteraction)
         self.displayNodeDidLoad()

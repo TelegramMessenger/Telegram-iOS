@@ -1484,8 +1484,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 Logger.shared.log("App \(self.episodeId)", "Memory consumption: \(value / (1024 * 1024)) MB")
                 
                 if !buildConfig.isAppStoreBuild {
-                    if value >= 1 * 1024 * 1024 * 1024 {
+                    if value >= 800 * 1024 * 1024 {
+                        #if targetEnvironment(simulator)
+                        print("Debug memory")
+                        #else
                         preconditionFailure()
+                        #endif
                     }
                 }
             }
