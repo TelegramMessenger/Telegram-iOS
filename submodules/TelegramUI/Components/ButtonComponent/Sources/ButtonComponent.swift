@@ -93,19 +93,22 @@ public final class ButtonTextContentComponent: Component {
     public let textColor: UIColor
     public let badgeBackground: UIColor
     public let badgeForeground: UIColor
+    public let combinedAlignment: Bool
     
     public init(
         text: String,
         badge: Int,
         textColor: UIColor,
         badgeBackground: UIColor,
-        badgeForeground: UIColor
+        badgeForeground: UIColor,
+        combinedAlignment: Bool = false
     ) {
         self.text = text
         self.badge = badge
         self.textColor = textColor
         self.badgeBackground = badgeBackground
         self.badgeForeground = badgeForeground
+        self.combinedAlignment = combinedAlignment
     }
     
     public static func ==(lhs: ButtonTextContentComponent, rhs: ButtonTextContentComponent) -> Bool {
@@ -122,6 +125,9 @@ public final class ButtonTextContentComponent: Component {
             return false
         }
         if lhs.badgeForeground != rhs.badgeForeground {
+            return false
+        }
+        if lhs.combinedAlignment != rhs.combinedAlignment {
             return false
         }
         return true
@@ -194,23 +200,26 @@ public final class ButtonTextContentComponent: Component {
             }
             
             var size = contentSize
+            var measurementSize = size
             if let badgeSize {
-                //size.width += badgeSpacing
-                //size.width += badgeSize.width
+                if component.combinedAlignment {
+                    measurementSize.width += badgeSpacing
+                    measurementSize.width += badgeSize.width
+                }
                 size.height = max(size.height, badgeSize.height)
             }
             
-            let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) * 0.5), y: floor((size.height - contentSize.height) * 0.5)), size: contentSize)
+            let contentFrame = CGRect(origin: CGPoint(x: floor((size.width - measurementSize.width) * 0.5), y: floor((size.height - measurementSize.height) * 0.5)), size: measurementSize)
             
             if let contentView = self.content.view {
                 if contentView.superview == nil {
                     self.addSubview(contentView)
                 }
-                transition.setFrame(view: contentView, frame: contentFrame)
+                transition.setFrame(view: contentView, frame: CGRect(origin: contentFrame.origin, size: contentSize))
             }
             
             if let badgeSize, let badge = self.badge {
-                let badgeFrame = CGRect(origin: CGPoint(x: contentFrame.maxX + badgeSpacing, y: floor((size.height - badgeSize.height) * 0.5) + 1.0), size: badgeSize)
+                let badgeFrame = CGRect(origin: CGPoint(x: contentFrame.minX + contentSize.width + badgeSpacing, y: floor((size.height - badgeSize.height) * 0.5) + 1.0), size: badgeSize)
                 
                 if let badgeView = badge.view {
                     var animateIn = false

@@ -1213,6 +1213,8 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     self?.dismiss(forceAway: true)
                 })
             }
+        }, controller: { [weak self] in
+            return self
         })
         
         let disableTapNavigation = !(self.context.sharedContext.currentMediaDisplaySettings.with { $0 }.showNextMediaOnTap)

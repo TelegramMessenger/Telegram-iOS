@@ -744,7 +744,9 @@ final class StoryContentCaptionComponent: Component {
                         return
                     }
                     component.controller()?.presentInGlobalOverlay(c, with: a)
-                }, rootNode: controller.displayNode, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
+                }, rootNode: { [weak controller] in
+                    return controller?.displayNode
+                }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
                     guard let self, let component = self.component else {
                         return
                     }

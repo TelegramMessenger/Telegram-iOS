@@ -1794,7 +1794,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     self?.arguments?.controllerInteraction.presentGlobalOverlayController(c, a)
-                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                }, rootNode: { [weak rootNode] in
+                    return rootNode
+                }, performAction: { [weak self] text, action in
                     guard let strongSelf = self, let item = strongSelf.arguments else {
                         return
                     }
