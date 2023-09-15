@@ -43,7 +43,7 @@ public func printOpenFiles() {
 
 private final class TempScanDatabase {
     private let queue: Queue
-    private let valueBox: SqliteValueBox
+    let valueBox: SqliteValueBox
     
     private let accessTimeTable: ValueBoxTable
     
@@ -129,7 +129,7 @@ private final class TempScanDatabase {
     }
 }
 
-private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase) -> ScanFilesResult {
+private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSubdirectories: Bool, performSizeMapping: Bool, tempDatabase: TempScanDatabase, reportMemoryUsageInterval: Int, reportMemoryUsageRemaining: inout Int) -> ScanFilesResult {
     var result = ScanFilesResult()
     
     var subdirectories: [String] = []
@@ -171,6 +171,13 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
                         result.totalSize += UInt64(value.st_size)
                         if performSizeMapping {
                             tempDatabase.add(pathBuffer: pathBuffer, pathSize: strnlen(pathBuffer, 1024), size: Int64(value.st_size), timestamp: Int32(value.st_mtimespec.tv_sec))
+                            
+                            reportMemoryUsageRemaining -= 1
+                            if reportMemoryUsageRemaining <= 0 {
+                                reportMemoryUsageRemaining = reportMemoryUsageInterval
+                                
+                                postboxLog("TimeBasedCleanup in-memory size: \(tempDatabase.valueBox.getDatabaseSize() / (1024 * 1024)) MB")
+                            }
                         }
                     }
                 }
@@ -181,7 +188,7 @@ private func scanFiles(at path: String, olderThan minTimestamp: Int32, includeSu
     
     if includeSubdirectories {
         for subPath in subdirectories {
-            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+            let subResult = scanFiles(at: subPath, olderThan: minTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, reportMemoryUsageInterval: reportMemoryUsageInterval, reportMemoryUsageRemaining: &reportMemoryUsageRemaining)
             result.totalSize += subResult.totalSize
             result.unlinkedCount += subResult.unlinkedCount
         }
@@ -352,6 +359,10 @@ private final class TimeBasedCleanupImpl {
             let queue = Queue(name: "TimeBasedCleanupScan", qos: .background)
             queue.async {
                 let tempDirectory = TempBox.shared.tempDirectory()
+                let randomId = UInt32.random(in: 0 ... UInt32.max)
+                
+                postboxLog("TimeBasedCleanup: reset scan id: \(randomId)")
+                
                 guard let tempDatabase = TempScanDatabase(queue: queue, basePath: tempDirectory.path) else {
                     postboxLog("TimeBasedCleanup: couldn't create temp database at \(tempDirectory.path)")
                     subscriber.putCompletion()
@@ -362,6 +373,9 @@ private final class TimeBasedCleanupImpl {
                 var removedShortLivedCount: Int = 0
                 var removedGeneralCount: Int = 0
                 let removedGeneralLimitCount: Int = 0
+                
+                let reportMemoryUsageInterval = 100
+                var reportMemoryUsageRemaining: Int = reportMemoryUsageInterval
                 
                 let startTime = CFAbsoluteTimeGetCurrent()
                 
@@ -383,7 +397,6 @@ private final class TimeBasedCleanupImpl {
                     for path in generalPaths {
                         totalApproximateSize += statForDirectory(path: path)
                     }
-                    
                     
                     if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: totalSizeBasedPath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
                         var fileIds = Set<Data>()
@@ -409,11 +422,18 @@ private final class TimeBasedCleanupImpl {
                 if totalApproximateSize <= bytesLimit {
                     performSizeMapping = false
                 }
+                #if DEBUG
+                if "".isEmpty {
+                    performSizeMapping = true
+                }
+                #endif
+                
+                print("TimeBasedCleanup: id: \(randomId) performSizeMapping: \(performSizeMapping)")
                 
                 let oldestShortLivedTimestamp = timestamp - shortLived
                 let oldestGeneralTimestamp = timestamp - general
                 for path in shortLivedPaths {
-                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+                    let scanResult = scanFiles(at: path, olderThan: oldestShortLivedTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, reportMemoryUsageInterval: reportMemoryUsageInterval, reportMemoryUsageRemaining: &reportMemoryUsageRemaining)
                     if !paths.contains(path) {
                         paths.append(path)
                     }
@@ -424,7 +444,7 @@ private final class TimeBasedCleanupImpl {
                 
                 if general < Int32.max {
                     for path in generalPaths {
-                        let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+                        let scanResult = scanFiles(at: path, olderThan: oldestGeneralTimestamp, includeSubdirectories: true, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, reportMemoryUsageInterval: reportMemoryUsageInterval, reportMemoryUsageRemaining: &reportMemoryUsageRemaining)
                         if !paths.contains(path) {
                             paths.append(path)
                         }
@@ -434,7 +454,7 @@ private final class TimeBasedCleanupImpl {
                 }
                 
                 if gigabytesLimit < Int32.max {
-                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase)
+                    let scanResult = scanFiles(at: totalSizeBasedPath, olderThan: 0, includeSubdirectories: false, performSizeMapping: performSizeMapping, tempDatabase: tempDatabase, reportMemoryUsageInterval: reportMemoryUsageInterval, reportMemoryUsageRemaining: &reportMemoryUsageRemaining)
                     if !paths.contains(totalSizeBasedPath) {
                         paths.append(totalSizeBasedPath)
                     }

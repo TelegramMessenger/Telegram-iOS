@@ -174,6 +174,10 @@ private final class CameraContext {
             object: self.session.session
         )
     }
+    
+    deinit {
+        Logger.shared.log("CameraContext", "deinit")
+    }
         
     private var isSessionRunning = false
     func startCapture() {
