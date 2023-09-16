@@ -460,7 +460,7 @@ final class VideoScrubberComponent: Component {
             let updatedPosition: Double
             if let (start, from, to, _) = self.positionAnimation {
                 var from = from
-                if let offset = component.audioData?.offset {
+                if component.audioOnly, let offset = component.audioData?.offset {
                     from -= offset
                 }
                 let duration = to - from
@@ -471,13 +471,13 @@ final class VideoScrubberComponent: Component {
                 }
             } else {
                 var position = component.position
-                if let offset = component.audioData?.offset {
+                if component.audioOnly, let offset = component.audioData?.offset {
                     position -= offset
                 }
                 let advance = component.isPlaying ? timestamp - component.generationTimestamp : 0.0
                 updatedPosition = max(component.startPosition, min(component.endPosition, position + advance))
             }
-            let cursorHeight: CGFloat = component.audioData != nil ? 80.0 : 50.0
+            let cursorHeight: CGFloat = component.audioData != nil && !component.audioOnly ? 80.0 : 50.0
             self.cursorView.frame = cursorFrame(size: scrubberSize, height: cursorHeight, position: updatedPosition, duration: trimDuration)
         }
                 
@@ -489,6 +489,7 @@ final class VideoScrubberComponent: Component {
             
             var trimDuration = component.duration
             
+            var isFirstTime = false
             var animateAudioAppearance = false
             if let previousComponent {
                 if previousComponent.audioData == nil, component.audioData != nil {
@@ -499,6 +500,8 @@ final class VideoScrubberComponent: Component {
                     self.isAudioSelected = false
                     animateAudioAppearance = true
                 }
+            } else {
+                isFirstTime = true
             }
             
             let scrubberSpacing: CGFloat = 4.0
@@ -586,6 +589,11 @@ final class VideoScrubberComponent: Component {
             self.audioScrollView.isUserInteractionEnabled = self.isAudioSelected || component.audioOnly
             audioTransition.setFrame(view: self.audioScrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: audioScrubberHeight)))
             self.audioScrollView.contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            
+            if isFirstTime, let offset = component.audioData?.offset, let duration = component.audioData?.duration, duration > 0.0 {
+                let contentOffset = offset * audioTotalWidth / duration
+                self.audioScrollView.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+            }
             
             audioTransition.setCornerRadius(layer: self.audioClippingView.layer, cornerRadius: self.isAudioSelected ? 0.0 : 9.0)
             
@@ -797,7 +805,7 @@ final class VideoScrubberComponent: Component {
                 self.positionAnimation = nil
                 self.displayLink?.isPaused = true
                 
-                let cursorHeight: CGFloat = component.audioData != nil ? 80.0 : 50.0
+                let cursorHeight: CGFloat = component.audioData != nil && !component.audioOnly ? 80.0 : 50.0
                 var cursorPosition = component.position
                 if component.audioOnly, let audioOffset = component.audioData?.offset {
                     cursorPosition -= audioOffset

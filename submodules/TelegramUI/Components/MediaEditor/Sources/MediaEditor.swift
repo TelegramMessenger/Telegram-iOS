@@ -304,10 +304,11 @@ public final class MediaEditor {
                 peerId: context.account.peerId,
                 originalDimensions: subject.dimensions,
                 cropOffset: .zero,
-                cropSize: nil,
+                cropRect: nil,
                 cropScale: 1.0,
                 cropRotation: 0.0,
                 cropMirroring: false,
+                cropOrientation: nil,
                 gradientColors: nil,
                 videoTrimRange: nil,
                 videoIsMuted: false,
@@ -325,7 +326,8 @@ public final class MediaEditor {
                 audioTrackTrimRange: nil,
                 audioTrackOffset: nil,
                 audioTrackVolume: nil,
-                audioTrackSamples: nil
+                audioTrackSamples: nil,
+                qualityPreset: nil
             )
         }
         self.valuesPromise.set(.single(self.values))

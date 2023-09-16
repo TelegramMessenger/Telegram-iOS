@@ -188,8 +188,8 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
 
 public final class MediaEditorVideoExport {
     public enum Subject {
-        case image(UIImage)
-        case video(AVAsset)
+        case image(image: UIImage)
+        case video(asset: AVAsset, isStory: Bool)
     }
     
     public struct Configuration {
@@ -247,7 +247,12 @@ public final class MediaEditorVideoExport {
         }
         
         var composerDimensions: CGSize {
-            return CGSize(width: 1080.0, height: 1920.0)
+            if self.values.isStory {
+                return CGSize(width: 1080.0, height: 1920.0)
+            } else {
+                let maxSize = CGSize(width: 1920.0, height: 1920.0)
+                return targetSize(cropSize: self.values.originalDimensions.cgSize.aspectFitted(maxSize))
+            }
         }
         
         var dimensions: CGSize {
@@ -351,12 +356,12 @@ public final class MediaEditorVideoExport {
     }
     
     private func setup() {
-        if case let .video(asset) = self.subject {
+        if case let .video(asset, isStory) = self.subject {
             if let trimmedVideoDuration = self.configuration.timeRange?.duration {
                 self.durationValue = trimmedVideoDuration
             } else {
                 asset.loadValuesAsynchronously(forKeys: ["tracks", "duration"]) {
-                    if asset.duration.seconds > 60.0 {
+                    if asset.duration.seconds > 60.0 && isStory {
                         self.durationValue = CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
                     } else {
                         self.durationValue = asset.duration
@@ -368,7 +373,7 @@ public final class MediaEditorVideoExport {
         }
                 
         switch self.subject {
-        case let .video(asset):
+        case let .video(asset, _):
             var additionalAsset: AVAsset?
             if let additionalPath = self.configuration.values.additionalVideoPath {
                 additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))

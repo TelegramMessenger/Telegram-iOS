@@ -144,3 +144,27 @@ NSString *TGComponentsPathForResource(NSString *name, NSString *type) {
     }
     return [bundle pathForResource:name ofType:type];
 }
+
+@implementation UIColor (Int32)
+
+- (int32_t)int32Value {
+    CGFloat red, green, blue, alpha;
+    if (![self getRed:&red green:&green blue:&blue alpha:&alpha]) {
+        if ([self getWhite:&red alpha:&alpha]) {
+            green = red;
+            blue = red;
+        } else {
+            red = green = blue = alpha = 1.0;
+        }
+    }
+
+    int8_t r = (int8_t)(red * 255);
+    int8_t g = (int8_t)(green * 255);
+    int8_t b = (int8_t)(blue * 255);
+    int8_t a = (int8_t)(alpha * 255);
+
+    int32_t intValue = (a << 24) | (r << 16) | (g << 8) | b;
+    return intValue;
+}
+
+@end

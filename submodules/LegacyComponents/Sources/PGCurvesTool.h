@@ -31,6 +31,9 @@ typedef enum
 
 @property (nonatomic, assign) PGCurvesType activeType;
 
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary;
+- (NSDictionary *)dictionary;
+
 @end
 
 @interface PGCurvesTool : PGPhotoTool
