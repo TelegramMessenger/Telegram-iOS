@@ -9,13 +9,6 @@ import ComponentFlow
 import LottieAnimationComponent
 import ReactionSelectionNode
 
-public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
-    if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
-        return codableEntities.map { $0.entity }
-    }
-    return []
-}
-
 private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> DrawingEntityView? {
     if let entity = entity as? DrawingBubbleEntity {
         return DrawingBubbleEntityView(context: context, entity: entity)

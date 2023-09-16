@@ -208,7 +208,7 @@ private final class FetchVideoLibraryMediaResourceContext {
 
 private let throttlingContext = FetchVideoLibraryMediaResourceContext()
 
-public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource, alwaysUseModernPipeline: Bool = true) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
@@ -248,7 +248,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         Logger.shared.log("FetchVideoResource", "Requesting video export")
                         
                         let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: 5.0, image: true, frameRate: 30.0)
-                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .image(image), configuration: configuration, outputPath: tempFile.path)
+                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .image(image: image), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                                                 
                         let statusDisposable = videoExport.status.start(next: { status in
@@ -299,6 +299,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                 let options = PHVideoRequestOptions()
                 options.isNetworkAccessAllowed = true
                 options.deliveryMode = .highQualityFormat
+                let dimensions = PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
                 requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: options, resultHandler: { avAsset, _, _ in
                     if alreadyReceivedAsset.swap(true) {
                         return
@@ -307,6 +308,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                         return
                     }
                     
+                    var isStory = false
                     var adjustments: TGVideoEditAdjustments?
                     var mediaEditorValues: MediaEditorValues?
                     switch resource.conversion {
@@ -324,13 +326,24 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                             adjustments = nil
                         }
                     case let .compress(adjustmentsValue):
+                        let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+                        let qualityPreset = MediaQualityPreset(preset: defaultPreset)
                         if let adjustmentsValue = adjustmentsValue {
                             if adjustmentsValue.isStory {
+                                isStory = true
                                 if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: adjustmentsValue.data.makeData()) {
                                     mediaEditorValues = values
                                 }
-                            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
-                                adjustments = TGVideoEditAdjustments(dictionary: dict)
+                            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                                if alwaysUseModernPipeline {
+                                    mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
+                                } else {
+                                    adjustments = legacyAdjustments
+                                }
+                            }
+                        } else {
+                            if alwaysUseModernPipeline {
+                                mediaEditorValues = MediaEditorValues(dimensions: dimensions, qualityPreset: qualityPreset)
                             }
                         }
                     }
@@ -339,7 +352,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                     if let mediaEditorValues {
                         let duration: Double = avAsset.duration.seconds
                         let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
-                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .video(avAsset), configuration: configuration, outputPath: tempFile.path)
+                        let videoExport = MediaEditorVideoExport(postbox: postbox, subject: .video(asset: avAsset, isStory: isStory), configuration: configuration, outputPath: tempFile.path)
                         videoExport.start()
                         
                         let statusDisposable = videoExport.status.start(next: { status in
@@ -464,7 +477,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
     return throttlingContext.wrap(priority: .default, signal: signal)
 }
 
-public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideoMediaResource, alwaysUseModernPipeline: Bool = true) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
         subscriber.putNext(.reset)
         
@@ -473,16 +486,31 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             filteredPath = String(filteredPath[filteredPath.index(filteredPath.startIndex, offsetBy: "file://".count)])
         }
         
+        let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+        let qualityPreset = MediaQualityPreset(preset: defaultPreset)
+        
+        let isImage = filteredPath.contains(".jpg")
+        var isStory = false
         let avAsset = AVURLAsset(url: URL(fileURLWithPath: filteredPath))
         var adjustments: TGVideoEditAdjustments?
         var mediaEditorValues: MediaEditorValues?
         if let videoAdjustments = resource.adjustments {
             if videoAdjustments.isStory {
+                isStory = true
                 if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
                     mediaEditorValues = values
                 }
-            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any] {
-                adjustments = TGVideoEditAdjustments(dictionary: dict)
+            } else if let dict = NSKeyedUnarchiver.unarchiveObject(with: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                if alwaysUseModernPipeline && !isImage {
+                    mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
+                } else {
+                    adjustments = legacyAdjustments
+                }
+            }
+        } else {
+            if alwaysUseModernPipeline && !isImage, let track = avAsset.tracks(withMediaType: .video).first {
+                let dimensions = track.naturalSize.applying(track.preferredTransform)
+                mediaEditorValues = MediaEditorValues(dimensions: PixelDimensions(dimensions), qualityPreset: qualityPreset)
             }
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
@@ -491,10 +519,10 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
             let duration: Double = avAsset.duration.seconds
             let configuration = recommendedVideoExportConfiguration(values: mediaEditorValues, duration: duration, frameRate: 30.0)
             let subject: MediaEditorVideoExport.Subject
-            if filteredPath.contains(".jpg"), let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
-                subject = .image(image)
+            if isImage, let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
+                subject = .image(image: image)
             } else {
-                subject = .video(avAsset)
+                subject = .video(asset: avAsset, isStory: isStory)
             }
             
             let videoExport = MediaEditorVideoExport(postbox: postbox, subject: subject, configuration: configuration, outputPath: tempFile.path)
@@ -556,7 +584,7 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                 }
             }
             let signal: SSignal
-            if filteredPath.contains(".jpg"), let entityRenderer = entityRenderer {
+            if isImage, let entityRenderer = entityRenderer {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: filteredPath), options: [.mappedRead]), let image = UIImage(data: data) {
                     let durationSignal: SSignal = SSignal(generator: { subscriber in
                         let disposable = (entityRenderer.duration()).start(next: { duration in
@@ -687,8 +715,8 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
                         adjustments = nil
                     case let .compress(adjustmentsValue):
                         if let adjustmentsValue = adjustmentsValue {
-                            if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any] {
-                                adjustments = TGVideoEditAdjustments(dictionary: dict)
+                            if let dict = NSKeyedUnarchiver.unarchiveObject(with: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                                adjustments = legacyAdjustments
                             }
                         }
                 }
@@ -763,5 +791,222 @@ public func fetchLocalFileGifMediaResource(resource: LocalFileGifMediaResource) 
         return ActionDisposable {
             disposable.dispose()
         }
+    }
+}
+
+private extension MediaQualityPreset {
+    init(preset: TGMediaVideoConversionPreset) {
+        var qualityPreset: MediaQualityPreset
+        switch preset {
+        case TGMediaVideoConversionPresetCompressedDefault:
+            qualityPreset = .compressedDefault
+        case TGMediaVideoConversionPresetCompressedVeryLow:
+            qualityPreset = .compressedVeryLow
+        case TGMediaVideoConversionPresetCompressedLow:
+            qualityPreset = .compressedLow
+        case TGMediaVideoConversionPresetCompressedMedium:
+            qualityPreset = .compressedMedium
+        case TGMediaVideoConversionPresetCompressedHigh:
+            qualityPreset = .compressedHigh
+        case TGMediaVideoConversionPresetCompressedVeryHigh:
+            qualityPreset = .compressedVeryHigh
+        case TGMediaVideoConversionPresetProfileLow:
+            qualityPreset = .profileLow
+        case TGMediaVideoConversionPresetProfile:
+            qualityPreset = .profile
+        case TGMediaVideoConversionPresetProfileHigh:
+            qualityPreset = .profileHigh
+        case TGMediaVideoConversionPresetProfileVeryHigh:
+            qualityPreset = .profileVeryHigh
+        case TGMediaVideoConversionPresetAnimation:
+            qualityPreset = .animation
+        case TGMediaVideoConversionPresetVideoMessage:
+            qualityPreset = .videoMessage
+        default:
+            qualityPreset = .compressedMedium
+        }
+        self = qualityPreset
+    }
+}
+
+private extension UIImage.Orientation {
+    var cropOrientation: MediaCropOrientation {
+        switch self {
+        case .up:
+            return .up
+        case .down:
+            return .down
+        case .left:
+            return .left
+        case .right:
+            return .right
+        default:
+            return .up
+        }
+    }
+}
+
+private extension MediaEditorValues {
+    convenience init(dimensions: PixelDimensions, qualityPreset: MediaQualityPreset) {
+        self.init(
+            peerId: EnginePeer.Id(0),
+            originalDimensions: dimensions,
+            cropOffset: .zero,
+            cropRect: nil,
+            cropScale: 1.0,
+            cropRotation: 0.0,
+            cropMirroring: false,
+            cropOrientation: nil,
+            gradientColors: nil,
+            videoTrimRange: nil,
+            videoIsMuted: false,
+            videoIsFullHd: true,
+            videoIsMirrored: false,
+            additionalVideoPath: nil,
+            additionalVideoPosition: nil,
+            additionalVideoScale: nil,
+            additionalVideoRotation: nil,
+            additionalVideoPositionChanges: [],
+            drawing: nil,
+            entities: [],
+            toolValues: [:],
+            audioTrack: nil,
+            audioTrackTrimRange: nil,
+            audioTrackOffset: nil,
+            audioTrackVolume: nil,
+            audioTrackSamples: nil,
+            qualityPreset: qualityPreset
+        )
+    }
+    
+    convenience init(legacyAdjustments: TGVideoEditAdjustments, defaultPreset: MediaQualityPreset) {
+        var videoTrimRange: Range<Double>?
+        if legacyAdjustments.trimStartValue > 0.0 || !legacyAdjustments.trimEndValue.isZero {
+            videoTrimRange = legacyAdjustments.trimStartValue ..< legacyAdjustments.trimEndValue
+        }
+        
+        var entities: [CodableDrawingEntity] = []
+        var drawing: UIImage?
+        
+        if let paintingData = legacyAdjustments.paintingData {
+            if let entitiesData = paintingData.entitiesData {
+                entities = decodeCodableDrawingEntities(data: entitiesData)
+            }
+            if let imagePath = paintingData.imagePath, let image = UIImage(contentsOfFile: imagePath) {
+                drawing = image
+            }
+        }
+                
+        var toolValues: [EditorToolKey: Any] = [:]
+        if let tools = legacyAdjustments.toolValues {
+            for (key, value) in tools {
+                if let floatValue = (value as? NSNumber)?.floatValue {
+                    if key == AnyHashable("enhance") {
+                        toolValues[.enhance] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("exposure") {
+                        toolValues[.brightness] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("contrast") {
+                        toolValues[.contrast] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("saturation") {
+                        toolValues[.saturation] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("warmth") {
+                        toolValues[.warmth] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("fade") {
+                        toolValues[.fade] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("vignette") {
+                        toolValues[.vignette] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("grain") {
+                        toolValues[.grain] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("highlights") {
+                        toolValues[.highlights] = floatValue / 100.0
+                    }
+                    if key == AnyHashable("shadows") {
+                        toolValues[.shadows] = floatValue / 100.0
+                    }
+                }
+            }
+        }
+        if let value = legacyAdjustments.tintValue() {
+            let shadowsColor = value["shadowsColor"] as? UIColor
+            let shadowsIntensity = (value["shadowsIntensity"] as? NSNumber)?.floatValue
+            let highlightsColor = value["highlightsColor"] as? UIColor
+            let highlightsIntensity = (value["highlightsIntensity"] as? NSNumber)?.floatValue
+            
+            if let shadowsColor, let shadowsIntensity, shadowsColor.alpha > 0.0 {
+                let shadowsTintValue = TintValue(color: shadowsColor, intensity: shadowsIntensity / 100.0)
+                toolValues[.shadowsTint] = shadowsTintValue
+            }
+            if let highlightsColor, let highlightsIntensity, highlightsColor.alpha > 0.0 {
+                let highlightsTintValue = TintValue(color: highlightsColor, intensity: highlightsIntensity / 100.0)
+                toolValues[.highlightsTint] = highlightsTintValue
+            }
+        }
+        if let value = legacyAdjustments.curvesValue() {
+            func readValue(_ key: String) -> CurvesValue.CurveValue? {
+                if let values = value[key] as? [AnyHashable: Any] {
+                    if let blacks = values["blacks"] as? NSNumber, let shadows = values["shadows"] as? NSNumber, let midtones = values["midtones"] as? NSNumber, let highlights = values["highlights"] as? NSNumber, let whites = values["whites"] as? NSNumber {
+                        return CurvesValue.CurveValue(
+                            blacks: blacks.floatValue / 100.0,
+                            shadows: shadows.floatValue / 100.0,
+                            midtones: midtones.floatValue / 100.0,
+                            highlights: highlights.floatValue / 100.0,
+                            whites: whites.floatValue / 100.0
+                        )
+                    }
+                }
+                return nil
+            }
+            if let all = readValue("luminance"), let red = readValue("red"), let green = readValue("green"), let blue = readValue("blue") {
+                toolValues[.curves] = CurvesValue(
+                    all: all,
+                    red: red,
+                    green: green,
+                    blue: blue
+                )
+            }
+        }
+        
+        var qualityPreset = MediaQualityPreset(preset: legacyAdjustments.preset)
+        if qualityPreset == .compressedDefault {
+            qualityPreset = defaultPreset
+        }
+        
+        self.init(
+            peerId: EnginePeer.Id(0),
+            originalDimensions: PixelDimensions(legacyAdjustments.originalSize),
+            cropOffset: .zero,
+            cropRect: legacyAdjustments.cropRect,
+            cropScale: 1.0,
+            cropRotation: legacyAdjustments.cropRotation,
+            cropMirroring: legacyAdjustments.cropMirrored,
+            cropOrientation: legacyAdjustments.cropOrientation.cropOrientation,
+            gradientColors: nil,
+            videoTrimRange: videoTrimRange,
+            videoIsMuted: legacyAdjustments.sendAsGif,
+            videoIsFullHd: true,
+            videoIsMirrored: false,
+            additionalVideoPath: nil,
+            additionalVideoPosition: nil,
+            additionalVideoScale: nil,
+            additionalVideoRotation: nil,
+            additionalVideoPositionChanges: [],
+            drawing: drawing,
+            entities: entities,
+            toolValues: toolValues,
+            audioTrack: nil,
+            audioTrackTrimRange: nil,
+            audioTrackOffset: nil,
+            audioTrackVolume: nil,
+            audioTrackSamples: nil,
+            qualityPreset: qualityPreset
+        )
     }
 }

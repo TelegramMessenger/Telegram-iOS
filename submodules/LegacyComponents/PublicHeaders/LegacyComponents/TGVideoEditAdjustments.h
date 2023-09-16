@@ -34,6 +34,9 @@ typedef enum
 
 - (CMTimeRange)trimTimeRange;
 
+- (NSDictionary *)tintValue;
+- (NSDictionary *)curvesValue;
+
 - (bool)trimApplied;
 
 - (bool)isCropAndRotationEqualWith:(id<TGMediaEditAdjustments>)adjustments;

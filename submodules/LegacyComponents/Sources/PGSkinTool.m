@@ -49,6 +49,11 @@
     [(PGPhotoSkinPass *)_pass setIntensity:value.floatValue / 100];
 }
 
+- (bool)isAvialableForVideo
+{
+    return false;
+}
+
 - (bool)requiresFaces
 {
     return true;

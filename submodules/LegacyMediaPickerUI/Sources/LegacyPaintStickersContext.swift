@@ -8,9 +8,9 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
-import DrawingUI
 import SolidRoundedButtonNode
 import MediaEditor
+import DrawingUI
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }

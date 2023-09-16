@@ -4834,15 +4834,15 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             switch subject {
             case let .video(path, _, _, _, _, _, _, _, _):
                 let asset = AVURLAsset(url: NSURL(fileURLWithPath: path) as URL)
-                exportSubject = .single(.video(asset))
+                exportSubject = .single(.video(asset: asset, isStory: true))
             case let .image(image, _, _, _):
-                exportSubject = .single(.image(image))
+                exportSubject = .single(.image(image: image))
             case let .asset(asset):
                 exportSubject = Signal { subscriber in
                     if asset.mediaType == .video {
                         PHImageManager.default().requestAVAsset(forVideo: asset, options: nil) { avAsset, _, _ in
                             if let avAsset {
-                                subscriber.putNext(.video(avAsset))
+                                subscriber.putNext(.video(asset: avAsset, isStory: true))
                                 subscriber.putCompletion()
                             }
                         }
@@ -4851,7 +4851,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         options.deliveryMode = .highQualityFormat
                         PHImageManager.default().requestImage(for: asset, targetSize: PHImageManagerMaximumSize, contentMode: .default, options: options) { image, _ in
                             if let image {
-                                subscriber.putNext(.image(image))
+                                subscriber.putNext(.image(image: image))
                                 subscriber.putCompletion()
                             }
                         }
@@ -4861,10 +4861,10 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             case let .draft(draft, _):
                 if draft.isVideo {
                     let asset = AVURLAsset(url: NSURL(fileURLWithPath: draft.fullPath(engine: context.engine)) as URL)
-                    exportSubject = .single(.video(asset))
+                    exportSubject = .single(.video(asset: asset, isStory: true))
                 } else {
                     if let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) {
-                        exportSubject = .single(.image(image))
+                        exportSubject = .single(.image(image: image))
                     } else {
                         fatalError()
                     }
@@ -4876,7 +4876,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     return
                 }
                 var duration: Double = 0.0
-                if case let .video(video) = exportSubject {
+                if case let .video(video, _) = exportSubject {
                     duration = video.duration.seconds
                 }
                 let configuration = recommendedVideoExportConfiguration(values: mediaEditor.values, duration: duration, forceFullHd: true, frameRate: 60.0)

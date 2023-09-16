@@ -19,8 +19,15 @@ void TGDispatchAfter(double delay, dispatch_queue_t queue, dispatch_block_t bloc
     
 int deviceMemorySize();
 int cpuCoreCount();
+
+@interface UIColor (Int32)
+
+- (int32_t)int32Value;
+
+@end
     
 #define UIColorRGB(rgb) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:1.0f])
+#define UIColorARGB(rgb) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:(((rgb >> 24) & 0xff) / 255.0f)])
 #define UIColorRGBA(rgb,a) ([[UIColor alloc] initWithRed:(((rgb >> 16) & 0xff) / 255.0f) green:(((rgb >> 8) & 0xff) / 255.0f) blue:(((rgb) & 0xff) / 255.0f) alpha:a])
     
 #define TGRestrictedToMainThread {if(![[NSThread currentThread] isMainThread]) TGLegacyLog(@"***** Warning: main thread-bound operation is running in background! *****");}

@@ -489,6 +489,7 @@ final class VideoScrubberComponent: Component {
             
             var trimDuration = component.duration
             
+            var isFirstTime = false
             var animateAudioAppearance = false
             if let previousComponent {
                 if previousComponent.audioData == nil, component.audioData != nil {
@@ -499,6 +500,8 @@ final class VideoScrubberComponent: Component {
                     self.isAudioSelected = false
                     animateAudioAppearance = true
                 }
+            } else {
+                isFirstTime = true
             }
             
             let scrubberSpacing: CGFloat = 4.0
@@ -586,6 +589,11 @@ final class VideoScrubberComponent: Component {
             self.audioScrollView.isUserInteractionEnabled = self.isAudioSelected || component.audioOnly
             audioTransition.setFrame(view: self.audioScrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: audioScrubberHeight)))
             self.audioScrollView.contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            
+            if isFirstTime, let offset = component.audioData?.offset, let duration = component.audioData?.duration, duration > 0.0 {
+                let contentOffset = offset * audioTotalWidth / duration
+                self.audioScrollView.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+            }
             
             audioTransition.setCornerRadius(layer: self.audioClippingView.layer, cornerRadius: self.isAudioSelected ? 0.0 : 9.0)
             

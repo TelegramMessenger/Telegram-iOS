@@ -3170,6 +3170,7 @@ public final class DrawingToolsInteraction {
             } else {
                 if self.isVideo {
                     entityView.seek(to: 0.0)
+                    entityView.play()
                 }
                 
                 entityView.animateInsertion()

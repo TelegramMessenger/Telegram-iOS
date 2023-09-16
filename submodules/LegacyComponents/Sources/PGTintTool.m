@@ -62,6 +62,36 @@
     return value;
 }
 
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    if (dictionary.count == 0) {
+        return nil;
+    }
+    
+    PGTintToolValue *value = [[PGTintToolValue alloc] init];
+    if (dictionary[@"shadowsColor"]) {
+        value.shadowsColor = UIColorARGB([dictionary[@"shadowsColor"] intValue]);
+    }
+    if (dictionary[@"shadowsIntensity"]) {
+        value.shadowsIntensity = [dictionary[@"shadowsIntensity"] floatValue];
+    }
+    if (dictionary[@"highlightsColor"]) {
+        value.highlightsColor = UIColorARGB([dictionary[@"highlightsColor"] intValue]);
+    }
+    if (dictionary[@"highlightsIntensity"]) {
+        value.highlightsIntensity = [dictionary[@"highlightsIntensity"] floatValue];
+    }
+    return value;
+}
+
+- (NSDictionary *)dictionary {
+    return @{
+        @"shadowsColor": @(self.shadowsColor.int32Value),
+        @"shadowsIntensity": @(self.shadowsIntensity),
+        @"highlightsColor": @(self.highlightsColor.int32Value),
+        @"highlightsIntensity": @(self.highlightsIntensity)
+    };
+}
+
 @end
 
 

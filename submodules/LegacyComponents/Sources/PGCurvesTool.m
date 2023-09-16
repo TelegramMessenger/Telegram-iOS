@@ -116,6 +116,41 @@ const NSUInteger PGCurveDataStep = 2;
     return interpolatedPoints;
 }
 
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    if (dictionary.count == 0) {
+        return nil;
+    }
+    
+    PGCurvesValue *value = [[PGCurvesValue alloc] init];
+    if (dictionary[@"blacks"]) {
+        value.blacksLevel = [dictionary[@"blacks"] floatValue];
+    }
+    if (dictionary[@"shadows"]) {
+        value.shadowsLevel = [dictionary[@"shadows"] floatValue];
+    }
+    if (dictionary[@"midtones"]) {
+        value.midtonesLevel = [dictionary[@"midtones"] floatValue];
+    }
+    if (dictionary[@"highlights"]) {
+        value.highlightsLevel = [dictionary[@"highlights"] floatValue];
+    }
+    if (dictionary[@"whites"]) {
+        value.whitesLevel = [dictionary[@"whites"] floatValue];
+    }
+   
+    return value;
+}
+
+- (NSDictionary *)dictionary {
+    return @{
+        @"blacks": @(self.blacksLevel),
+        @"shadows": @(self.shadowsLevel),
+        @"midtones": @(self.midtonesLevel),
+        @"highlights": @(self.highlightsLevel),
+        @"whites": @(self.whitesLevel)
+    };
+}
+
 @end
 
 @implementation PGCurvesToolValue
@@ -154,6 +189,36 @@ const NSUInteger PGCurveDataStep = 2;
     value.activeType = PGCurvesTypeLuminance;
     
     return value;
+}
+
+- (instancetype)initWithDictionary:(NSDictionary *)dictionary {
+    if (dictionary.count == 0) {
+        return nil;
+    }
+    
+    PGCurvesToolValue *value = [[PGCurvesToolValue alloc] init];
+    if (dictionary[@"luminance"]) {
+        value.luminanceCurve = [[PGCurvesValue alloc] initWithDictionary:dictionary[@"luminance"]];
+    }
+    if (dictionary[@"red"]) {
+        value.redCurve = [[PGCurvesValue alloc] initWithDictionary:dictionary[@"red"]];
+    }
+    if (dictionary[@"green"]) {
+        value.greenCurve = [[PGCurvesValue alloc] initWithDictionary:dictionary[@"green"]];
+    }
+    if (dictionary[@"blue"]) {
+        value.blueCurve = [[PGCurvesValue alloc] initWithDictionary:dictionary[@"blue"]];
+    }
+    return value;
+}
+
+- (NSDictionary *)dictionary {
+    return @{
+        @"luminance": self.luminanceCurve.dictionary,
+        @"red": self.redCurve.dictionary,
+        @"green": self.greenCurve.dictionary,
+        @"blue": self.blueCurve.dictionary
+    };
 }
 
 @end

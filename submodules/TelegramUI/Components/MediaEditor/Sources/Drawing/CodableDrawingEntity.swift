@@ -1,6 +1,17 @@
 import Foundation
 import TelegramCore
 
+public func decodeCodableDrawingEntities(data: Data) -> [CodableDrawingEntity] {
+    if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
+        return codableEntities
+    }
+    return []
+}
+
+public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
+    return decodeCodableDrawingEntities(data: data).map { $0.entity }
+}
+
 public enum CodableDrawingEntity: Equatable {
     public static func == (lhs: CodableDrawingEntity, rhs: CodableDrawingEntity) -> Bool {
         return lhs.entity.isEqual(to: rhs.entity)

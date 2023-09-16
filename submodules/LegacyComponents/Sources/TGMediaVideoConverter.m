@@ -786,7 +786,7 @@
 
 + (SSignal *)hashForAVAsset:(AVAsset *)avAsset adjustments:(TGMediaVideoEditAdjustments *)adjustments
 {
-    if ([adjustments trimApplied] || [adjustments cropAppliedForAvatar:false] || adjustments.sendAsGif)
+    if ([adjustments trimApplied] || [adjustments cropAppliedForAvatar:false] || adjustments.sendAsGif || [adjustments toolsApplied] || [adjustments hasPainting])
         return [SSignal single:nil];
     
     NSURL *fileUrl = nil;
