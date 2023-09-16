@@ -474,7 +474,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 })
             case let .booster(_, _, dateTimeFormat, peer, expires):
                 let expiresValue = stringForFullDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text("Boost expires on \(expiresValue)", .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: false, sectionId: self.section, action: {
+                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .boostersExpand(theme, title):
@@ -617,19 +617,19 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             }
             entries.append(.boostLevel(presentationData.theme, Int32(boostData.boosts), Int32(boostData.level), progress))
             
-            entries.append(.boostOverviewTitle(presentationData.theme, "OVERVIEW"))
+            entries.append(.boostOverviewTitle(presentationData.theme, presentationData.strings.Stats_Boosts_OverviewHeader))
             entries.append(.boostOverview(presentationData.theme, boostData))
             
             let boostersTitle: String
             let boostersPlaceholder: String?
             let boostersFooter: String?
             if let boostersState, boostersState.count > 0 {
-                boostersTitle = "\(boostersState.count) BOOSTERS"
+                boostersTitle = presentationData.strings.Stats_Boosts_Boosters(boostersState.count)
                 boostersPlaceholder = nil
-                boostersFooter = "Your channel is currently boosted by these users."
+                boostersFooter = presentationData.strings.Stats_Boosts_BoostersInfo
             } else {
-                boostersTitle = "BOOSTERS"
-                boostersPlaceholder = "No users currently boost your channel"
+                boostersTitle = presentationData.strings.Stats_Boosts_BoostersNone
+                boostersPlaceholder = presentationData.strings.Stats_Boosts_NoBoostersYet
                 boostersFooter = nil
             }
             entries.append(.boostersTitle(presentationData.theme, boostersTitle))
@@ -663,7 +663,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 entries.append(.boostersInfo(presentationData.theme, boostersFooter))
             }
             
-            entries.append(.boostLinkTitle(presentationData.theme, "LINK FOR BOOSTING"))
+            entries.append(.boostLinkTitle(presentationData.theme, presentationData.strings.Stats_Boosts_LinkHeader))
             
             if let peer {
                 let link: String
@@ -675,7 +675,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 entries.append(.boostLink(presentationData.theme, link))
             }
             
-            entries.append(.boostLinkInfo(presentationData.theme, "Share this link with your subscribers to get more boosts."))
+            entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
         }
     }
     
@@ -834,7 +834,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             return map
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .sectionControl(["Statistics", "Boosts"], state.section == .boosts ? 1 : 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .sectionControl([presentationData.strings.Stats_Statistics, presentationData.strings.Stats_Boosts], state.section == .boosts ? 1 : 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(state: state, peer: peer, data: data, messages: messages, interactions: interactions, boostData: boostData, boostersState: boostersState, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))

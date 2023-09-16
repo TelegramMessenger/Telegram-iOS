@@ -10003,3 +10003,17 @@ Sorry for the inconvenience.";
 "Conversation.BoostChannel" = "BOOST";
 
 "MediaEditor.Audio" = "Audio";
+
+"Stats.Statistics" = "Statistics";
+"Stats.Boosts" = "Boosts";
+
+"Stats.Boosts.BoostersNone" = "BOOSTERS";
+"Stats.Boosts.Boosters_1" = "%@ BOOSTER";
+"Stats.Boosts.Boosters_any" = "%@ BOOSTERS";
+"Stats.Boosts.NoBoostersYet" = "No users currently boost your channel";
+"Stats.Boosts.BoostersInfo" = "Your channel is currently boosted by these users.";
+"Stats.Boosts.ExpiresOn" = "Boost expires on %@";
+
+"Stats.Boosts.OverviewHeader" = "OVERVIEW";
+"Stats.Boosts.LinkHeader" = "LINK FOR BOOSTING";
+"Stats.Boosts.LinkInfo" = "Share this link with your subscribers to get more boosts.";

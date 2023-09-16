@@ -450,7 +450,7 @@ public final class PeerListItemComponent: Component {
                 leftInset += 9.0
             }
             var rightInset: CGFloat = contextInset * 2.0 + 8.0 + component.sideInset
-            if component.reaction != nil {
+            if component.reaction != nil || component.rightAccessory != .none {
                 rightInset += 32.0
             }
             

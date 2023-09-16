@@ -4449,7 +4449,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             return
         }
         
-        if !skipSendCheck, let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
+        if !self.isEditingStory, !skipSendCheck, let sendAsPeerId = self.state.privacy.sendAsPeerId, sendAsPeerId.namespace == Namespaces.Peer.CloudChannel {
             let _ = (self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(sendAsPeerId))
             |> deliverOnMainQueue).start(next: { [weak self] status in
                 guard let self else {

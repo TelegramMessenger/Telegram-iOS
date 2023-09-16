@@ -483,6 +483,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public func remove(uuid: UUID, animated: Bool = false, announce: Bool = true) {
         if let view = self.getView(for: uuid) {
             if self.selectedEntityView === view {
+                if let stickerEntityView = self.selectedEntityView as? DrawingStickerEntityView {
+                    stickerEntityView.onDeselection()
+                }
+                
                 self.selectedEntityView = nil
                 self.selectionChanged(nil)
                 self.hasSelectionChanged(false)

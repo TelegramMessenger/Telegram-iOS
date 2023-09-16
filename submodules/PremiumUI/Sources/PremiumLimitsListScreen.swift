@@ -53,6 +53,7 @@ public class PremiumLimitsListScreen: ViewController {
             if forceDark {
                 self.presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
             }
+            self.presentationData = self.presentationData.withUpdated(theme: self.presentationData.theme.withModalBlocksBackground())
             
             self.controller = controller
             
@@ -71,7 +72,7 @@ public class PremiumLimitsListScreen: ViewController {
             super.init()
                         
             self.containerView.clipsToBounds = true
-            self.containerView.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            self.containerView.backgroundColor = self.presentationData.theme.overallDarkAppearance ? self.presentationData.theme.list.blocksBackgroundColor : self.presentationData.theme.list.plainBackgroundColor
             
             self.addSubnode(self.dim)
             
@@ -1149,7 +1150,7 @@ private class FooterNode: ASDisplayNode {
         self.buttonNode.title = title
         
         self.coverNode = ASDisplayNode()
-        self.coverNode.backgroundColor = self.theme.list.plainBackgroundColor
+        self.coverNode.backgroundColor = self.theme.overallDarkAppearance ? self.theme.list.blocksBackgroundColor : self.theme.list.plainBackgroundColor
         
         self.pageIndicatorView = ComponentHostView<Empty>()
         self.pageIndicatorView.isUserInteractionEnabled = false
