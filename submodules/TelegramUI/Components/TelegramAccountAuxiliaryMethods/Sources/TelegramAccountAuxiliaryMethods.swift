@@ -18,7 +18,18 @@ import Display
 public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, MediaResource) -> Signal<String?, NoError>)?) -> AccountAuxiliaryMethods {
     return AccountAuxiliaryMethods(fetchResource: { postbox, resource, ranges, _ in
         if let resource = resource as? VideoLibraryMediaResource {
-            return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource)
+            return postbox.transaction { transaction -> Bool in
+                var useModernPipeline = true
+                let appConfig = currentAppConfiguration(transaction: transaction)
+                if let data = appConfig.data, let _ = data["ios_killswitch_disable_modern_video_pipeline"] {
+                    useModernPipeline = false
+                }
+                return useModernPipeline
+            }
+            |> castError(MediaResourceDataFetchError.self)
+            |> mapToSignal { useModernPipeline -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
+            }
         } else if let resource = resource as? LocalFileVideoMediaResource {
             return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource)
         } else if let resource = resource as? LocalFileGifMediaResource {
