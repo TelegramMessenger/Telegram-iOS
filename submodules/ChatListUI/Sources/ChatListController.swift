@@ -401,7 +401,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.tabBarItem.badgeValue = compactNumericCountString(Int(count.0), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
             }
-        })
+        }).strict()
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -416,7 +416,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.updateThemeAndStrings()
                 }
             }
-        })
+        }).strict()
         
         if !previewing {
             /*

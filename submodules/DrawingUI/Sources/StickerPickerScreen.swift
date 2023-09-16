@@ -559,7 +559,7 @@ public class StickerPickerScreen: ViewController {
                     } else {
                         strongSelf.gifMode = hasRecentGifs ? .recent : .trending
                     }
-                })
+                }).strict()
                 
                 self.trendingGifsPromise.set(.single(nil))
                 self.trendingGifsPromise.set(paneGifSearchForQuery(context: context, query: "", offset: nil, incompleteResults: true, delayRequest: false, updateActivity: nil)

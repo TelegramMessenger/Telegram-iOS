@@ -198,7 +198,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
         }
         
         if let filter, case let .filter(id, _, _, data) = filter, data.isShared {
-            self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).start()
+            self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).start().strict()
             self.chatFilterUpdatesDisposable = (self.context.engine.peers.subscribedChatFolderUpdates(folderId: id)
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 guard let self else {
@@ -221,7 +221,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
-            })
+            }).strict()
         }
         
         if case let .forum(peerId) = location {
@@ -242,7 +242,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
-            })
+            }).strict()
         }
     }
     

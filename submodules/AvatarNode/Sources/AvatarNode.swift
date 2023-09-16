@@ -563,7 +563,7 @@ public final class AvatarNode: ASDisplayNode {
                                 return
                             }
                             self.imageNode.contents = image?.cgImage
-                        })
+                        }).strict()
                     }
                 }
             }

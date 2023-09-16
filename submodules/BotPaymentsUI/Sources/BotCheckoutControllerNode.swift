@@ -1116,7 +1116,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                 
                 strongSelf.updateActionButton()
             }
-        })
+        }).strict()
 
         self.addSubnode(self.actionButtonPanelNode)
         self.actionButtonPanelNode.addSubnode(self.actionButtonPanelSeparator)
@@ -1140,7 +1140,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     strongSelf.passwordTip = hint
                 }
             }
-        })
+        }).strict()
         
         self.actionButtonPanelSeparator.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
         self.actionButtonPanelNode.backgroundColor = presentationData.theme.rootController.navigationBar.opaqueBackgroundColor

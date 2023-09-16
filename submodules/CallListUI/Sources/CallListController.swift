@@ -138,7 +138,7 @@ public final class CallListController: TelegramBaseController {
                     strongSelf.updateThemeAndStrings()
                 }
             }
-        })
+        }).strict()
         
         self.scrollToTop = { [weak self] in
             self?.controllerNode.scrollToLatest()

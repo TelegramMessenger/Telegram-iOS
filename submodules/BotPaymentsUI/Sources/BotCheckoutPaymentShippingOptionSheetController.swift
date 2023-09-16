@@ -20,7 +20,7 @@ final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetControll
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
-        })
+        }).strict()
         
         var items: [ActionSheetItem] = []
         

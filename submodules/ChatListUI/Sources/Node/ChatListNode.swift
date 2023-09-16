@@ -1832,7 +1832,7 @@ public final class ChatListNode: ListView {
             |> distinctUntilChanged
             
             self.suggestedChatListNotice.set(suggestedChatListNoticeSignal)
-        })
+        }).strict()
         
         let storageInfo: Signal<Double?, NoError>
         if !"".isEmpty, case .chatList(groupId: .root) = location, chatListFilter == nil {
@@ -2723,7 +2723,7 @@ public final class ChatListNode: ListView {
                     return state
                 }
             }
-        })
+        }).strict()
         
         self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState -> Signal<Bool, NoError> in
             guard let strongSelf = self, let filteredEntries = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListView.filteredEntries else {

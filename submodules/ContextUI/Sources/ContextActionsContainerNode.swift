@@ -804,7 +804,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
                 
                 strongSelf.tip = tip
                 requestLayout()
-            })
+            }).strict()
         }
     }
     

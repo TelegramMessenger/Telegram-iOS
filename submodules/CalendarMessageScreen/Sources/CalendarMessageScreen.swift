@@ -87,7 +87,7 @@ private final class MediaPreviewView: SimpleLayer {
                             }
                             strongSelf.contents = image.cgImage
                         }
-                    })
+                    }).strict()
                 }
             }
         }
@@ -1185,7 +1185,7 @@ public final class CalendarMessageScreen: ViewController {
                     return
                 }
                 strongSelf.calendarSource.loadMore()
-            })
+            }).strict()
 
             self.stateDisposable = (self.calendarSource.state
             |> deliverOnMainQueue).start(next: { [weak self] state in
@@ -1194,7 +1194,7 @@ public final class CalendarMessageScreen: ViewController {
                 }
                 strongSelf.calendarState = state
                 strongSelf.reloadMediaInfo()
-            })
+            }).strict()
         }
 
         deinit {

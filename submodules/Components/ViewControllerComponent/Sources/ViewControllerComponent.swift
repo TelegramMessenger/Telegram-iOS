@@ -267,7 +267,7 @@ open class ViewControllerComponentContainer: ViewController {
                     strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                 }
             }
-        })
+        }).strict()
         
         switch statusBarStyle {
             case .none:

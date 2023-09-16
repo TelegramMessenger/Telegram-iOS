@@ -2540,7 +2540,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case let .reference(referenceSource):
                 self.statusBar.statusBarStyle = .Ignore
                 
@@ -2552,7 +2552,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case let .extracted(extractedSource):
                 if extractedSource.blurBackground {
                     self.statusBar.statusBarStyle = .Hide
@@ -2567,7 +2567,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case .controller:
                 self.statusBar.statusBarStyle = .Hide
         }

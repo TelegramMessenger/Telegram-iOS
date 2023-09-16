@@ -516,7 +516,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
                         strongSelf.pictureInPictureController?.invalidatePlaybackState()
                     }
                 }
-            })
+            }).strict()
         }
 
         deinit {
@@ -938,7 +938,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             } else {
                 strongSelf.footerContentNode.setFramePreviewImage(image: nil)
             }
-        })
+        }).strict()
         
         self.alternativeDismiss = { [weak self] in
             guard let strongSelf = self, strongSelf.hasPictureInPicture else {
@@ -973,7 +973,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             if let strongSelf = self {
                 strongSelf.updateControlsVisibility(false)
             }
-        })
+        }).strict()
     }
     
     deinit {

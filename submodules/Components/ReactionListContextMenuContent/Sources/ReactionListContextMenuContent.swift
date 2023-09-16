@@ -163,7 +163,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                             }
                             strongSelf.file = file
                             strongSelf.updateReactionLayer()
-                        })
+                        }).strict()
                     }
                 } else {
                     let iconNode = ASImageNode()
@@ -507,7 +507,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                                 }
                                 strongSelf.file = file
                                 strongSelf.updateReactionLayer()
-                            })
+                            }).strict()
                         }
                     } else {
                         self.file = nil
@@ -825,7 +825,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                     }
                 }
-            })
+            }).strict()
         }
         
         deinit {

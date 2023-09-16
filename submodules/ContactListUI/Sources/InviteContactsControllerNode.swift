@@ -325,7 +325,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                     strongSelf.updateThemeAndStrings()
                 }
             }
-        })
+        }).strict()
         
         let selectionStateSignal = self.selectionStatePromise.get()
         let transition: Signal<InviteContactsTransition, NoError>
@@ -428,7 +428,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
         
         self.disposable = transition.start(next: { [weak self] transition in
             self?.enqueueTransition(transition)
-        })
+        }).strict()
         
         shareImpl = { [weak self] in
             if let strongSelf = self {

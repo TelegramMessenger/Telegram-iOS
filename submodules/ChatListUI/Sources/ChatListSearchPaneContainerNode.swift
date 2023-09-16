@@ -134,7 +134,7 @@ private final class ChatListSearchPendingPane {
         |> deliverOnMainQueue).start(next: { [weak self] _ in
             self?.isReady = true
             hasBecomeReady(key)
-        })
+        }).strict()
     }
     
     deinit {

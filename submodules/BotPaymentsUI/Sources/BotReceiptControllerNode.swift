@@ -319,7 +319,7 @@ final class BotReceiptControllerNode: ItemListControllerNode {
                 
                 strongSelf.receiptData.set(.single((receipt.invoice, receipt.info, receipt.shippingOption, receipt.credentialsTitle, receipt.invoiceMedia, receipt.tipAmount)))
             }
-        })
+        }).strict()
         
         self.actionButton.addTarget(self, action: #selector(self.actionButtonPressed), forControlEvents: .touchUpInside)
 

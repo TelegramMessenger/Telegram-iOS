@@ -422,7 +422,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
                 strongSelf.didSetReady = true
                 strongSelf._ready.set(.single(true))
             }
-        })
+        }).strict()
         
         self.controller?.searchNavigationNode?.setQueryUpdated({ [weak self] query, languageCode in
             guard let strongSelf = self else {

@@ -2656,7 +2656,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 })
             }
-        })
+        }).strict()
                         
         self.recentListNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
@@ -2733,7 +2733,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 strongSelf.playlistLocation = playlistStateAndType?.1.playlistLocation
-            })
+            }).strict()
         }
         
         self.deletedMessagesDisposable = (context.account.stateManager.deletedMessages
@@ -2758,7 +2758,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return state
                 }
             }
-        })
+        }).strict()
     }
     
     deinit {
@@ -3056,7 +3056,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                         }
                                     }
                                 }, completed: {
-                                })
+                                }).strict()
                                 cancelImpl = {
                                     self?.playlistPreloadDisposable?.dispose()
                                 }

@@ -293,7 +293,7 @@ public class BrowserScreen: ViewController {
                 }
                 strongSelf.contentState = state
                 strongSelf.requestLayout(transition: .immediate)
-            })
+            }).strict()
             
             self.content?.onScrollingUpdate = { [weak self] update in
                 self?.onContentScrollingUpdate(update)

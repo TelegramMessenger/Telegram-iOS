@@ -180,7 +180,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                     strongSelf.animationFile = file
                     strongSelf.setupAnimation()
                 }
-            })
+            }).strict()
         case let .sticker(packReference, fileId):
             self.fileDisposable = (self.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
             |> map { pack -> TelegramMediaFile? in
@@ -194,7 +194,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                     strongSelf.animationFile = file
                     strongSelf.setupAnimation()
                 }
-            })
+            }).strict()
         }
     }
     

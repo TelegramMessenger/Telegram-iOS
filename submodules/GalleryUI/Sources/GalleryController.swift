@@ -1120,7 +1120,7 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     if let strongSelf = self, strongSelf.traceVisibility() {
                         let _ = strongSelf.context.engine.messages.addSecretChatMessageScreenshot(peerId: id.peerId).start()
                     }
-                })
+                }).strict()
             }
         default:
             break

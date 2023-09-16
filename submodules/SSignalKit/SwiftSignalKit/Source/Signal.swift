@@ -23,18 +23,37 @@ public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
     return function(value)
 }
 
-private final class SubscriberDisposable<T, E> : Disposable {
+private final class SubscriberDisposable<T, E>: Disposable, CustomStringConvertible {
     private let subscriber: Subscriber<T, E>
-    private let disposable: Disposable
     
-    init(subscriber: Subscriber<T, E>, disposable: Disposable) {
+    private var lock = pthread_mutex_t()
+    private var disposable: Disposable?
+    
+    init(subscriber: Subscriber<T, E>, disposable: Disposable?) {
         self.subscriber = subscriber
         self.disposable = disposable
+        
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     func dispose() {
-        subscriber.markTerminatedWithoutDisposal()
-        disposable.dispose()
+        self.subscriber.markTerminatedWithoutDisposal()
+        
+        var disposeItem: Disposable?
+        pthread_mutex_lock(&self.lock)
+        disposeItem = self.disposable
+        self.disposable = nil
+        pthread_mutex_unlock(&self.lock)
+        
+        disposeItem?.dispose()
+    }
+    
+    public var description: String {
+        return "SubscriberDisposable { disposable: \(self.disposable == nil ? "nil" : "hasValue") }"
     }
 }
 

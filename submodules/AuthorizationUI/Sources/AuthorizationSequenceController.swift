@@ -84,7 +84,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] state in
             self?.updateState(state: state)
-        })
+        }).strict()
     }
     
     required public init(coder aDecoder: NSCoder) {

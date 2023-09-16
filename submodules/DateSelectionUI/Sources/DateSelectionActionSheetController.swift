@@ -26,7 +26,7 @@ public final class DateSelectionActionSheetController: ActionSheetController {
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }
-        })
+        }).strict()
         
         self._ready.set(.single(true))
         

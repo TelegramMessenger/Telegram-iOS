@@ -129,7 +129,7 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
                 
                 strongSelf.setupPlayback(lottieInstance: lottieInstance)
             }
-        })
+        }).strict()
     }
     
     private func updatePlayback() {

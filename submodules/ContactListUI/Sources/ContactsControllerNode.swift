@@ -143,7 +143,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     strongSelf.updateThemeAndStrings()
                 }
             }
-        })
+        }).strict()
         
         addNearbyImpl = { [weak self] in
             if let strongSelf = self {
@@ -243,7 +243,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.contactListNode.storySubscriptions.set(.single(storySubscriptions))
             
             self.storiesReady.set(.single(true))
-        })*/
+        }).strict()*/
 
         self.contactListNode.openStories = { [weak self] peer, sourceNode in
             guard let self else {

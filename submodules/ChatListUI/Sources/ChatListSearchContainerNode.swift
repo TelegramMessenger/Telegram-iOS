@@ -501,7 +501,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     strongSelf.updateTheme(theme: presentationData.theme)
                 }
             }
-        })
+        }).strict()
         
         if case let .forum(peerId) = location {
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
