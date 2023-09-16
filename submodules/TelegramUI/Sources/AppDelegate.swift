@@ -1488,7 +1488,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         #if targetEnvironment(simulator)
                         print("Debug memory")
                         #else
-                        preconditionFailure()
+                        if self.contextValue?.context.sharedContext.immediateExperimentalUISettings.crashOnMemoryPressure == true {
+                            preconditionFailure()
+                        }
                         #endif
                     }
                 }

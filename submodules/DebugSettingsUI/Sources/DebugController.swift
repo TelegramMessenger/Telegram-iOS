@@ -71,6 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
+    case crashOnMemoryPressure(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
     case resetNotifications
     case crash(PresentationTheme)
@@ -117,7 +118,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
+        case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -166,8 +167,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 15
         case .crashOnSlowQueries:
             return 16
-        case .clearTips:
+        case .crashOnMemoryPressure:
             return 17
+        case .clearTips:
+            return 18
         case .resetNotifications:
             return 19
         case .crash:
@@ -933,6 +936,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
+        case let .crashOnMemoryPressure(_, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Crash on memory pressure", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.crashOnMemoryPressure = value
+                    return settings
+                }).start()
+            })
         case .clearTips:
             return ItemListActionItem(presentationData: presentationData, title: "Clear Tips", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 let _ = (arguments.sharedContext.accountManager.transaction { transaction -> Void in
@@ -1366,6 +1377,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         #endif
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
+    entries.append(.crashOnMemoryPressure(presentationData.theme, experimentalSettings.crashOnMemoryPressure))
     if isMainApp {
         entries.append(.clearTips(presentationData.theme))
         entries.append(.resetNotifications)
