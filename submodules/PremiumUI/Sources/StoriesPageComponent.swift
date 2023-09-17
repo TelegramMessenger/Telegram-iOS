@@ -609,9 +609,9 @@ final class StoriesPageComponent: CombinedComponent {
                 availableSize: context.availableSize,
                 transition: context.transition
             )
-                        
+                                    
             let background = background.update(
-                component: Rectangle(color: theme.list.plainBackgroundColor),
+                component: Rectangle(color: theme.overallDarkAppearance ? theme.list.blocksBackgroundColor : theme.list.plainBackgroundColor),
                 availableSize: scroll.size,
                 transition: context.transition
             )
