@@ -1351,15 +1351,21 @@ final class MediaEditorScreenComponent: Component {
                         audioOffsetUpdated: { [weak mediaEditor] offset, done in
                             if let mediaEditor {
                                 mediaEditor.setAudioTrackOffset(offset, apply: done)
-                                if done {
-                                    if !isAudioOnly {
-                                        mediaEditor.play()
+                                if isAudioOnly {
+                                    let offset = (mediaEditor.values.audioTrackOffset ?? 0.0)
+                                    let start = (mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0)
+                                    if done {
+                                        mediaEditor.seek(offset + start, andPlay: true)
+                                    } else {
+                                        mediaEditor.seek(offset + start, andPlay: false)
+                                        mediaEditor.stop()
                                     }
                                 } else {
-                                    if isAudioOnly {
-                                        mediaEditor.seek(offset + (mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0), andPlay: false)
+                                    if done {
+                                        mediaEditor.play()
+                                    } else {
+                                        mediaEditor.stop()
                                     }
-                                    mediaEditor.stop()
                                 }
                             }
                         },
