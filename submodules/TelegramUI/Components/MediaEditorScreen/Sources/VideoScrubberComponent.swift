@@ -643,26 +643,39 @@ final class VideoScrubberComponent: Component {
             }
             
             let audioTitle = NSAttributedString(string: trackTitle, font: Font.semibold(13.0), textColor: .white)
-            let audioTitleSize = self.audioTitle.update(
-                transition: transition,
-                component: AnyComponent(
-                    MultilineTextComponent(
-                        text: .plain(audioTitle)
-                    )
-                ),
-                environment: {},
-                containerSize: availableSize
-            )
+            let audioTitleSize: CGSize
+            if !trackTitle.isEmpty {
+                audioTitleSize = self.audioTitle.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(audioTitle)
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+            } else {
+                if let audioTitleView = self.audioTitle.view {
+                    audioTitleSize = audioTitleView.bounds.size
+                } else {
+                    audioTitleSize = .zero
+                }
+            }
             
             let spacing: CGFloat = 4.0
             let iconSize = CGSize(width: 14.0, height: 14.0)
             let contentTotalWidth = iconSize.width + audioTitleSize.width + spacing
             
+            var audioContentTransition = audioTransition
+            if animateAudioAppearance, component.audioData != nil {
+                audioContentTransition = .immediate
+            }
             audioTransition.setAlpha(view: self.audioIconView, alpha: self.isAudioSelected ? 0.0 : 1.0)
-          
+                      
             let audioIconFrame = CGRect(origin: CGPoint(x: max(8.0, floorToScreenPixels((deselectedAudioClipWidth - contentTotalWidth) / 2.0)), y: floorToScreenPixels((audioScrubberHeight - iconSize.height) / 2.0)), size: iconSize)
-            audioTransition.setBounds(view: self.audioIconView, bounds: CGRect(origin: .zero, size: audioIconFrame.size))
-            audioTransition.setPosition(view: self.audioIconView, position: audioIconFrame.center)
+            audioContentTransition.setBounds(view: self.audioIconView, bounds: CGRect(origin: .zero, size: audioIconFrame.size))
+            audioContentTransition.setPosition(view: self.audioIconView, position: audioIconFrame.center)
             
             let trackTitleIsVisible = !self.isAudioSelected && !component.audioOnly && !trackTitle.isEmpty
             if let view = self.audioTitle.view {
@@ -677,7 +690,7 @@ final class VideoScrubberComponent: Component {
                 
                 let audioTitleFrame = CGRect(origin: CGPoint(x: audioIconFrame.maxX + spacing, y: floorToScreenPixels((audioScrubberHeight - audioTitleSize.height) / 2.0)), size: audioTitleSize)
                 view.bounds = CGRect(origin: .zero, size: audioTitleFrame.size)
-                audioTransition.setPosition(view: view, position: audioTitleFrame.center)
+                audioContentTransition.setPosition(view: view, position: audioTitleFrame.center)
             }
             audioTransition.setAlpha(view: self.audioIconView, alpha: trackTitleIsVisible ? 1.0 : 0.0)
             

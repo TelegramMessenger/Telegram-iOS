@@ -2096,7 +2096,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             }
             
             let mediaEditor = MediaEditor(context: self.context, subject: subject.editorSubject, values: initialValues, hasHistogram: true)
-            if let initialVideoPosition = self.controller?.initialVideoPosition {
+            if let initialVideoPosition = controller.initialVideoPosition {
                 mediaEditor.seek(initialVideoPosition, andPlay: true)
             }
             mediaEditor.attachPreviewView(self.previewView)
@@ -2157,7 +2157,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                     Queue.mainQueue().async {
                         self.gradientView.image = gradientImage
                         
-                        if self.controller?.isEditingStory == true && subject.isVideo {
+                        if self.controller?.isEditingStory == true {
                             
                         } else {
                             self.previewContainerView.alpha = 1.0
@@ -2178,11 +2178,20 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.mediaEditor = mediaEditor
             self.mediaEditorPromise.set(.single(mediaEditor))
             
-            if self.controller?.isEditingStory == true && subject.isVideo {
+            if controller.isEditingStory == true {
                 mediaEditor.onFirstDisplay = { [weak self] in
                     if let self {
-                        self.previewContainerView.alpha = 1.0
-                        self.backgroundDimView.isHidden = false
+                        if subject.isPhoto {
+                            self.previewContainerView.layer.allowsGroupOpacity = true
+                            self.previewContainerView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25, completion: { _ in
+                                self.previewContainerView.layer.allowsGroupOpacity = false
+                                self.previewContainerView.alpha = 1.0
+                                self.backgroundDimView.isHidden = false
+                            })
+                        } else {
+                            self.previewContainerView.alpha = 1.0
+                            self.backgroundDimView.isHidden = false
+                        }
                     }
                 }
             }
@@ -3177,14 +3186,27 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                 return
                             }
                             
+                            func maybeFixMisencodedText(_ text: String) -> String {
+                                let charactersToSearchFor = CharacterSet(charactersIn: "àåèîóûþÿ")
+                                if text.lowercased().rangeOfCharacter(from: charactersToSearchFor) != nil {
+                                    if let data = text.data(using: .windowsCP1252), let string = String(data: data, encoding: .windowsCP1251) {
+                                        return string
+                                    } else {
+                                        return text
+                                    }
+                                } else {
+                                    return text
+                                }
+                            }
+                            
                             var artist: String?
                             var title: String?
                             for data in audioAsset.commonMetadata {
-                                if data.commonKey == .commonKeyArtist {
-                                    artist = data.stringValue
+                                if data.commonKey == .commonKeyArtist, let value = data.stringValue {
+                                    artist = maybeFixMisencodedText(value)
                                 }
-                                if data.commonKey == .commonKeyTitle {
-                                    title = data.stringValue
+                                if data.commonKey == .commonKeyTitle, let value = data.stringValue {
+                                    title = maybeFixMisencodedText(value)
                                 }
                             }
                             

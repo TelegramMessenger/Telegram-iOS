@@ -370,6 +370,7 @@ public final class MediaEditor {
         }
         
         self.audioDelayTimer?.invalidate()
+        self.audioDelayTimer = nil
     }
     
     public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
@@ -1066,7 +1067,12 @@ public final class MediaEditor {
         if let audioPlayer = self.audioPlayer {
             audioPlayer.pause()
             
-            self.destroyTimeObservers()
+            if self.sourceIsVideo {
+                self.audioDelayTimer?.invalidate()
+                self.audioDelayTimer = nil
+            } else {
+                self.destroyTimeObservers()
+            }
             self.audioPlayer = nil
              
             if !self.sourceIsVideo {

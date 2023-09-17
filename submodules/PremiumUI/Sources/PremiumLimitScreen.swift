@@ -255,7 +255,7 @@ public class PremiumLimitDisplayComponent: Component {
            
             let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
             rotateAnimation.fromValue = 0.0 as NSNumber
-            rotateAnimation.toValue = -0.38 as NSNumber
+            rotateAnimation.toValue = -0.3 as NSNumber
             rotateAnimation.duration = 0.15
             rotateAnimation.fillMode = .forwards
             rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -264,7 +264,7 @@ public class PremiumLimitDisplayComponent: Component {
             
             Queue.mainQueue().after(0.5, {
                 let bounceAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                bounceAnimation.fromValue = -0.38 as NSNumber
+                bounceAnimation.fromValue = -0.3 as NSNumber
                 bounceAnimation.toValue = 0.05 as NSNumber
                 bounceAnimation.duration = 0.15
                 bounceAnimation.fillMode = .forwards
