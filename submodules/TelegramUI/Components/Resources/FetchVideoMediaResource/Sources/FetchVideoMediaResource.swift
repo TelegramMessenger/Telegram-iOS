@@ -510,7 +510,7 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
         } else {
             if alwaysUseModernPipeline && !isImage, let track = avAsset.tracks(withMediaType: .video).first {
                 let dimensions = track.naturalSize.applying(track.preferredTransform)
-                mediaEditorValues = MediaEditorValues(dimensions: PixelDimensions(dimensions), qualityPreset: qualityPreset)
+                mediaEditorValues = MediaEditorValues(dimensions: PixelDimensions(width: Int32(abs(dimensions.width)), height: Int32(abs(dimensions.height))), qualityPreset: qualityPreset)
             }
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")

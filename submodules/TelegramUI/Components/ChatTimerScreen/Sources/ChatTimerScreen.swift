@@ -470,8 +470,6 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
             
             self.contentContainerNode.view.addSubview(pickerView)
             self.pickerView = pickerView
-            
-            pickerView.selectRow(1, inComponent: 0, animated: false)
         case .autoremove:
             let pickerView = TimerCustomPickerView()
             pickerView.dataSource = self
