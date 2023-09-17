@@ -233,6 +233,7 @@ final class PendingStoryManager {
         
         var itemsDisposable: Disposable?
         var currentPendingItemContext: PendingItemContext?
+        var queuedPendingItems = Set<PeerId>()
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
@@ -324,6 +325,14 @@ final class PendingStoryManager {
                     print(currentPendingItemContext)
                 })
             }
+            self.queuedPendingItems = Set(localState.items.map { item -> PeerId in
+                switch item.target {
+                case .myStories:
+                    return self.accountPeerId
+                case let .peer(id):
+                    return id
+                }
+            })
             
             if self.currentPendingItemContext == nil, let firstItem = localState.items.first {
                 let queue = self.queue
@@ -377,6 +386,9 @@ final class PendingStoryManager {
         
         private func processContextsUpdated() {
             var currentProgress: [PeerId: Float] = [:]
+            for peerId in self.queuedPendingItems {
+                currentProgress[peerId] = 0.0
+            }
             if let currentPendingItemContext = self.currentPendingItemContext {
                 switch currentPendingItemContext.item.target {
                 case .myStories:
