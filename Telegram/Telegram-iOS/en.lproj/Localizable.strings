@@ -10019,3 +10019,30 @@ Sorry for the inconvenience.";
 "Stats.Boosts.LinkInfo" = "Share this link with your subscribers to get more boosts.";
 
 "Conversation.SaveToFiles" = "Save to Files";
+
+"ChatList.ContextOpenChannel" = "Open Channel";
+
+"Channel.EditAdmin.SectionMessages" = "Manage Messages";
+"Channel.EditAdmin.SectionStories" = "Manage Stories";
+
+"Channel.EditAdmin.PermissionEditMessagesOfOthers" = "Edit Messages of Others";
+"Channel.AdminLog.CanEditMessagesOfOthers" = "Edit Messages of Others";
+"Channel.EditAdmin.PermissionPostStories" = "Post Stories";
+"Channel.AdminLog.CanPostStories" = "Post Stories";
+"Channel.EditAdmin.PermissionEditStoriesOfOthers" = "Edit Stories of Others";
+"Channel.AdminLog.CanEditStoriesOfOthers" = "Edit Stories of Others";
+"Channel.EditAdmin.PermissionDeleteStoriesOfOthers" = "Delete Stories of Others";
+"Channel.AdminLog.CanDeleteStoriesOfOthers" = "Delete Stories of Others";
+
+"PeerInfo.Channel.ArchivedStories" = "Archived Stories";
+
+"Story.SendReactionAsMessage" = "Send reaction as a private message";
+
+"Story.ToastRemovedFromChannelText" = "Story removed from the channel's profile";
+"Story.ToastSavedToChannelTitle" = "Story saved to the channel's profile";
+"Story.ToastSavedToChannelText" = "Saved stories can be viewed by others on the channel's profile until an admin removes them.";
+
+"Story.Context.SaveToChannel" = "Save to Posts";
+"Story.Context.RemoveFromChannel" = "Remove from Posts";
+
+"Story.StealthModePlaceholder" = "Stealth Mode active — {m}:{s}";

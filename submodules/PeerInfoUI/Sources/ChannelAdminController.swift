@@ -501,8 +501,7 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
         return strings.Channel_EditAdmin_PermissionPostMessages
     } else if right.contains(.canEditMessages) {
         if isChannel {
-            //TODO:localize
-            return "Edit Messages of Others"
+            return strings.Channel_EditAdmin_PermissionEditMessagesOfOthers
         } else {
             return strings.Channel_EditAdmin_PermissionEditMessages
         }
@@ -535,14 +534,11 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
             return strings.Channel_AdminLog_CanManageCalls
         }
     } else if right.contains(.canPostStories) {
-        //TODO:localize
-        return "Post Stories"
+        return strings.Channel_EditAdmin_PermissionPostStories
     } else if right.contains(.canEditStories) {
-        //TODO:localize
-        return "Edit Stories of Others"
+        return strings.Channel_EditAdmin_PermissionEditStoriesOfOthers
     } else if right.contains(.canDeleteStories) {
-        //TODO:localize
-        return "Delete Stories of Others"
+        return strings.Channel_EditAdmin_PermissionDeleteStoriesOfOthers
     } else {
         return ""
     }
@@ -738,12 +734,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                         
                         enabled = true
                         
-                        //TODO:localize
                         switch type {
                         case .messages:
-                            itemTitle = "Manage Messages"
+                            itemTitle = presentationData.strings.Channel_EditAdmin_SectionMessages
                         case .stories:
-                            itemTitle = "Manage Stories"
+                            itemTitle = presentationData.strings.Channel_EditAdmin_SectionStories
                         }
                         
                         isSelected = subRights.allSatisfy({ currentRightsFlags.contains($0) })
@@ -818,12 +813,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                             
                             enabled = !state.updating
                             
-                            //TODO:localize
                             switch type {
                             case .messages:
-                                itemTitle = "Manage Messages"
+                                itemTitle = presentationData.strings.Channel_EditAdmin_SectionMessages
                             case .stories:
-                                itemTitle = "Manage Stories"
+                                itemTitle = presentationData.strings.Channel_EditAdmin_SectionStories
                             }
                             
                             isSelected = subRights.allSatisfy({ currentRightsFlags.contains($0) })
@@ -884,12 +878,11 @@ private func channelAdminControllerEntries(presentationData: PresentationData, s
                                 continue rightsLoop
                             }
                             
-                            //TODO:localize
                             switch type {
                             case .messages:
-                                itemTitle = "Manage Messages"
+                                itemTitle = presentationData.strings.Channel_EditAdmin_SectionMessages
                             case .stories:
-                                itemTitle = "Manage Stories"
+                                itemTitle = presentationData.strings.Channel_EditAdmin_SectionStories
                             }
                             
                             isSelected = subRights.allSatisfy({ adminInfo.rights.rights.contains($0) })

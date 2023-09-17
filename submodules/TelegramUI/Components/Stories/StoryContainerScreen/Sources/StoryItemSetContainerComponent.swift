@@ -2687,14 +2687,35 @@ public final class StoryItemSetContainerComponent: Component {
                 let minutes = Int(stealthModeTimeout / 60)
                 let seconds = Int(stealthModeTimeout % 60)
                 
-                inputPlaceholder = .counter([
-                    MessageInputPanelComponent.Placeholder.CounterItem(id: 0, content: .text("Stealth Mode active – ")),
-                    MessageInputPanelComponent.Placeholder.CounterItem(id: 1, content: .number(minutes, minDigits: 2)),
-                    MessageInputPanelComponent.Placeholder.CounterItem(id: 2, content: .text(":")),
-                    MessageInputPanelComponent.Placeholder.CounterItem(id: 3, content: .number(seconds, minDigits: 2)),
-                ])
+                let rawString = component.strings.Story_StealthModePlaceholder
+                var items: [MessageInputPanelComponent.Placeholder.CounterItem] = []
+                var startIndex = rawString.startIndex
+                while true {
+                    if let range = rawString.range(of: "{", range: startIndex ..< rawString.endIndex) {
+                        if range.lowerBound != startIndex {
+                            items.append(MessageInputPanelComponent.Placeholder.CounterItem(id: items.count, content: .text(String(rawString[startIndex ..< range.lowerBound]))))
+                        }
+                        
+                        startIndex = range.upperBound
+                        if let endRange = rawString.range(of: "}", range: startIndex ..< rawString.endIndex) {
+                            let controlString = rawString[range.upperBound ..< endRange.lowerBound]
+                            if controlString == "m" {
+                                items.append(MessageInputPanelComponent.Placeholder.CounterItem(id: items.count, content: .number(minutes, minDigits: 2)))
+                            } else if controlString == "s" {
+                                items.append(MessageInputPanelComponent.Placeholder.CounterItem(id: items.count, content: .number(seconds, minDigits: 2)))
+                            }
+                            
+                            startIndex = endRange.upperBound
+                        }
+                    } else {
+                        break
+                    }
+                }
+                if startIndex != rawString.endIndex {
+                    items.append(MessageInputPanelComponent.Placeholder.CounterItem(id: items.count, content: .text(String(rawString[startIndex ..< rawString.endIndex]))))
+                }
                 
-                //inputPlaceholder = component.strings.Story_StealthModeActivePlaceholder("\(stringForDuration(stealthModeTimeout))").string
+                inputPlaceholder = .counter(items)
             } else {
                 inputPlaceholder = .plain(component.strings.Story_InputPlaceholderReplyPrivately)
             }
@@ -4185,7 +4206,6 @@ public final class StoryItemSetContainerComponent: Component {
                 if let current = self.reactionContextNode {
                     reactionContextNode = current
                 } else {
-                    //TODO:localize
                     reactionContextNodeTransition = .immediate
                     reactionContextNode = ReactionContextNode(
                         context: component.context,
@@ -4193,7 +4213,7 @@ public final class StoryItemSetContainerComponent: Component {
                         presentationData: component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme),
                         items: reactionItems.map(ReactionContextItem.reaction),
                         selectedItems: component.slice.item.storyItem.myReaction.flatMap { Set([$0]) } ?? Set(),
-                        title: self.displayLikeReactions ? nil : "Send reaction as a private message",
+                        title: self.displayLikeReactions ? nil : component.strings.Story_SendReactionAsMessage,
                         getEmojiContent: { [weak self] animationCache, animationRenderer in
                             guard let self, let component = self.component else {
                                 preconditionFailure()
@@ -5823,8 +5843,7 @@ public final class StoryItemSetContainerComponent: Component {
             }
             
             if channel.hasPermission(.editStories) {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? "Remove from Posts" : "Save to Posts", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: component.slice.item.storyItem.isPinned ? component.strings.Story_Context_RemoveFromChannel : component.strings.Story_Context_SaveToChannel, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: component.slice.item.storyItem.isPinned ? "Stories/Context Menu/Unpin" : "Stories/Context Menu/Pin"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, a in
                     a(.default)
@@ -5836,11 +5855,10 @@ public final class StoryItemSetContainerComponent: Component {
                     let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
-                    //TODO:localize
                     if component.slice.item.storyItem.isPinned {
                         self.scheduledStoryUnpinnedUndoOverlay = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .info(title: nil, text: "Story removed from the channel's profile", timeout: nil),
+                            content: .info(title: nil, text: presentationData.strings.Story_ToastRemovedFromChannelText, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             blurred: true,
@@ -5849,7 +5867,7 @@ public final class StoryItemSetContainerComponent: Component {
                     } else {
                         self.component?.presentController(UndoOverlayController(
                             presentationData: presentationData,
-                            content: .info(title: "Story saved to the channel's profile", text: "Saved stories can be viewed by others on the channel's profile until an admin removes them.", timeout: nil),
+                            content: .info(title: presentationData.strings.Story_ToastSavedToChannelTitle, text: presentationData.strings.Story_ToastSavedToChannelText, timeout: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             blurred: true,

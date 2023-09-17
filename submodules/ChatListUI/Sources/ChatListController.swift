@@ -2842,8 +2842,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             })
                         })))
                     } else if case .channel = peer {
-                        //TODO:localize
-                        items.append(.action(ContextMenuActionItem(text: "Open Channel", icon: { theme in
+                        items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.ChatList_ContextOpenChannel, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Channels"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, _ in
                             c.dismiss(completion: {
