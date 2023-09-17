@@ -10046,3 +10046,6 @@ Sorry for the inconvenience.";
 "Story.Context.RemoveFromChannel" = "Remove from Posts";
 
 "Story.StealthModePlaceholder" = "Stealth Mode active — {m}:{s}";
+
+"Chat.ReplyStoryPrivateChannel" = "Private story";
+"Message.ForwardedUnavailableStoryShort" = "Private Story\nFrom: %@";

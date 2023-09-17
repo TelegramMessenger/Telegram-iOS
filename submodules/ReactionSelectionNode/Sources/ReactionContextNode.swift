@@ -2628,7 +2628,6 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             additionalAnimationNodeValue.updateLayout(size: effectFrame.size)
             self.addSubnode(additionalAnimationNodeValue)
         } else if itemNode.item.isCustom {
-            
             var effectURL: URL?
             if let genericReactionEffect = self.genericReactionEffect {
                 effectURL = URL(fileURLWithPath: genericReactionEffect)
@@ -2638,7 +2637,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 }
             }
             
-            if "".isEmpty, let effectURL {
+            if let effectURL {
                 let additionalAnimationNodeValue: AnimatedStickerNode
                 if self.useDirectRendering {
                     additionalAnimationNodeValue = DirectAnimatedStickerNode()
@@ -2659,61 +2658,57 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 self.addSubnode(additionalAnimationNodeValue)
             } else {
                 additionalAnimationNode = nil
+            }
                 
-                var effectData: Data?
-                if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
-                    effectData = TGGUnzipData(data, 5 * 1024 * 1024) ?? data
-                } else {
-                    if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json") {
-                        effectData = try? Data(contentsOf: url)
-                    }
+            var patternEffectData: Data?
+            if let url = getAppBundle().url(forResource: "generic_reaction_inline_pattern", withExtension: "json") {
+                patternEffectData = try? Data(contentsOf: url)
+            }
+            
+            if let patternEffectData, let composition = try? Animation.from(data: patternEffectData) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                if incomingMessage {
+                    view.layer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
                 }
                 
-                if let effectData = effectData, let composition = try? Animation.from(data: effectData) {
-                    let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
-                    view.animationSpeed = 1.0
-                    view.backgroundColor = nil
-                    view.isOpaque = false
-                    
-                    if incomingMessage {
-                        view.layer.transform = CATransform3DMakeScale(-1.0, 1.0, 1.0)
-                    }
-                    
-                    genericAnimationView = view
-                    
-                    let animationCache = itemNode.context.animationCache
-                    let animationRenderer = itemNode.context.animationRenderer
-                    
-                    for i in 1 ... 7 {
-                        let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
-                        for animationLayer in allLayers {
-                            let baseItemLayer = InlineStickerItemLayer(
-                                context: itemNode.context,
-                                userLocation: .other,
-                                attemptSynchronousLoad: false,
-                                emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
-                                file: itemNode.item.listAnimation,
-                                cache: animationCache,
-                                renderer: animationRenderer,
-                                placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                                pointSize: CGSize(width: 32.0, height: 32.0)
-                            )
-                            
-                            if let sublayers = animationLayer.sublayers {
-                                for sublayer in sublayers {
-                                    sublayer.isHidden = true
-                                }
+                genericAnimationView = view
+                
+                let animationCache = itemNode.context.animationCache
+                let animationRenderer = itemNode.context.animationRenderer
+                
+                for i in 1 ... 7 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: itemNode.context,
+                            userLocation: .other,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            file: itemNode.item.listAnimation,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: 32.0, height: 32.0)
+                        )
+                        
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
                             }
-                            
-                            baseItemLayer.isVisibleForAnimations = true
-                            baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
-                            animationLayer.addSublayer(baseItemLayer)
                         }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
                     }
-                    
-                    view.frame = effectFrame.insetBy(dx: -20.0, dy: -20.0)//.offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
-                    self.view.addSubview(view)
                 }
+                
+                view.frame = effectFrame.insetBy(dx: -20.0, dy: -20.0)//.offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
+                self.view.addSubview(view)
             }
         } else {
             additionalAnimationNode = nil
@@ -2873,6 +2868,13 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 } else {
                     beginDismissAnimation()
                 }
+            }
+            
+            if let genericAnimationView = genericAnimationView {
+                genericAnimationView.play(completion: { [weak genericAnimationView] _ in
+                    genericAnimationView?.alpha = 0.0
+                    genericAnimationView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                })
             }
             
             additionalAnimationNode.visibility = true
