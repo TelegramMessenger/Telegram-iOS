@@ -3461,6 +3461,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                                 let stickerEntity = DrawingStickerEntity(content: .file(reaction.stillAnimation, .reaction(.builtin(heart), .white)))
                                                 self.interaction?.insertEntity(stickerEntity, scale: 1.175)
                                             }
+                                            
+                                            self.mediaEditor?.play()
                                         }
                                     }
                                     self.stickerScreen = controller

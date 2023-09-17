@@ -149,6 +149,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                     if self.animationNode == nil {
                         let animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode.clipsToBounds = true
                         animationNode.autoplay = false
                         self.animationNode = animationNode
                         animationNode.started = { [weak self, weak animationNode] in
@@ -354,7 +355,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
                 if self.isReaction {
-                    animationNode.cornerRadius = floor(imageSize.width * 0.03)
+                    animationNode.cornerRadius = floor(imageSize.width * 0.1)
                 }
                 animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)

@@ -1120,6 +1120,9 @@ public extension MediaEditorValues {
         if !self.entities.isEmpty {
             return true
         }
+        if self.additionalVideoPath != nil {
+            return true
+        }
         return false
     }
 }

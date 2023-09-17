@@ -336,7 +336,8 @@ final class VideoScrubberComponent: Component {
             let location = gestureRecognizer.location(in: self.audioContainerView)
             return self.audioContainerView.bounds.contains(location)
         }
-                
+        
+        var ignoreScrollUpdates = false
         private func updateAudioOffset(done: Bool) {
             guard self.audioScrollView.contentSize.width > 0.0, let component = self.component, let duration = self.component?.audioData?.duration else {
                 return
@@ -353,6 +354,9 @@ final class VideoScrubberComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard !self.ignoreScrollUpdates else {
+                return
+            }
             self.updateAudioOffset(done: false)
         }
         
@@ -490,8 +494,12 @@ final class VideoScrubberComponent: Component {
             var trimDuration = component.duration
             
             var isFirstTime = false
+            var audioChanged = false
             var animateAudioAppearance = false
             if let previousComponent {
+                if let previousAudioData = previousComponent.audioData, previousAudioData.title != component.audioData?.title {
+                    audioChanged = true
+                }
                 if previousComponent.audioData == nil, component.audioData != nil {
                     self.positionAnimation = nil
                     animateAudioAppearance = true
@@ -588,12 +596,20 @@ final class VideoScrubberComponent: Component {
             
             self.audioScrollView.isUserInteractionEnabled = self.isAudioSelected || component.audioOnly
             audioTransition.setFrame(view: self.audioScrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: audioScrubberHeight)))
-            self.audioScrollView.contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            
+            let contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            self.ignoreScrollUpdates = true
+            if self.audioScrollView.contentSize != contentSize {
+                self.audioScrollView.contentSize = contentSize
+            }
             
             if isFirstTime, let offset = component.audioData?.offset, let duration = component.audioData?.duration, duration > 0.0 {
                 let contentOffset = offset * audioTotalWidth / duration
                 self.audioScrollView.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+            } else if audioChanged {
+                self.audioScrollView.contentOffset = .zero
             }
+            self.ignoreScrollUpdates = false
             
             audioTransition.setCornerRadius(layer: self.audioClippingView.layer, cornerRadius: self.isAudioSelected ? 0.0 : 9.0)
             
