@@ -454,6 +454,7 @@ final class StoryItemOverlaysView: UIView {
                             placeholderColor: flags.contains(.isDark) ? UIColor(white: 1.0, alpha: 0.1) : UIColor(white: 0.0, alpha: 0.1),
                             pointSize: CGSize(width: min(256, itemSize.width), height: min(256, itemSize.height))
                         )
+                        customEmojiView.clipsToBounds = true
                         customEmojiView.updateTextColor(flags.contains(.isDark) ? .white : .black)
                         
                         self.customEmojiLoadDisposable?.dispose()
@@ -491,6 +492,7 @@ final class StoryItemOverlaysView: UIView {
                 stickerTransition.setPosition(view: customEmojiView, position: stickerFrame.center)
                 stickerTransition.setBounds(view: customEmojiView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
                 stickerTransition.setScale(view: customEmojiView, scale: stickerScale)
+                customEmojiView.layer.cornerRadius = stickerFrame.size.width * 0.1
                 
                 customEmojiView.isActive = isActive
             }

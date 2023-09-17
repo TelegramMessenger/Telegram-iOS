@@ -483,7 +483,7 @@ public final class MediaEditorVideoExport {
                 kCVPixelBufferMetalCompatibilityKey as String: true,
                 AVVideoColorPropertiesKey: colorProperties
             ]
-            if !"".isEmpty, let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing && additionalAsset == nil {
+            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
             } else {
                 self.setupComposer()
             }

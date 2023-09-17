@@ -336,7 +336,8 @@ final class VideoScrubberComponent: Component {
             let location = gestureRecognizer.location(in: self.audioContainerView)
             return self.audioContainerView.bounds.contains(location)
         }
-                
+        
+        var ignoreScrollUpdates = false
         private func updateAudioOffset(done: Bool) {
             guard self.audioScrollView.contentSize.width > 0.0, let component = self.component, let duration = self.component?.audioData?.duration else {
                 return
@@ -353,6 +354,9 @@ final class VideoScrubberComponent: Component {
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            guard !self.ignoreScrollUpdates else {
+                return
+            }
             self.updateAudioOffset(done: false)
         }
         
@@ -490,8 +494,12 @@ final class VideoScrubberComponent: Component {
             var trimDuration = component.duration
             
             var isFirstTime = false
+            var audioChanged = false
             var animateAudioAppearance = false
             if let previousComponent {
+                if let previousAudioData = previousComponent.audioData, previousAudioData.title != component.audioData?.title {
+                    audioChanged = true
+                }
                 if previousComponent.audioData == nil, component.audioData != nil {
                     self.positionAnimation = nil
                     animateAudioAppearance = true
@@ -588,12 +596,20 @@ final class VideoScrubberComponent: Component {
             
             self.audioScrollView.isUserInteractionEnabled = self.isAudioSelected || component.audioOnly
             audioTransition.setFrame(view: self.audioScrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: audioScrubberHeight)))
-            self.audioScrollView.contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            
+            let contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
+            self.ignoreScrollUpdates = true
+            if self.audioScrollView.contentSize != contentSize {
+                self.audioScrollView.contentSize = contentSize
+            }
             
             if isFirstTime, let offset = component.audioData?.offset, let duration = component.audioData?.duration, duration > 0.0 {
                 let contentOffset = offset * audioTotalWidth / duration
                 self.audioScrollView.contentOffset = CGPoint(x: contentOffset, y: 0.0)
+            } else if audioChanged {
+                self.audioScrollView.contentOffset = .zero
             }
+            self.ignoreScrollUpdates = false
             
             audioTransition.setCornerRadius(layer: self.audioClippingView.layer, cornerRadius: self.isAudioSelected ? 0.0 : 9.0)
             
@@ -627,26 +643,39 @@ final class VideoScrubberComponent: Component {
             }
             
             let audioTitle = NSAttributedString(string: trackTitle, font: Font.semibold(13.0), textColor: .white)
-            let audioTitleSize = self.audioTitle.update(
-                transition: transition,
-                component: AnyComponent(
-                    MultilineTextComponent(
-                        text: .plain(audioTitle)
-                    )
-                ),
-                environment: {},
-                containerSize: availableSize
-            )
+            let audioTitleSize: CGSize
+            if !trackTitle.isEmpty {
+                audioTitleSize = self.audioTitle.update(
+                    transition: transition,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(audioTitle)
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+            } else {
+                if let audioTitleView = self.audioTitle.view {
+                    audioTitleSize = audioTitleView.bounds.size
+                } else {
+                    audioTitleSize = .zero
+                }
+            }
             
             let spacing: CGFloat = 4.0
             let iconSize = CGSize(width: 14.0, height: 14.0)
             let contentTotalWidth = iconSize.width + audioTitleSize.width + spacing
             
+            var audioContentTransition = audioTransition
+            if animateAudioAppearance, component.audioData != nil {
+                audioContentTransition = .immediate
+            }
             audioTransition.setAlpha(view: self.audioIconView, alpha: self.isAudioSelected ? 0.0 : 1.0)
-          
+                      
             let audioIconFrame = CGRect(origin: CGPoint(x: max(8.0, floorToScreenPixels((deselectedAudioClipWidth - contentTotalWidth) / 2.0)), y: floorToScreenPixels((audioScrubberHeight - iconSize.height) / 2.0)), size: iconSize)
-            audioTransition.setBounds(view: self.audioIconView, bounds: CGRect(origin: .zero, size: audioIconFrame.size))
-            audioTransition.setPosition(view: self.audioIconView, position: audioIconFrame.center)
+            audioContentTransition.setBounds(view: self.audioIconView, bounds: CGRect(origin: .zero, size: audioIconFrame.size))
+            audioContentTransition.setPosition(view: self.audioIconView, position: audioIconFrame.center)
             
             let trackTitleIsVisible = !self.isAudioSelected && !component.audioOnly && !trackTitle.isEmpty
             if let view = self.audioTitle.view {
@@ -661,7 +690,7 @@ final class VideoScrubberComponent: Component {
                 
                 let audioTitleFrame = CGRect(origin: CGPoint(x: audioIconFrame.maxX + spacing, y: floorToScreenPixels((audioScrubberHeight - audioTitleSize.height) / 2.0)), size: audioTitleSize)
                 view.bounds = CGRect(origin: .zero, size: audioTitleFrame.size)
-                audioTransition.setPosition(view: view, position: audioTitleFrame.center)
+                audioContentTransition.setPosition(view: view, position: audioTitleFrame.center)
             }
             audioTransition.setAlpha(view: self.audioIconView, alpha: trackTitleIsVisible ? 1.0 : 0.0)
             
