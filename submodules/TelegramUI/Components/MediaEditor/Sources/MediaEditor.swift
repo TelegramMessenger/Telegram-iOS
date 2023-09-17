@@ -573,11 +573,9 @@ public final class MediaEditor {
 //                    self.maybeGeneratePersonSegmentation(image)
                 }
                 
-                if let audioTrack = self.values.audioTrack {
-                    self.setAudioTrack(audioTrack)
-                    self.setAudioTrackVolume(self.values.audioTrackVolume)
-                    self.setAudioTrackTrimRange(self.values.audioTrackTrimRange, apply: true)
-                    self.setAudioTrackOffset(self.values.audioTrackOffset, apply: true)
+                if let _ = self.values.audioTrack {
+                    self.setupAudioPlayback()
+                    self.updateAudioPlaybackRange()
                 }
                 
                 if let player {
@@ -608,6 +606,19 @@ public final class MediaEditor {
                         } else {
                             startPlayback()
                         }
+                    }
+                } else if let audioPlayer = self.audioPlayer {
+                    let offset = self.values.audioTrackOffset ?? 0.0
+                    let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                    
+                    let audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
+                    audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    if audioPlayer.status != .readyToPlay {
+                        Queue.mainQueue().after(0.1) {
+                            audioPlayer.play()
+                        }
+                    } else {
+                        audioPlayer.play()
                     }
                 }
             }
@@ -936,6 +947,10 @@ public final class MediaEditor {
                 } else {
                     if audioPlayer.status == .readyToPlay {
                         audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
+                        if rate > 0.0 {
+//                            audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            audioPlayer.play()
+                        }
                     } else {
                         audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
                         if rate > 0.0 {
@@ -1059,14 +1074,22 @@ public final class MediaEditor {
             }
         }
         
-        if let audioTrack {
+        self.setupAudioPlayback()
+    }
+    
+    private func setupAudioPlayback() {
+        if let audioTrack = self.values.audioTrack {
             let path = fullDraftPath(peerId: self.context.account.peerId, path: audioTrack.path)
             let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
             let playerItem = AVPlayerItem(asset: audioAsset)
             let player = AVPlayer(playerItem: playerItem)
             player.automaticallyWaitsToMinimizeStalling = false
-            self.audioPlayer = player            
+            self.audioPlayer = player
             self.maybeGenerateAudioSamples(asset: audioAsset)
+            
+            if let volume = self.values.audioTrackVolume {
+                self.audioPlayer?.volume = Float(volume)
+            }
             
             self.setupTimeObservers()
             
@@ -1081,9 +1104,8 @@ public final class MediaEditor {
             return values.withUpdatedAudioTrackTrimRange(trimRange)
         }
         
-        if apply, let trimRange {
-            let offset = self.values.audioTrackOffset ?? 0.0
-            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+        if apply, let _ = trimRange {
+            self.updateAudioPlaybackRange()
         }
     }
     
@@ -1094,9 +1116,7 @@ public final class MediaEditor {
         
         if apply {
             let offset = offset ?? 0.0
-            let duration = self.duration ?? 0.0
             let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
-            let upperBound = self.values.audioTrackTrimRange?.upperBound ?? duration
             
             let audioTime: CMTime
             if self.sourceIsVideo {
@@ -1105,11 +1125,20 @@ public final class MediaEditor {
             } else {
                 audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
             }
-            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
+            self.updateAudioPlaybackRange()
             self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
             if !self.sourceIsVideo {
                 self.audioPlayer?.play()
             }
+        }
+    }
+    
+    private func updateAudioPlaybackRange() {
+        if let upperBound = self.values.audioTrackTrimRange?.upperBound {
+            let offset = self.values.audioTrackOffset ?? 0.0
+            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
+        } else {
+            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = .invalid
         }
     }
     
