@@ -652,7 +652,7 @@ public final class MediaEditor {
                     if self.sourceIsVideo {
                         start = self.values.videoTrimRange?.lowerBound ?? 0.0
                     } else {
-                        start = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                        start = (self.values.audioTrackOffset ?? 0.0) + (self.values.audioTrackTrimRange?.lowerBound ?? 0.0)
                     }
                     let targetTime = CMTime(seconds: start, preferredTimescale: CMTimeScale(1000))
                     self.player?.seek(to: targetTime)
@@ -846,11 +846,7 @@ public final class MediaEditor {
             self.audioPlayer?.seek(to: self.audioTime(for: targetPosition), toleranceBefore: .zero, toleranceAfter: .zero)
         }
     }
-    
-    private func setupAudioPlayback() {
         
-    }
-    
     private var audioDelayTimer: SwiftSignalKit.Timer?
     private func audioDelay(for time: CMTime) -> Double? {
         var time = time
@@ -1052,6 +1048,17 @@ public final class MediaEditor {
             return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(nil).withUpdatedAudioTrackVolume(nil).withUpdatedAudioTrackOffset(nil)
         }
         
+        if let audioPlayer = self.audioPlayer {
+            audioPlayer.pause()
+            
+            self.destroyTimeObservers()
+            self.audioPlayer = nil
+             
+            if !self.sourceIsVideo {
+                self.playerPromise.set(.single(nil))
+            }
+        }
+        
         if let audioTrack {
             let path = fullDraftPath(peerId: self.context.account.peerId, path: audioTrack.path)
             let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
@@ -1065,16 +1072,6 @@ public final class MediaEditor {
             
             if !self.sourceIsVideo {
                 self.playerPromise.set(.single(player))
-            }
-        } else if let audioPlayer = self.audioPlayer {
-            audioPlayer.pause()
-            
-            self.destroyTimeObservers()
-            
-            self.audioPlayer = nil
-             
-            if !self.sourceIsVideo {
-                self.playerPromise.set(.single(nil))
             }
         }
     }

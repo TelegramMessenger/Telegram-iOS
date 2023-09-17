@@ -10017,3 +10017,5 @@ Sorry for the inconvenience.";
 "Stats.Boosts.OverviewHeader" = "OVERVIEW";
 "Stats.Boosts.LinkHeader" = "LINK FOR BOOSTING";
 "Stats.Boosts.LinkInfo" = "Share this link with your subscribers to get more boosts.";
+
+"Conversation.SaveToFiles" = "Save to Files";

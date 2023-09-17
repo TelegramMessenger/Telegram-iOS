@@ -760,9 +760,11 @@ final class MediaEditorScreenComponent: Component {
                         if controller.isEditingStory {
                             controller.requestCompletion(animated: true)
                         } else {
-                            controller.openPrivacySettings(completion: { [weak controller] in
-                                controller?.requestCompletion(animated: true)
-                            })
+                            if controller.checkIfCompletionIsAllowed() {
+                                controller.openPrivacySettings(completion: { [weak controller] in
+                                    controller?.requestCompletion(animated: true)
+                                })
+                            }
                         }
                     }
                 )),
@@ -3101,7 +3103,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
         
         func presentAudioPicker() {
             var isSettingTrack = false
-            self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3"], forceDarkTheme: true, dismissed: { [weak self] in
+            self.controller?.present(legacyICloudFilePicker(theme: self.presentationData.theme, mode: .import, documentTypes: ["public.mp3", "public.mpeg-4-audio", "public.aac-audio"], forceDarkTheme: true, dismissed: { [weak self] in
                 if let self {
                     Queue.mainQueue().after(0.1) {
                         if !isSettingTrack {
@@ -4188,6 +4190,24 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             self.present(controller, in: .window(.root))
         })
     }
+    
+    fileprivate func presentUnavailableReactionPremiumSuggestion(file: TelegramMediaFile) {
+        self.hapticFeedback.error()
+        
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, position: .top, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
+            if case .info = action, let self {
+                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                self.push(controller)
+            }
+            return false
+        })
+        self.present(controller, in: .window(.root))
+    }
 
     fileprivate func presentCaptionLimitPremiumSuggestion(isPremium: Bool) {
         self.dismissAllTooltips()
@@ -4439,6 +4459,19 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }
             })
             return false
+        }
+        return true
+    }
+    
+    func checkIfCompletionIsAllowed() -> Bool {
+        if !self.context.isPremium {
+            let entities = self.node.entitiesView.entities.filter { !($0 is DrawingMediaEntity) }
+            for entity in entities {
+                if let stickerEntity = entity as? DrawingStickerEntity, case let .file(file, type) = stickerEntity.content, case let .reaction(reaction, _) = type, case .custom = reaction {
+                    self.presentUnavailableReactionPremiumSuggestion(file: file)
+                    return false
+                }
+            }
         }
         return true
     }

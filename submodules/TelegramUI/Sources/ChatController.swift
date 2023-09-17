@@ -4536,9 +4536,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 var file: TelegramMediaFile?
+                var title: String?
+                var performer: String?
                 for media in message.media {
                     if let mediaFile = media as? TelegramMediaFile, mediaFile.isMusic {
                         file = mediaFile
+                        for attribute in mediaFile.attributes {
+                            if case let .Audio(_, _, titleValue, performerValue, _) = attribute {
+                                if let titleValue, !titleValue.isEmpty {
+                                    title = titleValue
+                                }
+                                if let performerValue, !performerValue.isEmpty {
+                                    performer = performerValue
+                                }
+                            }
+                        }
                     }
                 }
                 guard let file else {
@@ -4602,28 +4614,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let audioUrl = URL(fileURLWithPath: symlinkPath)
                             let audioAsset = AVURLAsset(url: audioUrl)
+                            
+                            var fileExtension = "mp3"
+                            if let filename = file.fileName {
+                                if let dotIndex = filename.lastIndex(of: ".") {
+                                    fileExtension = String(filename[filename.index(after: dotIndex)...])
+                                }
+                            }
+                            
                             var nameComponents: [String] = []
-                            var artist: String?
-                            var title: String?
-                            for data in audioAsset.commonMetadata {
-                                if data.commonKey == .commonKeyArtist {
-                                    artist = data.stringValue
+                            if let title {
+                                if let performer {
+                                    nameComponents.append(performer)
                                 }
-                                if data.commonKey == .commonKeyTitle {
-                                    title = data.stringValue
-                                }
-                            }
-                            if let artist, !artist.isEmpty {
-                                nameComponents.append(artist)
-                            }
-                            if let title, !title.isEmpty {
                                 nameComponents.append(title)
+                            } else {
+                                var artist: String?
+                                var title: String?
+                                for data in audioAsset.commonMetadata {
+                                    if data.commonKey == .commonKeyArtist {
+                                        artist = data.stringValue
+                                    }
+                                    if data.commonKey == .commonKeyTitle {
+                                        title = data.stringValue
+                                    }
+                                }
+                                if let artist, !artist.isEmpty {
+                                    nameComponents.append(artist)
+                                }
+                                if let title, !title.isEmpty {
+                                    nameComponents.append(title)
+                                }
+                                if nameComponents.isEmpty, var filename = file.fileName {
+                                    if let dotIndex = filename.lastIndex(of: ".") {
+                                        filename = String(filename[..<dotIndex])
+                                    }
+                                    nameComponents.append(filename)
+                                }
                             }
                             if !nameComponents.isEmpty {
                                 try? FileManager.default.removeItem(atPath: symlinkPath)
                                 
-                                let filename = "\(nameComponents.joined(separator: " – ")).mp3"
-                                symlinkPath = symlinkPath.replacingOccurrences(of: audioUrl.lastPathComponent, with: filename)
+                                let fileName = "\(nameComponents.joined(separator: " – ")).\(fileExtension)"
+                                symlinkPath = symlinkPath.replacingOccurrences(of: audioUrl.lastPathComponent, with: fileName)
                                 let _ = try? FileManager.default.linkItem(atPath: data.path, toPath: symlinkPath)
                             }
                             
