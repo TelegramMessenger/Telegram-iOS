@@ -184,6 +184,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         self.imageNode.isHidden = false
                         self.didSetUpAnimationNode = false
                     }
+                    self.imageNode.isHidden = false
                     self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
                 }
@@ -489,15 +490,23 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                     self.stickerEntity.content = .file(animation, .reaction(updateReaction.reaction, style))
                 }
                 
-                if let animationNode = self.animationNode, let snapshot = animationNode.view.snapshotView(afterScreenUpdates: false) {
-                    snapshot.frame = animationNode.frame
-                    snapshot.layer.transform = animationNode.transform
+                var nodeToTransitionOut: ASDisplayNode?
+                if let animationNode = self.animationNode {
+                    nodeToTransitionOut = animationNode
+                } else if !self.imageNode.isHidden {
+                    nodeToTransitionOut = self.imageNode
+                }
+                
+                if let nodeToTransitionOut, let snapshot = nodeToTransitionOut.view.snapshotView(afterScreenUpdates: false) {
+                    snapshot.frame = nodeToTransitionOut.frame
+                    snapshot.layer.transform = nodeToTransitionOut.transform
                     snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                         snapshot.removeFromSuperview()
                     })
                     snapshot.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
                     self.addSubview(snapshot)
                 }
+                
                 self.animationNode?.removeFromSupernode()
                 self.animationNode = nil
                 self.didSetUpAnimationNode = false
@@ -508,8 +517,17 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 self.applyVisibility()
                 self.setNeedsLayout()
                 
-                self.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                self.animationNode?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                let nodeToTransitionIn: ASDisplayNode?
+                if let animationNode = self.animationNode {
+                    nodeToTransitionIn = animationNode
+                } else {
+                    nodeToTransitionIn = self.imageNode
+                }
+                
+                if let nodeToTransitionIn {
+                    nodeToTransitionIn.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    nodeToTransitionIn.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
                 
                 let _ = self.dismissReactionSelection()
             }
