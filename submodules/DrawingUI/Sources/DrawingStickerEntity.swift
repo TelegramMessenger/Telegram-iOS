@@ -353,6 +353,9 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
+                if self.isReaction {
+                    animationNode.cornerRadius = floor(imageSize.width * 0.03)
+                }
                 animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)
                 
@@ -363,10 +366,9 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             }
             
             if let videoNode = self.videoNode {
-                let videoSize = self.dimensions.aspectFitted(boundingSize)
-                videoNode.cornerRadius = floor(videoSize.width * 0.03)
-                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - videoSize.width) * 0.5), y: floor((size.height - videoSize.height) * 0.5)), size: videoSize)
-                videoNode.updateLayout(size: videoSize, transition: .immediate)
+                videoNode.cornerRadius = floor(imageSize.width * 0.03)
+                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
+                videoNode.updateLayout(size: imageSize, transition: .immediate)
             }
             
             self.update(animated: false)
