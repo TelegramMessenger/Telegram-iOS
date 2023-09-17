@@ -58,11 +58,17 @@ private final class InfoButtonNode: HighlightableButtonNode {
 }
 
 public class ChatMessageForwardInfoNode: ASDisplayNode {
+    public enum StoryType {
+        case regular
+        case expired
+        case unavailable
+    }
+    
     public struct StoryData: Equatable {
-        public var isExpired: Bool
+        public var storyType: StoryType
         
-        public init(isExpired: Bool) {
-            self.isExpired = isExpired
+        public init(storyType: StoryType) {
+            self.storyType = storyType
         }
     }
     
@@ -159,10 +165,13 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         
                         if let storyData = storyData {
-                            if storyData.isExpired {
-                                completeSourceString = strings.Message_ForwardedExpiredStoryShort(peerString)
-                            } else {
+                            switch storyData.storyType {
+                            case .regular:
                                 completeSourceString = strings.Message_ForwardedStoryShort(peerString)
+                            case .expired:
+                                completeSourceString = strings.Message_ForwardedExpiredStoryShort(peerString)
+                            case .unavailable:
+                                completeSourceString = strings.Message_ForwardedUnavailableStoryShort(peerString)
                             }
                         } else {
                             completeSourceString = strings.Message_ForwardedMessageShort(peerString)
@@ -251,8 +260,13 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
             infoWidth += leftOffset
             
             var cutout: TextNodeCutout?
-            if let storyData, storyData.isExpired {
-                cutout = TextNodeCutout(topLeft: CGSize(width: 16.0, height: 10.0))
+            if let storyData {
+                switch storyData.storyType {
+                case .regular, .unavailable:
+                    break
+                case .expired:
+                    cutout = TextNodeCutout(topLeft: CGSize(width: 16.0, height: 10.0))
+                }
             }
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth - infoWidth, height: constrainedSize.height), alignment: .natural, cutout: cutout, insets: UIEdgeInsets()))
@@ -273,7 +287,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                 }
                 textNode.frame = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: textLayout.size)
                 
-                if let storyData, storyData.isExpired {
+                if let storyData, case .expired = storyData.storyType {
                     let expiredStoryIconView: UIImageView
                     if let current = node.expiredStoryIconView {
                         expiredStoryIconView = current

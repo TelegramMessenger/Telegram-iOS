@@ -138,9 +138,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     titleString = arguments.strings.User_DeletedAccount
                 }
                 isText = false
+                
+                var hideStory = false
+                if let peer = arguments.parentMessage.peers[story.peerId] as? TelegramChannel, peer.username == nil, peer.usernames.isEmpty {
+                    switch peer.participationStatus {
+                    case .member:
+                        break
+                    case .kicked, .left:
+                        hideStory = true
+                    }
+                }
+                
                 if let storyItem = arguments.parentMessage.associatedStories[story], storyItem.data.isEmpty {
                     isExpiredStory = true
                     textString = NSAttributedString(string: arguments.strings.Chat_ReplyExpiredStory)
+                    isMedia = false
+                } else if hideStory {
+                    isExpiredStory = true
+                    textString = NSAttributedString(string: arguments.strings.Chat_ReplyStoryPrivateChannel)
                     isMedia = false
                 } else {
                     isStory = true
