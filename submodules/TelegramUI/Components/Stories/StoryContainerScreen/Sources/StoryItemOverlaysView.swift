@@ -197,7 +197,7 @@ public func storyPreviewWithAddedReactions(
                         let itemSize = CGSize(width: minSide, height: minSide)
                         
                         if let (_, maybeImage) = reactionsData.first(where: { $0.0 == reaction }), let image = maybeImage {
-                            var imageFrame = itemSize.centered(around: targetFrame.center.offsetBy(dx: 0.0, dy: -targetFrame.height * 0.05))
+                            var imageFrame = itemSize.centered(around: targetFrame.center.offsetBy(dx: -targetFrame.height * 0.015, dy: -targetFrame.height * 0.05))
                             if case .builtin = reaction {
                                 imageFrame = imageFrame.insetBy(dx: -imageFrame.width * 0.5, dy: -imageFrame.height * 0.5)
                             }
@@ -486,7 +486,7 @@ final class StoryItemOverlaysView: UIView {
                     counterFractionOffset = 0.0
                     stickerScale = 1.0
                 }
-                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.5, y: size.height * (0.47 + counterFractionOffset)))
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.49, y: size.height * (0.47 + counterFractionOffset)))
                 
                 stickerTransition.setPosition(view: customEmojiView, position: stickerFrame.center)
                 stickerTransition.setBounds(view: customEmojiView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
@@ -511,7 +511,7 @@ final class StoryItemOverlaysView: UIView {
                     counterFractionOffset = 0.0
                     stickerScale = 1.0
                 }
-                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.5, y: size.height * (0.47 + counterFractionOffset)))
+                let stickerFrame = itemSize.centered(around: CGPoint(x: size.width * 0.49, y: size.height * (0.47 + counterFractionOffset)))
                 
                 stickerTransition.setPosition(view: directStickerView, position: stickerFrame.center)
                 stickerTransition.setBounds(view: directStickerView, bounds: CGRect(origin: CGPoint(), size: stickerFrame.size))
