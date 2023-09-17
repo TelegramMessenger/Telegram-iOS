@@ -1574,6 +1574,9 @@ public final class StoryItemSetContainerComponent: Component {
                                 self.visibleItems.removeValue(forKey: itemId)
                                 visibleItem.contentContainerView.removeFromSuperview()
                                 visibleItem.unclippedContainerView.removeFromSuperview()
+                                visibleItem.contentTintLayer.removeFromSuperlayer()
+                                visibleItem.footerPanel?.view?.removeFromSuperview()
+                                visibleItem.contentViewsShadowView?.removeFromSuperview()
                             }
                         })
                         itemTransition.setBounds(view: visibleItem.contentContainerView, bounds: CGRect(origin: CGPoint(), size: itemLayout.contentFrame.size))

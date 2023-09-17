@@ -545,21 +545,26 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
         
         reactionContextNode.premiumReactionsSelected = { [weak self] file in
-            guard let self, let file else {
+            guard let self else {
                 return
             }
-                        
-            let context = self.context
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                
-            let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
-                if case .info = action, let self {
-                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
-                    self.containerView?.push(controller)
-                }
-                return false
-            })
-            self.containerView?.present(controller)
+
+            if let file {
+                let context = self.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
+                    if case .info = action, let self {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                        self.containerView?.push(controller)
+                    }
+                    return false
+                })
+                self.containerView?.present(controller)
+            } else {
+                let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                self.containerView?.push(controller)
+            }
         }
         
         let anchorRect = self.convert(self.bounds, to: superview).offsetBy(dx: 0.0, dy: -20.0)

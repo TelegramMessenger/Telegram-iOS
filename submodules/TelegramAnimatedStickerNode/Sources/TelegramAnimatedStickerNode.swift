@@ -40,7 +40,7 @@ public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource
         } else if let path = getAppBundle().path(forResource: self.name, ofType: "json") {
             return path
         } else {
-            return nil
+            return self.name
         }
     }
 }

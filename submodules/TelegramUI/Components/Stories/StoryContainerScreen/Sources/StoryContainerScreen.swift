@@ -1394,7 +1394,6 @@ private final class StoryContainerScreenComponent: Component {
                         
                         itemSetView.view.parentState = self.state
                         
-                        let startTime = CFAbsoluteTimeGetCurrent()
                         let _ = itemSetView.view.update(
                             transition: itemSetTransition,
                             component: AnyComponent(StoryItemSetContainerComponent(
@@ -1538,7 +1537,7 @@ private final class StoryContainerScreenComponent: Component {
                         if let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             if itemSetView.superview == nil {
                                 self.addSubview(itemSetView)
-                                print("init time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
+                                //print("init time: \((CFAbsoluteTimeGetCurrent() - startTime) * 1000.0) ms")
                             }
                             if itemSetComponentView.superview == nil {
                                 itemSetView.tintLayer.isDoubleSided = false

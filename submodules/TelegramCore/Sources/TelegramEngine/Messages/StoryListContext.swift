@@ -584,6 +584,18 @@ public final class PeerStoryListContext {
                                 }
                             }
                         }
+                        for mediaArea in mappedItem.mediaAreas {
+                            if case let .reaction(_, reaction, _) = mediaArea {
+                                if case let .custom(fileId) = reaction {
+                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                    if allEntityFiles[mediaId] == nil {
+                                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                            allEntityFiles[file.fileId] = file
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 

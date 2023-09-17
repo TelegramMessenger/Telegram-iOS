@@ -563,7 +563,11 @@ public final class PeerListItemComponent: Component {
             }
             
             let availableTextWidth = availableSize.width - leftInset - rightInset
-            let titleAvailableWidth = component.style == .compact ? availableTextWidth * 0.7 : availableSize.width - leftInset - rightInset
+            var titleAvailableWidth = component.style == .compact ? availableTextWidth * 0.7 : availableSize.width - leftInset - rightInset
+            if case .none = component.rightAccessory {
+            } else {
+                titleAvailableWidth -= 20.0
+            }
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(

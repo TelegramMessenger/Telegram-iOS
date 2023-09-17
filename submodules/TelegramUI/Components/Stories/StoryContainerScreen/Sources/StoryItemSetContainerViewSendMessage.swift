@@ -3328,7 +3328,7 @@ final class StoryItemSetContainerSendMessage {
                     view.standaloneReactionAnimation = nil
                     
                     let standaloneReactionAnimationView = standaloneReactionAnimation.view
-                    standaloneReactionAnimation.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak standaloneReactionAnimationView] _ in
+                    standaloneReactionAnimation.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimationView] _ in
                         standaloneReactionAnimationView?.removeFromSuperview()
                     })
                 }
