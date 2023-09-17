@@ -242,8 +242,8 @@ private class TimerPickerItemView: UIView {
         if let (value, _) = self.value, value == viewOnceTimeout {
             self.valueLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.frame.width - self.valueLabel.frame.size.width) / 2.0), y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
         } else {
-            self.valueLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 20.0 - self.valueLabel.frame.size.width, y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
-            self.unitLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 12.0, y: floor((self.frame.height - self.unitLabel.frame.height) / 2.0) + 2.0), size: self.unitLabel.frame.size)
+            self.valueLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 28.0 - self.valueLabel.frame.size.width, y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
+            self.unitLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 20.0, y: floor((self.frame.height - self.unitLabel.frame.height) / 2.0) + 2.0), size: self.unitLabel.frame.size)
         }
     }
 }
