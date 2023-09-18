@@ -15,7 +15,7 @@ enum ExportWriterStatus {
 
 protocol MediaEditorVideoExportWriter {
     func setup(configuration: MediaEditorVideoExport.Configuration, outputPath: String)
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, sourceFrameRate: Float)
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, preferredTransform: CGAffineTransform?, sourceFrameRate: Float)
     func setupAudioInput(configuration: MediaEditorVideoExport.Configuration)
     
     func startWriting() -> Bool
@@ -62,25 +62,38 @@ public final class MediaEditorVideoAVAssetWriter: MediaEditorVideoExportWriter {
         Logger.shared.log("VideoExport", "Did setup asset writer")
     }
     
-    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, sourceFrameRate: Float) {
+    func setupVideoInput(configuration: MediaEditorVideoExport.Configuration, preferredTransform: CGAffineTransform?, sourceFrameRate: Float) {
         guard let writer = self.writer else {
             return
         }
         
         Logger.shared.log("VideoExport", "Will setup video input")
         
+        var dimensions = configuration.dimensions
         var videoSettings = configuration.videoSettings
         if var compressionSettings = videoSettings[AVVideoCompressionPropertiesKey] as? [String: Any] {
             compressionSettings[AVVideoExpectedSourceFrameRateKey] = sourceFrameRate
             videoSettings[AVVideoCompressionPropertiesKey] = compressionSettings
         }
+        if let preferredTransform {
+            if (preferredTransform.b == -1 && preferredTransform.c == 1) || (preferredTransform.b == 1 && preferredTransform.c == -1) {
+                dimensions = CGSize(width: dimensions.height, height: dimensions.width)
+            }
+            videoSettings[AVVideoWidthKey] = Int(dimensions.width)
+            videoSettings[AVVideoHeightKey] = Int(dimensions.height)
+        }
         
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
+        if let preferredTransform {
+            videoInput.transform = preferredTransform
+           
+        }
         videoInput.expectsMediaDataInRealTime = false
+
         let sourcePixelBufferAttributes = [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
-            kCVPixelBufferWidthKey as String: UInt32(configuration.dimensions.width),
-            kCVPixelBufferHeightKey as String: UInt32(configuration.dimensions.height)
+            kCVPixelBufferWidthKey as String: UInt32(dimensions.width),
+            kCVPixelBufferHeightKey as String: UInt32(dimensions.height)
         ]
         self.adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: sourcePixelBufferAttributes)
         
@@ -221,7 +234,7 @@ public final class MediaEditorVideoExport {
         
         var audioTimeRange: CMTimeRange? {
             if let audioTrack = self.values.audioTrack {
-                let offset = self.values.audioTrackOffset ?? 0.0
+                let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
                 if let range = self.values.audioTrackTrimRange {
                     return CMTimeRange(
                         start: CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
@@ -240,7 +253,8 @@ public final class MediaEditorVideoExport {
         
         var audioStartTime: CMTime {
             if let range = self.values.audioTrackTrimRange {
-                return CMTime(seconds: range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                let offset = -min(0.0, self.values.audioTrackOffset ?? 0.0)
+                return CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
             } else {
                 return .zero
             }
@@ -410,9 +424,11 @@ public final class MediaEditorVideoExport {
                 print("error")
                 return
             }
-        
+            videoTrack.preferredTransform = videoAssetTrack.preferredTransform
+            
             let timeRange: CMTimeRange = CMTimeRangeMake(start: .zero, duration: duration)
             try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
+            
             if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid), !self.configuration.values.videoIsMuted {
                 try? audioTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: .zero)
             }
@@ -483,7 +499,15 @@ public final class MediaEditorVideoExport {
                 kCVPixelBufferMetalCompatibilityKey as String: true,
                 AVVideoColorPropertiesKey: colorProperties
             ]
-            if let videoTrack = videoTracks.first, videoTrack.preferredTransform.isIdentity && !self.configuration.values.requiresComposing {
+            
+            let originalDimensions = self.configuration.values.originalDimensions
+            var isNotFullscreen = false
+            if case .video(_, true) = self.subject, originalDimensions.width > 0 && abs((Double(originalDimensions.height) / Double(originalDimensions.width)) - 1.7777778) > 0.001 {
+                isNotFullscreen = true
+            }
+            var preferredTransform: CGAffineTransform?
+            if let videoTrack = videoTracks.first, !self.configuration.values.requiresComposing && !isNotFullscreen {
+                preferredTransform = videoTrack.preferredTransform
             } else {
                 self.setupComposer()
             }
@@ -517,7 +541,7 @@ public final class MediaEditorVideoExport {
             } else {
                 sourceFrameRate = 30.0
             }
-            writer.setupVideoInput(configuration: self.configuration, sourceFrameRate: sourceFrameRate)
+            writer.setupVideoInput(configuration: self.configuration, preferredTransform: preferredTransform, sourceFrameRate: sourceFrameRate)
         } else {
             self.videoOutput = nil
         }
@@ -558,7 +582,7 @@ public final class MediaEditorVideoExport {
             return
         }
         writer.setup(configuration: self.configuration, outputPath: self.outputPath)
-        writer.setupVideoInput(configuration: self.configuration, sourceFrameRate: 30.0)
+        writer.setupVideoInput(configuration: self.configuration, preferredTransform: nil, sourceFrameRate: 30.0)
                 
         if let audioData = self.configuration.values.audioTrack {
             let mixComposition = AVMutableComposition()

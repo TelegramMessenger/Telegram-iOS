@@ -191,6 +191,12 @@ final class VideoScrubberComponent: Component {
         
         override init(frame: CGRect) {
             self.audioScrollView = UIScrollView()
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+                self.audioScrollView.contentInsetAdjustmentBehavior = .never
+            }
+            if #available(iOS 13.0, *) {
+                self.audioScrollView.automaticallyAdjustsScrollIndicatorInsets = false
+            }
             self.audioScrollView.bounces = false
             self.audioScrollView.decelerationRate = .fast
             self.audioScrollView.clipsToBounds = false
@@ -530,6 +536,8 @@ final class VideoScrubberComponent: Component {
             let totalWidth = scrubberSize.width - handleWidth
             var audioTotalWidth = scrubberSize.width
             
+            let minimalAudioWidth = handleWidth * 2.0
+            
             var originY: CGFloat = 0
             var totalHeight = scrubberSize.height
             var audioAlpha: CGFloat = 0.0
@@ -553,7 +561,9 @@ final class VideoScrubberComponent: Component {
                 }
                 if trimDuration > 0.0 {
                     let audioFraction = audioData.duration / trimDuration
-                    audioTotalWidth = ceil(totalWidth * audioFraction)
+                    if audioFraction < 1.0 - .ulpOfOne || audioFraction > 1.0 + .ulpOfOne {
+                        audioTotalWidth = max(minimalAudioWidth, ceil(totalWidth * audioFraction))
+                    }
                 }
             } else {
                 self.isAudioSelected = false
@@ -575,8 +585,18 @@ final class VideoScrubberComponent: Component {
                     }
                     
                     let fraction = duration / component.duration
-                    deselectedAudioClipWidth = availableSize.width * fraction
+                    deselectedAudioClipWidth = max(minimalAudioWidth, availableSize.width * fraction)
                     deselectedAudioClipOrigin = (audioData.start ?? 0.0) / component.duration * availableSize.width
+                    
+                    if self.audioScrollView.contentOffset.x < 0.0 {
+                        deselectedAudioClipOrigin -= self.audioScrollView.contentOffset.x
+                        if self.audioScrollView.contentSize.width > self.audioScrollView.frame.width {
+                            deselectedAudioClipWidth += self.audioScrollView.contentOffset.x
+                        }
+                    } else if self.audioScrollView.contentSize.width > self.audioScrollView.frame.width, self.audioScrollView.contentOffset.x > self.audioScrollView.contentSize.width - self.audioScrollView.frame.width {
+                        let delta = self.audioScrollView.contentOffset.x - (self.audioScrollView.contentSize.width - self.audioScrollView.frame.width)
+                        deselectedAudioClipWidth -= delta
+                    }
                 }
             }
             
@@ -595,12 +615,26 @@ final class VideoScrubberComponent: Component {
             audioTransition.setBounds(view: self.audioClippingView, bounds: audioClippingBounds)
             
             self.audioScrollView.isUserInteractionEnabled = self.isAudioSelected || component.audioOnly
-            audioTransition.setFrame(view: self.audioScrollView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: availableSize.width, height: audioScrubberHeight)))
             
-            let contentSize = CGSize(width: audioTotalWidth, height: audioScrubberHeight)
             self.ignoreScrollUpdates = true
+            
+            let audioScrollFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: audioScrubberHeight))
+            audioTransition.setFrame(view: self.audioScrollView, frame: audioScrollFrame)
+            
+            let contentSize = CGSize(width: audioTotalWidth, height: 39.0)
             if self.audioScrollView.contentSize != contentSize {
                 self.audioScrollView.contentSize = contentSize
+                if !component.audioOnly {
+                    let leftInset = scrubberSize.width
+                    let rightInset: CGFloat
+                    if self.audioScrollView.contentSize.width > self.audioScrollView.frame.width {
+                        rightInset = scrubberSize.width
+                    } else {
+                        rightInset = self.audioScrollView.frame.width - self.audioScrollView.contentSize.width
+                    }
+                    self.audioScrollView.contentInset = UIEdgeInsets(top: 0.0, left: leftInset, bottom: 0.0, right: rightInset)
+                }
+                self.audioScrollView.contentOffset = .zero
             }
             
             if isFirstTime, let offset = component.audioData?.offset, let duration = component.audioData?.duration, duration > 0.0 {
@@ -789,10 +823,24 @@ final class VideoScrubberComponent: Component {
                     endPosition = end
                 }
             }
+            
+            var trimViewOffset: CGFloat = 0.0
+            var trimViewVisualInsets: UIEdgeInsets = .zero
+            if self.isAudioSelected {
+                if self.audioScrollView.contentOffset.x < 0.0 {
+                    trimViewOffset = -self.audioScrollView.contentOffset.x
+                    trimViewVisualInsets.right = trimViewOffset
+                } else if self.audioScrollView.contentSize.width > self.audioScrollView.frame.width, self.audioScrollView.contentOffset.x > self.audioScrollView.contentSize.width - self.audioScrollView.frame.width {
+                    let delta = self.audioScrollView.contentOffset.x - (self.audioScrollView.contentSize.width - self.audioScrollView.frame.width)
+                    trimViewOffset = -delta
+                    trimViewVisualInsets.left = delta
+                }
+            }
                         
             self.trimView.isHollow = self.isAudioSelected || component.audioOnly
             let (leftHandleFrame, rightHandleFrame) = self.trimView.update(
                 totalWidth: totalWidth,
+                visualInsets: trimViewVisualInsets,
                 scrubberSize: scrubberSize,
                 duration: trimDuration,
                 startPosition: startPosition,
@@ -805,6 +853,7 @@ final class VideoScrubberComponent: Component {
             
             let (ghostLeftHandleFrame, ghostRightHandleFrame) = self.ghostTrimView.update(
                 totalWidth: totalWidth,
+                visualInsets: .zero,
                 scrubberSize: CGSize(width: scrubberSize.width, height: collapsedScrubberHeight),
                 duration: component.duration,
                 startPosition: component.startPosition,
@@ -852,7 +901,8 @@ final class VideoScrubberComponent: Component {
                 self.updateCursorPosition()
             }
             
-            videoTransition.setFrame(view: self.trimView, frame: bounds.offsetBy(dx: 0.0, dy: self.isAudioSelected ? 0.0 : originY))
+            let trimViewFrame = CGRect(origin: CGPoint(x: trimViewOffset, y: self.isAudioSelected ? 0.0 : originY), size: bounds.size)
+            videoTransition.setFrame(view: self.trimView, frame: trimViewFrame)
             
             videoTransition.setFrame(view: self.ghostTrimView, frame: bounds.offsetBy(dx: 0.0, dy: originY))
             videoTransition.setAlpha(view: self.ghostTrimView, alpha: self.isAudioSelected ? 0.75 : 0.0)
@@ -1124,6 +1174,7 @@ private class TrimView: UIView {
     
     func update(
         totalWidth: CGFloat,
+        visualInsets: UIEdgeInsets,
         scrubberSize: CGSize,
         duration: Double,
         startPosition: Double,
@@ -1144,13 +1195,15 @@ private class TrimView: UIView {
         let leftHandlePositionFraction = duration > 0.0 ? startPosition / duration : 0.0
         let leftHandlePosition = floorToScreenPixels(handleWidth / 2.0 + totalWidth * leftHandlePositionFraction)
         
-        let leftHandleFrame = CGRect(origin: CGPoint(x: leftHandlePosition - handleWidth / 2.0, y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
+        var leftHandleFrame = CGRect(origin: CGPoint(x: leftHandlePosition - handleWidth / 2.0, y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
+        leftHandleFrame.origin.x = max(leftHandleFrame.origin.x, visualInsets.left)
         transition.setFrame(view: self.leftHandleView, frame: leftHandleFrame)
 
         let rightHandlePositionFraction = duration > 0.0 ? endPosition / duration : 1.0
         let rightHandlePosition = floorToScreenPixels(handleWidth / 2.0 + totalWidth * rightHandlePositionFraction)
         
-        let rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
+        var rightHandleFrame = CGRect(origin: CGPoint(x: max(leftHandleFrame.maxX, rightHandlePosition - handleWidth / 2.0), y: 0.0), size: CGSize(width: handleWidth, height: scrubberSize.height))
+        rightHandleFrame.origin.x = min(rightHandleFrame.origin.x, totalWidth - visualInsets.right)
         transition.setFrame(view: self.rightHandleView, frame: rightHandleFrame)
         
         let capsuleSize = CGSize(width: 2.0, height: 11.0)

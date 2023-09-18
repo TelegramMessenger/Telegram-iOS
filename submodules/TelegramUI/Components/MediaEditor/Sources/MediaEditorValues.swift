@@ -1087,10 +1087,10 @@ public extension MediaEditorValues {
     }
     
     var requiresComposing: Bool {
-        if self.originalDimensions.width > 0 && abs((Double(self.originalDimensions.height) / Double(self.originalDimensions.width)) - 1.7777778) > 0.001 {
+        if abs(1.0 - self.cropScale) > 0.0 {
             return true
         }
-        if abs(1.0 - self.cropScale) > 0.0 {
+        if self.cropRect != nil {
             return true
         }
         if self.cropOffset != .zero {

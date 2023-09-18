@@ -791,7 +791,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     let errorText: String
                     switch error {
                     case .generic:
-                        errorText = "The folder link has expired."
+                        errorText = presentationData.strings.Chat_ErrorFolderLinkExpired
                     }
                     present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }))
@@ -877,7 +877,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     case .ok:
                         updateImpl?()
                     case let .replace(previousPeer):
-                        let text = "You currently boost **\(previousPeer.compactDisplayTitle)**. Do you want to boost **\(peer.compactDisplayTitle)** instead?"
+                        let text = presentationData.strings.ChannelBoost_ReplaceBoost(previousPeer.compactDisplayTitle, peer.compactDisplayTitle).string
                         let controller = replaceBoostConfirmationController(context: context, fromPeer: previousPeer, toPeer: peer, text: text, commit: {
                             updateImpl?()
                         })
@@ -895,16 +895,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             title = nil
                             text = presentationData.strings.Login_UnknownError
                         case let .floodWait(timeout):
-                            title = "Can't Boost Too Often"
+                            title = presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle
                             let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
-                            text = "You can change the channel you boost only once a day. Next time you can boost is in **\(valueText)**."
+                            text = presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string
                             dismiss = true
-                        case .peerBoostAlreadyActive:
-                            title = "Already Boosted"
-                            text = "You are already boosting this channel."
                         case .premiumRequired:
-                            title = "Premium Needed"
-                            text = "Only **Telegram Premium** subscribers can boost channels. Do you want to subscribe to **Telegram Premium**?"
+                            title = presentationData.strings.ChannelBoost_Error_PremiumNeededTitle
+                            text = presentationData.strings.ChannelBoost_Error_PremiumNeededText
                             actions = [
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
@@ -914,9 +911,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 })
                             ]
                         case .giftedPremiumNotAllowed:
-                            title = "Can't Boost with Gifted Premium"
-                            text = "Because your **Telegram Premium** subscription was gifted to you, you can't use it to boost channels."
+                            title = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedTitle
+                            text = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedText
                             dismiss = true
+                        case .peerBoostAlreadyActive:
+                            return true
                         }
                         
                         let controller = textAlertController(sharedContext: context.sharedContext, title: title, text: text, actions: actions, parseMarkdown: true)
@@ -930,8 +929,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 navigationController?.pushViewController(controller)
                 
                 updateImpl = { [weak controller] in
-                    let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
-                    controller?.updateSubject(nextSubject, count: nextCount)
+                    if let _ = status.nextLevelBoosts {
+                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
+                        controller?.updateSubject(nextSubject, count: nextCount)
+                    } else {
+                        controller?.dismiss()
+                    }
                 }
                 dismissImpl = { [weak controller] in
                     controller?.dismiss()

@@ -31,7 +31,18 @@ public func makeTelegramAccountAuxiliaryMethods(uploadInBackground: ((Postbox, M
                 return fetchVideoLibraryMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
             }
         } else if let resource = resource as? LocalFileVideoMediaResource {
-            return fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource)
+            return postbox.transaction { transaction -> Bool in
+                var useModernPipeline = true
+                let appConfig = currentAppConfiguration(transaction: transaction)
+                if let data = appConfig.data, let _ = data["ios_killswitch_disable_modern_video_pipeline"] {
+                    useModernPipeline = false
+                }
+                return useModernPipeline
+            }
+            |> castError(MediaResourceDataFetchError.self)
+            |> mapToSignal { useModernPipeline -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
+                fetchLocalFileVideoMediaResource(postbox: postbox, resource: resource, alwaysUseModernPipeline: useModernPipeline)
+            }
         } else if let resource = resource as? LocalFileGifMediaResource {
             return fetchLocalFileGifMediaResource(resource: resource)
         } else if let photoLibraryResource = resource as? PhotoLibraryMediaResource {

@@ -677,8 +677,9 @@ public final class MediaEditor {
                     if self.sourceIsVideo {
                         let audioTime = self.audioTime(for: targetTime)
                         if let audioDelay = self.audioDelay(for: targetTime) {
+                            self.audioPlayer?.pause()
                             self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                                self?.audioPlayer?.seek(to: audioTime)
+                                self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
                                 self?.audioPlayer?.play()
                             }, queue: Queue.mainQueue())
                             self.audioDelayTimer?.start()
@@ -866,7 +867,10 @@ public final class MediaEditor {
             time = .zero
         }
         let videoStart = self.values.videoTrimRange?.lowerBound ?? 0.0
-        let audioStart = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+        var audioStart = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+        if let offset = self.values.audioTrackOffset, offset < 0.0 {
+            audioStart -= offset
+        }
         if audioStart - videoStart > 0.0 {
             let delay = audioStart - time.seconds
             if delay > 0 {
@@ -883,12 +887,13 @@ public final class MediaEditor {
         }
         let seconds = time.seconds
         
-        let audioOffset = self.values.audioTrackOffset ?? 0.0
+        let offset = self.values.audioTrackOffset ?? 0.0
+        let audioOffset = max(0.0, offset)
         let audioStart = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
-        if seconds < audioStart {
+        if seconds < audioStart - min(0.0, offset) {
             return CMTime(seconds: audioOffset + audioStart, preferredTimescale: CMTimeScale(1000.0))
         } else {
-            return CMTime(seconds: audioOffset + seconds, preferredTimescale: CMTimeScale(1000.0))
+            return CMTime(seconds: audioOffset + seconds + min(0.0, offset), preferredTimescale: CMTimeScale(1000.0))
         }
     }
     
@@ -942,7 +947,8 @@ public final class MediaEditor {
             if let audioPlayer = self.audioPlayer {
                 if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
                     self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                        self?.audioPlayer?.setRate(rate, time: audioTime, atHostTime: futureTime)
+                        self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        self?.audioPlayer?.play()
                     }, queue: Queue.mainQueue())
                     self.audioDelayTimer?.start()
                 } else {
@@ -1121,27 +1127,13 @@ public final class MediaEditor {
         }
         
         if apply {
-            let offset = offset ?? 0.0
-            let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
-            
-            let audioTime: CMTime
-            if self.sourceIsVideo {
-                let time = self.player?.currentTime() ?? .zero
-                audioTime = self.audioTime(for: time)
-            } else {
-                audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
-            }
             self.updateAudioPlaybackRange()
-            self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
-            if !self.sourceIsVideo {
-                self.audioPlayer?.play()
-            }
         }
     }
     
     private func updateAudioPlaybackRange() {
         if let upperBound = self.values.audioTrackTrimRange?.upperBound {
-            let offset = self.values.audioTrackOffset ?? 0.0
+            let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
         } else {
             self.audioPlayer?.currentItem?.forwardPlaybackEndTime = .invalid
