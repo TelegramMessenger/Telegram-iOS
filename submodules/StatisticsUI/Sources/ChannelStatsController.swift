@@ -473,7 +473,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.contextAction(message.id, node, gesture)
                 })
             case let .booster(_, _, dateTimeFormat, peer, expires):
-                let expiresValue = stringForFullDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
+                let expiresValue = stringForMediumDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
                     arguments.openPeer(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
@@ -500,13 +500,13 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
+public enum ChannelStatsSection {
+    case stats
+    case boosts
+}
+
 private struct ChannelStatsControllerState: Equatable {
-    enum Section {
-        case stats
-        case boosts
-    }
-    
-    let section: Section
+    let section: ChannelStatsSection
     let boostersExpanded: Bool
   
     init() {
@@ -514,7 +514,7 @@ private struct ChannelStatsControllerState: Equatable {
         self.boostersExpanded = false
     }
     
-    init(section: Section, boostersExpanded: Bool) {
+    init(section: ChannelStatsSection, boostersExpanded: Bool) {
         self.section = section
         self.boostersExpanded = boostersExpanded
     }
@@ -529,7 +529,7 @@ private struct ChannelStatsControllerState: Equatable {
         return true
     }
     
-    func withUpdatedSection(_ section: Section) -> ChannelStatsControllerState {
+    func withUpdatedSection(_ section: ChannelStatsSection) -> ChannelStatsControllerState {
         return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded)
     }
     
@@ -682,9 +682,9 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
     return entries
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, statsDatacenterId: Int32?) -> ViewController {
-    let statePromise = ValuePromise(ChannelStatsControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: ChannelStatsControllerState())
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, statsDatacenterId: Int32?) -> ViewController {
+    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -717,7 +717,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     })
     dataPromise.set(.single(nil) |> then(dataSignal))
     
-    let boostData = context.engine.peers.getChannelBoostStatus(peerId: peerId)
+    let boostData: Signal<ChannelBoostStatus?, NoError>
+    if let boostStatus {
+        boostData = .single(boostStatus)
+    } else {
+        boostData = context.engine.peers.getChannelBoostStatus(peerId: peerId)
+    }
     let boostersContext = ChannelBoostersContext(account: context.account, peerId: peerId)
     
     var presentImpl: ((ViewController) -> Void)?

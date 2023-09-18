@@ -39,13 +39,17 @@ func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor
     })
 }
 
-private func generateBadgePath(rectSize: CGSize, tailPosition: CGFloat = 0.5) -> UIBezierPath {
+private func generateBadgePath(rectSize: CGSize, tailPosition: CGFloat? = 0.5) -> UIBezierPath {
     let cornerRadius: CGFloat = rectSize.height / 2.0
     let tailWidth: CGFloat = 20.0
     let tailHeight: CGFloat = 9.0
     let tailRadius: CGFloat = 4.0
 
     let rect = CGRect(origin: CGPoint(x: 0.0, y: tailHeight), size: rectSize)
+    
+    guard let tailPosition else {
+        return UIBezierPath(cgPath: CGPath(roundedRect: rect, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil))
+    }
 
     let path = UIBezierPath()
 
@@ -278,8 +282,8 @@ public class PremiumLimitDisplayComponent: Component {
         
         private let badgeForeground: SimpleLayer
         private let badgeIcon: UIImageView
-        private let badgeCountLabel: RollingLabel
-        private let countMaskView = UIImageView()
+        private let badgeLabel: BadgeLabelView
+        private let badgeLabelMaskView = UIImageView()
         
         private let hapticFeedback = HapticFeedback()
         
@@ -311,11 +315,9 @@ public class PremiumLimitDisplayComponent: Component {
             self.badgeIcon = UIImageView()
             self.badgeIcon.contentMode = .center
                         
-            self.badgeCountLabel = RollingLabel()
-            self.badgeCountLabel.font = Font.with(size: 24.0, design: .round, weight: .semibold, traits: [])
-            self.badgeCountLabel.textColor = .white
-            self.badgeCountLabel.configure(with: "0")
-            self.badgeCountLabel.mask = self.countMaskView
+            self.badgeLabel = BadgeLabelView()
+            let _ = self.badgeLabel.update(value: "0", transition: .immediate)
+            self.badgeLabel.mask = self.badgeLabelMaskView
             
             super.init(frame: frame)
             
@@ -327,10 +329,10 @@ public class PremiumLimitDisplayComponent: Component {
             self.addSubview(self.badgeView)
             self.badgeView.layer.addSublayer(self.badgeForeground)
             self.badgeView.addSubview(self.badgeIcon)
-            self.badgeView.addSubview(self.badgeCountLabel)
+            self.badgeView.addSubview(self.badgeLabel)
             
-            self.countMaskView.contentMode = .scaleToFill
-            self.countMaskView.image = generateImage(CGSize(width: 2.0, height: 48.0), rotatedContext: { size, context in
+            self.badgeLabelMaskView.contentMode = .scaleToFill
+            self.badgeLabelMaskView.image = generateImage(CGSize(width: 2.0, height: 36.0), rotatedContext: { size, context in
                 let bounds = CGRect(origin: .zero, size: size)
                 context.clear(bounds)
                 
@@ -339,9 +341,8 @@ public class PremiumLimitDisplayComponent: Component {
                     UIColor(rgb: 0xffffff).cgColor,
                     UIColor(rgb: 0xffffff).cgColor,
                     UIColor(rgb: 0xffffff, alpha: 0.0).cgColor,
-                    UIColor(rgb: 0xffffff, alpha: 0.0).cgColor
                 ]
-                var locations: [CGFloat] = [0.0, 0.11, 0.46, 0.57, 1.0]
+                var locations: [CGFloat] = [0.0, 0.24, 0.76, 1.0]
                 let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
 
                 context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
@@ -355,9 +356,16 @@ public class PremiumLimitDisplayComponent: Component {
         }
         
         private var didPlayAppearanceAnimation = false
-        func playAppearanceAnimation(component: PremiumLimitDisplayComponent, availableSize: CGSize, from: CGFloat? = nil) {
+        func playAppearanceAnimation(component: PremiumLimitDisplayComponent, badgeFullSize: CGSize, from: CGFloat? = nil) {
             if from == nil {
                 self.badgeView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.4, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
+            }
+            
+            let rotationAngle: CGFloat
+            if badgeFullSize.width > 100.0 {
+                rotationAngle = 0.2
+            } else {
+                rotationAngle = 0.26
             }
             
             let positionAnimation = CABasicAnimation(keyPath: "position.x")
@@ -370,7 +378,7 @@ public class PremiumLimitDisplayComponent: Component {
            
             let rotateAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
             rotateAnimation.fromValue = 0.0 as NSNumber
-            rotateAnimation.toValue = -0.26 as NSNumber
+            rotateAnimation.toValue = -rotationAngle as NSNumber
             rotateAnimation.duration = 0.15
             rotateAnimation.fillMode = .forwards
             rotateAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -379,7 +387,7 @@ public class PremiumLimitDisplayComponent: Component {
             
             Queue.mainQueue().after(0.5, {
                 let bounceAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                bounceAnimation.fromValue = -0.26 as NSNumber
+                bounceAnimation.fromValue = -rotationAngle as NSNumber
                 bounceAnimation.toValue = 0.04 as NSNumber
                 bounceAnimation.duration = 0.2
                 bounceAnimation.fillMode = .forwards
@@ -410,7 +418,13 @@ public class PremiumLimitDisplayComponent: Component {
             }
             
             if let badgeText = component.badgeText {
-                self.badgeCountLabel.configure(with: badgeText, increment: from != nil, duration: from != nil ? 0.3 : 0.5)
+                let transition: Transition = .easeInOut(duration: from != nil ? 0.3 : 0.5)
+                var frameTransition = transition
+                if from == nil {
+                    frameTransition = frameTransition.withAnimation(.none)
+                }
+                let badgeLabelSize = self.badgeLabel.update(value: badgeText, transition: transition)
+                frameTransition.setFrame(view: self.badgeLabel, frame: CGRect(origin: CGPoint(x: 14.0 + floorToScreenPixels((badgeFullSize.width - badgeLabelSize.width) / 2.0), y: 5.0), size: badgeLabelSize))
             }
         }
         
@@ -643,9 +657,7 @@ public class PremiumLimitDisplayComponent: Component {
             
             if badgePosition > 1.0 - 0.15 {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 1.0, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: 1.0).cgPath)
-                
-//                self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
+                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 1.0).cgPath)
                 
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
@@ -654,10 +666,8 @@ public class PremiumLimitDisplayComponent: Component {
                 }
             } else if badgePosition < 0.15 {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.0, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: 0.0).cgPath)
-                
-//                self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
-                
+                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.0).cgPath)
+                                
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
                 } else {
@@ -665,10 +675,8 @@ public class PremiumLimitDisplayComponent: Component {
                 }
             } else {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.5, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: 0.5).cgPath)
-                
-//                self.badgeMaskArrowView.isHidden = component.isPremiumDisabled
-                
+                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateBadgePath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.5).cgPath)
+                                
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
                 } else {
@@ -681,8 +689,7 @@ public class PremiumLimitDisplayComponent: Component {
             }
     
             self.badgeIcon.frame = CGRect(x: 10.0, y: 9.0, width: 30.0, height: 30.0)
-            self.badgeCountLabel.frame = CGRect(x: badgeFullSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
-            self.countMaskView.frame = CGRect(x: 0.0, y: 0.0, width: countWidth, height: 48.0)
+            self.badgeLabelMaskView.frame = CGRect(x: 0.0, y: 0.0, width: 100.0, height: 36.0)
             
             if component.isPremiumDisabled {
                 if !self.didPlayAppearanceAnimation {
@@ -690,7 +697,8 @@ public class PremiumLimitDisplayComponent: Component {
                     
                     self.badgeView.alpha = 1.0
                     if let badgeText = component.badgeText {
-                        self.badgeCountLabel.configure(with: badgeText, duration: 0.3)
+                        let badgeLabelSize = self.badgeLabel.update(value: badgeText, transition: .immediate)
+                        transition.setFrame(view: self.badgeLabel, frame: CGRect(origin: CGPoint(x: 14.0 + floorToScreenPixels((badgeFullSize.width - badgeLabelSize.width) / 2.0), y: 5.0), size: badgeLabelSize))
                     }
                 }
             } else if !self.didPlayAppearanceAnimation || !transition.animation.isImmediate {
@@ -699,13 +707,14 @@ public class PremiumLimitDisplayComponent: Component {
                     if component.badgePosition < 0.1 {
                         self.badgeView.alpha = 1.0
                         if let badgeText = component.badgeText {
-                            self.badgeCountLabel.configure(with: badgeText, duration: 0.001)
+                            let badgeLabelSize = self.badgeLabel.update(value: badgeText, transition: .immediate)
+                            transition.setFrame(view: self.badgeLabel, frame: CGRect(origin: CGPoint(x: 14.0 + floorToScreenPixels((badgeFullSize.width - badgeLabelSize.width) / 2.0), y: 5.0), size: badgeLabelSize))
                         }
                     } else {
-                        self.playAppearanceAnimation(component: component, availableSize: size)
+                        self.playAppearanceAnimation(component: component, badgeFullSize: badgeFullSize)
                     }
                 } else {
-                    self.playAppearanceAnimation(component: component, availableSize: size, from: currentBadgeX)
+                    self.playAppearanceAnimation(component: component, badgeFullSize: badgeFullSize, from: currentBadgeX)
                 }
             }
             
@@ -800,8 +809,9 @@ private final class LimitSheetContent: CombinedComponent {
     let action: () -> Bool
     let dismiss: () -> Void
     let openPeer: (EnginePeer) -> Void
+    let openStats: (() -> Void)?
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, dismiss: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, dismiss: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?) {
         self.context = context
         self.subject = subject
         self.count = count
@@ -809,6 +819,7 @@ private final class LimitSheetContent: CombinedComponent {
         self.action = action
         self.dismiss = dismiss
         self.openPeer = openPeer
+        self.openStats = openStats
     }
     
     static func ==(lhs: LimitSheetContent, rhs: LimitSheetContent) -> Bool {
@@ -878,6 +889,7 @@ private final class LimitSheetContent: CombinedComponent {
         let linkButton = Child(SolidRoundedButtonComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
         let peerShortcut = Child(Button.self)
+        let statsButton = Child(Button.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -1072,7 +1084,7 @@ private final class LimitSheetContent: CombinedComponent {
                 defaultValue = component.count == 4 ? dataSizeString(limit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                 premiumValue = component.count != 4 ? dataSizeString(premiumLimit, formatting: DataSizeStringFormatting(strings: environment.strings, decimalSeparator: environment.dateTimeFormat.decimalSeparator)) : ""
                 badgePosition = component.count == 4 ? 1.0 : 0.5
-                badgeGraphPosition = badgePosition
+                badgeGraphPosition = 0.5
                 titleText = strings.Premium_FileTooLarge
             
                 if isPremiumDisabled {
@@ -1165,8 +1177,33 @@ private final class LimitSheetContent: CombinedComponent {
                                 }
                             }
                         ),
+                        availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                }
+                
+                if let _ = link, let openStats = component.openStats {
+                    let _ = openStats
+                    let statsButton = statsButton.update(
+                        component: Button(
+                            content: AnyComponent(
+                                BundleIconComponent(
+                                    name: "Premium/Stats",
+                                    tintColor: environment.theme.list.itemAccentColor
+                                )
+                            ),
+                            action: {
+                                component.dismiss()
+                                Queue.mainQueue().after(0.35) {
+                                    openStats()
+                                }
+                            }
+                        ).minSize(CGSize(width: 44.0, height: 44.0)),
                         availableSize: context.availableSize,
                         transition: .immediate
+                    )
+                    context.add(statsButton
+                        .position(CGPoint(x: 31.0, y: 28.0))
                     )
                 }
                 
@@ -1528,14 +1565,16 @@ private final class LimitSheetComponent: CombinedComponent {
     let cancel: () -> Void
     let action: () -> Bool
     let openPeer: (EnginePeer) -> Void
+    let openStats: (() -> Void)?
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?) {
         self.context = context
         self.subject = subject
         self.count = count
         self.cancel = cancel
         self.action = action
         self.openPeer = openPeer
+        self.openStats = openStats
     }
     
     static func ==(lhs: LimitSheetComponent, rhs: LimitSheetComponent) -> Bool {
@@ -1543,6 +1582,9 @@ private final class LimitSheetComponent: CombinedComponent {
             return false
         }
         if lhs.subject != rhs.subject {
+            return false
+        }
+        if lhs.count != rhs.count {
             return false
         }
         
@@ -1573,7 +1615,8 @@ private final class LimitSheetComponent: CombinedComponent {
                                 }
                             })
                         },
-                        openPeer: context.component.openPeer
+                        openPeer: context.component.openPeer,
+                        openStats: context.component.openStats
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: animateOut
@@ -1636,14 +1679,14 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     
     private let hapticFeedback = HapticFeedback()
     
-    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }) {
+    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }, openStats: (() -> Void)? = nil) {
         self.context = context
         self.openPeer = openPeer
         
         var actionImpl: (() -> Bool)?
         super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, cancel: {}, action: {
             return actionImpl?() ?? true
-        }, openPeer: openPeer), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
+        }, openPeer: openPeer, openStats: openStats), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
         
@@ -1673,7 +1716,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     public func updateSubject(_ subject: Subject, count: Int32) {
         let component = LimitSheetComponent(context: self.context, subject: subject, count: count, cancel: {}, action: {
             return true
-        }, openPeer: self.openPeer)
+        }, openPeer: self.openPeer, openStats: nil)
         self.updateComponent(component: AnyComponent(component), transition: .easeInOut(duration: 0.2))
                 
         self.hapticFeedback.impact()
@@ -1750,7 +1793,7 @@ private final class PeerShortcutComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: availableSize
+                containerSize: CGSize(width: availableSize.width - 50.0, height: availableSize.height)
             )
             
             let size = CGSize(width: 30.0 + textSize.width + 20.0, height: 32.0)

@@ -84,7 +84,7 @@ public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudF
     } else {
         controller = DocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
     }
-    controller.forceDarkTheme = forceDarkTheme
+    controller.forceDarkTheme = forceDarkTheme || theme.overallDarkAppearance
     controller.didDisappear = {
         dismissImpl?()
     }
