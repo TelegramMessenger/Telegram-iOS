@@ -1525,6 +1525,8 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     private var action: (() -> Bool)?
     private let openPeer: (EnginePeer) -> Void
     
+    private let hapticFeedback = HapticFeedback()
+    
     public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }) {
         self.context = context
         self.openPeer = openPeer
@@ -1532,7 +1534,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         var actionImpl: (() -> Bool)?
         super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, cancel: {}, action: {
             return actionImpl?() ?? true
-        }, openPeer: openPeer), navigationBarAppearance: .none, theme: forceDark ? .dark : .default)
+        }, openPeer: openPeer), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
         
@@ -1564,6 +1566,8 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
             return true
         }, openPeer: self.openPeer)
         self.updateComponent(component: AnyComponent(component), transition: .easeInOut(duration: 0.2))
+                
+        self.hapticFeedback.impact()
         
         self.view.addSubview(ConfettiView(frame: self.view.bounds))
     }

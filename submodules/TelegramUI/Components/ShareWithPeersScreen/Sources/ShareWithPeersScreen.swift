@@ -25,6 +25,7 @@ import TooltipUI
 import OverlayStatusController
 import Markdown
 import TelegramUIPreferences
+import UndoUI
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -344,6 +345,8 @@ final class ShareWithPeersScreenComponent: Component {
         
         private var searchStateContext: ShareWithPeersScreen.StateContext?
         private var searchStateDisposable: Disposable?
+        
+        private let postingAvailabilityDisposable = MetaDisposable()
         
         private let hapticFeedback = HapticFeedback()
         
@@ -1063,15 +1066,73 @@ final class ShareWithPeersScreenComponent: Component {
                                 selectionState: .none,
                                 hasNext: i < peers.count - 1,
                                 action: { [weak self] peer in
-                                    guard let self else {
+                                    guard let self, let component = self.component else {
                                         return
                                     }
                                     if isStories {
                                         let _ = self.presentSendAsPeer()
                                     } else {
-                                        self.hapticFeedback.impact(.light)
-                                        self.environment?.controller()?.dismiss()
-                                        self.component?.peerCompletion(peer.id)
+                                        if peer.id.namespace == Namespaces.Peer.CloudUser {
+                                            self.component?.peerCompletion(peer.id)
+                                            self.environment?.controller()?.dismiss()
+                                            
+                                            self.hapticFeedback.impact(.light)
+                                        } else {
+                                            self.postingAvailabilityDisposable.set((component.context.engine.messages.checkStoriesUploadAvailability(target: .peer(peer.id))
+                                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                                guard let self, let component = self.component else {
+                                                    return
+                                                }
+                                                switch status {
+                                                case .available:
+                                                    component.peerCompletion(peer.id)
+                                                    self.environment?.controller()?.dismiss()
+                                                case .channelBoostRequired:
+                                                    let _ = combineLatest(
+                                                        queue: Queue.mainQueue(),
+                                                        component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id)),
+                                                        component.context.engine.peers.getChannelBoostStatus(peerId: peer.id)
+                                                    ).start(next: { [weak self] peer, status in
+                                                        guard let self, let component = self.component, let peer, let status else {
+                                                            return
+                                                        }
+                                                        
+                                                        let link: String
+                                                        if let addressName = peer.addressName, !addressName.isEmpty {
+                                                            link = "t.me/\(peer.addressName ?? "")?boost"
+                                                        } else {
+                                                            link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
+                                                        }
+                                                        
+                                                        if let navigationController = self.environment?.controller()?.navigationController as? NavigationController {
+                                                            if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
+                                                                previousController.dismiss()
+                                                            }
+                                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                                            let controller = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak navigationController] in
+                                                                UIPasteboard.general.string = "https://\(link)"
+                                                                
+                                                                if let previousController = navigationController?.viewControllers.reversed().first(where: { $0 is ShareWithPeersScreen}) as? ShareWithPeersScreen {
+                                                                    previousController.dismiss(completion: { [weak navigationController] in
+                                                                        Queue.mainQueue().justDispatch {   
+                                                                            if let controller = navigationController?.viewControllers.last as? ViewController {
+                                                                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                                            }
+                                                                        }
+                                                                    })
+                                                                }
+                                                                return true
+                                                            })
+                                                            navigationController.pushViewController(controller)
+                                                        }
+                                                        
+                                                        self.hapticFeedback.impact(.light)
+                                                    })
+                                                default:
+                                                    break
+                                                }
+                                            }))
+                                        }
                                     }
                                 }
                             )),
@@ -2826,9 +2887,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
                         closeFriendsPeers: closeFriends,
                         grayListPeers: grayListPeers
                     )
+                    
                     self.stateValue = state
                     self.stateSubject.set(.single(state))
-
+                    
                     self.readySubject.set(true)
                 })
             case let .chats(isGrayList):
