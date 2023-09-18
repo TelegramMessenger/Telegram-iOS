@@ -352,6 +352,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                 let controller = MediaEditorScreen(
                     context: context,
                     subject: subject,
+                    customTarget: customTarget,
                     isEditing: false,
                     transitionIn: transitionIn,
                     transitionOut: { finished, isNew in
