@@ -2244,11 +2244,13 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
     private let items: [AnyComponentWithIdentity<ChildEnvironment>]
     private let padding: CGFloat
     private let minSpacing: CGFloat
+    private let verticalSpacing: CGFloat
 
-    init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], padding: CGFloat, minSpacing: CGFloat) {
+    init(_ items: [AnyComponentWithIdentity<ChildEnvironment>], padding: CGFloat, minSpacing: CGFloat, verticalSpacing: CGFloat) {
         self.items = items
         self.padding = padding
         self.minSpacing = minSpacing
+        self.verticalSpacing = verticalSpacing
     }
 
     static func ==(lhs: ItemStack<ChildEnvironment>, rhs: ItemStack<ChildEnvironment>) -> Bool {
@@ -2259,6 +2261,9 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
             return false
         }
         if lhs.minSpacing != rhs.minSpacing {
+            return false
+        }
+        if lhs.verticalSpacing != rhs.verticalSpacing {
             return false
         }
         return true
@@ -2313,7 +2318,19 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                 let remainingWidth = context.availableSize.width - itemsWidth - context.component.padding * 2.0
                 spacing = remainingWidth / CGFloat(group.count - 1)
                 
-                var nextX: CGFloat = context.component.padding
+                var useCenteredLayout = false
+                if spacing > 30.0 || group.count == 1 {
+                    spacing = 30.0
+                    useCenteredLayout = true
+                }
+                
+                var nextX: CGFloat
+                if useCenteredLayout {
+                    let totalWidth = itemsWidth + spacing * CGFloat(group.count - 1)
+                    nextX = floorToScreenPixels((size.width - totalWidth) / 2.0)
+                } else {
+                    nextX = context.component.padding
+                }
                 for i in group {
                     let child = updatedChildren[i]
                     let frame = CGRect(origin: CGPoint(x: nextX, y: size.height + floorToScreenPixels((groupHeight - child.size.height) / 2.0)), size: child.size)
@@ -2323,7 +2340,7 @@ final class ItemStack<ChildEnvironment: Equatable>: CombinedComponent {
                     )
                     nextX += child.size.width + spacing
                 }
-                size.height += groupHeight
+                size.height += groupHeight + context.component.verticalSpacing
             }
 
             return size
@@ -2357,7 +2374,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         component: AnyComponent(
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
-                                                title: "LOCATION",
+                                                title: strings.MediaEditor_AddLocationShort,
                                                 iconName: "Chat/Attach Menu/Location",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView
@@ -2380,7 +2397,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         component: AnyComponent(
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
-                                                title: "AUDIO",
+                                                title: strings.MediaEditor_AddAudio,
                                                 iconName: "Media Editor/Audio",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView
@@ -2413,7 +2430,8 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                         )
                     ],
                     padding: 18.0,
-                    minSpacing: 8.0
+                    minSpacing: 8.0,
+                    verticalSpacing: 12.0
                 )
             ),
             environment: {},
@@ -2426,7 +2444,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
             view.frame = CGRect(origin: CGPoint(x: 0.0, y: padding), size: size)
         }
         
-        return CGSize(width: size.width, height: size.height + padding * 2.0)
+        return CGSize(width: size.width, height: size.height + padding * 2.0 - 12.0)
     }
 }
 

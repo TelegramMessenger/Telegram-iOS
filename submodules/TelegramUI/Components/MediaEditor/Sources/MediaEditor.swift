@@ -589,6 +589,8 @@ public final class MediaEditor {
                     if let initialSeekPosition = self.initialSeekPosition {
                         self.initialSeekPosition = nil
                         player.seek(to: CMTime(seconds: initialSeekPosition, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
+                    } else if let trimRange = self.values.videoTrimRange {
+                        player.seek(to: CMTime(seconds: trimRange.lowerBound, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
                     }
                  
                     self.setupTimeObservers()
@@ -1065,9 +1067,9 @@ public final class MediaEditor {
         }
     }
     
-    public func setAudioTrack(_ audioTrack: MediaAudioTrack?) {
+    public func setAudioTrack(_ audioTrack: MediaAudioTrack?, trimRange: Range<Double>? = nil, offset: Double? = nil) {
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(nil).withUpdatedAudioTrackVolume(nil).withUpdatedAudioTrackOffset(nil)
+            return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(trimRange).withUpdatedAudioTrackVolume(nil).withUpdatedAudioTrackOffset(offset)
         }
         
         if let audioPlayer = self.audioPlayer {
@@ -1087,6 +1089,7 @@ public final class MediaEditor {
         }
         
         self.setupAudioPlayback()
+        self.updateAudioPlaybackRange()
     }
     
     private func setupAudioPlayback() {

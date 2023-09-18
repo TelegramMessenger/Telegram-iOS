@@ -279,6 +279,7 @@ public class PremiumLimitDisplayComponent: Component {
         private let badgeForeground: SimpleLayer
         private let badgeIcon: UIImageView
         private let badgeCountLabel: RollingLabel
+        private let countMaskView = UIImageView()
         
         private let hapticFeedback = HapticFeedback()
         
@@ -309,11 +310,12 @@ public class PremiumLimitDisplayComponent: Component {
             
             self.badgeIcon = UIImageView()
             self.badgeIcon.contentMode = .center
-            
+                        
             self.badgeCountLabel = RollingLabel()
             self.badgeCountLabel.font = Font.with(size: 24.0, design: .round, weight: .semibold, traits: [])
             self.badgeCountLabel.textColor = .white
             self.badgeCountLabel.configure(with: "0")
+            self.badgeCountLabel.mask = self.countMaskView
             
             super.init(frame: frame)
             
@@ -326,6 +328,24 @@ public class PremiumLimitDisplayComponent: Component {
             self.badgeView.layer.addSublayer(self.badgeForeground)
             self.badgeView.addSubview(self.badgeIcon)
             self.badgeView.addSubview(self.badgeCountLabel)
+            
+            self.countMaskView.contentMode = .scaleToFill
+            self.countMaskView.image = generateImage(CGSize(width: 2.0, height: 48.0), rotatedContext: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                context.clear(bounds)
+                
+                let colorsArray: [CGColor] = [
+                    UIColor(rgb: 0xffffff, alpha: 0.0).cgColor,
+                    UIColor(rgb: 0xffffff).cgColor,
+                    UIColor(rgb: 0xffffff).cgColor,
+                    UIColor(rgb: 0xffffff, alpha: 0.0).cgColor,
+                    UIColor(rgb: 0xffffff, alpha: 0.0).cgColor
+                ]
+                var locations: [CGFloat] = [0.0, 0.11, 0.46, 0.57, 1.0]
+                let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
+
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+            })
             
             self.isUserInteractionEnabled = false
         }
@@ -360,7 +380,7 @@ public class PremiumLimitDisplayComponent: Component {
             Queue.mainQueue().after(0.5, {
                 let bounceAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
                 bounceAnimation.fromValue = -0.26 as NSNumber
-                bounceAnimation.toValue = 0.035 as NSNumber
+                bounceAnimation.toValue = 0.04 as NSNumber
                 bounceAnimation.duration = 0.2
                 bounceAnimation.fillMode = .forwards
                 bounceAnimation.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -374,7 +394,7 @@ public class PremiumLimitDisplayComponent: Component {
                 
                 Queue.mainQueue().after(0.2) {
                     let returnAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                    returnAnimation.fromValue = 0.035 as NSNumber
+                    returnAnimation.fromValue = 0.04 as NSNumber
                     returnAnimation.toValue = 0.0 as NSNumber
                     returnAnimation.duration = 0.15
                     returnAnimation.fillMode = .forwards
@@ -390,7 +410,7 @@ public class PremiumLimitDisplayComponent: Component {
             }
             
             if let badgeText = component.badgeText {
-                self.badgeCountLabel.configure(with: badgeText, duration: from != nil ? 0.3 : 0.5)
+                self.badgeCountLabel.configure(with: badgeText, increment: from != nil, duration: from != nil ? 0.3 : 0.5)
             }
         }
         
@@ -577,7 +597,7 @@ public class PremiumLimitDisplayComponent: Component {
                 if component.invertProgress {
                     progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: size.width - activityPosition, height: lineHeight)))
                     progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
-                    progressTransition.setFrame(layer: self.activeBackground, frame: CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
+                    progressTransition.setBounds(layer: self.activeBackground, bounds: CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
                 } else {
                     progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
                     progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight)))
@@ -654,15 +674,6 @@ public class PremiumLimitDisplayComponent: Component {
                 } else {
                     self.badgeView.center = CGPoint(x: size.width * badgePosition, y: 82.0)
                 }
-                
-//                if self.badgeView.frame.maxX > size.width {
-//                    let delta = self.badgeView.frame.maxX - size.width - 6.0
-//                    if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
-//
-//                    } else {
-//                        self.badgeView.center = self.badgeView.center.offsetBy(dx: -delta, dy: 0.0)
-//                    }
-//                }
             }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeFullSize.width * 3.0, height: badgeFullSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
@@ -671,6 +682,7 @@ public class PremiumLimitDisplayComponent: Component {
     
             self.badgeIcon.frame = CGRect(x: 10.0, y: 9.0, width: 30.0, height: 30.0)
             self.badgeCountLabel.frame = CGRect(x: badgeFullSize.width - countWidth - 11.0, y: 10.0, width: countWidth, height: 48.0)
+            self.countMaskView.frame = CGRect(x: 0.0, y: 0.0, width: countWidth, height: 48.0)
             
             if component.isPremiumDisabled {
                 if !self.didPlayAppearanceAnimation {
@@ -1080,7 +1092,7 @@ private final class LimitSheetContent: CombinedComponent {
                 } else {
                     badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
                 }
-                badgeGraphPosition = badgePosition
+                badgeGraphPosition = 0.5
                 buttonAnimationName = "premium_addone"
             
                 if isPremiumDisabled {
@@ -1425,6 +1437,7 @@ private final class LimitSheetContent: CombinedComponent {
                             transition.animateAlpha(view: view, from: 0.0, to: 1.0)
                         }))
                         .disappear(Transition.Disappear({ view, transition, completion in
+                            view.superview?.sendSubviewToBack(view)
                             transition.animatePosition(view: view, from: .zero, to: CGPoint(x: 0.0, y: -64.0), additive: true)
                             transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
                                 completion()

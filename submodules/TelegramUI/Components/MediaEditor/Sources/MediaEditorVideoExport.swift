@@ -434,10 +434,14 @@ public final class MediaEditorVideoExport {
             }
             
             var musicRange = timeRange
+            let musicStartTime = self.configuration.audioStartTime
             if let audioTrackRange = self.configuration.audioTimeRange {
                 musicRange = audioTrackRange
             }
-            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: self.configuration.audioStartTime)
+            if musicStartTime + musicRange.duration > duration {
+                musicRange = CMTimeRange(start: musicRange.start, end: duration - musicStartTime)
+            }
+            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: musicStartTime)
             
             if let volume = self.configuration.values.audioTrackVolume, volume < 1.0 {
                 let audioMix = AVMutableAudioMix()
@@ -502,11 +506,17 @@ public final class MediaEditorVideoExport {
             
             let originalDimensions = self.configuration.values.originalDimensions
             var isNotFullscreen = false
-            if case .video(_, true) = self.subject, originalDimensions.width > 0 && abs((Double(originalDimensions.height) / Double(originalDimensions.width)) - 1.7777778) > 0.001 {
-                isNotFullscreen = true
+            var hasNonIdentityTransform = false
+            if case .video(_, true) = self.subject {
+                if originalDimensions.width > 0 && abs((Double(originalDimensions.height) / Double(originalDimensions.width)) - 1.7777778) > 0.001 {
+                    isNotFullscreen = true
+                }
+                if let videoTrack = videoTracks.first {
+                    hasNonIdentityTransform = !videoTrack.preferredTransform.isIdentity
+                }
             }
             var preferredTransform: CGAffineTransform?
-            if let videoTrack = videoTracks.first, !self.configuration.values.requiresComposing && !isNotFullscreen {
+            if let videoTrack = videoTracks.first, !self.configuration.values.requiresComposing && !isNotFullscreen && !hasNonIdentityTransform {
                 preferredTransform = videoTrack.preferredTransform
             } else {
                 self.setupComposer()

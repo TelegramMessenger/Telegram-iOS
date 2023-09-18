@@ -246,10 +246,10 @@ private func makeEditorImageFrameComposition(context: CIContext, inputImage: CII
         resultImage = mediaImage.composited(over: resultImage)
     }
     
-    if var drawingImage {
-        if values.isStory {
-            drawingImage = drawingImage.transformed(by: CGAffineTransformMakeScale(initialScale, initialScale))
-        }
+    if let drawingImage {
+//        if values.isStory {
+//            drawingImage = drawingImage.transformed(by: CGAffineTransformMakeScale(initialScale, initialScale))
+//        }
         resultImage = drawingImage.samplingLinear().composited(over: resultImage)
     }
     

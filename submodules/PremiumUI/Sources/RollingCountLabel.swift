@@ -37,20 +37,16 @@ open class RollingLabel: UILabel {
         self.suffix = suffix
     }
     
-    func configure(with string: String, duration: Double = 0.9) {
+    func configure(with string: String, increment: Bool = false, duration: Double = 0.0) {
         self.fullText = string
         
         self.clean()
         self.setupSubviews()
         
         self.text = " "
-        self.animate(duration: duration)
+        self.animate(increment: increment, duration: duration)
     }
-    
-    private func animate(ascending: Bool = true, duration: Double) {
-        self.createAnimations(ascending: ascending, duration: duration)
-    }
-    
+        
     private func clean() {
         self.text = nil
         self.subviews.forEach { $0.removeFromSuperview() }
@@ -167,11 +163,12 @@ open class RollingLabel: UILabel {
         }
     }
     
-    private func createAnimations(ascending: Bool, duration: Double) {
+    private func animate(ascending: Bool = true, increment: Bool, duration: Double) {
         var offset: CFTimeInterval = 0.0
         
-        for scrollLayer in scrollLayers {
+        for scrollLayer in self.scrollLayers {
             let maxY = scrollLayer.sublayers?.last?.frame.origin.y ?? 0.0
+            let height = scrollLayer.sublayers?.last?.frame.size.height ?? 0.0
             
             let animation = CABasicAnimation(keyPath: "sublayerTransform.translation.y")
             animation.duration = duration + offset
@@ -179,7 +176,11 @@ open class RollingLabel: UILabel {
             
             let verticalOffset = 20.0
             if ascending {
-                animation.fromValue = maxY + verticalOffset
+                if increment {
+                    animation.fromValue = height + verticalOffset
+                } else {
+                    animation.fromValue = maxY + verticalOffset
+                }
                 animation.toValue = 0
             } else {
                 animation.fromValue = 0
