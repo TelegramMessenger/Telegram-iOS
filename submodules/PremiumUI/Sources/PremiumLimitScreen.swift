@@ -597,7 +597,7 @@ public class PremiumLimitDisplayComponent: Component {
                 if component.invertProgress {
                     progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: size.width - activityPosition, height: lineHeight)))
                     progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
-                    progressTransition.setFrame(layer: self.activeBackground, frame: CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
+                    progressTransition.setBounds(layer: self.activeBackground, bounds: CGRect(origin: .zero, size: CGSize(width: containerFrame.width * 1.35, height: lineHeight)))
                 } else {
                     progressTransition.setFrame(layer: self.inactiveBackground, frame: CGRect(origin: .zero, size: CGSize(width: activityPosition, height: lineHeight)))
                     progressTransition.setFrame(view: self.activeContainer, frame: CGRect(origin: CGPoint(x: activityPosition, y: 0.0), size: CGSize(width: activeWidth, height: lineHeight)))
@@ -674,15 +674,6 @@ public class PremiumLimitDisplayComponent: Component {
                 } else {
                     self.badgeView.center = CGPoint(x: size.width * badgePosition, y: 82.0)
                 }
-                
-//                if self.badgeView.frame.maxX > size.width {
-//                    let delta = self.badgeView.frame.maxX - size.width - 6.0
-//                    if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
-//
-//                    } else {
-//                        self.badgeView.center = self.badgeView.center.offsetBy(dx: -delta, dy: 0.0)
-//                    }
-//                }
             }
             self.badgeForeground.bounds = CGRect(origin: CGPoint(), size: CGSize(width: badgeFullSize.width * 3.0, height: badgeFullSize.height))
             if self.badgeForeground.animation(forKey: "movement") == nil {
@@ -1101,7 +1092,7 @@ private final class LimitSheetContent: CombinedComponent {
                 } else {
                     badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
                 }
-                badgeGraphPosition = 0.75
+                badgeGraphPosition = 0.5
                 buttonAnimationName = "premium_addone"
             
                 if isPremiumDisabled {

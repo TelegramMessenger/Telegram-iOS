@@ -502,11 +502,17 @@ public final class MediaEditorVideoExport {
             
             let originalDimensions = self.configuration.values.originalDimensions
             var isNotFullscreen = false
-            if case .video(_, true) = self.subject, originalDimensions.width > 0 && abs((Double(originalDimensions.height) / Double(originalDimensions.width)) - 1.7777778) > 0.001 {
-                isNotFullscreen = true
+            var hasNonIdentityTransform = false
+            if case .video(_, true) = self.subject {
+                if originalDimensions.width > 0 && abs((Double(originalDimensions.height) / Double(originalDimensions.width)) - 1.7777778) > 0.001 {
+                    isNotFullscreen = true
+                }
+                if let videoTrack = videoTracks.first {
+                    hasNonIdentityTransform = !videoTrack.preferredTransform.isIdentity
+                }
             }
             var preferredTransform: CGAffineTransform?
-            if let videoTrack = videoTracks.first, !self.configuration.values.requiresComposing && !isNotFullscreen {
+            if let videoTrack = videoTracks.first, !self.configuration.values.requiresComposing && !isNotFullscreen && !hasNonIdentityTransform {
                 preferredTransform = videoTrack.preferredTransform
             } else {
                 self.setupComposer()

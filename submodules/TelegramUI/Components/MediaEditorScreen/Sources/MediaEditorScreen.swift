@@ -1371,6 +1371,18 @@ final class MediaEditorScreenComponent: Component {
                                     }
                                 } else {
                                     if done {
+                                        let audioStart = mediaEditor.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                                        let audioOffset = min(0.0, mediaEditor.values.audioTrackOffset ?? 0.0)
+                                        
+                                        var start = -audioOffset + audioStart
+                                        if let duration = mediaEditor.duration {
+                                            let upperBound = mediaEditor.values.videoTrimRange?.upperBound ?? duration
+                                            if start >= upperBound {
+                                                start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+                                            }
+                                        }
+
+                                        mediaEditor.seek(start, andPlay: true)
                                         mediaEditor.play()
                                     } else {
                                         mediaEditor.stop()
@@ -3226,14 +3238,22 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                             }
                             
                             Queue.mainQueue().async {
-                                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration))
+                                var audioTrimRange: Range<Double>?
+                                var audioOffset: Double?
+                                
                                 if mediaEditor.sourceIsVideo {
                                     if let videoDuration = mediaEditor.originalDuration {
-                                        mediaEditor.setAudioTrackTrimRange(0 ..< min(videoDuration, audioDuration), apply: true)
+                                        if let videoStart = mediaEditor.values.videoTrimRange?.lowerBound {
+                                            audioOffset = -videoStart
+                                        }
+                                        audioTrimRange = 0 ..< min(videoDuration, audioDuration)
                                     }
                                 } else {
-                                    mediaEditor.setAudioTrackTrimRange(0 ..< min(15, audioDuration), apply: true)
+                                    audioTrimRange = 0 ..< min(15, audioDuration)
                                 }
+                                
+                                mediaEditor.setAudioTrack(MediaAudioTrack(path: fileName, artist: artist, title: title, duration: audioDuration), trimRange: audioTrimRange, offset: audioOffset)
+
                                 mediaEditor.seek(mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0, andPlay: true)
                                 
                                 self.requestUpdate(transition: .easeInOut(duration: 0.2))
