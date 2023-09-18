@@ -239,7 +239,7 @@ func replaceBoostConfirmationController(context: AccountContext, fromPeer: Engin
     var contentNode: PhotoUpdateConfirmationAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: "Replace", action: {
+    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChannelBoost_Replace, action: {
         dismissImpl?(true)
         commit()
     })]

@@ -1080,7 +1080,7 @@ private final class LimitSheetContent: CombinedComponent {
                 } else {
                     badgePosition = min(1.0, CGFloat(component.count) / CGFloat(premiumLimit))
                 }
-                badgeGraphPosition = badgePosition
+                badgeGraphPosition = 0.75
                 buttonAnimationName = "premium_addone"
             
                 if isPremiumDisabled {

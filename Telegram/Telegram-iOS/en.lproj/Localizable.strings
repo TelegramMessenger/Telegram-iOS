@@ -10061,6 +10061,7 @@ Sorry for the inconvenience.";
 "Message.ForwardedUnavailableStoryShort" = "Private Story\nFrom: %@";
 
 "ChannelBoost.ReplaceBoost" = "You currently boost **%1$@**. Do you want to boost **%2$@** instead?";
+"ChannelBoost.Replace" = "Replace";
 
 "ChannelBoost.Error.BoostTooOftenTitle" = "Can't Boost Too Often";
 "ChannelBoost.Error.BoostTooOftenText" = "You can change the channel you boost only once a day. Next time you can boost is in **%@**.";
@@ -10070,3 +10071,8 @@ Sorry for the inconvenience.";
 "ChannelBoost.Error.GiftedPremiumNotAllowedText" = "Because your **Telegram Premium** subscription was gifted to you, you can't use it to boost channels.";
 
 "Chat.ErrorFolderLinkExpired" = "The folder link has expired.";
+
+"Stats.Boosts.Level" = "Level";
+"Stats.Boosts.PremiumSubscribers" = "Premium Subscribers";
+"Stats.Boosts.ExistingBoosts" = "Existing Boosts";
+"Stats.Boosts.BoostsToLevelUp" = "Boosts to Level Up";
