@@ -1392,9 +1392,9 @@ private final class LimitSheetContent: CombinedComponent {
                             component: SolidRoundedButtonComponent(
                                 title: link,
                                 theme: SolidRoundedButtonComponent.Theme(
-                                    backgroundColor: UIColor(rgb: 0x343436),
+                                    backgroundColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                                     backgroundColors: [],
-                                    foregroundColor: .white
+                                    foregroundColor: environment.theme.list.itemPrimaryTextColor
                                 ),
                                 font: .regular,
                                 fontSize: 17.0,
