@@ -2357,7 +2357,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         component: AnyComponent(
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
-                                                title: "LOCATION",
+                                                title: strings.MediaEditor_AddLocationShort,
                                                 iconName: "Chat/Attach Menu/Location",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView
@@ -2380,7 +2380,7 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
                                         component: AnyComponent(
                                             InteractiveStickerButtonContent(
                                                 theme: theme,
-                                                title: "AUDIO",
+                                                title: strings.MediaEditor_AddAudio,
                                                 iconName: "Media Editor/Audio",
                                                 useOpaqueTheme: useOpaqueTheme,
                                                 tintContainerView: self.tintContainerView
