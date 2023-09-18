@@ -8310,8 +8310,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                             previousController.dismiss()
                         }
-                        let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: false, cancel: {}, action: {
+                        let controller = self.context.sharedContext.makePremiumLimitController(context: self.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: false, cancel: {}, action: { [weak self] in
                             UIPasteboard.general.string = "https://\(link)"
+                            
+                            if let self {
+                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            }
                             return true
                         })
                         navigationController.pushViewController(controller)
