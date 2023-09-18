@@ -27,6 +27,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ContextUI",
         "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/LegacyMediaPickerUI",
         "//submodules/TelegramUI/Components/MediaEditor",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
@@ -43,6 +44,9 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState",
         "//submodules/DeviceAccess",
         "//submodules/LocationUI",
+        "//submodules/TelegramUI/Components/AudioWaveformComponent",
+        "//submodules/ReactionSelectionNode",
+        "//submodules/TelegramUI/Components/VolumeSliderContextItem",
     ],
     visibility = [
         "//visibility:public",

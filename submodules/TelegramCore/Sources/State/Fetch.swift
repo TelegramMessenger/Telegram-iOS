@@ -22,8 +22,30 @@ private final class MediaResourceDataCopyFile : MediaResourceDataFetchCopyLocalI
     }
 }
 
-public func fetchCloudMediaLocation(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int64?, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
-    return multipartFetch(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, networkStatsContext: account.networkStatsContext, resource: resource, datacenterId: datacenterId, size: size, intervals: intervals, parameters: parameters)
+func fetchCloudMediaLocation(
+    accountPeerId: PeerId,
+    postbox: Postbox,
+    network: Network,
+    mediaReferenceRevalidationContext: MediaReferenceRevalidationContext,
+    networkStatsContext: NetworkStatsContext,
+    resource: TelegramMediaResource,
+    datacenterId: Int,
+    size: Int64?,
+    intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>,
+    parameters: MediaResourceFetchParameters?
+) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+    return multipartFetch(
+        accountPeerId: accountPeerId,
+        postbox: postbox,
+        network: network,
+        mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+        networkStatsContext: networkStatsContext,
+        resource: resource,
+        datacenterId: datacenterId,
+        size: size,
+        intervals: intervals,
+        parameters: parameters
+    )
 }
 
 private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaResourceDataFetchResult, NoError> {
@@ -40,21 +62,76 @@ private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaRes
 }
 
 func fetchResource(account: Account, resource: MediaResource, intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>? {
+    return fetchResource(
+        accountPeerId: account.peerId,
+        postbox: account.postbox,
+        network: account.network,
+        mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext,
+        networkStatsContext: account.networkStatsContext,
+        isTestingEnvironment: account.testingEnvironment,
+        resource: resource,
+        intervals: intervals,
+        parameters: parameters
+    )
+}
+    
+func fetchResource(
+    accountPeerId: PeerId,
+    postbox: Postbox,
+    network: Network,
+    mediaReferenceRevalidationContext: MediaReferenceRevalidationContext,
+    networkStatsContext: NetworkStatsContext,
+    isTestingEnvironment: Bool,
+    resource: MediaResource,
+    intervals: Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>,
+    parameters: MediaResourceFetchParameters?
+) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>? {
     if let _ = resource as? EmptyMediaResource {
         return .single(.reset)
         |> then(.never())
     } else if let secretFileResource = resource as? SecretFileMediaResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-        |> then(fetchSecretFileResource(account: account, resource: secretFileResource, intervals: intervals, parameters: parameters))
+        |> then(fetchSecretFileResource(
+            accountPeerId: accountPeerId,
+            postbox: postbox,
+            network: network,
+            mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+            networkStatsContext: networkStatsContext,
+            resource: secretFileResource,
+            intervals: intervals,
+            parameters: parameters
+        ))
     } else if let cloudResource = resource as? TelegramMultipartFetchableResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-        |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: parameters))
+        |> then(fetchCloudMediaLocation(
+            accountPeerId: accountPeerId,
+            postbox: postbox,
+            network: network,
+            mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+            networkStatsContext: networkStatsContext,
+            resource: cloudResource,
+            datacenterId: cloudResource.datacenterId,
+            size: resource.size == 0 ? nil : resource.size,
+            intervals: intervals,
+            parameters: parameters
+        ))
     } else if let webFileResource = resource as? MediaResourceWithWebFileReference {
-        return currentWebDocumentsHostDatacenterId(postbox: account.postbox, isTestingEnvironment: account.testingEnvironment)
+        return currentWebDocumentsHostDatacenterId(postbox: postbox, isTestingEnvironment: isTestingEnvironment)
         |> castError(MediaResourceDataFetchError.self)
         |> mapToSignal { datacenterId -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
             return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-            |> then(fetchCloudMediaLocation(account: account, resource: webFileResource, datacenterId: Int(datacenterId), size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: parameters))
+            |> then(fetchCloudMediaLocation(
+                accountPeerId: accountPeerId,
+                postbox: postbox,
+                network: network,
+                mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+                networkStatsContext: networkStatsContext,
+                resource: webFileResource,
+                datacenterId: Int(datacenterId),
+                size: resource.size == 0 ? nil : resource.size,
+                intervals: intervals,
+                parameters: parameters
+            ))
         }
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         return fetchLocalFileResource(path: localFileResource.localFilePath, move: localFileResource.isUniquelyReferencedTemporaryFile)
@@ -63,7 +140,7 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
         |> then(fetchHttpResource(url: httpReference.url))
     } else if let wallpaperResource = resource as? WallpaperDataResource {
-        return getWallpaper(network: account.network, slug: wallpaperResource.slug)
+        return getWallpaper(network: network, slug: wallpaperResource.slug)
         |> mapError { _ -> MediaResourceDataFetchError in
             return .generic
         }
@@ -75,13 +152,24 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
                 return .fail(.generic)
             }
             return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-            |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: MediaResourceFetchParameters(
-                tag: nil,
-                info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false),
-                location: nil,
-                contentType: .other,
-                isRandomAccessAllowed: true
-            )))
+            |> then(fetchCloudMediaLocation(
+                accountPeerId: accountPeerId,
+                postbox: postbox,
+                network: network,
+                mediaReferenceRevalidationContext: mediaReferenceRevalidationContext,
+                networkStatsContext: networkStatsContext,
+                resource: cloudResource,
+                datacenterId: cloudResource.datacenterId,
+                size: resource.size == 0 ? nil : resource.size,
+                intervals: intervals,
+                parameters: MediaResourceFetchParameters(
+                    tag: nil,
+                    info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false),
+                    location: nil,
+                    contentType: .other,
+                    isRandomAccessAllowed: true
+                )
+            ))
         }
     }
     return nil

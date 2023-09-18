@@ -72,6 +72,13 @@ public extension TelegramEngine {
                 return peers.map(EnginePeer.init)
             }
         }
+        
+        public func channelsForStories() -> Signal<[EnginePeer], NoError> {
+            return _internal_channelsForStories(account: self.account)
+            |> map { peers -> [EnginePeer] in
+                return peers.map(EnginePeer.init)
+            }
+        }
 
         public func channelAddressNameAssignmentAvailability(peerId: PeerId?) -> Signal<ChannelAddressNameAssignmentAvailability, NoError> {
             return _internal_channelAddressNameAssignmentAvailability(account: self.account, peerId: peerId)
@@ -343,7 +350,7 @@ public extension TelegramEngine {
         }
 
         public func createSupergroup(title: String, description: String?, username: String? = nil, isForum: Bool = false, location: (latitude: Double, longitude: Double, address: String)? = nil, isForHistoryImport: Bool = false) -> Signal<PeerId, CreateChannelError> {
-            return _internal_createSupergroup(account: self.account, title: title, description: description, username: username, isForum: isForum, location: location, isForHistoryImport: isForHistoryImport)
+            return _internal_createSupergroup(postbox: self.account.postbox, network: self.account.network, stateManager: account.stateManager, title: title, description: description, username: username, isForum: isForum, location: location, isForHistoryImport: isForHistoryImport)
         }
 
         public func deleteChannel(peerId: PeerId) -> Signal<Void, DeleteChannelError> {
@@ -502,7 +509,7 @@ public extension TelegramEngine {
         }
 
         public func recentPeers() -> Signal<RecentPeers, NoError> {
-            return _internal_recentPeers(account: self.account)
+            return _internal_recentPeers(accountPeerId: self.account.peerId, postbox: self.account.postbox)
         }
 
         public func managedUpdatedRecentPeers() -> Signal<Void, NoError> {
@@ -813,7 +820,7 @@ public extension TelegramEngine {
             |> beforeNext { _ in
                 let delayTime = CFAbsoluteTimeGetCurrent() - startTime
                 if delayTime > 0.3 {
-                    Logger.shared.log("getNextUnreadChannel", "took \(delayTime) s")
+                    //Logger.shared.log("getNextUnreadChannel", "took \(delayTime) s")
                 }
             }
         }
@@ -935,7 +942,7 @@ public extension TelegramEngine {
         }
         
         public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer, NoError> {
-            return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
+            return _internal_storedMessageFromSearchPeer(postbox: self.account.postbox, peer: peer._asPeer())
             |> map { result -> EnginePeer in
                 return EnginePeer(result)
             }
@@ -987,7 +994,7 @@ public extension TelegramEngine {
         }
         
         public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool) -> Signal<Never, NoError> {
-            return _internal_setChannelForumMode(account: self.account, peerId: id, isForum: isForum)
+            return _internal_setChannelForumMode(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: id, isForum: isForum)
         }
         
         public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
@@ -1180,6 +1187,18 @@ public extension TelegramEngine {
         
         public func updatePeerStoriesHidden(id: PeerId, isHidden: Bool) {
             let _ = _internal_updatePeerStoriesHidden(account: self.account, id: id, isHidden: isHidden).start()
+        }
+        
+        public func getChannelBoostStatus(peerId: EnginePeer.Id) -> Signal<ChannelBoostStatus?, NoError> {
+            return _internal_getChannelBoostStatus(account: self.account, peerId: peerId)
+        }
+
+        public func canApplyChannelBoost(peerId: EnginePeer.Id) -> Signal<CanApplyBoostStatus, NoError> {
+            return _internal_canApplyChannelBoost(account: self.account, peerId: peerId)
+        }
+        
+        public func applyChannelBoost(peerId: EnginePeer.Id) -> Signal<Bool, NoError> {
+            return _internal_applyChannelBoost(account: self.account, peerId: peerId)
         }
     }
 }

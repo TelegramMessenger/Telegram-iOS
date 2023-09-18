@@ -275,7 +275,7 @@ private struct Month: Equatable {
     }
 }
 
-private let durationFont = Font.regular(12.0)
+private let durationFont = Font.semibold(11.0)
 private let minDurationImage: UIImage = {
     let image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -286,6 +286,18 @@ private let minDurationImage: UIImage = {
             image.draw(in: CGRect(origin: CGPoint(x: (size.width - image.size.width) / 2.0, y: (size.height - image.size.height) / 2.0), size: image.size))
             UIGraphicsPopContext()
         }
+    })
+    return image!
+}()
+
+private let rightShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
     })
     return image!
 }()
@@ -317,14 +329,11 @@ private final class DurationLayer: CALayer {
             let verticalInset: CGFloat = 2.0
             let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-
-                context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-                context.setBlendMode(.copy)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
-
+                
                 context.setBlendMode(.normal)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+                
                 UIGraphicsPushContext(context)
                 string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
                 UIGraphicsPopContext()
@@ -355,6 +364,7 @@ private protocol ItemLayer: SparseItemGridLayer {
 private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
     var durationLayer: DurationLayer?
+    var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -403,7 +413,7 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
 
-        if let duration = duration {
+        if let duration {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
@@ -417,6 +427,24 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
             durationLayer.removeFromSuperlayer()
+        }
+        
+        let size = self.bounds.size
+        
+        if self.durationLayer != nil {
+            if self.rightShadowLayer == nil {
+                let rightShadowLayer = SimpleLayer()
+                self.rightShadowLayer = rightShadowLayer
+                self.insertSublayer(rightShadowLayer, at: 0)
+                rightShadowLayer.contents = rightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let rightShadowLayer = self.rightShadowLayer {
+                self.rightShadowLayer = nil
+                rightShadowLayer.removeFromSuperlayer()
+            }
         }
     }
 
@@ -476,15 +504,21 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     }
 
     func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
-        /*if let durationLayer = self.durationLayer {
+        if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
-        }*/
+        }
+        
+        if let rightShadowLayer = self.rightShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+        }
     }
 }
 
 private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemLayer {
     var item: VisualMediaItem?
     var durationLayer: DurationLayer?
+    var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -543,7 +577,7 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
     func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
 
-        if let duration = duration {
+        if let duration {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
@@ -557,6 +591,24 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
             durationLayer.removeFromSuperlayer()
+        }
+        
+        let size = self.bounds.size
+        
+        if self.durationLayer != nil {
+            if self.rightShadowLayer == nil {
+                let rightShadowLayer = SimpleLayer()
+                self.rightShadowLayer = rightShadowLayer
+                self.insertSublayer(rightShadowLayer, at: 0)
+                rightShadowLayer.contents = rightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let rightShadowLayer = self.rightShadowLayer {
+                self.rightShadowLayer = nil
+                rightShadowLayer.removeFromSuperlayer()
+            }
         }
     }
 
@@ -616,9 +668,14 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
     }
 
     func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
-        /*if let durationLayer = self.durationLayer {
+        if let durationLayer = self.durationLayer {
             durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
-        }*/
+        }
+        
+        if let rightShadowLayer = self.rightShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+        }
     }
 }
 
@@ -941,7 +998,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
         return self.chatPresentationData.theme.theme.list.itemPlainSeparatorColor
     }
 
-    func createLayer() -> SparseItemGridLayer? {
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
         if self.useListItems {
             return nil
         }
@@ -1109,7 +1166,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                     var duration: Int32?
                     var isMin: Bool = false
                     if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
-                        duration = file.duration.flatMap(Int32.init)
+                        duration = file.duration.flatMap { Int32(floor($0)) }
                         isMin = layer.bounds.width < 80.0
                     }
                     layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))

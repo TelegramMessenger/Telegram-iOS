@@ -38,11 +38,11 @@ func minTimestampForPeerInclusion(_ peer: Peer) -> Int32? {
     }
 }
 
-func shouldKeepUserStoriesInFeed(peerId: PeerId, isContact: Bool) -> Bool {
+func shouldKeepUserStoriesInFeed(peerId: PeerId, isContactOrMember: Bool) -> Bool {
     if peerId.namespace == Namespaces.Peer.CloudUser && (peerId.id._internalGetInt64Value() == 777000 || peerId.id._internalGetInt64Value() == 333000) {
         return true
     }
-    return isContact
+    return isContactOrMember
 }
 
 func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: AccumulatedPeers) {
@@ -70,6 +70,21 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
             }
         }
     }
+    for (_, chat) in peers.chats {
+        switch chat {
+        case let .channel(flags, flags2, _, _, _, _, _, _, _, _, _, _, _, _, storiesMaxId):
+            let isMin = (flags & (1 << 12)) != 0
+            let storiesUnavailable = (flags2 & (1 << 3)) != 0
+            
+            if let storiesMaxId = storiesMaxId {
+                transaction.setStoryItemsInexactMaxId(peerId: chat.peerId, id: storiesMaxId)
+            } else if !isMin && storiesUnavailable {
+                transaction.clearStoryItemsInexactMaxId(peerId: chat.peerId)
+            }
+        default:
+            break
+        }
+    }
     for (_, peer) in peers.peers {
         parsedPeers.append(peer)
     }
@@ -79,8 +94,8 @@ func updatePeers(transaction: Transaction, accountPeerId: PeerId, peers: Accumul
 }
 
 func _internal_updatePeerIsContact(transaction: Transaction, user: TelegramUser, isContact: Bool) {
-    let previousValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContact: transaction.isPeerContact(peerId: user.id))
-    let updatedValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContact: isContact)
+    let previousValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContactOrMember: transaction.isPeerContact(peerId: user.id))
+    let updatedValue = shouldKeepUserStoriesInFeed(peerId: user.id, isContactOrMember: isContact)
     
     if previousValue != updatedValue, let storiesHidden = user.storiesHidden {
         if updatedValue {
@@ -126,6 +141,53 @@ func _internal_updatePeerIsContact(transaction: Transaction, user: TelegramUser,
     }
 }
 
+private func _internal_updateChannelMembership(transaction: Transaction, channel: TelegramChannel, isMember: Bool, justJoined: Bool) {
+    if isMember, let storiesHidden = channel.storiesHidden {
+        if storiesHidden {
+            if transaction.storySubscriptionsContains(key: .filtered, peerId: channel.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                peerIds.removeAll(where: { $0 == channel.id })
+                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+            }
+            if !transaction.storySubscriptionsContains(key: .hidden, peerId: channel.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                if !peerIds.contains(channel.id) {
+                    peerIds.append(channel.id)
+                    transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                }
+            }
+        } else {
+            if transaction.storySubscriptionsContains(key: .hidden, peerId: channel.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                peerIds.removeAll(where: { $0 == channel.id })
+                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+            }
+            if !transaction.storySubscriptionsContains(key: .filtered, peerId: channel.id) {
+                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                if !peerIds.contains(channel.id) {
+                    peerIds.append(channel.id)
+                    transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                }
+            }
+        }
+        
+        if justJoined {
+            _internal_addSynchronizePeerStoriesOperation(peerId: channel.id, transaction: transaction)
+        }
+    } else {
+        if transaction.storySubscriptionsContains(key: .filtered, peerId: channel.id) {
+            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+            peerIds.removeAll(where: { $0 == channel.id })
+            transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+        }
+        if transaction.storySubscriptionsContains(key: .hidden, peerId: channel.id) {
+            var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+            peerIds.removeAll(where: { $0 == channel.id })
+            transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+        }
+    }
+}
+
 public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (Peer?, Peer) -> Peer?) {
     transaction.updatePeersInternal(peers, update: { previous, updated in
         let peerId = updated.id
@@ -134,8 +196,23 @@ public func updatePeersCustom(transaction: Transaction, peers: [Peer], update: (
         
         if let previous = previous as? TelegramUser, let updatedUser = updated as? TelegramUser {
             updated = TelegramUser.merge(lhs: previous, rhs: updatedUser)
-        } else if let previous = previous as? TelegramChannel, let updatedChannel = updated as? TelegramChannel {
-            updated = mergeChannel(lhs: previous, rhs: updatedChannel)
+        }
+        
+        if let updatedChannel = updated as? TelegramChannel {
+            var wasMember = false
+            var wasHidden: Bool?
+            if let previous = previous as? TelegramChannel {
+                wasMember = previous.participationStatus == .member
+                wasHidden = previous.storiesHidden
+                updated = mergeChannel(lhs: previous, rhs: updatedChannel)
+            }
+            
+            if let updated = updated as? TelegramChannel {
+                let isMember = updated.participationStatus == .member
+                if isMember != wasMember || updated.storiesHidden != wasHidden {
+                    _internal_updateChannelMembership(transaction: transaction, channel: updated, isMember: isMember, justJoined: previous == nil || wasHidden == nil)
+                }
+            }
         }
         
         switch peerId.namespace {

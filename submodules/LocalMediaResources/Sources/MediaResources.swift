@@ -220,6 +220,11 @@ public struct PhotoLibraryMediaResourceId {
     }
 }
 
+public enum MediaImageFormat: Int32 {
+    case jpeg
+    case jxl
+}
+
 public class PhotoLibraryMediaResource: TelegramMediaResource {
     public var size: Int64? {
         return nil
@@ -227,20 +232,52 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     
     public let localIdentifier: String
     public let uniqueId: Int64
+    public let width: Int32?
+    public let height: Int32?
+    public let format: MediaImageFormat?
+    public let quality: Int32?
     
-    public init(localIdentifier: String, uniqueId: Int64) {
+    public init(localIdentifier: String, uniqueId: Int64, width: Int32? = nil, height: Int32? = nil, format: MediaImageFormat? = nil, quality: Int32? = nil) {
         self.localIdentifier = localIdentifier
         self.uniqueId = uniqueId
+        self.width = width
+        self.height = height
+        self.format = format
+        self.quality = quality
     }
     
     public required init(decoder: PostboxDecoder) {
         self.localIdentifier = decoder.decodeStringForKey("i", orElse: "")
         self.uniqueId = decoder.decodeInt64ForKey("uid", orElse: 0)
+        self.width = decoder.decodeOptionalInt32ForKey("w")
+        self.height = decoder.decodeOptionalInt32ForKey("h")
+        self.format = decoder.decodeOptionalInt32ForKey("f").flatMap(MediaImageFormat.init(rawValue:))
+        self.quality = decoder.decodeOptionalInt32ForKey("q")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.localIdentifier, forKey: "i")
         encoder.encodeInt64(self.uniqueId, forKey: "uid")
+        if let width = self.width {
+            encoder.encodeInt32(width, forKey: "w")
+        } else {
+            encoder.encodeNil(forKey: "w")
+        }
+        if let height = self.height {
+            encoder.encodeInt32(height, forKey: "h")
+        } else {
+            encoder.encodeNil(forKey: "h")
+        }
+        if let format = self.format {
+            encoder.encodeInt32(format.rawValue, forKey: "f")
+        } else {
+            encoder.encodeNil(forKey: "f")
+        }
+        if let quality = self.quality {
+            encoder.encodeInt32(quality, forKey: "q")
+        } else {
+            encoder.encodeNil(forKey: "q")
+        }
     }
     
     public var id: MediaResourceId {
@@ -249,7 +286,25 @@ public class PhotoLibraryMediaResource: TelegramMediaResource {
     
     public func isEqual(to: MediaResource) -> Bool {
         if let to = to as? PhotoLibraryMediaResource {
-            return self.localIdentifier == to.localIdentifier && self.uniqueId == to.uniqueId
+            if self.localIdentifier != to.localIdentifier {
+                return false
+            }
+            if self.uniqueId != to.uniqueId {
+                return false
+            }
+            if self.width != to.width {
+                return false
+            }
+            if self.height != to.height {
+                return false
+            }
+            if self.format != to.format {
+                return false
+            }
+            if self.quality != to.quality {
+                return false
+            }
+            return true
         } else {
             return false
         }

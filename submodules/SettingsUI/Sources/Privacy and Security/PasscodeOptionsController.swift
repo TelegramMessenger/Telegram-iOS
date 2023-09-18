@@ -438,12 +438,41 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     }
 }
 
-public func passcodeEntryController(context: AccountContext, animateIn: Bool = true, modalPresentation: Bool = false, completion: @escaping (Bool) -> Void) -> Signal<ViewController?, NoError> {
-    return context.sharedContext.accountManager.transaction { transaction -> PostboxAccessChallengeData in
+public func passcodeEntryController(
+    context: AccountContext,
+    animateIn: Bool = true,
+    modalPresentation: Bool = false,
+    completion: @escaping (Bool) -> Void
+) -> Signal<ViewController?, NoError> {
+    return passcodeEntryController(
+        accountManager: context.sharedContext.accountManager,
+        applicationBindings: context.sharedContext.applicationBindings,
+        presentationData: context.sharedContext.currentPresentationData.with { $0 },
+        updatedPresentationData: context.sharedContext.presentationData,
+        statusBarHost: context.sharedContext.mainWindow?.statusBarHost,
+        appLockContext: context.sharedContext.appLockContext,
+        animateIn: animateIn,
+        modalPresentation: modalPresentation,
+        completion: completion
+    )
+}
+    
+public func passcodeEntryController(
+    accountManager: AccountManager<TelegramAccountManagerTypes>,
+    applicationBindings: TelegramApplicationBindings,
+    presentationData: PresentationData,
+    updatedPresentationData: Signal<PresentationData, NoError>,
+    statusBarHost: StatusBarHost?,
+    appLockContext: AppLockContext,
+    animateIn: Bool = true,
+    modalPresentation: Bool = false,
+    completion: @escaping (Bool) -> Void
+) -> Signal<ViewController?, NoError> {
+    return accountManager.transaction { transaction -> PostboxAccessChallengeData in
         return transaction.getAccessChallengeData()
     }
     |> mapToSignal { accessChallengeData -> Signal<(PostboxAccessChallengeData, PresentationPasscodeSettings?), NoError> in
-        return context.sharedContext.accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
+        return accountManager.transaction { transaction -> (PostboxAccessChallengeData, PresentationPasscodeSettings?) in
             let passcodeSettings = transaction.getSharedData(ApplicationSpecificSharedDataKeys.presentationPasscodeSettings)?.get(PresentationPasscodeSettings.self)
             return (accessChallengeData, passcodeSettings)
         }
@@ -459,12 +488,12 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             biometrics = .enabled(nil)
             #else
             if let passcodeSettings = passcodeSettings, passcodeSettings.enableBiometrics {
-                biometrics = .enabled(context.sharedContext.applicationBindings.isMainApp ? passcodeSettings.biometricsDomainState : passcodeSettings.shareBiometricsDomainState)
+                biometrics = .enabled(applicationBindings.isMainApp ? passcodeSettings.biometricsDomainState : passcodeSettings.shareBiometricsDomainState)
             } else {
                 biometrics = .none
             }
             #endif
-            let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, statusBarHost: context.sharedContext.mainWindow?.statusBarHost, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
+            let controller = PasscodeEntryController(applicationBindings: applicationBindings, accountManager: accountManager, appLockContext: appLockContext, presentationData: presentationData, presentationDataSignal: updatedPresentationData, statusBarHost: statusBarHost, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
             }, modalPresentation: modalPresentation))
             controller.presentationCompleted = { [weak controller] in

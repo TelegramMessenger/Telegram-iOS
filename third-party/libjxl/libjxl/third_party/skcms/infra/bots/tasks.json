@@ -1,0 +1,452 @@
+{
+  "casSpecs": {
+    "whole-repo": {
+      "root": "..",
+      "paths": ["skcms"],
+      "excludes": ["^(.*\\/)*\\.git(\\/.*)*$"]
+    }
+  },
+  "commit_queue": {
+    "skcms": {}
+  },
+  "jobs": {
+    "skcms": {
+      "tasks": [
+        "skcms-Linux",
+        "skcms-Mac",
+        "skcms-Win",
+        "skcms-Linux-Bazel-Build-RBE",
+        "skcms-Linux-Bazel-Test-RBE",
+        "skcms-Win-Bazel-Build-RBE",
+        "skcms-Win-Bazel-Test-RBE",
+        "skcms-Android-ARM-Bazel-Build-RBE",
+        "skcms-Android-ARM64-Bazel-Build-RBE"
+      ]
+    },
+    "skcms-Linux": {
+      "tasks": ["skcms-Linux"]
+    },
+    "skcms-Mac": {
+      "tasks": ["skcms-Mac"]
+    },
+    "skcms-Win": {
+      "tasks": ["skcms-Win"]
+    },
+    "skcms-Linux-Bazel-Build-RBE": {
+      "tasks": ["skcms-Linux-Bazel-Build-RBE"]
+    },
+    "skcms-Linux-Bazel-Test-RBE": {
+      "tasks": ["skcms-Linux-Bazel-Test-RBE"]
+    },
+    "skcms-Win-Bazel-Build-RBE": {
+      "tasks": ["skcms-Win-Bazel-Build-RBE"]
+    },
+    "skcms-Win-Bazel-Test-RBE": {
+      "tasks": ["skcms-Win-Bazel-Test-RBE"]
+    },
+    "skcms-Android-ARM-Bazel-Build-RBE": {
+      "tasks": ["skcms-Android-ARM-Bazel-Build-RBE"]
+    },
+    "skcms-Android-ARM64-Bazel-Build-RBE": {
+      "tasks": ["skcms-Android-ARM64-Bazel-Build-RBE"]
+    }
+  },
+  "tasks": {
+    "skcms-Linux": {
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/ninja/linux-amd64",
+          "path": "ninja",
+          "version": "version:1.8.2"
+        },
+        {
+          "name": "skia/bots/android_ndk_linux",
+          "path": "ndk",
+          "version": "version:16"
+        },
+        {
+          "name": "skia/bots/clang_linux",
+          "path": "clang_linux",
+          "version": "version:16"
+        },
+        {
+          "name": "infra/python/cpython/linux-amd64",
+          "path": "python",
+          "version": "version:2.7.15.chromium14"
+        }
+      ],
+      "command": [
+        "python/bin/python",
+        "skcms/infra/bots/bot.py",
+        "ninja",
+        "ndk",
+        "clang_linux"
+      ],
+      "dimensions": [
+        "os:Linux",
+        "cpu:x86-64-Skylake_GCE",
+        "gpu:none",
+        "pool:Skia"
+      ],
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Mac": {
+      "caches": [
+        {
+          "name": "xcode_skcms",
+          "path": "cache/Xcode_skcms.app"
+        }
+      ],
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/ninja/mac-amd64",
+          "path": "ninja",
+          "version": "version:1.8.2"
+        },
+        {
+          "name": "skia/bots/android_ndk_darwin",
+          "path": "ndk",
+          "version": "version:10"
+        },
+        {
+          "name": "infra/tools/mac_toolchain/${platform}",
+          "path": "mac_toolchain",
+          "version": "git_revision:796d2b92cff93fc2059623ce0a66284373ceea0a"
+        },
+        {
+          "name": "infra/python/cpython/mac-amd64",
+          "path": "python",
+          "version": "version:2.7.15.chromium14"
+        }
+      ],
+      "command": [
+        "python/bin/python",
+        "skcms/infra/bots/bot.py",
+        "ninja",
+        "ndk",
+        "mac_toolchain",
+        "cache/Xcode_skcms.app"
+      ],
+      "dimensions": [
+        "cores:12",
+        "cpu:x86-64",
+        "os:Mac-10.15.7",
+        "pool:Skia"
+      ],
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Win": {
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "skia/bots/win_ninja",
+          "path": "ninja",
+          "version": "version:2"
+        },
+        {
+          "name": "skia/bots/win_toolchain",
+          "path": "win_toolchain",
+          "version": "version:11"
+        },
+        {
+          "name": "skia/bots/clang_win",
+          "path": "clang_win",
+          "version": "version:14"
+        },
+        {
+          "name": "infra/python/cpython/windows-amd64",
+          "path": "python",
+          "version": "version:2.7.15.chromium14"
+        }
+      ],
+      "command": [
+        "python/bin/python.exe",
+        "skcms/infra/bots/bot.py",
+        "ninja",
+        "win_toolchain",
+        "clang_win"
+      ],
+      "dimensions": ["os:Windows-Server-17763", "gpu:none", "pool:Skia"],
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Linux-Bazel-Build-RBE": {
+      "caches": [
+        {
+          "name": "vpython",
+          "path": "cache/vpython"
+        }
+      ],
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/3pp/tools/cpython3/linux-amd64",
+          "path": "cipd_bin_packages/cpython3",
+          "version": "version:2@3.8.10.chromium.19"
+        },
+        {
+          "name": "skia/bots/bazelisk",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "cipd_bin_packages/cpython3/bin/python3",
+        "skcms/infra/bots/bazel.py",
+        "build",
+        "rbe",
+        "linux"
+      ],
+      "dimensions": [
+        "pool:Skia",
+        "os:Debian-10.3",
+        "gpu:none",
+        "cpu:x86-64-Haswell_GCE",
+        "machine_type:n1-highcpu-64",
+        "docker_installed:true"
+      ],
+      "env_prefixes": {
+        "PATH": [
+          "cipd_bin_packages/cpython3",
+          "cipd_bin_packages/cpython3/bin",
+          "bazelisk"
+        ],
+        "VPYTHON_VIRTUALENV_ROOT": [
+          "cache/vpython"
+        ]
+      },
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Linux-Bazel-Test-RBE": {
+      "caches": [
+        {
+          "name": "vpython",
+          "path": "cache/vpython"
+        }
+      ],
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/3pp/tools/cpython3/linux-amd64",
+          "path": "cipd_bin_packages/cpython3",
+          "version": "version:2@3.8.10.chromium.19"
+        },
+        {
+          "name": "skia/bots/bazelisk",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "cipd_bin_packages/cpython3/bin/python3",
+        "skcms/infra/bots/bazel.py",
+        "test",
+        "rbe",
+        "linux"
+      ],
+      "dimensions": [
+        "pool:Skia",
+        "os:Debian-10.3",
+        "gpu:none",
+        "cpu:x86-64-Haswell_GCE",
+        "machine_type:n1-highcpu-64",
+        "docker_installed:true"
+      ],
+      "env_prefixes": {
+        "PATH": [
+          "cipd_bin_packages/cpython3",
+          "cipd_bin_packages/cpython3/bin",
+          "bazelisk"
+        ],
+        "VPYTHON_VIRTUALENV_ROOT": [
+          "cache/vpython"
+        ]
+      },
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Win-Bazel-Build-RBE": {
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/python/cpython3/windows-amd64",
+          "path": "python",
+          "version": "version:3.8.0b1.chromium.1"
+        },
+        {
+          "name": "skia/bots/win_toolchain",
+          "path": "win_toolchain",
+          "version": "version:11"
+        },
+        {
+          "name": "skia/bots/bazelisk_win_amd64",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "python/bin/python3.exe",
+        "skcms/infra/bots/bazel.py",
+        "build",
+        "rbe",
+        "windows"
+      ],
+      "env_prefixes": {
+        "PATH": ["win_toolchain/sys64", "bazelisk"]
+      },
+      "dimensions": ["os:Windows-Server-17763", "gpu:none", "pool:Skia"],
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Win-Bazel-Test-RBE": {
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/python/cpython3/windows-amd64",
+          "path": "python",
+          "version": "version:3.8.0b1.chromium.1"
+        },
+        {
+          "name": "skia/bots/win_toolchain",
+          "path": "win_toolchain",
+          "version": "version:11"
+        },
+        {
+          "name": "skia/bots/bazelisk_win_amd64",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "python/bin/python3.exe",
+        "skcms/infra/bots/bazel.py",
+        "test",
+        "rbe",
+        "windows"
+      ],
+      "env_prefixes": {
+        "PATH": ["win_toolchain/sys64", "bazelisk"]
+      },
+      "dimensions": ["os:Windows-Server-17763", "gpu:none", "pool:Skia"],
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Android-ARM-Bazel-Build-RBE": {
+      "caches": [
+        {
+          "name": "vpython",
+          "path": "cache/vpython"
+        }
+      ],
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/3pp/tools/cpython3/linux-amd64",
+          "path": "cipd_bin_packages/cpython3",
+          "version": "version:2@3.8.10.chromium.19"
+        },
+        {
+          "name": "skia/bots/android_ndk_linux",
+          "path": "android_ndk_linux",
+          "version": "version:16"
+        },
+        {
+          "name": "skia/bots/bazelisk",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "cipd_bin_packages/cpython3/bin/python3",
+        "skcms/infra/bots/bazel.py",
+        "build",
+        "rbe",
+        "android-arm"
+      ],
+      "dimensions": [
+        "pool:Skia",
+        "os:Debian-10.3",
+        "gpu:none",
+        "cpu:x86-64-Haswell_GCE",
+        "machine_type:n1-highcpu-64",
+        "docker_installed:true"
+      ],
+      "env_prefixes": {
+        "ANDROID_NDK_HOME": [
+          "android_ndk_linux"
+        ],
+        "PATH": [
+          "cipd_bin_packages/cpython3",
+          "cipd_bin_packages/cpython3/bin",
+          "bazelisk"
+        ],
+        "VPYTHON_VIRTUALENV_ROOT": [
+          "cache/vpython"
+        ]
+      },
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    },
+    "skcms-Android-ARM64-Bazel-Build-RBE": {
+      "caches": [
+        {
+          "name": "vpython",
+          "path": "cache/vpython"
+        }
+      ],
+      "casSpec": "whole-repo",
+      "cipd_packages": [
+        {
+          "name": "infra/3pp/tools/cpython3/linux-amd64",
+          "path": "cipd_bin_packages/cpython3",
+          "version": "version:2@3.8.10.chromium.19"
+        },
+        {
+          "name": "skia/bots/android_ndk_linux",
+          "path": "android_ndk_linux",
+          "version": "version:16"
+        },
+        {
+          "name": "skia/bots/bazelisk",
+          "path": "bazelisk",
+          "version": "version:0"
+        }
+      ],
+      "command": [
+        "cipd_bin_packages/cpython3/bin/python3",
+        "skcms/infra/bots/bazel.py",
+        "build",
+        "rbe",
+        "android-arm64"
+      ],
+      "dimensions": [
+        "pool:Skia",
+        "os:Debian-10.3",
+        "gpu:none",
+        "cpu:x86-64-Haswell_GCE",
+        "machine_type:n1-highcpu-64",
+        "docker_installed:true"
+      ],
+      "env_prefixes": {
+        "ANDROID_NDK_HOME": [
+          "android_ndk_linux"
+        ],
+        "PATH": [
+          "cipd_bin_packages/cpython3",
+          "cipd_bin_packages/cpython3/bin",
+          "bazelisk"
+        ],
+        "VPYTHON_VIRTUALENV_ROOT": [
+          "cache/vpython"
+        ]
+      },
+      "max_attempts": 1,
+      "service_account": "skia-external-compile-tasks@skia-swarming-bots.iam.gserviceaccount.com"
+    }
+  }
+}

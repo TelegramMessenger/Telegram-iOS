@@ -24,6 +24,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/lottie-ios:Lottie",
         "//submodules/GZip:GZip",
+        "//submodules/TelegramUIPreferences",
     ],
     visibility = [
         "//visibility:public",

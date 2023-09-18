@@ -114,6 +114,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
 
     func update(
         theme: PresentationTheme,
+        forceDark: Bool,
         size: CGSize,
         cloudSourcePoint: CGFloat,
         isLeftAligned: Bool,
@@ -128,7 +129,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         if self.theme !== theme {
             self.theme = theme
             
-            if theme.overallDarkAppearance {
+            if theme.overallDarkAppearance && !forceDark {
                 if let vibrancyEffectView = self.vibrancyEffectView {
                     self.vibrancyEffectView = nil
                     vibrancyEffectView.removeFromSuperview()
@@ -136,7 +137,11 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             } else {
                 if self.vibrancyEffectView == nil {
                     let style: UIBlurEffect.Style
-                    style = .extraLight
+                    if forceDark {
+                        style = .dark
+                    } else {
+                        style = .extraLight
+                    }
                     let blurEffect = UIBlurEffect(style: style)
                     let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
                     let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
@@ -146,6 +151,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
             }
             
             self.backgroundView.updateColor(color: theme.contextMenu.backgroundColor, transition: .immediate)
+            //self.backgroundView.updateColor(color: UIColor(white: 1.0, alpha: 0.0), forceKeepBlur: true, transition: .immediate)
             
             let shadowColor = UIColor(white: 0.0, alpha: 0.4)
             
@@ -204,7 +210,7 @@ final class ReactionContextBackgroundNode: ASDisplayNode {
         self.backgroundView.update(size: contentBounds.size, transition: transition)
         
         if let vibrancyEffectView = self.vibrancyEffectView {
-            transition.updateFrame(view: vibrancyEffectView, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: contentBounds.size))
+            transition.updateFrame(view: vibrancyEffectView, frame: CGRect(origin: CGPoint(x: 10.0, y: 10.0), size: contentBounds.size), beginWithCurrentState: true)
         }
     }
     

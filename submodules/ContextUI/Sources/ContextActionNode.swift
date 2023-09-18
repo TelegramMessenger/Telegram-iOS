@@ -210,7 +210,7 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
                     return
                 }
                 strongSelf.iconNode.image = image
-            })
+            }).strict()
         }
     }
     

@@ -31,7 +31,7 @@ public protocol SparseItemGridShimmerLayer: CALayer {
 }
 
 public protocol SparseItemGridBinding: AnyObject {
-    func createLayer() -> SparseItemGridLayer?
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer?
     func createView() -> SparseItemGridView?
     func createShimmerLayer() -> SparseItemGridShimmerLayer?
     func bindLayers(items: [SparseItemGrid.Item], layers: [SparseItemGridDisplayItem], size: CGSize, insets: UIEdgeInsets, synchronous: SparseItemGrid.Synchronous)
@@ -820,7 +820,7 @@ public final class SparseItemGrid: ASDisplayNode {
             self.scrollView.setContentOffset(CGPoint(x: 0.0, y: contentOffset), animated: false)
         }
 
-        func ensureItemVisible(index: Int) {
+        func ensureItemVisible(index: Int, anyAmount: Bool) {
             guard let layout = self.layout, let _ = self.items else {
                 return
             }
@@ -830,8 +830,14 @@ public final class SparseItemGrid: ASDisplayNode {
 
             let itemFrame = layout.frame(at: index)
             let visibleBounds = self.scrollView.bounds
-            if itemFrame.intersects(visibleBounds) {
-                return
+            if anyAmount {
+                if itemFrame.intersects(visibleBounds) {
+                    return
+                }
+            } else {
+                if visibleBounds.contains(itemFrame) {
+                    return
+                }
             }
 
             var contentOffset: CGFloat
@@ -982,7 +988,7 @@ public final class SparseItemGrid: ASDisplayNode {
                             itemLayer = current
                             updateLayers.append((itemLayer, index))
                         } else {
-                            itemLayer = VisibleItem(layer: items.itemBinding.createLayer(), view: items.itemBinding.createView())
+                            itemLayer = VisibleItem(layer: items.itemBinding.createLayer(item: item), view: items.itemBinding.createView())
                             self.visibleItems[item.id] = itemLayer
                             
                             bindItems.append(item)
@@ -1700,7 +1706,7 @@ public final class SparseItemGrid: ASDisplayNode {
             if let headerTextView = headerText.view {
                 if headerTextView.superview == nil {
                     headerTextView.layer.anchorPoint = CGPoint()
-                    self.view.addSubview(headerTextView)
+                    self.view.insertSubview(headerTextView, at: 0)
                 }
                 headerTextView.center = headerTextFrame.origin
                 headerTextView.bounds = CGRect(origin: CGPoint(), size: headerTextFrame.size)
@@ -1936,11 +1942,11 @@ public final class SparseItemGrid: ASDisplayNode {
         currentViewport.scrollToItem(at: index)
     }
 
-    public func ensureItemVisible(index: Int) {
+    public func ensureItemVisible(index: Int, anyAmount: Bool = true) {
         guard let currentViewport = self.currentViewport else {
             return
         }
-        currentViewport.ensureItemVisible(index: index)
+        currentViewport.ensureItemVisible(index: index, anyAmount: anyAmount)
     }
 
     public func scrollToTop() -> Bool {

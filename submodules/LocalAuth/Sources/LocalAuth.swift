@@ -11,20 +11,29 @@ public struct LocalAuth {
     public static let biometricAuthentication: LocalAuthBiometricAuthentication? = {
         let context = LAContext()
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
-            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                switch context.biometryType {
-                case .faceID:
-                    return .faceId
-                case .touchID:
-                    return .touchId
-                case .none:
-                    return nil
-                @unknown default:
-                    return nil
-                }
-            } else {
+            #if swift(>=5.9)
+            switch context.biometryType {
+            case .faceID, .opticID:
+                return .faceId
+            case .touchID:
                 return .touchId
+            case .none:
+                return nil
+            @unknown default:
+                return nil
             }
+            #else
+            switch context.biometryType {
+            case .faceID://, .opticID:
+                return .faceId
+            case .touchID:
+                return .touchId
+            case .none:
+                return nil
+            @unknown default:
+                return nil
+            }
+            #endif
         } else {
             return nil
         }

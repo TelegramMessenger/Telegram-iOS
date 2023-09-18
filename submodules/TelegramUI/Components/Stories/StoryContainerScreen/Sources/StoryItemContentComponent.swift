@@ -30,18 +30,24 @@ final class StoryItemContentComponent: Component {
     let strings: PresentationStrings
     let peer: EnginePeer
     let item: EngineStoryItem
+    let availableReactions: StoryAvailableReactions?
+    let entityFiles: [MediaId: TelegramMediaFile]
     let audioMode: StoryContentItem.AudioMode
     let isVideoBuffering: Bool
     let isCurrent: Bool
+    let activateReaction: (UIView, MessageReaction.Reaction) -> Void
     
-    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool) {
+    init(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, item: EngineStoryItem, availableReactions: StoryAvailableReactions?, entityFiles: [MediaId: TelegramMediaFile], audioMode: StoryContentItem.AudioMode, isVideoBuffering: Bool, isCurrent: Bool, activateReaction: @escaping (UIView, MessageReaction.Reaction) -> Void) {
 		self.context = context
         self.strings = strings
         self.peer = peer
 		self.item = item
+        self.entityFiles = entityFiles
+        self.availableReactions = availableReactions
         self.audioMode = audioMode
         self.isVideoBuffering = isVideoBuffering
         self.isCurrent = isCurrent
+        self.activateReaction = activateReaction
 	}
 
 	static func ==(lhs: StoryItemContentComponent, rhs: StoryItemContentComponent) -> Bool {
@@ -57,6 +63,12 @@ final class StoryItemContentComponent: Component {
 		if lhs.item != rhs.item {
 			return false
 		}
+        if lhs.availableReactions != rhs.availableReactions {
+            return false
+        }
+        if lhs.entityFiles.keys != rhs.entityFiles.keys {
+            return false
+        }
         if lhs.isVideoBuffering != rhs.isVideoBuffering {
             return false
         }
@@ -68,6 +80,7 @@ final class StoryItemContentComponent: Component {
 
     final class View: StoryContentItem.View {
         private let imageView: StoryItemImageView
+        private let overlaysView: StoryItemOverlaysView
         private var videoNode: UniversalVideoNode?
         private var loadingEffectView: StoryItemLoadingEffectView?
         
@@ -107,18 +120,33 @@ final class StoryItemContentComponent: Component {
 		override init(frame: CGRect) {
             self.hierarchyTrackingLayer = HierarchyTrackingLayer()
             self.imageView = StoryItemImageView()
+            self.overlaysView = StoryItemOverlaysView()
             
 			super.init(frame: frame)
             
             self.layer.addSublayer(self.hierarchyTrackingLayer)
             
             self.addSubview(self.imageView)
+            self.addSubview(self.overlaysView)
             
             self.hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] value in
                 guard let self else {
                     return
                 }
                 self.updateProgressMode(update: true)
+            }
+            
+            self.overlaysView.activate = { [weak self] view, reaction in
+                guard let self, let component = self.component else {
+                    return
+                }
+                component.activateReaction(view, reaction)
+            }
+            self.overlaysView.requestUpdate = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.state?.updated(transition: .immediate)
             }
 		}
         
@@ -132,6 +160,13 @@ final class StoryItemContentComponent: Component {
             self.currentProgressTimer?.invalidate()
             self.videoProgressDisposable?.dispose()
             self.currentFetchPriority?.disposable.dispose()
+        }
+        
+        func allowsInstantPauseOnTouch(point: CGPoint) -> Bool {
+            if let _ = self.overlaysView.hitTest(self.convert(self.convert(point, to: self.overlaysView), to: self.overlaysView), with: nil) {
+                return false
+            }
+            return true
         }
         
         private func performActionAfterImageContentLoaded(update: Bool) {
@@ -187,7 +222,7 @@ final class StoryItemContentComponent: Component {
                     videoNode.isHidden = true
                     
                     self.videoNode = videoNode
-                    self.addSubview(videoNode.view)
+                    self.insertSubview(videoNode.view, aboveSubview: self.imageView)
                     
                     videoNode.playbackCompleted = { [weak self] in
                         guard let self else {
@@ -252,6 +287,10 @@ final class StoryItemContentComponent: Component {
             if self.progressMode != progressMode {
                 self.progressMode = progressMode
                 self.updateProgressMode(update: true)
+                
+                if let component = self.component, !self.overlaysView.bounds.isEmpty {
+                    self.updateOverlays(component: component, size: self.overlaysView.bounds.size, synchronousLoad: false, transition: .immediate)
+                }
             }
         }
         
@@ -449,7 +488,26 @@ final class StoryItemContentComponent: Component {
                     return result
                 }
             }
+            if let result = self.overlaysView.hitTest(self.convert(point, to: self.overlaysView), with: event) {
+                return result
+            }
             return nil
+        }
+        
+        private func updateOverlays(component: StoryItemContentComponent, size: CGSize, synchronousLoad: Bool, transition: Transition) {
+            self.overlaysView.update(
+                context: component.context,
+                strings: component.strings,
+                peer: component.peer,
+                story: component.item,
+                availableReactions: component.availableReactions,
+                entityFiles: component.entityFiles,
+                size: size,
+                isCaptureProtected: component.item.isForwardingDisabled,
+                attemptSynchronous: synchronousLoad,
+                isActive: self.progressMode == .play,
+                transition: transition
+            )
         }
         
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
@@ -579,11 +637,13 @@ final class StoryItemContentComponent: Component {
                     attemptSynchronous: synchronousLoad,
                     transition: transition
                 )
+                self.updateOverlays(component: component, size: availableSize, synchronousLoad: synchronousLoad, transition: transition)
                 applyState = true
                 if self.imageView.isContentLoaded {
                     self.contentLoaded = true
                 }
                 transition.setFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                transition.setFrame(view: self.overlaysView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 var dimensions: CGSize?
                 switch messageMedia {
@@ -719,7 +779,7 @@ final class StoryItemContentComponent: Component {
                 if let current = self.loadingEffectView {
                     loadingEffectView = current
                 } else {
-                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, borderAlpha: 0.2, duration: 1.0, hasCustomBorder: true, playOnce: false)
+                    loadingEffectView = StoryItemLoadingEffectView(effectAlpha: 0.1, borderAlpha: 0.2, duration: 1.0, hasCustomBorder: false, playOnce: false)
                     self.loadingEffectView = loadingEffectView
                     self.addSubview(loadingEffectView)
                 }

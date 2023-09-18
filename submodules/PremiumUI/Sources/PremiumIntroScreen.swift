@@ -220,6 +220,18 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .storiesSuggestedReactions:
+            if case .storiesSuggestedReactions = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .channelBoost(peerId):
+            if case .channelBoost(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -255,6 +267,8 @@ public enum PremiumSource: Equatable {
     case storiesPermanentViews
     case storiesFormatting
     case storiesExpirationDurations
+    case storiesSuggestedReactions
+    case channelBoost(EnginePeer.Id)
     
     var identifier: String? {
         switch self {
@@ -324,6 +338,10 @@ public enum PremiumSource: Equatable {
             return "stories__links_and_formatting"
         case .storiesExpirationDurations:
             return "stories__expiration_durations"
+        case .storiesSuggestedReactions:
+            return "stories__suggested_reactions"
+        case let .channelBoost(peerId):
+            return "channel_boost__\(peerId.id._internalGetInt64Value())"
         }
     }
 }
@@ -1535,8 +1553,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let sideInsets = sideInset * 2.0 + environment.safeInsets.left + environment.safeInsets.right
             var size = CGSize(width: context.availableSize.width, height: 0.0)
             
+            var topBackgroundColor = theme.list.plainBackgroundColor
+            let bottomBackgroundColor = theme.list.blocksBackgroundColor
+            if theme.overallDarkAppearance {
+                topBackgroundColor = bottomBackgroundColor
+            }
+        
             let overscroll = overscroll.update(
-                component: Rectangle(color: theme.list.plainBackgroundColor),
+                component: Rectangle(color: topBackgroundColor),
                 availableSize: CGSize(width: context.availableSize.width, height: 1000),
                 transition: context.transition
             )
@@ -1547,8 +1571,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let fade = fade.update(
                 component: RoundedRectangle(
                     colors: [
-                        theme.list.plainBackgroundColor,
-                        theme.list.blocksBackgroundColor
+                        topBackgroundColor,
+                        bottomBackgroundColor
                     ],
                     cornerRadius: 0.0,
                     gradientDirection: .vertical
@@ -2386,7 +2410,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         return { context in
             let environment = context.environment[EnvironmentType.self].value
             let state = context.state
-            
+                        
             let background = background.update(component: Rectangle(color: environment.theme.list.blocksBackgroundColor), environment: {}, availableSize: context.availableSize, transition: context.transition)
             
             var starIsVisible = true
@@ -2844,7 +2868,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             completion: {
                 completionImpl?()
             }
-        ), navigationBarAppearance: .transparent, theme: forceDark ? .dark : .default)
+        ), navigationBarAppearance: .transparent, presentationMode: modal ? .modal : .default, theme: forceDark ? .dark : .default)
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

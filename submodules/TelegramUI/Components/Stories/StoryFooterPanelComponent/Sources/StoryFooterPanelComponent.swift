@@ -12,6 +12,7 @@ import SemanticStatusNode
 import SwiftSignalKit
 import TelegramPresentationData
 import AnimatedCountLabelNode
+import MessageInputActionButtonComponent
 
 public final class StoryFooterPanelComponent: Component {
     public final class AnimationHint {
@@ -22,43 +23,79 @@ public final class StoryFooterPanelComponent: Component {
         }
     }
     
+    public struct MyReaction: Equatable {
+        public let reaction: MessageReaction.Reaction
+        public let file: TelegramMediaFile?
+        public let animationFileId: Int64?
+        
+        public init(reaction: MessageReaction.Reaction, file: TelegramMediaFile?, animationFileId: Int64?) {
+            self.reaction = reaction
+            self.file = file
+            self.animationFileId = animationFileId
+        }
+    }
+    
     public let context: AccountContext
+    public let theme: PresentationTheme
     public let strings: PresentationStrings
     public let storyItem: EngineStoryItem
+    public let myReaction: MyReaction?
+    public let isChannel: Bool
     public let externalViews: EngineStoryItem.Views?
     public let expandFraction: CGFloat
     public let expandViewStats: () -> Void
     public let deleteAction: () -> Void
     public let moreAction: (UIView, ContextGesture?) -> Void
+    public let likeAction: () -> Void
+    public let forwardAction: () -> Void
     
     public init(
         context: AccountContext,
+        theme: PresentationTheme,
         strings: PresentationStrings,
         storyItem: EngineStoryItem,
+        myReaction: MyReaction?,
+        isChannel: Bool,
         externalViews: EngineStoryItem.Views?,
         expandFraction: CGFloat,
         expandViewStats: @escaping () -> Void,
         deleteAction: @escaping () -> Void,
-        moreAction: @escaping (UIView, ContextGesture?) -> Void
+        moreAction: @escaping (UIView, ContextGesture?) -> Void,
+        likeAction: @escaping () -> Void,
+        forwardAction: @escaping () -> Void
     ) {
         self.context = context
+        self.theme = theme
         self.strings = strings
         self.storyItem = storyItem
+        self.myReaction = myReaction
+        self.isChannel = isChannel
         self.externalViews = externalViews
         self.expandViewStats = expandViewStats
         self.expandFraction = expandFraction
         self.deleteAction = deleteAction
         self.moreAction = moreAction
+        self.likeAction = likeAction
+        self.forwardAction = forwardAction
     }
     
     public static func ==(lhs: StoryFooterPanelComponent, rhs: StoryFooterPanelComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
         if lhs.strings !== rhs.strings {
             return false
         }
         if lhs.storyItem != rhs.storyItem {
+            return false
+        }
+        if lhs.myReaction != rhs.myReaction {
+            return false
+        }
+        if lhs.isChannel != rhs.isChannel {
             return false
         }
         if lhs.externalViews != rhs.externalViews {
@@ -75,6 +112,10 @@ public final class StoryFooterPanelComponent: Component {
         private let viewStatsCountText: AnimatedCountLabelView
         private let viewStatsLabelText = ComponentView<Empty>()
         private let deleteButton = ComponentView<Empty>()
+        
+        private var likeButton: ComponentView<Empty>?
+        private var likeStatsText: AnimatedCountLabelView?
+        private var forwardButton: ComponentView<Empty>?
         
         private var reactionStatsIcon: UIImageView?
         private var reactionStatsText: AnimatedCountLabelView?
@@ -95,6 +136,12 @@ public final class StoryFooterPanelComponent: Component {
         private var uploadProgressDisposable: Disposable?
         
         public let externalContainerView: UIView
+        
+        private weak var likeButtonTracingOffsetView: UIView?
+        
+        public var likeButtonView: UIView? {
+            return self.likeButton?.view
+        }
         
         override init(frame: CGRect) {
             self.viewStatsButton = HighlightTrackingButton()
@@ -152,6 +199,10 @@ public final class StoryFooterPanelComponent: Component {
             self.uploadProgressDisposable?.dispose()
         }
         
+        public func setLikeButtonTracingOffset(view: UIView) {
+            self.likeButtonTracingOffsetView = view
+        }
+        
         @objc private func viewStatsPressed() {
             guard let component = self.component else {
                 return
@@ -168,6 +219,7 @@ public final class StoryFooterPanelComponent: Component {
         
         func update(component: StoryFooterPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let isFirstTime = self.component == nil
+            let previousComponent = self.component
             
             self.isUserInteractionEnabled = component.expandFraction == 0.0
             
@@ -287,8 +339,10 @@ public final class StoryFooterPanelComponent: Component {
             let _ = baseViewCountAlpha
             
             var peers: [EnginePeer] = []
-            if let seenPeers = component.externalViews?.seenPeers ?? component.storyItem.views?.seenPeers {
-                peers = Array(seenPeers.prefix(3))
+            if !component.isChannel {
+                if let seenPeers = component.externalViews?.seenPeers ?? component.storyItem.views?.seenPeers {
+                    peers = Array(seenPeers.prefix(3))
+                }
             }
             let avatarsContent = self.avatarsContext.update(peers: peers, animated: false)
             let avatarsSize = self.avatarsView.update(context: component.context, content: avatarsContent, itemSize: CGSize(width: 30.0, height: 30.0), animation: isFirstTime ? ListViewItemUpdateAnimation.None : ListViewItemUpdateAnimation.System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .easeInOut, interactive: false)), synchronousLoad: synchronousLoad)
@@ -300,15 +354,196 @@ public final class StoryFooterPanelComponent: Component {
                 reactionCount = views.reactedCount
             }
             
-            self.viewStatsButton.isEnabled = viewCount != 0
+            if component.isChannel {
+                viewCount = max(1, viewCount)
+                if component.storyItem.myReaction != nil {
+                    reactionCount = max(1, reactionCount)
+                }
+            }
+            
+            self.viewStatsButton.isEnabled = viewCount != 0 && !component.isChannel
+            
+            var rightContentOffset: CGFloat = availableSize.width - 12.0
+            
+            if component.isChannel {
+                var likeStatsTransition = transition
+                
+                if transition.animation.isImmediate, !isFirstTime, let previousComponent, previousComponent.storyItem.id == component.storyItem.id, previousComponent.expandFraction == component.expandFraction {
+                    likeStatsTransition = .easeInOut(duration: 0.2)
+                }
+                
+                let likeStatsText: AnimatedCountLabelView
+                if let current = self.likeStatsText {
+                    likeStatsText = current
+                } else {
+                    likeStatsTransition = likeStatsTransition.withAnimation(.none)
+                    likeStatsText = AnimatedCountLabelView(frame: CGRect())
+                    likeStatsText.isUserInteractionEnabled = false
+                    self.likeStatsText = likeStatsText
+                    self.externalContainerView.addSubview(likeStatsText)
+                }
+                
+                let reactionStatsLayout = likeStatsText.update(
+                    size: CGSize(width: availableSize.width, height: size.height),
+                    segments: [
+                        .number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
+                    ],
+                    transition: (isFirstTime || likeStatsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
+                )
+                var likeStatsFrame = CGRect(origin: CGPoint(x: rightContentOffset - reactionStatsLayout.size.width, y: floor((size.height - reactionStatsLayout.size.height) * 0.5)), size: reactionStatsLayout.size)
+                likeStatsFrame.origin.y += component.expandFraction * 45.0
+                
+                likeStatsTransition.setPosition(view: likeStatsText, position: likeStatsFrame.center)
+                likeStatsTransition.setBounds(view: likeStatsText, bounds: CGRect(origin: CGPoint(), size:    likeStatsFrame.size))
+                var likeStatsAlpha: CGFloat = (1.0 - component.expandFraction)
+                if reactionCount == 0 {
+                    likeStatsAlpha = 0.0
+                }
+                likeStatsTransition.setAlpha(view: likeStatsText, alpha: likeStatsAlpha)
+                likeStatsTransition.setScale(view: likeStatsText, scale: reactionCount == 0 ? 0.001 : 1.0)
+                
+                if reactionCount != 0 {
+                    rightContentOffset -= reactionStatsLayout.size.width + 1.0
+                }
+                
+                let likeButton: ComponentView<Empty>
+                if let current = self.likeButton {
+                    likeButton = current
+                } else {
+                    likeButton = ComponentView()
+                    self.likeButton = likeButton
+                }
+                
+                let forwardButton: ComponentView<Empty>
+                if let current = self.forwardButton {
+                    forwardButton = current
+                } else {
+                    forwardButton = ComponentView()
+                    self.forwardButton = forwardButton
+                }
+                
+                let likeButtonSize = likeButton.update(
+                    transition: likeStatsTransition,
+                    component: AnyComponent(MessageInputActionButtonComponent(
+                        mode: .like(reaction: component.myReaction?.reaction, file: component.myReaction?.file, animationFileId: component.myReaction?.animationFileId),
+                        storyId: component.storyItem.id,
+                        action: { [weak self] _, action, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard case .up = action else {
+                                return
+                            }
+                            component.likeAction()
+                        },
+                        longPressAction: nil,
+                        switchMediaInputMode: {
+                        },
+                        updateMediaCancelFraction: { _ in
+                        },
+                        lockMediaRecording: {
+                        },
+                        stopAndPreviewMediaRecording: {
+                        },
+                        moreAction: { _, _ in },
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        presentController: { _ in },
+                        audioRecorder: nil,
+                        videoRecordingStatus: nil
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 33.0, height: 33.0)
+                )
+                if let likeButtonView = likeButton.view {
+                    if likeButtonView.superview == nil {
+                        self.addSubview(likeButtonView)
+                    }
+                    var likeButtonFrame = CGRect(origin: CGPoint(x: rightContentOffset - likeButtonSize.width, y: floor((size.height - likeButtonSize.height) * 0.5)), size: likeButtonSize)
+                    likeButtonFrame.origin.y += component.expandFraction * 45.0
+                    
+                    if let likeButtonTracingOffsetView = self.likeButtonTracingOffsetView {
+                        let difference = CGPoint(x: likeButtonFrame.midX - likeButtonView.layer.position.x, y: likeButtonFrame.midY - likeButtonView.layer.position.y)
+                        if difference != CGPoint() {
+                            likeStatsTransition.setPosition(view: likeButtonTracingOffsetView, position: likeButtonTracingOffsetView.layer.position.offsetBy(dx: difference.x, dy: difference.y))
+                        }
+                    }
+                    
+                    likeStatsTransition.setPosition(view: likeButtonView, position: likeButtonFrame.center)
+                    likeStatsTransition.setBounds(view: likeButtonView, bounds: CGRect(origin: CGPoint(), size: likeButtonFrame.size))
+                    likeStatsTransition.setAlpha(view: likeButtonView, alpha: 1.0 - component.expandFraction)
+                    
+                    rightContentOffset -= likeButtonSize.width + 14.0
+                }
+                
+                let forwardButtonSize = forwardButton.update(
+                    transition: likeStatsTransition,
+                    component: AnyComponent(MessageInputActionButtonComponent(
+                        mode: .forward,
+                        storyId: component.storyItem.id,
+                        action: { [weak self] _, action, _ in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            guard case .up = action else {
+                                return
+                            }
+                            component.forwardAction()
+                        },
+                        longPressAction: nil,
+                        switchMediaInputMode: {
+                        },
+                        updateMediaCancelFraction: { _ in
+                        },
+                        lockMediaRecording: {
+                        },
+                        stopAndPreviewMediaRecording: {
+                        },
+                        moreAction: { _, _ in },
+                        context: component.context,
+                        theme: component.theme,
+                        strings: component.strings,
+                        presentController: { _ in },
+                        audioRecorder: nil,
+                        videoRecordingStatus: nil
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 33.0, height: 33.0)
+                )
+                if let forwardButtonView = forwardButton.view {
+                    if forwardButtonView.superview == nil {
+                        self.addSubview(forwardButtonView)
+                    }
+                    var forwardButtonFrame = CGRect(origin: CGPoint(x: rightContentOffset - likeButtonSize.width, y: floor((size.height - forwardButtonSize.height) * 0.5)), size: forwardButtonSize)
+                    forwardButtonFrame.origin.y += component.expandFraction * 45.0
+                    
+                    likeStatsTransition.setPosition(view: forwardButtonView, position: forwardButtonFrame.center)
+                    likeStatsTransition.setBounds(view: forwardButtonView, bounds: CGRect(origin: CGPoint(), size: forwardButtonFrame.size))
+                    likeStatsTransition.setAlpha(view: forwardButtonView, alpha: 1.0 - component.expandFraction)
+                    
+                    rightContentOffset -= forwardButtonSize.width + 8.0
+                }
+            } else {
+                if let likeButton = self.likeButton {
+                    self.likeButton = nil
+                    likeButton.view?.removeFromSuperview()
+                }
+                if let forwardButton = self.forwardButton {
+                    self.forwardButton = nil
+                    forwardButton.view?.removeFromSuperview()
+                }
+            }
             
             var regularSegments: [AnimatedCountLabelView.Segment] = []
             if viewCount != 0 {
-                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.regular(15.0), textColor: .white)))
+                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white)))
             }
             
             let viewPart: String
-            if viewCount == 0 {
+            if component.isChannel {
+                viewPart = ""
+            } else if viewCount == 0 {
                 viewPart = component.strings.Story_Footer_NoViews
             } else {
                 var string = component.strings.Story_Footer_ViewCount(Int32(viewCount))
@@ -336,7 +571,7 @@ public final class StoryFooterPanelComponent: Component {
             var reactionsIconSize: CGSize?
             var reactionsTextSize: CGSize?
             
-            if reactionCount != 0 {
+            if reactionCount != 0 && !component.isChannel {
                 var reactionsTransition = transition
                 let reactionStatsIcon: UIImageView
                 if let current = self.reactionStatsIcon {
@@ -365,7 +600,7 @@ public final class StoryFooterPanelComponent: Component {
                 let reactionStatsLayout = reactionStatsText.update(
                     size: CGSize(width: availableSize.width, height: size.height),
                     segments: [
-                        .number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.regular(15.0), textColor: .white))
+                        .number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
                     ],
                     transition: (isFirstTime || reactionsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
                 )
@@ -396,14 +631,18 @@ public final class StoryFooterPanelComponent: Component {
             let avatarViewsSpacing: CGFloat = 18.0
             let viewsIconSpacing: CGFloat = 2.0
             
-            let reactionsIconSpacing: CGFloat = 2.0
+            let reactionsIconSpacing: CGFloat = component.isChannel ? 5.0 : 2.0
             
             var contentWidth: CGFloat = 0.0
             
             contentWidth += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
             if let image = self.viewsIconView.image {
-                if viewCount != 0 {
-                    contentWidth += (image.size.width + viewsIconSpacing) * component.expandFraction
+                if component.isChannel {
+                    contentWidth += image.size.width + viewsIconSpacing
+                } else {
+                    if viewCount != 0 {
+                        contentWidth += (image.size.width + viewsIconSpacing) * component.expandFraction
+                    }
                 }
             }
             
@@ -412,13 +651,22 @@ public final class StoryFooterPanelComponent: Component {
             } else {
                 contentWidth += viewStatsTextLayout.size.width
             }
-            contentWidth += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            if !component.isChannel {
+                contentWidth += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            }
             
-            if let reactionsIconSize, let reactionsTextSize {
-                contentWidth += viewsReactionsSpacing
-                contentWidth += reactionsIconSize.width
-                contentWidth += reactionsIconSpacing
-                contentWidth += reactionsTextSize.width
+            if component.isChannel {
+                /*if let reactionsIconSize {
+                    contentWidth += viewsReactionsSpacing
+                    contentWidth += reactionsIconSize.width
+                }*/
+            } else {
+                if let reactionsIconSize, let reactionsTextSize {
+                    contentWidth += viewsReactionsSpacing
+                    contentWidth += reactionsIconSize.width
+                    contentWidth += reactionsIconSpacing
+                    contentWidth += reactionsTextSize.width
+                }
             }
             
             let minContentX: CGFloat = 16.0
@@ -435,19 +683,31 @@ public final class StoryFooterPanelComponent: Component {
                 let viewsIconFrame = CGRect(origin: CGPoint(x: contentX, y: floor((size.height - image.size.height) * 0.5)), size: image.size)
                 transition.setPosition(view: self.viewsIconView, position: viewsIconFrame.center)
                 transition.setBounds(view: self.viewsIconView, bounds: CGRect(origin: CGPoint(), size: viewsIconFrame.size))
-                if viewCount == 0 {
-                    transition.setAlpha(view: self.viewsIconView, alpha: 0.0)
+                
+                if component.isChannel {
+                    transition.setAlpha(view: self.viewsIconView, alpha: 1.0)
+                    transition.setScale(view: self.viewsIconView, scale: 1.0)
                 } else {
-                    transition.setAlpha(view: self.viewsIconView, alpha: component.expandFraction)
+                    if viewCount == 0 {
+                        transition.setAlpha(view: self.viewsIconView, alpha: 0.0)
+                    } else {
+                        transition.setAlpha(view: self.viewsIconView, alpha: component.expandFraction)
+                    }
+                    transition.setScale(view: self.viewsIconView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: 1.0 - component.expandFraction))
                 }
-                transition.setScale(view: self.viewsIconView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: 1.0 - component.expandFraction))
             }
             
-            if !avatarsSize.width.isZero {
-                contentX += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
-            }
-            if let image = self.viewsIconView.image {
-                contentX += (image.size.width + viewsIconSpacing) * component.expandFraction
+            if component.isChannel {
+                if let image = self.viewsIconView.image {
+                    contentX += image.size.width + viewsIconSpacing
+                }
+            } else {
+                if !avatarsSize.width.isZero {
+                    contentX += (avatarsSize.width + avatarViewsSpacing) * (1.0 - component.expandFraction)
+                }
+                if let image = self.viewsIconView.image {
+                    contentX += (image.size.width + viewsIconSpacing) * component.expandFraction
+                }
             }
             
             transition.setFrame(view: self.viewStatsCountText, frame: CGRect(origin: CGPoint(x: contentX, y: floor((size.height - viewStatsTextLayout.size.height) * 0.5)), size: viewStatsTextLayout.size))
@@ -471,7 +731,9 @@ public final class StoryFooterPanelComponent: Component {
                 transition.setAlpha(view: viewStatsLabelTextView, alpha: 1.0 - component.expandFraction)
                 transition.setScale(view: viewStatsLabelTextView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: component.expandFraction))
             }
-            contentX += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            if !component.isChannel {
+                contentX += viewStatsLabelSize.width * (1.0 - component.expandFraction)
+            }
             
             if let reactionStatsIcon = self.reactionStatsIcon, let reactionsIconSize, let reactionStatsText = self.reactionStatsText, let reactionsTextSize {
                 contentX += viewsReactionsSpacing
@@ -488,8 +750,6 @@ public final class StoryFooterPanelComponent: Component {
 
             transition.setFrame(view: self.viewStatsButton, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: statsButtonWidth, height: baseHeight)))
             self.viewStatsButton.isUserInteractionEnabled = component.expandFraction == 0.0
-            
-            var rightContentOffset: CGFloat = availableSize.width - 12.0
             
             let isPending = component.storyItem.isPending
             self.viewsIconView.isHidden = isPending
@@ -522,10 +782,15 @@ public final class StoryFooterPanelComponent: Component {
                 transition.setPosition(view: deleteButtonView, position: deleteButtonFrame.center)
                 transition.setBounds(view: deleteButtonView, bounds: CGRect(origin: CGPoint(), size: deleteButtonFrame.size))
                 
-                rightContentOffset -= deleteButtonSize.width + 8.0
-                
                 transition.setAlpha(view: deleteButtonView, alpha: 1.0 - sideContentFraction)
                 transition.setScale(view: deleteButtonView, scale: CGFloat(1.0).interpolate(to: CGFloat(0.1), amount: sideContentFraction))
+                
+                if component.isChannel {
+                    deleteButtonView.isHidden = true
+                } else {
+                    deleteButtonView.isHidden = false
+                    rightContentOffset -= deleteButtonSize.width + 8.0
+                }
             }
             
             return size

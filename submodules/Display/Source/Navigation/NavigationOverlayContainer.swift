@@ -56,7 +56,7 @@ final class NavigationOverlayContainer: ASDisplayNode {
                     strongSelf.isReadyUpdated?()
                 }
             }
-        })
+        }).strict()
     }
     
     deinit {

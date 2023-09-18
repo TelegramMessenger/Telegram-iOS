@@ -448,7 +448,9 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0), strings: presentationData.strings, textNode: self.textNode.textNode, updateIsActive: { _ in
         }, present: { _, _ in
-        }, rootNode: self, performAction: { _, _ in
+        }, rootNode: { [weak self] in
+            return self
+        }, performAction: { _, _ in
         })
         self.textSelectionNode = textSelectionNode
         
@@ -802,7 +804,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
                 
                 strongSelf.tip = tip
                 requestLayout()
-            })
+            }).strict()
         }
     }
     

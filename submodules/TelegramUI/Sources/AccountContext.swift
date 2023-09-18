@@ -21,6 +21,7 @@ import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
 import AppBundle
+import DirectMediaImageCache
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -244,12 +245,16 @@ public final class AccountContextImpl: AccountContext {
     public private(set) var userLimits: EngineConfiguration.UserLimits
     
     public private(set) var isPremium: Bool
-        
+    
+    public let imageCache: AnyObject?
+    
     public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
         self.engine = TelegramEngine(account: account)
+        
+        self.imageCache = DirectMediaImageCache(account: account)
         
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
         self.isPremium = false

@@ -296,7 +296,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                         return
                     }
                     strongSelf.iconNode.image = image
-                })
+                }).strict()
             }
         } else if let image = self.iconNode.image {
             iconSize = image.size
@@ -1122,7 +1122,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                     }
                     strongSelf.tip = tip
                     requestUpdate(.immediate)
-                })
+                }).strict()
             }
         }
         

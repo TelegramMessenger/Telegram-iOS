@@ -10,23 +10,27 @@ import AccountContext
 
 public struct MediaEditorResultPrivacy: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
+        case sendAsPeerId
         case privacy
         case timeout
         case disableForwarding
         case archive
     }
     
+    public let sendAsPeerId: EnginePeer.Id?
     public let privacy: EngineStoryPrivacy
     public let timeout: Int
     public let isForwardingDisabled: Bool
     public let pin: Bool
     
     public init(
+        sendAsPeerId: EnginePeer.Id?,
         privacy: EngineStoryPrivacy,
         timeout: Int,
         isForwardingDisabled: Bool,
         pin: Bool
     ) {
+        self.sendAsPeerId = sendAsPeerId
         self.privacy = privacy
         self.timeout = timeout
         self.isForwardingDisabled = isForwardingDisabled
@@ -36,6 +40,7 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
+        self.sendAsPeerId = try container.decodeIfPresent(Int64.self, forKey: .sendAsPeerId).flatMap { EnginePeer.Id($0) }
         self.privacy = try container.decode(EngineStoryPrivacy.self, forKey: .privacy)
         self.timeout = Int(try container.decode(Int32.self, forKey: .timeout))
         self.isForwardingDisabled = try container.decodeIfPresent(Bool.self, forKey: .disableForwarding) ?? false
@@ -45,6 +50,7 @@ public struct MediaEditorResultPrivacy: Codable, Equatable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
     
+        try container.encodeIfPresent(self.sendAsPeerId?.toInt64(), forKey: .sendAsPeerId)
         try container.encode(self.privacy, forKey: .privacy)
         try container.encode(Int32(self.timeout), forKey: .timeout)
         try container.encode(self.isForwardingDisabled, forKey: .disableForwarding)
@@ -213,7 +219,7 @@ public func addStoryDraft(engine: TelegramEngine, item: MediaEditorDraft) {
 
 public func removeStoryDraft(engine: TelegramEngine, path: String, delete: Bool) {
     if delete {
-        try? FileManager.default.removeItem(atPath: fullDraftPath(engine: engine, path: path))
+        try? FileManager.default.removeItem(atPath: fullDraftPath(peerId: engine.account.peerId, path: path))
     }
     let itemId = MediaEditorDraftItemId(path.persistentHashValue)
     let _ = engine.orderedLists.removeItem(collectionId: ApplicationSpecificOrderedItemListCollectionId.storyDrafts, id: itemId.rawValue).start()
@@ -264,10 +270,10 @@ public func updateStoryDrafts(engine: TelegramEngine) {
 
 public extension MediaEditorDraft {
     func fullPath(engine: TelegramEngine) -> String {
-        return fullDraftPath(engine: engine, path: self.path)
+        return fullDraftPath(peerId: engine.account.peerId, path: self.path)
     }
 }
 
-private func fullDraftPath(engine: TelegramEngine, path: String) -> String {
-    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(engine.account.peerId.toInt64())/" + path
+func fullDraftPath(peerId: EnginePeer.Id, path: String) -> String {
+    return NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0] + "/storyDrafts_\(peerId.toInt64())/" + path
 }

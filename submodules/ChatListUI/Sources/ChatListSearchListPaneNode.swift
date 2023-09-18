@@ -2345,25 +2345,20 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             for item in items {
                 switch item {
                 case let .recentlySearchedPeer(peer, _, _, _, _, _, _, _, _):
-                    if case .user = peer {
-                        storyStatsIds.append(peer.id)
-                    }
+                    storyStatsIds.append(peer.id)
                 case let .localPeer(peer, _, _, _, _, _, _, _, _, _):
-                    if case .user = peer {
-                        storyStatsIds.append(peer.id)
-                    }
+                    storyStatsIds.append(peer.id)
                 case let .globalPeer(foundPeer, _, _, _, _, _, _, _, _):
-                    if foundPeer.peer is TelegramUser {
-                        storyStatsIds.append(foundPeer.peer.id)
-                    }
+                    storyStatsIds.append(foundPeer.peer.id)
                 case let .message(_, peer, _, _, _, _, _, _, _, _, _, _, _):
-                    if let peer = peer.peer, case .user = peer {
+                    if let peer = peer.peer {
                         storyStatsIds.append(peer.id)
                     }
                 default:
                     break
                 }
             }
+            storyStatsIds.removeAll(where: { $0 == context.account.peerId })
             
             return context.engine.data.subscribe(
                 EngineDataMap(
@@ -2557,6 +2552,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> map { stats -> ([RecentlySearchedPeer], [EnginePeer.Id: PeerStoryStats]) in
                     var mappedStats: [EnginePeer.Id: PeerStoryStats] = [:]
                     for (id, value) in stats {
+                        if id == context.account.peerId {
+                            continue
+                        }
                         if let value {
                             mappedStats[id] = value
                         }
@@ -2658,7 +2656,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 })
             }
-        })
+        }).strict()
                         
         self.recentListNode.beganInteractiveDragging = { _ in
             interaction.dismissInput()
@@ -2735,7 +2733,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
                 }
                 strongSelf.playlistLocation = playlistStateAndType?.1.playlistLocation
-            })
+            }).strict()
         }
         
         self.deletedMessagesDisposable = (context.account.stateManager.deletedMessages
@@ -2760,7 +2758,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return state
                 }
             }
-        })
+        }).strict()
     }
     
     deinit {
@@ -3058,7 +3056,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                         }
                                     }
                                 }, completed: {
-                                })
+                                }).strict()
                                 cancelImpl = {
                                     self?.playlistPreloadDisposable?.dispose()
                                 }
@@ -3386,7 +3384,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     }
 }
 
-private final class ShimmerEffectNode: ASDisplayNode {
+private final class SearchShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
     private let imageNodeContainer: ASDisplayNode
@@ -3504,13 +3502,13 @@ private final class ShimmerEffectNode: ASDisplayNode {
 
 public final class ChatListSearchShimmerNode: ASDisplayNode {
     private let backgroundColorNode: ASDisplayNode
-    private let effectNode: ShimmerEffectNode
+    private let effectNode: SearchShimmerEffectNode
     private let maskNode: ASImageNode
     private var currentParams: (size: CGSize, presentationData: PresentationData, key: ChatListSearchPaneKey)?
     
     public init(key: ChatListSearchPaneKey) {
         self.backgroundColorNode = ASDisplayNode()
-        self.effectNode = ShimmerEffectNode()
+        self.effectNode = SearchShimmerEffectNode()
         self.maskNode = ASImageNode()
         
         super.init()

@@ -25,6 +25,8 @@ import ChatInputNode
 import ChatEntityKeyboardInputNode
 import ChatControllerInteraction
 import ChatAvatarNavigationNode
+import AccessoryPanelNode
+import ForwardAccessoryPanelNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -66,6 +68,55 @@ private struct ChatControllerNodeDerivedLayoutState {
     var inputNodeHeight: CGFloat?
     var inputNodeAdditionalHeight: CGFloat?
     var upperInputPositionBound: CGFloat?
+}
+
+class HistoryNodeContainer: ASDisplayNode {
+    private(set) var secretContainer: UIView?
+    public var isSecret: Bool = false {
+        didSet {
+            if self.isSecret != oldValue {
+                if self.isNodeLoaded {
+                    (self.view as? UITextField)?.isSecureTextEntry = self.isSecret
+                }
+            }
+        }
+    }
+    
+    init(isSecret: Bool) {
+        self.isSecret = isSecret
+        
+        super.init()
+        
+        self.setViewBlock {
+            let captureProtectedView = UITextField(frame: CGRect())
+            captureProtectedView.isSecureTextEntry = self.isSecret
+            self.secretContainer = captureProtectedView.subviews.first
+            return captureProtectedView
+        }
+        
+        let _ = self.view
+    }
+    
+    override func addSubnode(_ subnode: ASDisplayNode) {
+        if let secretContainer = self.secretContainer {
+            secretContainer.addSubnode(subnode)
+        } else {
+            super.addSubnode(subnode)
+        }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let secretContainer = self.secretContainer {
+            return secretContainer.hitTest(point, with: event)
+        } else {
+            return super.hitTest(point, with: event)
+        }
+    }
+    
+    func updateSize(size: CGSize, transition: ContainedViewLayoutTransition) {
+        /*if let secretContainer = self.secretContainer {
+        }*/
+    }
 }
 
 class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
@@ -436,9 +487,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         //self.historyScrollingArea = SparseDiscreteScrollingArea()
         //self.historyNode.historyScrollingArea = self.historyScrollingArea
 
+        //self.historyNodeContainer = HistoryNodeContainer(isSecret: chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat)
         self.historyNodeContainer = ASDisplayNode()
+        
         self.historyNodeContainer.addSubnode(self.historyNode)
-        //self.historyNodeContainer.addSubnode(self.historyScrollingArea)
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
@@ -854,6 +906,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             case .inline:
                 statusBar.statusBarStyle = .Ignore
             }
+        }
+        
+        if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
+            historyNodeContainer.isSecret = self.chatPresentationInterfaceState.copyProtectionEnabled || self.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat
         }
 
         var previousListBottomInset: CGFloat?
@@ -1482,6 +1538,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         transition.updateBounds(node: self.historyNodeContainer, bounds: contentBounds)
         transition.updatePosition(node: self.historyNodeContainer, position: contentBounds.center)
+        
+        if let historyNodeContainer = self.historyNodeContainer as? HistoryNodeContainer {
+            historyNodeContainer.updateSize(size: contentBounds.size, transition: transition)
+        }
         
         transition.updateBounds(node: self.historyNode, bounds: CGRect(origin: CGPoint(), size: contentBounds.size))
         transition.updatePosition(node: self.historyNode, position: CGPoint(x: contentBounds.size.width / 2.0, y: contentBounds.size.height / 2.0))

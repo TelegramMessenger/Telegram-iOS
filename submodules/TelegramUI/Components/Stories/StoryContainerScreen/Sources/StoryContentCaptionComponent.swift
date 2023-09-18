@@ -448,6 +448,16 @@ final class StoryContentCaptionComponent: Component {
                                 }
                             }
                         }
+                    } else {
+                        if case .tap = gesture {
+                            if component.externalState.isSelectingText {
+                                self.cancelTextSelection()
+                            } else if self.isExpanded {
+                                self.collapse(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            } else {
+                                self.expand(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                            }
+                        }
                     }
                 }
             default:
@@ -734,7 +744,9 @@ final class StoryContentCaptionComponent: Component {
                         return
                     }
                     component.controller()?.presentInGlobalOverlay(c, with: a)
-                }, rootNode: controller.displayNode, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
+                }, rootNode: { [weak controller] in
+                    return controller?.displayNode
+                }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
                     guard let self, let component = self.component else {
                         return
                     }

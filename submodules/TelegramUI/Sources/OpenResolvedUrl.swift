@@ -791,7 +791,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     let errorText: String
                     switch error {
                     case .generic:
-                        errorText = "The folder link has expired."
+                        errorText = presentationData.strings.Chat_ErrorFolderLinkExpired
                     }
                     present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }))
@@ -833,6 +833,111 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "story_expired", scale: 0.066, colors: [:], title: nil, text: presentationData.strings.Story_TooltipExpired, customUndoText: nil, timeout: nil), elevatedLayout: elevatedLayout, animateInAsReplacement: false, action: { _ in
                         return true
                     }), nil)
+                }
+            })
+        case let .boost(peerId, status, canApplyStatus):
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer, let status else {
+                    return
+                }
+                
+                var isBoosted = false
+                if case let .error(error) = canApplyStatus, case .peerBoostAlreadyActive = error {
+                    isBoosted = true
+                }
+                
+                var isCurrent = false
+                if case let .chat(chatPeerId, _) = urlContext, chatPeerId == peerId {
+                    isCurrent = true
+                }
+                
+                var currentLevel = Int32(status.level)
+                var currentLevelBoosts = Int32(status.currentLevelBoosts)
+                var nextLevelBoosts = status.nextLevelBoosts.flatMap(Int32.init)
+                
+                if isBoosted && status.boosts == currentLevelBoosts {
+                    currentLevel = max(0, currentLevel - 1)
+                    nextLevelBoosts = currentLevelBoosts
+                    currentLevelBoosts = max(0, currentLevelBoosts - 1)
+                }
+                
+                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: isBoosted)
+                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: true)
+                let nextCount = Int32(status.boosts + 1)
+                
+                var updateImpl: (() -> Void)?
+                var dismissImpl: (() -> Void)?
+                let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), action: {
+                    if isBoosted {
+                        return true
+                    }
+                    var dismiss = false
+                    switch canApplyStatus {
+                    case .ok:
+                        updateImpl?()
+                    case let .replace(previousPeer):
+                        let text = presentationData.strings.ChannelBoost_ReplaceBoost(previousPeer.compactDisplayTitle, peer.compactDisplayTitle).string
+                        let controller = replaceBoostConfirmationController(context: context, fromPeer: previousPeer, toPeer: peer, text: text, commit: {
+                            updateImpl?()
+                        })
+                        present(controller, nil)
+                    case let .error(error):
+                        let title: String?
+                        let text: String
+                        
+                        var actions: [TextAlertAction] = [
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                        
+                        switch error {
+                        case .generic:
+                            title = nil
+                            text = presentationData.strings.Login_UnknownError
+                        case let .floodWait(timeout):
+                            title = presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle
+                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
+                            text = presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string
+                            dismiss = true
+                        case .premiumRequired:
+                            title = presentationData.strings.ChannelBoost_Error_PremiumNeededTitle
+                            text = presentationData.strings.ChannelBoost_Error_PremiumNeededText
+                            actions = [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                    dismissImpl?()
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: false, dismissed: nil)
+                                    navigationController?.pushViewController(controller)
+                                })
+                            ]
+                        case .giftedPremiumNotAllowed:
+                            title = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedTitle
+                            text = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedText
+                            dismiss = true
+                        case .peerBoostAlreadyActive:
+                            return true
+                        }
+                        
+                        let controller = textAlertController(sharedContext: context.sharedContext, title: title, text: text, actions: actions, parseMarkdown: true)
+                        present(controller, nil)
+                    }
+                    return dismiss
+                },
+                openPeer: { peer in
+                    openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                })
+                navigationController?.pushViewController(controller)
+                
+                updateImpl = { [weak controller] in
+                    if let _ = status.nextLevelBoosts {
+                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
+                        controller?.updateSubject(nextSubject, count: nextCount)
+                    } else {
+                        controller?.dismiss()
+                    }
+                }
+                dismissImpl = { [weak controller] in
+                    controller?.dismiss()
                 }
             })
     }

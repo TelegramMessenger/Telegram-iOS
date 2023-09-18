@@ -48,6 +48,7 @@ import TranslateUI
 import TelegramNotices
 import ObjectiveC
 import LocationUI
+import ReactionSelectionNode
 
 private var ObjCKey_DeinitWatcher: Int?
 
@@ -433,7 +434,7 @@ final class StoryItemSetContainerSendMessage {
         
         let contextItems = ContextController.Items(content: .list(items))
         
-        let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(contextItems), gesture: gesture)
+        let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .top)), items: .single(contextItems), gesture: gesture)
         contextController.dismissed = { [weak view] in
             guard let view else {
                 return
@@ -601,6 +602,7 @@ final class StoryItemSetContainerSendMessage {
                                 }
                             }
                         })
+                        component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: peerId, id: focusedItem.storyItem.id))
                         inputPanelView.clearSendMessageInput(updateState: true)
                         
                         self.currentInputMode = .text
@@ -1260,6 +1262,15 @@ final class StoryItemSetContainerSendMessage {
             return
         }
         inputPanelView.clearSendMessageInput(updateState: true)
+        
+        guard let component = view.component else {
+            return
+        }
+        let focusedItem = component.slice.item
+        guard let peerId = focusedItem.peerId else {
+            return
+        }
+        component.storyItemSharedState.replyDrafts.removeValue(forKey: StoryId(peerId: peerId, id: focusedItem.storyItem.id))
     }
     
     enum AttachMenuSubject {
@@ -2087,6 +2098,7 @@ final class StoryItemSetContainerSendMessage {
                                 if let item = item {
                                     if item.fileSize > Int64(premiumLimits.maxUploadFileParts) * 512 * 1024 {
                                         let controller = PremiumLimitScreen(context: component.context, subject: .files, count: 4, action: {
+                                            return true
                                         })
                                         component.controller()?.push(controller)
                                         return
@@ -2095,6 +2107,7 @@ final class StoryItemSetContainerSendMessage {
                                         var replaceImpl: ((ViewController) -> Void)?
                                         let controller = PremiumLimitScreen(context: context, subject: .files, count: 2, action: {
                                             replaceImpl?(PremiumIntroScreen(context: context, source: .upload))
+                                            return true
                                         })
                                         replaceImpl = { [weak controller] c in
                                             controller?.replace(with: c)
@@ -3225,7 +3238,7 @@ final class StoryItemSetContainerSendMessage {
             let subject = EngineMessage(stableId: 0, stableVersion: 0, id: EngineMessage.Id(peerId: PeerId(0), namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [.geo(TelegramMediaMap(latitude: venue.latitude, longitude: venue.longitude, heading: nil, accuracyRadius: nil, geoPlace: nil, venue: venue.venue, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil))], peers: [:], associatedMessages: [:], associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
             
             let context = component.context
-            actions.append(ContextMenuAction(content: .textWithIcon(title: "View Location", icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
+            actions.append(ContextMenuAction(content: .textWithIcon(title: updatedPresentationData.initial.strings.Story_ViewLocation, icon: generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: .white)), action: { [weak controller, weak view] in
                 let locationController = LocationViewController(
                     context: context,
                     updatedPresentationData: updatedPresentationData,
@@ -3249,6 +3262,8 @@ final class StoryItemSetContainerSendMessage {
                 }
                 controller?.push(locationController)
             }))
+        case .reaction:
+            return
         }
         
         let referenceSize = view.controlsContainerView.frame.size
@@ -3280,5 +3295,105 @@ final class StoryItemSetContainerSendMessage {
         )
         self.menuController = menuController
         view.updateIsProgressPaused()
+    }
+    
+    func activateInlineReaction(view: StoryItemSetContainerComponent.View, reactionView: UIView, reaction: MessageReaction.Reaction) {
+        guard let component = view.component else {
+            return
+        }
+        
+        let animateWithReactionItem: (ReactionItem) -> Void = { [weak self, weak view] reactionItem in
+            guard let self, let view else {
+                return
+            }
+            
+            self.performWithPossibleStealthModeConfirmation(view: view, action: { [weak view] in
+                guard let view, let component = view.component else {
+                    return
+                }
+                if component.slice.peer.id != component.context.account.peerId {
+                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: reaction).start()
+                }
+                
+                let targetFrame = reactionView.convert(reactionView.bounds, to: view)
+                
+                let targetView = UIView(frame: targetFrame)
+                targetView.isUserInteractionEnabled = false
+                view.addSubview(targetView)
+                
+                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: false)
+                view.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                
+                if let standaloneReactionAnimation = view.standaloneReactionAnimation {
+                    view.standaloneReactionAnimation = nil
+                    
+                    let standaloneReactionAnimationView = standaloneReactionAnimation.view
+                    standaloneReactionAnimation.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimationView] _ in
+                        standaloneReactionAnimationView?.removeFromSuperview()
+                    })
+                }
+                view.standaloneReactionAnimation = standaloneReactionAnimation
+                
+                standaloneReactionAnimation.frame = view.bounds
+                standaloneReactionAnimation.animateReactionSelection(
+                    context: component.context,
+                    theme: component.theme,
+                    animationCache: component.context.animationCache,
+                    reaction: reactionItem,
+                    avatarPeers: [],
+                    playHaptic: true,
+                    isLarge: false,
+                    hideCenterAnimation: true,
+                    targetView: targetView,
+                    addStandaloneReactionAnimation: { [weak view] standaloneReactionAnimation in
+                        guard let view else {
+                            return
+                        }
+                        
+                        if let standaloneReactionAnimation = view.standaloneReactionAnimation {
+                            view.standaloneReactionAnimation = nil
+                            standaloneReactionAnimation.view.removeFromSuperview()
+                        }
+                        view.standaloneReactionAnimation = standaloneReactionAnimation
+                        
+                        standaloneReactionAnimation.frame = view.bounds
+                        view.componentContainerView.addSubview(standaloneReactionAnimation.view)
+                    },
+                    completion: { [weak targetView, weak standaloneReactionAnimation] in
+                        targetView?.removeFromSuperview()
+                        standaloneReactionAnimation?.view.removeFromSuperview()
+                    }
+                )
+            })
+        }
+        
+        switch reaction {
+        case .builtin:
+            if let availableReactions = component.availableReactions {
+                for reactionItem in availableReactions.reactionItems {
+                    if reactionItem.reaction.rawValue == reaction {
+                        animateWithReactionItem(reactionItem)
+                        break
+                    }
+                }
+            }
+        case let .custom(fileId):
+            let _ = (component.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+            |> deliverOnMainQueue).start(next: { files in
+                if let itemFile = files[fileId] {
+                    let reactionItem = ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
+                        appearAnimation: itemFile,
+                        stillAnimation: itemFile,
+                        listAnimation: itemFile,
+                        largeListAnimation: itemFile,
+                        applicationAnimation: nil,
+                        largeApplicationAnimation: nil,
+                        isCustom: true
+                    )
+                    animateWithReactionItem(reactionItem)
+                }
+            })
+        }
     }
 }

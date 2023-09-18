@@ -858,6 +858,27 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/addlist/\(slug)"
                         }
                     }
+                } else if parsedUrl.host == "boost" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var domain: String?
+                        var channel: Int64?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "domain" {
+                                        domain = value
+                                    } else if queryItem.name == "channel" {
+                                        channel = Int64(value)
+                                    }
+                                }
+                            }
+                        }
+                        if let domain {
+                            convertedUrl = "https://t.me/\(domain)?boost"
+                        } else if let channel {
+                            convertedUrl = "https://t.me/c/\(channel)?boost"
+                        }
+                    }
                 }
             } else {
                 if parsedUrl.host == "importStickers" {

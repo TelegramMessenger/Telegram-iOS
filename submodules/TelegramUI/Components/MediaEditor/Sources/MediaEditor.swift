@@ -21,6 +21,7 @@ public struct MediaEditorPlayerState {
     public let framesCount: Int
     public let framesUpdateTimestamp: Double
     public let hasAudio: Bool
+    public let isAudioPlayerOnly: Bool
 }
 
 public final class MediaEditor {
@@ -44,9 +45,15 @@ public final class MediaEditor {
 
     private let context: AccountContext
     private let subject: Subject
+    
+    private let clock = CMClockGetHostTimeClock()
     private var player: AVPlayer?
     private var additionalPlayer: AVPlayer?
+    private var audioPlayer: AVPlayer?
+    
     private var timeObserver: Any?
+    private weak var timeObserverPlayer: AVPlayer?
+    
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
     private weak var previewView: MediaEditorPreviewView?
@@ -108,7 +115,7 @@ public final class MediaEditor {
     }
     
     public var resultIsVideo: Bool {
-        return self.player != nil || self.values.entities.contains(where: { $0.entity.isAnimated })
+        return self.player != nil || self.audioPlayer != nil || self.values.entities.contains(where: { $0.entity.isAnimated })
     }
     
     public var resultImage: UIImage? {
@@ -120,19 +127,20 @@ public final class MediaEditor {
     }
         
     private let playerPromise = Promise<AVPlayer?>()
-    private var playerPlaybackState: (Double, Double, Bool, Bool) = (0.0, 0.0, false, false) {
+    private var playerPlaybackState: (Double, Double, Bool, Bool, Bool) = (0.0, 0.0, false, false, false) {
         didSet {
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
-    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool)>((0.0, 0.0, false, false))
+    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool, Bool)>((0.0, 0.0, false, false, false))
     
     public var position: Signal<Double, NoError> {
         return self.playerPlaybackStatePromise.get()
-        |> map { _, position, _, _ -> Double in
+        |> map { _, position, _, _, _ -> Double in
             return position
         }
     }
+   
     public var duration: Double? {
         if let _ = self.player {
             if let trimRange = self.values.videoTrimRange {
@@ -145,27 +153,57 @@ public final class MediaEditor {
         }
     }
     
+    public var originalDuration: Double? {
+        if let _ = self.player {
+            return min(60.0, self.playerPlaybackState.0)
+        } else {
+            return nil
+        }
+    }
+    
     public var onFirstDisplay: () -> Void = {}
     
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
         return self.playerPromise.get()
         |> mapToSignal { [weak self] player in
-            if let self, let asset = player?.currentItem?.asset {
-                return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), self.videoFrames(asset: asset, count: framesCount))
-                |> map { values, durationAndPosition, framesAndUpdateTimestamp in
-                    let (duration, position, isPlaying, hasAudio) = durationAndPosition
-                    let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
-                    return MediaEditorPlayerState(
-                        generationTimestamp: CACurrentMediaTime(),
-                        duration: duration,
-                        timeRange: values.videoTrimRange,
-                        position: position,
-                        isPlaying: isPlaying,
-                        frames: frames,
-                        framesCount: framesCount,
-                        framesUpdateTimestamp: framesUpdateTimestamp,
-                        hasAudio: hasAudio
-                    )
+            if let self, player != nil {
+                if player === self.player, let asset = player?.currentItem?.asset {
+                    return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), self.videoFrames(asset: asset, count: framesCount))
+                    |> map { values, durationAndPosition, framesAndUpdateTimestamp in
+                        let (duration, position, isPlaying, hasAudio, isAudioPlayerOnly) = durationAndPosition
+                        let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
+                        return MediaEditorPlayerState(
+                            generationTimestamp: CACurrentMediaTime(),
+                            duration: duration,
+                            timeRange: values.videoTrimRange,
+                            position: position,
+                            isPlaying: isPlaying,
+                            frames: frames,
+                            framesCount: framesCount,
+                            framesUpdateTimestamp: framesUpdateTimestamp,
+                            hasAudio: hasAudio,
+                            isAudioPlayerOnly: isAudioPlayerOnly
+                        )
+                    }
+                } else if player === self.audioPlayer {
+                    return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get())
+                    |> map { values, durationAndPosition in
+                        let (duration, position, isPlaying, _, _) = durationAndPosition
+                        return MediaEditorPlayerState(
+                            generationTimestamp: CACurrentMediaTime(),
+                            duration: duration,
+                            timeRange: values.audioTrackTrimRange,
+                            position: position,
+                            isPlaying: isPlaying,
+                            frames: [],
+                            framesCount: 0,
+                            framesUpdateTimestamp: 0,
+                            hasAudio: false,
+                            isAudioPlayerOnly: true
+                        )
+                    }
+                } else {
+                    return .single(nil)
                 }
             } else {
                 return .single(nil)
@@ -263,12 +301,14 @@ public final class MediaEditor {
             self.updateRenderChain()
         } else {
             self.values = MediaEditorValues(
+                peerId: context.account.peerId,
                 originalDimensions: subject.dimensions,
                 cropOffset: .zero,
-                cropSize: nil,
+                cropRect: nil,
                 cropScale: 1.0,
                 cropRotation: 0.0,
                 cropMirroring: false,
+                cropOrientation: nil,
                 gradientColors: nil,
                 videoTrimRange: nil,
                 videoIsMuted: false,
@@ -281,7 +321,13 @@ public final class MediaEditor {
                 additionalVideoPositionChanges: [],
                 drawing: nil,
                 entities: [],
-                toolValues: [:]
+                toolValues: [:],
+                audioTrack: nil,
+                audioTrackTrimRange: nil,
+                audioTrackOffset: nil,
+                audioTrackVolume: nil,
+                audioTrackSamples: nil,
+                qualityPreset: nil
             )
         }
         self.valuesPromise.set(.single(self.values))
@@ -298,23 +344,33 @@ public final class MediaEditor {
         }
         
         if case let .asset(asset) = subject {
-            self.playerPlaybackState = (asset.duration, 0.0, false, false)
+            self.playerPlaybackState = (asset.duration, 0.0, false, false, false)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         } else if case let .video(_, _, _, _, _, duration) = subject {
-            self.playerPlaybackState = (duration, 0.0, false, true)
+            self.playerPlaybackState = (duration, 0.0, false, true, false)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
     
     deinit {
         self.textureSourceDisposable?.dispose()
-        
+        self.destroyTimeObservers()
+    }
+    
+    private func destroyTimeObservers() {
         if let timeObserver = self.timeObserver {
-            self.player?.removeTimeObserver(timeObserver)
+            self.timeObserverPlayer?.removeTimeObserver(timeObserver)
+            
+            self.timeObserver = nil
+            self.timeObserverPlayer = nil
         }
         if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
             NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
+            self.didPlayToEndTimeObserver = nil
         }
+        
+        self.audioDelayTimer?.invalidate()
+        self.audioDelayTimer = nil
     }
     
     public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
@@ -336,6 +392,7 @@ public final class MediaEditor {
         }
                 
         let context = self.context
+        let clock = self.clock
         let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, AVPlayer?, UIColor, UIColor), NoError>
         switch subject {
         case let .image(image, _):
@@ -349,6 +406,11 @@ public final class MediaEditor {
                     
                     let playerItem = AVPlayerItem(asset: asset)
                     let player = AVPlayer(playerItem: playerItem)
+                    if #available(iOS 15.0, *) {
+                        player.sourceClock = clock
+                    } else {
+                        player.masterClock = clock
+                    }
                     player.automaticallyWaitsToMinimizeStalling = false
    
                     if let gradientColors = draft.values.gradientColors {
@@ -391,12 +453,22 @@ public final class MediaEditor {
             textureSource = Signal { subscriber in
                 let asset = AVURLAsset(url: URL(fileURLWithPath: path))
                 let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+                if #available(iOS 15.0, *) {
+                    player.sourceClock = clock
+                } else {
+                    player.masterClock = clock
+                }
                 player.automaticallyWaitsToMinimizeStalling = false
                 
                 var additionalPlayer: AVPlayer?
                 if let additionalPath {
                     let additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
                     additionalPlayer = AVPlayer(playerItem: AVPlayerItem(asset: additionalAsset))
+                    if #available(iOS 15.0, *) {
+                        additionalPlayer?.sourceClock = clock
+                    } else {
+                        additionalPlayer?.masterClock = clock
+                    }
                     additionalPlayer?.automaticallyWaitsToMinimizeStalling = false
                 }
                 
@@ -502,6 +574,11 @@ public final class MediaEditor {
 //                    self.maybeGeneratePersonSegmentation(image)
                 }
                 
+                if let _ = self.values.audioTrack {
+                    self.setupAudioPlayback()
+                    self.updateAudioPlaybackRange()
+                }
+                
                 if let player {
                     player.isMuted = self.values.videoIsMuted
                     if let trimRange = self.values.videoTrimRange {
@@ -512,39 +589,121 @@ public final class MediaEditor {
                     if let initialSeekPosition = self.initialSeekPosition {
                         self.initialSeekPosition = nil
                         player.seek(to: CMTime(seconds: initialSeekPosition, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
+                    } else if let trimRange = self.values.videoTrimRange {
+                        player.seek(to: CMTime(seconds: trimRange.lowerBound, preferredTimescale: CMTimeScale(1000)), toleranceBefore: .zero, toleranceAfter: .zero)
                     }
-                    self.timeObserver = player.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self] time in
-                        guard let self, let duration = player.currentItem?.duration.seconds else {
-                            return
-                        }
-                        var hasAudio = false
-                        if let audioTracks = player.currentItem?.asset.tracks(withMediaType: .audio) {
-                            hasAudio = !audioTracks.isEmpty
-                        }
-                        self.playerPlaybackState = (duration, time.seconds, player.rate > 0.0, hasAudio)
-                    }
-                    self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: player.currentItem, queue: nil, using: { [weak self] notification in
-                        if let self {
-                            let start = self.values.videoTrimRange?.lowerBound ?? 0.0
-                            self.player?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
-                            self.additionalPlayer?.seek(to: CMTime(seconds: start, preferredTimescale: CMTimeScale(1000)))
-                            self.onPlaybackAction(.seek(start))
-                            self.player?.play()
-                            self.additionalPlayer?.play()
-                            Queue.mainQueue().justDispatch {
-                                self.onPlaybackAction(.play)
-                            }
-                        }
-                    })
+                 
+                    self.setupTimeObservers()
                     Queue.mainQueue().justDispatch {
-                        player.playImmediately(atRate: 1.0)
-                        additionalPlayer?.playImmediately(atRate: 1.0)
-                        self.onPlaybackAction(.play)
-                        self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                        let startPlayback = {
+                            player.playImmediately(atRate: 1.0)
+                            additionalPlayer?.playImmediately(atRate: 1.0)
+                            self.audioPlayer?.playImmediately(atRate: 1.0)
+                            self.onPlaybackAction(.play)
+                            self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                        }
+                        if let audioPlayer = self.audioPlayer, audioPlayer.status != .readyToPlay {
+                            Queue.mainQueue().after(0.1) {
+                                startPlayback()
+                            }
+                        } else {
+                            startPlayback()
+                        }
+                    }
+                } else if let audioPlayer = self.audioPlayer {
+                    let offset = self.values.audioTrackOffset ?? 0.0
+                    let lowerBound = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+                    
+                    let audioTime = CMTime(seconds: offset + lowerBound, preferredTimescale: CMTimeScale(1000))
+                    audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    if audioPlayer.status != .readyToPlay {
+                        Queue.mainQueue().after(0.1) {
+                            audioPlayer.play()
+                        }
+                    } else {
+                        audioPlayer.play()
                     }
                 }
             }
         })
+    }
+    
+    private func setupTimeObservers() {
+        var observedPlayer = self.player
+        var isAudioPlayerOnly = false
+        if observedPlayer == nil {
+            observedPlayer = self.audioPlayer
+            if observedPlayer != nil {
+                isAudioPlayerOnly = true
+            }
+        }
+        guard let observedPlayer else {
+            return
+        }
+        
+        if self.timeObserver == nil {
+            self.timeObserverPlayer = observedPlayer
+            self.timeObserver = observedPlayer.addPeriodicTimeObserver(forInterval: CMTimeMake(value: 1, timescale: 10), queue: DispatchQueue.main) { [weak self, weak observedPlayer] time in
+                guard let self, let observedPlayer, let duration = observedPlayer.currentItem?.duration.seconds else {
+                    return
+                }
+                var hasAudio = false
+                if let audioTracks = observedPlayer.currentItem?.asset.tracks(withMediaType: .audio) {
+                    hasAudio = !audioTracks.isEmpty
+                }
+                if time.seconds > 20000 {
+                    
+                } else {
+                    self.playerPlaybackState = (duration, time.seconds, observedPlayer.rate > 0.0, hasAudio, isAudioPlayerOnly)
+                }
+            }
+        }
+
+        if self.didPlayToEndTimeObserver == nil {
+            self.didPlayToEndTimeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: observedPlayer.currentItem, queue: nil, using: { [weak self] notification in
+                if let self {
+                    var start: Double
+                    if self.sourceIsVideo {
+                        start = self.values.videoTrimRange?.lowerBound ?? 0.0
+                    } else {
+                        start = (self.values.audioTrackOffset ?? 0.0) + (self.values.audioTrackTrimRange?.lowerBound ?? 0.0)
+                    }
+                    let targetTime = CMTime(seconds: start, preferredTimescale: CMTimeScale(1000))
+                    self.player?.seek(to: targetTime)
+                    self.additionalPlayer?.seek(to: targetTime)
+                    self.onPlaybackAction(.seek(start))
+                    
+                    self.player?.play()
+                    self.additionalPlayer?.play()
+                    
+                    if self.sourceIsVideo {
+                        let audioTime = self.audioTime(for: targetTime)
+                        if let audioDelay = self.audioDelay(for: targetTime) {
+                            self.audioPlayer?.pause()
+                            self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                                self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                                self?.audioPlayer?.play()
+                            }, queue: Queue.mainQueue())
+                            self.audioDelayTimer?.start()
+                        } else {
+                            self.audioPlayer?.seek(to: audioTime)
+                            self.audioPlayer?.play()
+                        }
+                    } else {
+                        self.audioPlayer?.seek(to: targetTime)
+                        self.audioPlayer?.play()
+                    }
+                    
+                    Queue.mainQueue().justDispatch {
+                        self.onPlaybackAction(.play)
+                    }
+                }
+            })
+        }
+    }
+    
+    private func setupDidPlayToEndObserver() {
+       
     }
     
     public func attachPreviewView(_ previewView: MediaEditorPreviewView) {
@@ -636,16 +795,17 @@ public final class MediaEditor {
     private var targetTimePosition: (CMTime, Bool)?
     private var updatingTimePosition = false
     public func seek(_ position: Double, andPlay play: Bool) {
-        guard let player = self.player else {
+        if self.player == nil && self.audioPlayer == nil {
             self.initialSeekPosition = position
             return
         }
         if !play {
-            player.pause()
+            self.player?.pause()
             self.additionalPlayer?.pause()
+            self.audioPlayer?.pause()
             self.onPlaybackAction(.pause)
         }
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(1000.0))
         if self.targetTimePosition?.0 != targetPosition {
             self.targetTimePosition = (targetPosition, play)
             if !self.updatingTimePosition {
@@ -653,8 +813,26 @@ public final class MediaEditor {
             }
         }
         if play {
-            player.play()
+            self.player?.play()
             self.additionalPlayer?.play()
+            
+            if self.sourceIsVideo {
+                let audioTime = self.audioTime(for: targetPosition)
+                if let audioDelay = self.audioDelay(for: targetPosition) {
+                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                        self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        self?.audioPlayer?.play()
+                    }, queue: Queue.mainQueue())
+                    self.audioDelayTimer?.start()
+                } else {
+                    self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    self.audioPlayer?.play()
+                }
+            } else {
+                self.audioPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+                self.audioPlayer?.play()
+            }
+            
             self.onPlaybackAction(.play)
         }
     }
@@ -666,37 +844,153 @@ public final class MediaEditor {
         }
         player.pause()
         self.additionalPlayer?.pause()
+        self.audioPlayer?.pause()
         
-        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(60.0))
+        let targetPosition = CMTime(seconds: position, preferredTimescale: CMTimeScale(1000.0))
         player.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: {  _ in
             Queue.mainQueue().async {
                 completion()
             }
         })
+                
         self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+        
+        if let _ = self.audioDelay(for: targetPosition) {
+            
+        } else {
+            self.audioPlayer?.seek(to: self.audioTime(for: targetPosition), toleranceBefore: .zero, toleranceAfter: .zero)
+        }
+    }
+        
+    private var audioDelayTimer: SwiftSignalKit.Timer?
+    private func audioDelay(for time: CMTime) -> Double? {
+        var time = time
+        if time == .invalid {
+            time = .zero
+        }
+        let videoStart = self.values.videoTrimRange?.lowerBound ?? 0.0
+        var audioStart = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+        if let offset = self.values.audioTrackOffset, offset < 0.0 {
+            audioStart -= offset
+        }
+        if audioStart - videoStart > 0.0 {
+            let delay = audioStart - time.seconds
+            if delay > 0 {
+                return delay
+            }
+        }
+        return nil
+    }
+    
+    private func audioTime(for time: CMTime) -> CMTime {
+        var time = time
+        if time == .invalid {
+            time = .zero
+        }
+        let seconds = time.seconds
+        
+        let offset = self.values.audioTrackOffset ?? 0.0
+        let audioOffset = max(0.0, offset)
+        let audioStart = self.values.audioTrackTrimRange?.lowerBound ?? 0.0
+        if seconds < audioStart - min(0.0, offset) {
+            return CMTime(seconds: audioOffset + audioStart, preferredTimescale: CMTimeScale(1000.0))
+        } else {
+            return CMTime(seconds: audioOffset + seconds + min(0.0, offset), preferredTimescale: CMTimeScale(1000.0))
+        }
     }
     
     public var isPlaying: Bool {
-        return (self.player?.rate ?? 0.0) > 0.0
+        let effectivePlayer = self.player ?? self.audioPlayer
+        return (effectivePlayer?.rate ?? 0.0) > 0.0
+    }
+    
+    public func togglePlayback() {
+        if self.isPlaying {
+            self.stop()
+        } else {
+            self.play()
+        }
     }
     
     public func play() {
-        self.player?.play()
-        self.additionalPlayer?.play()
-        self.onPlaybackAction(.play)
+        self.setRate(1.0)
     }
     
     public func stop() {
-        self.player?.pause()
-        self.additionalPlayer?.pause()
-        self.onPlaybackAction(.pause)
+        self.setRate(0.0)
+    }
+    
+    private func setRate(_ rate: Float) {
+        let hostTime: UInt64 = mach_absolute_time()
+        let time: TimeInterval = 0
+        let cmHostTime = CMClockMakeHostTimeFromSystemUnits(hostTime)
+        let cmVTime = CMTimeMakeWithSeconds(time, preferredTimescale: 1000000)
+        let futureTime = CMTimeAdd(cmHostTime, cmVTime)
+        
+        if self.player == nil, let audioPlayer = self.audioPlayer {
+            let itemTime = audioPlayer.currentItem?.currentTime() ?? .invalid
+            if audioPlayer.status == .readyToPlay {
+                audioPlayer.setRate(rate, time: itemTime, atHostTime: futureTime)
+            } else {
+                audioPlayer.seek(to: itemTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                if rate > 0.0 {
+                    audioPlayer.play()
+                } else {
+                    audioPlayer.pause()
+                }
+            }
+        } else {
+            let itemTime = self.player?.currentItem?.currentTime() ?? .invalid
+            let audioTime = self.audioTime(for: itemTime)
+        
+            self.player?.setRate(rate, time: itemTime, atHostTime: futureTime)
+            self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
+            
+            if let audioPlayer = self.audioPlayer {
+                if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
+                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                        self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        self?.audioPlayer?.play()
+                    }, queue: Queue.mainQueue())
+                    self.audioDelayTimer?.start()
+                } else {
+                    if audioPlayer.status == .readyToPlay {
+                        audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
+                        if rate > 0.0 {
+//                            audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            audioPlayer.play()
+                        }
+                    } else {
+                        audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        if rate > 0.0 {
+                            audioPlayer.play()
+                        } else {
+                            audioPlayer.pause()
+                        }
+                    }
+                }
+            }
+        }
+        
+        if rate > 0.0 {
+            self.onPlaybackAction(.play)
+        } else {
+            self.onPlaybackAction(.pause)
+            
+            self.audioDelayTimer?.invalidate()
+            self.audioDelayTimer = nil
+        }
     }
     
     public func invalidate() {
         self.player?.pause()
         self.additionalPlayer?.pause()
+        self.audioPlayer?.pause()
         self.onPlaybackAction(.pause)
         self.renderer.textureSource?.invalidate()
+        
+        self.audioDelayTimer?.invalidate()
+        self.audioDelayTimer = nil
     }
     
     private func updateVideoTimePosition() {
@@ -704,17 +998,37 @@ public final class MediaEditor {
             return
         }
         self.updatingTimePosition = true
-        self.player?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
-            if let self {
-                if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
-                    self.updatingTimePosition = false
-                    self.targetTimePosition = nil
-                } else {
-                    self.updateVideoTimePosition()
+        
+        if self.player == nil, let audioPlayer = self.audioPlayer {
+            audioPlayer.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
+                if let self {
+                    if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
+                        self.updatingTimePosition = false
+                        self.targetTimePosition = nil
+                    } else {
+                        self.updateVideoTimePosition()
+                    }
                 }
+            })
+        } else {
+            self.player?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero, completionHandler: { [weak self] _ in
+                if let self {
+                    if let (currentTargetPosition, _) = self.targetTimePosition, currentTargetPosition == targetPosition {
+                        self.updatingTimePosition = false
+                        self.targetTimePosition = nil
+                    } else {
+                        self.updateVideoTimePosition()
+                    }
+                }
+            })
+            
+            self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+            
+            if let _ = self.audioDelay(for: targetPosition) {
+            } else {
+                self.audioPlayer?.seek(to: self.audioTime(for: targetPosition), toleranceBefore: .zero, toleranceAfter: .zero)
             }
-        })
-        self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+        }
         self.onPlaybackAction(.seek(targetPosition.seconds))
     }
     
@@ -751,6 +1065,90 @@ public final class MediaEditor {
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedGradientColors(gradientColors: gradientColors)
         }
+    }
+    
+    public func setAudioTrack(_ audioTrack: MediaAudioTrack?, trimRange: Range<Double>? = nil, offset: Double? = nil) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(trimRange).withUpdatedAudioTrackVolume(nil).withUpdatedAudioTrackOffset(offset)
+        }
+        
+        if let audioPlayer = self.audioPlayer {
+            audioPlayer.pause()
+            
+            if self.sourceIsVideo {
+                self.audioDelayTimer?.invalidate()
+                self.audioDelayTimer = nil
+            } else {
+                self.destroyTimeObservers()
+            }
+            self.audioPlayer = nil
+             
+            if !self.sourceIsVideo {
+                self.playerPromise.set(.single(nil))
+            }
+        }
+        
+        self.setupAudioPlayback()
+        self.updateAudioPlaybackRange()
+    }
+    
+    private func setupAudioPlayback() {
+        if let audioTrack = self.values.audioTrack {
+            let path = fullDraftPath(peerId: self.context.account.peerId, path: audioTrack.path)
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
+            let playerItem = AVPlayerItem(asset: audioAsset)
+            let player = AVPlayer(playerItem: playerItem)
+            player.automaticallyWaitsToMinimizeStalling = false
+            self.audioPlayer = player
+            self.maybeGenerateAudioSamples(asset: audioAsset)
+            
+            if let volume = self.values.audioTrackVolume {
+                self.audioPlayer?.volume = Float(volume)
+            }
+            
+            self.setupTimeObservers()
+            
+            if !self.sourceIsVideo {
+                self.playerPromise.set(.single(player))
+            }
+        }
+    }
+    
+    public func setAudioTrackTrimRange(_ trimRange: Range<Double>?, apply: Bool) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrackTrimRange(trimRange)
+        }
+        
+        if apply, let _ = trimRange {
+            self.updateAudioPlaybackRange()
+        }
+    }
+    
+    public func setAudioTrackOffset(_ offset: Double?, apply: Bool) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrackOffset(offset)
+        }
+        
+        if apply {
+            self.updateAudioPlaybackRange()
+        }
+    }
+    
+    private func updateAudioPlaybackRange() {
+        if let upperBound = self.values.audioTrackTrimRange?.upperBound {
+            let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
+            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
+        } else {
+            self.audioPlayer?.currentItem?.forwardPlaybackEndTime = .invalid
+        }
+    }
+    
+    public func setAudioTrackVolume(_ volume: CGFloat?) {
+        self.updateValues(mode: .skipRendering) { values in
+            return values.withUpdatedAudioTrackVolume(volume)
+        }
+        
+        self.audioPlayer?.volume = Float(volume ?? 1.0)
     }
     
     private var previousUpdateTime: Double?
@@ -814,6 +1212,59 @@ public final class MediaEditor {
                 try handler.perform([faceRequest])
             } catch {
                 print(error)
+            }
+        }
+    }
+    
+    private func maybeGenerateAudioSamples(asset: AVAsset) {
+        Queue.concurrentDefaultQueue().async {
+            guard let audioTrack = asset.tracks(withMediaType: .audio).first else {
+                return
+            }
+            
+            do {
+                let assetReader = try AVAssetReader(asset: asset)
+                
+                let settings: [String: Any] = [
+                    AVFormatIDKey: kAudioFormatLinearPCM,
+                    AVLinearPCMBitDepthKey: 32,
+                    AVLinearPCMIsFloatKey: true,
+                    AVLinearPCMIsBigEndianKey: false,
+                    AVLinearPCMIsNonInterleaved: false
+                ]
+                
+                let assetReaderOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: settings)
+                
+                assetReader.add(assetReaderOutput)
+                
+                assetReader.startReading()
+                
+                var samplesData = Data()
+                var peak: Int32 = 0
+                
+                while let sampleBuffer = assetReaderOutput.copyNextSampleBuffer() {
+                    if let dataBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) {
+                        let length = CMBlockBufferGetDataLength(dataBuffer)
+                        let bytes = UnsafeMutablePointer<Int32>.allocate(capacity: length)
+                        CMBlockBufferCopyDataBytes(dataBuffer, atOffset: 0, dataLength: length, destination: bytes)
+                                                               
+                        let samples = Array(UnsafeBufferPointer(start: bytes, count: length / MemoryLayout<Int32>.size))
+                        if var maxSample = samples.max() {
+                            if maxSample > peak {
+                                peak = maxSample
+                            }
+                            samplesData.append(Data(bytesNoCopy: &maxSample, count: 4, deallocator: .none))
+                        }
+                    
+                        bytes.deallocate()
+                    }
+                }
+                Queue.mainQueue().async {
+                    self.updateValues(mode: .skipRendering) { values in
+                        return values.withUpdatedAudioTrackSamples(MediaAudioTrackSamples(samples: samplesData, peak: peak))
+                    }
+                }
+            } catch {
             }
         }
     }

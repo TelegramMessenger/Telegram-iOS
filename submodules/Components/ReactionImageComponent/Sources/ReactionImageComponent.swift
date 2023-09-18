@@ -151,7 +151,7 @@ public final class ReactionImageNode: ASDisplayNode {
                         strongSelf.iconNode.image = image
                     }
                 }
-            })
+            }).strict()
         } else if let file = file {
             self.size = file.dimensions?.cgSize ?? displayPixelSize
             self.isAnimation = false
@@ -169,7 +169,7 @@ public final class ReactionImageNode: ASDisplayNode {
                         strongSelf.iconNode.image = image
                     }
                 }
-            })
+            }).strict()
         } else {
             self.size = displayPixelSize
             self.isAnimation = false

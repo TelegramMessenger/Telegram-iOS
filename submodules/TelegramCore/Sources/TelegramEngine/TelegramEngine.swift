@@ -57,7 +57,7 @@ public final class TelegramEngine {
     }()
 
     public lazy var historyImport: HistoryImport = {
-        return HistoryImport(account: self.account)
+        return HistoryImport(postbox: self.account.postbox, network: self.account.network)
     }()
 
     public lazy var contacts: Contacts = {
@@ -73,7 +73,7 @@ public final class TelegramEngine {
     }()
 
     public lazy var data: EngineData = {
-        return EngineData(account: self.account)
+        return EngineData(postbox: self.account.postbox)
     }()
 
     public lazy var orderedLists: OrderedLists = {

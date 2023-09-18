@@ -421,7 +421,8 @@
     _videoDimensions = item.dimensions;
     
     if (_entitiesView == nil) {
-        _entitiesView = [item.stickersContext drawingEntitiesViewWithSize:item.dimensions];
+        CGSize maxSize = CGSizeMake(1920.0, 1920.0);
+        _entitiesView = [item.stickersContext drawingEntitiesViewWithSize:TGFitSize(item.dimensions, maxSize)];
         _entitiesView.hidden = true;
         _entitiesView.userInteractionEnabled = false;
         [_contentWrapperView addSubview:_entitiesView];
@@ -755,7 +756,7 @@
     if (self.bounds.size.width > self.bounds.size.height)
         _containerView.frame = self.bounds;
     else
-        _containerView.frame = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height - 44.0);
+        _containerView.frame = CGRectMake(0, 0, self.bounds.size.width, self.bounds.size.height);
     
     [self _layoutPlayerView];
     
@@ -812,7 +813,6 @@
     _paintingImageView.frame = _imageView.frame;
     _videoView.frame = _imageView.frame;
     
-
     CGSize originalSize = self.item.asset.originalSize;
     
     CGSize rotatedCropSize = cropRect.size;
@@ -831,8 +831,10 @@
     _contentWrapperView.frame = CGRectMake(0.0f, 0.0f, _contentView.bounds.size.width, _contentView.bounds.size.height);
     
     CGRect rect = [TGPhotoDrawingController fittedCropRect:cropRect originalSize:originalSize keepOriginalSize:true];
-    _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
-    _entitiesView.transform = CGAffineTransformMakeRotation(0.0);
+    _entitiesView.bounds = CGRectMake(0, 0, rect.size.width, rect.size.height);
+    _entitiesView.center = CGPointMake(_contentWrapperView.bounds.size.width / 2.0, _contentWrapperView.bounds.size.height / 2.0);
+    CGFloat entitiesScale = _contentWrapperView.bounds.size.width / rect.size.width;
+    _entitiesView.transform = CGAffineTransformMakeScale(entitiesScale, entitiesScale);
     
     CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, 0.0);
@@ -949,10 +951,12 @@
         CGSize originalSize = _videoDimensions;
         CGRect cropRect = CGRectMake(0, 0, _videoDimensions.width, _videoDimensions.height);
         UIImageOrientation cropOrientation = UIImageOrientationUp;
+        bool cropMirrored = false;
         if (adjustments != nil)
         {
             cropRect = adjustments.cropRect;
             cropOrientation = adjustments.cropOrientation;
+            cropMirrored = adjustments.cropMirrored;
         }
         
         CGContextConcatCTM(UIGraphicsGetCurrentContext(), TGVideoCropTransformForOrientation(cropOrientation, _playerWrapperView.bounds.size, false));

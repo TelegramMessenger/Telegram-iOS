@@ -180,6 +180,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case displayStoryReactionTooltip = 46
     case storyStealthModeReplyCount = 47
     case viewOnceTooltip = 48
+    case displayStoryUnmuteTooltip = 49
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -428,6 +429,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func viewOnceTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.viewOnceTooltip.key)
+    }
+    
+    static func displayStoryUnmuteTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayStoryUnmuteTooltip.key)
     }
 }
 
@@ -1632,5 +1637,26 @@ public struct ApplicationSpecificNotice {
             
             return Int(previousValue)
         }
+    }
+    
+    public static func setDisplayStoryUnmuteTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayStoryUnmuteTooltip(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func displayStoryUnmuteTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayStoryUnmuteTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
     }
 }

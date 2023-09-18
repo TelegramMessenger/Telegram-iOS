@@ -14,13 +14,17 @@ public final class EngineStoryItem: Equatable {
     public final class Views: Equatable {
         public let seenCount: Int
         public let reactedCount: Int
+        public var forwardCount: Int
         public let seenPeers: [EnginePeer]
+        public let reactions: [MessageReaction]
         public let hasList: Bool
         
-        public init(seenCount: Int, reactedCount: Int, seenPeers: [EnginePeer], hasList: Bool) {
+        public init(seenCount: Int, reactedCount: Int, forwardCount: Int, seenPeers: [EnginePeer], reactions: [MessageReaction], hasList: Bool) {
             self.seenCount = seenCount
             self.reactedCount = reactedCount
+            self.forwardCount = forwardCount
             self.seenPeers = seenPeers
+            self.reactions = reactions
             self.hasList = hasList
         }
         
@@ -31,7 +35,13 @@ public final class EngineStoryItem: Equatable {
             if lhs.reactedCount != rhs.reactedCount {
                 return false
             }
+            if lhs.forwardCount != rhs.forwardCount {
+                return false
+            }
             if lhs.seenPeers != rhs.seenPeers {
+                return false
+            }
+            if lhs.reactions != rhs.reactions {
                 return false
             }
             if lhs.hasList != rhs.hasList {
@@ -59,9 +69,10 @@ public final class EngineStoryItem: Equatable {
     public let isSelectedContacts: Bool
     public let isForwardingDisabled: Bool
     public let isEdited: Bool
+    public let isMy: Bool
     public let myReaction: MessageReaction.Reaction?
     
-    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, myReaction: MessageReaction.Reaction?) {
+    public init(id: Int32, timestamp: Int32, expirationTimestamp: Int32, media: EngineMedia, mediaAreas: [MediaArea], text: String, entities: [MessageTextEntity], views: Views?, privacy: EngineStoryPrivacy?, isPinned: Bool, isExpired: Bool, isPublic: Bool, isPending: Bool, isCloseFriends: Bool, isContacts: Bool, isSelectedContacts: Bool, isForwardingDisabled: Bool, isEdited: Bool, isMy: Bool, myReaction: MessageReaction.Reaction?) {
         self.id = id
         self.timestamp = timestamp
         self.expirationTimestamp = expirationTimestamp
@@ -80,6 +91,7 @@ public final class EngineStoryItem: Equatable {
         self.isSelectedContacts = isSelectedContacts
         self.isForwardingDisabled = isForwardingDisabled
         self.isEdited = isEdited
+        self.isMy = isMy
         self.myReaction = myReaction
     }
     
@@ -138,6 +150,9 @@ public final class EngineStoryItem: Equatable {
         if lhs.isEdited != rhs.isEdited {
             return false
         }
+        if lhs.isMy != rhs.isMy {
+            return false
+        }
         if lhs.myReaction != rhs.myReaction {
             return false
         }
@@ -159,7 +174,9 @@ extension EngineStoryItem {
                 return Stories.Item.Views(
                     seenCount: views.seenCount,
                     reactedCount: views.reactedCount,
+                    forwardCount: views.forwardCount,
                     seenPeerIds: views.seenPeers.map(\.id),
+                    reactions: views.reactions,
                     hasList: views.hasList
                 )
             },
@@ -177,6 +194,7 @@ extension EngineStoryItem {
             isSelectedContacts: self.isSelectedContacts,
             isForwardingDisabled: self.isForwardingDisabled,
             isEdited: self.isEdited,
+            isMy: self.isMy,
             myReaction: self.myReaction
         )
     }
@@ -355,18 +373,18 @@ public final class StorySubscriptionsContext {
                         if isRefresh && !isHidden {
                             updatedStealthMode = stealthMode
                         }
-                    case let .allStories(flags, _, state, userStories, users, stealthMode):
-                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                    case let .allStories(flags, _, state, peerStories, chats, users, stealthMode):
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                         
                         let hasMore: Bool = (flags & (1 << 0)) != 0
                         
                         let (_, currentPeerItems) = transaction.getAllStorySubscriptions(key: subscriptionsKey)
                         var peerEntries: [PeerId] = []
                         
-                        for userStorySet in userStories {
-                            switch userStorySet {
-                            case let .userStories(_, userId, maxReadId, stories):
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                        for peerStorySet in peerStories {
+                            switch peerStorySet {
+                            case let .peerStories(_, peerIdValue, maxReadId, stories):
+                                let peerId = peerIdValue.peerId
                                 
                                 let previousPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
                                 
@@ -533,9 +551,11 @@ public final class PeerStoryListContext {
                                 return EngineStoryItem.Views(
                                     seenCount: views.seenCount,
                                     reactedCount: views.reactedCount,
+                                    forwardCount: views.forwardCount,
                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
                                     },
+                                    reactions: views.reactions,
                                     hasList: views.hasList
                                 )
                             },
@@ -549,6 +569,7 @@ public final class PeerStoryListContext {
                             isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited,
+                            isMy: item.isMy,
                             myReaction: item.myReaction
                         )
                         items.append(mappedItem)
@@ -559,6 +580,18 @@ public final class PeerStoryListContext {
                                 if allEntityFiles[mediaId] == nil {
                                     if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
                                         allEntityFiles[file.fileId] = file
+                                    }
+                                }
+                            }
+                        }
+                        for mediaArea in mappedItem.mediaAreas {
+                            if case let .reaction(_, reaction, _) = mediaArea {
+                                if case let .custom(fileId) = reaction {
+                                    let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+                                    if allEntityFiles[mediaId] == nil {
+                                        if let file = transaction.getMedia(mediaId) as? TelegramMediaFile {
+                                            allEntityFiles[file.fileId] = file
+                                        }
                                     }
                                 }
                             }
@@ -608,19 +641,19 @@ public final class PeerStoryListContext {
             let account = self.account
             let accountPeerId = account.peerId
             let isArchived = self.isArchived
-            self.requestDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
-                return transaction.getPeer(peerId).flatMap(apiInputUser)
+            self.requestDisposable = (self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { inputUser -> Signal<([EngineStoryItem], Int, PeerReference?, Bool), NoError> in
-                guard let inputUser = inputUser else {
+            |> mapToSignal { inputPeer -> Signal<([EngineStoryItem], Int, PeerReference?, Bool), NoError> in
+                guard let inputPeer = inputPeer else {
                     return .single(([], 0, nil, false))
                 }
                 
                 let signal: Signal<Api.stories.Stories, MTRpcError>
                 if isArchived {
-                    signal = account.network.request(Api.functions.stories.getStoriesArchive(offsetId: Int32(loadMoreToken), limit: Int32(limit)))
+                    signal = account.network.request(Api.functions.stories.getStoriesArchive(peer: inputPeer, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 } else {
-                    signal = account.network.request(Api.functions.stories.getPinnedStories(userId: inputUser, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
+                    signal = account.network.request(Api.functions.stories.getPinnedStories(peer: inputPeer, offsetId: Int32(loadMoreToken), limit: Int32(limit)))
                 }
                 return signal
                 |> map { result -> Api.stories.Stories? in
@@ -640,11 +673,11 @@ public final class PeerStoryListContext {
                         var hasMore: Bool = false
                         
                         switch result {
-                        case let .stories(count, stories, users):
+                        case let .stories(count, stories, chats, users):
                             totalCount = Int(count)
                             hasMore = stories.count >= limit
                             
-                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(transaction: transaction, chats: chats, users: users))
                             
                             for story in stories {
                                 if let storedItem = Stories.StoredItem(apiStoryItem: story, peerId: peerId, transaction: transaction) {
@@ -661,9 +694,11 @@ public final class PeerStoryListContext {
                                                 return EngineStoryItem.Views(
                                                     seenCount: views.seenCount,
                                                     reactedCount: views.reactedCount,
+                                                    forwardCount: views.forwardCount,
                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                         return transaction.getPeer(id).flatMap(EnginePeer.init)
                                                     },
+                                                    reactions: views.reactions,
                                                     hasList: views.hasList
                                                 )
                                             },
@@ -677,6 +712,7 @@ public final class PeerStoryListContext {
                                             isSelectedContacts: item.isSelectedContacts,
                                             isForwardingDisabled: item.isForwardingDisabled,
                                             isEdited: item.isEdited,
+                                            isMy: item.isMy,
                                             myReaction: item.myReaction
                                         )
                                         storyItems.append(mappedItem)
@@ -813,9 +849,11 @@ public final class PeerStoryListContext {
                                                                     return EngineStoryItem.Views(
                                                                         seenCount: views.seenCount,
                                                                         reactedCount: views.reactedCount,
+                                                                        forwardCount: views.forwardCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
                                                                         },
+                                                                        reactions: views.reactions,
                                                                         hasList: views.hasList
                                                                     )
                                                                 },
@@ -829,6 +867,7 @@ public final class PeerStoryListContext {
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited,
+                                                                isMy: item.isMy,
                                                                 myReaction: item.myReaction
                                                             )
                                                             finalUpdatedState = updatedState
@@ -856,9 +895,11 @@ public final class PeerStoryListContext {
                                                                 return EngineStoryItem.Views(
                                                                     seenCount: views.seenCount,
                                                                     reactedCount: views.reactedCount,
+                                                                    forwardCount: views.forwardCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
                                                                     },
+                                                                    reactions: views.reactions,
                                                                     hasList: views.hasList
                                                                 )
                                                             },
@@ -872,6 +913,7 @@ public final class PeerStoryListContext {
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
                                                             isEdited: item.isEdited,
+                                                            isMy: item.isMy,
                                                             myReaction: item.myReaction
                                                         )
                                                         finalUpdatedState = updatedState
@@ -901,9 +943,11 @@ public final class PeerStoryListContext {
                                                                     return EngineStoryItem.Views(
                                                                         seenCount: views.seenCount,
                                                                         reactedCount: views.reactedCount,
+                                                                        forwardCount: views.forwardCount,
                                                                         seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                             return peers[id].flatMap(EnginePeer.init)
                                                                         },
+                                                                        reactions: views.reactions,
                                                                         hasList: views.hasList
                                                                     )
                                                                 },
@@ -917,6 +961,7 @@ public final class PeerStoryListContext {
                                                                 isSelectedContacts: item.isSelectedContacts,
                                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                                 isEdited: item.isEdited,
+                                                                isMy: item.isMy,
                                                                 myReaction: item.myReaction
                                                             ))
                                                             updatedState.items.sort(by: { lhs, rhs in
@@ -942,9 +987,11 @@ public final class PeerStoryListContext {
                                                                 return EngineStoryItem.Views(
                                                                     seenCount: views.seenCount,
                                                                     reactedCount: views.reactedCount,
+                                                                    forwardCount: views.forwardCount,
                                                                     seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                                         return peers[id].flatMap(EnginePeer.init)
                                                                     },
+                                                                    reactions: views.reactions,
                                                                     hasList: views.hasList
                                                                 )
                                                             },
@@ -958,6 +1005,7 @@ public final class PeerStoryListContext {
                                                             isSelectedContacts: item.isSelectedContacts,
                                                             isForwardingDisabled: item.isForwardingDisabled,
                                                             isEdited: item.isEdited,
+                                                            isMy: item.isMy,
                                                             myReaction: item.myReaction
                                                         ))
                                                         updatedState.items.sort(by: { lhs, rhs in
@@ -1107,9 +1155,11 @@ public final class PeerExpiringStoryListContext {
                                             return EngineStoryItem.Views(
                                                 seenCount: views.seenCount,
                                                 reactedCount: views.reactedCount,
+                                                forwardCount: views.forwardCount,
                                                 seenPeers: views.seenPeerIds.compactMap { id -> EnginePeer? in
                                                     return transaction.getPeer(id).flatMap(EnginePeer.init)
                                                 },
+                                                reactions: views.reactions,
                                                 hasList: views.hasList
                                             )
                                         },
@@ -1123,6 +1173,7 @@ public final class PeerExpiringStoryListContext {
                                         isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited,
+                                        isMy: item.isMy,
                                         myReaction: item.myReaction
                                     )
                                     items.append(.item(mappedItem))
@@ -1165,16 +1216,16 @@ public final class PeerExpiringStoryListContext {
             let account = self.account
             let accountPeerId = account.peerId
             let peerId = self.peerId
-            self.pollDisposable = (self.account.postbox.transaction { transaction -> Api.InputUser? in
-                return transaction.getPeer(peerId).flatMap(apiInputUser)
+            self.pollDisposable = (self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { inputUser -> Signal<Never, NoError> in
-                guard let inputUser = inputUser else {
+            |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+                guard let inputPeer = inputPeer else {
                     return .complete()
                 }
-                return account.network.request(Api.functions.stories.getUserStories(userId: inputUser))
+                return account.network.request(Api.functions.stories.getPeerStories(peer: inputPeer))
                 |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.stories.UserStories?, NoError> in
+                |> `catch` { _ -> Signal<Api.stories.PeerStories?, NoError> in
                     return .single(nil)
                 }
                 |> mapToSignal { result -> Signal<Never, NoError> in
@@ -1182,12 +1233,12 @@ public final class PeerExpiringStoryListContext {
                         var updatedPeerEntries: [StoryItemsTableEntry] = []
                         updatedPeerEntries.removeAll()
                         
-                        if let result = result, case let .userStories(stories, users) = result {
-                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                        if let result = result, case let .peerStories(stories, chats, users) = result {
+                            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                             
                             switch stories {
-                            case let .userStories(_, userId, maxReadId, stories):
-                                let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                            case let .peerStories(_, peerIdValue, maxReadId, stories):
+                                let peerId = peerIdValue.peerId
                                 
                                 let previousPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
                                 
@@ -1331,16 +1382,16 @@ public final class PeerExpiringStoryListContext {
 }
 
 public func _internal_pollPeerStories(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, peerReference: PeerReference? = nil) -> Signal<Never, NoError> {
-    return postbox.transaction { transaction -> Api.InputUser? in
-        return transaction.getPeer(peerId).flatMap(apiInputUser) ?? peerReference?.inputUser
+    return postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(peerId).flatMap(apiInputPeer) ?? peerReference?.inputPeer
     }
-    |> mapToSignal { inputUser -> Signal<Never, NoError> in
-        guard let inputUser = inputUser else {
+    |> mapToSignal { inputPeer -> Signal<Never, NoError> in
+        guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return network.request(Api.functions.stories.getUserStories(userId: inputUser))
+        return network.request(Api.functions.stories.getPeerStories(peer: inputPeer))
         |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.stories.UserStories?, NoError> in
+        |> `catch` { _ -> Signal<Api.stories.PeerStories?, NoError> in
             return .single(nil)
         }
         |> mapToSignal { result -> Signal<Never, NoError> in
@@ -1348,12 +1399,12 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 var updatedPeerEntries: [StoryItemsTableEntry] = []
                 updatedPeerEntries.removeAll()
                 
-                if let result = result, case let .userStories(stories, users) = result {
-                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [], users: users)
+                if let result = result, case let .peerStories(stories, chats, users) = result {
+                    let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     
                     switch stories {
-                    case let .userStories(_, userId, maxReadId, stories):
-                        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                    case let .peerStories(_, peerIdValue, maxReadId, stories):
+                        let peerId = peerIdValue.peerId
                         
                         let previousPeerEntries: [StoryItemsTableEntry] = transaction.getStoryItems(peerId: peerId)
                         
@@ -1379,8 +1430,35 @@ public func _internal_pollPeerStories(postbox: Postbox, network: Network, accoun
                 
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
                 
-                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+                var isContactOrMember = false
+                if transaction.isPeerContact(peerId: peerId) {
+                    isContactOrMember = true
+                } else if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                    if peer.participationStatus == .member {
+                        isContactOrMember = true
+                    }
+                } else if let peer = transaction.getPeer(peerId) as? TelegramGroup {
+                    if case .Member = peer.membership {
+                        isContactOrMember = true
+                    }
+                }
+                
+                if !updatedPeerEntries.isEmpty, shouldKeepUserStoriesInFeed(peerId: peerId, isContactOrMember: isContactOrMember) {
                     if let user = transaction.getPeer(peerId) as? TelegramUser, let storiesHidden = user.storiesHidden {
+                        if storiesHidden {
+                            if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .hidden, state: state, peerIds: peerIds)
+                            }
+                        } else {
+                            if !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
+                                var (state, peerIds) = transaction.getAllStorySubscriptions(key: .filtered)
+                                peerIds.append(peerId)
+                                transaction.replaceAllStorySubscriptions(key: .filtered, state: state, peerIds: peerIds)
+                            }
+                        }
+                    } else if let channel = transaction.getPeer(peerId) as? TelegramChannel, let storiesHidden = channel.storiesHidden {
                         if storiesHidden {
                             if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) {
                                 var (state, peerIds) = transaction.getAllStorySubscriptions(key: .hidden)

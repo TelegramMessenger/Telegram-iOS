@@ -1,6 +1,10 @@
 build --action_env=ZERO_AR_DATE=1
 
 build --apple_platform_type=ios
+build --enable_platform_specific_config
+build --apple_crosstool_top=@local_config_apple_cc//:toolchain
+build --crosstool_top=@local_config_apple_cc//:toolchain
+build --host_crosstool_top=@local_config_apple_cc//:toolchain
 
 build --cxxopt='-std=c++17'
 build --per_file_copt="third-party/webrtc/.*\.cpp$","@-std=c++17"

@@ -9,7 +9,7 @@ import Tuples
 import ImageBlur
 import FastBlur
 
-private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
+public func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
     if let (colorData, alphaData) = data.withUnsafeBytes({ bytes -> (Data, Data)? in
         var colorSize: Int32 = 0
         memcpy(&colorSize, bytes.baseAddress, 4)

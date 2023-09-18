@@ -441,6 +441,9 @@ public class ItemListPermanentInviteLinkItemNode: ListViewItemNode, ItemListItem
                     strongSelf.addressButtonNode.frame = strongSelf.containerNode.bounds
                     strongSelf.referenceContainerNode.frame =  strongSelf.containerNode.bounds
                     strongSelf.addressButtonIconNode.frame = strongSelf.containerNode.bounds
+                    
+                    strongSelf.addressButtonNode.isHidden = item.contextAction == nil
+                    strongSelf.addressButtonIconNode.isHidden = item.contextAction == nil
                                         
                     let shareButtonNode: SolidRoundedButtonNode
                     if let currentShareButtonNode = strongSelf.shareButtonNode {

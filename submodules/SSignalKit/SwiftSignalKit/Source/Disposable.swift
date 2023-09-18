@@ -4,6 +4,32 @@ public protocol Disposable: AnyObject {
     func dispose()
 }
 
+public final class StrictDisposable: Disposable {
+    private let disposable: Disposable
+    private let isDisposed = Atomic<Bool>(value: false)
+    
+    public init(_ disposable: Disposable) {
+        self.disposable = disposable
+    }
+    
+    deinit {
+        #if DEBUG
+        assert(self.isDisposed.with({ $0 }))
+        #endif
+    }
+    
+    public func dispose() {
+        let _ = self.isDisposed.swap(true)
+        self.disposable.dispose()
+    }
+}
+
+public extension Disposable {
+    func strict() -> Disposable {
+        return StrictDisposable(self)
+    }
+}
+
 final class _EmptyDisposable: Disposable {
     func dispose() {
     }

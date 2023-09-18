@@ -57,6 +57,7 @@ private enum MultipartFetchDownloadError {
     case revalidateMediaReference
     case hashesMissing
     case fatal
+    case webfileNotAvailable
 }
 
 private enum MultipartFetchGenericLocationResult {
@@ -351,6 +352,8 @@ private enum MultipartFetchSource {
                                 |> mapError { error -> MultipartFetchDownloadError in
                                     if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_")  {
                                         return .revalidateMediaReference
+                                    } else if error.errorDescription == "WEBFILE_NOT_AVAILABLE" {
+                                        return .webfileNotAvailable
                                     }
                                     return .generic
                                 }
@@ -379,6 +382,9 @@ private enum MultipartFetchSource {
                     case let .web(_, location):
                         return download.request(Api.functions.upload.getWebFile(location: location, offset: Int32(offset), limit: Int32(limit)), tag: tag, continueInBackground: continueInBackground, expectedResponseSize: Int32(limit))
                         |> mapError { error -> MultipartFetchDownloadError in
+                            if error.errorDescription == "WEBFILE_NOT_AVAILABLE" {
+                                return .webfileNotAvailable
+                            }
                             return .fatal
                         }
                         |> mapToSignal { result, info -> Signal<(Data, NetworkResponseInfo), MultipartFetchDownloadError> in
@@ -930,6 +936,9 @@ private final class MultipartFetchManager {
                         }
                     case .hashesMissing:
                         break
+                    case .webfileNotAvailable:
+                        strongSelf.completeSize = 0
+                        strongSelf.checkState()
                 }
             }))
         }

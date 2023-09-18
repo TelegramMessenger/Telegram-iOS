@@ -149,7 +149,7 @@ final class ChatListEmptyNode: ASDisplayNode {
                 if let (size, insets) = self.validLayout {
                     self.updateLayout(size: size, insets: insets, transition: .immediate)
                 }
-            })
+            }).strict()
         }
     }
     

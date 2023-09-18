@@ -247,12 +247,15 @@ open class ViewControllerComponentContainer: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 var theme = presentationData.theme
+                
+                var resolvedTheme = resolveTheme(baseTheme: presentationData.theme, theme: strongSelf.theme)
                 if case .modal = presentationMode {
                     theme = theme.withModalBlocksBackground()
+                    resolvedTheme = resolvedTheme.withModalBlocksBackground()
                 }
 
                 strongSelf.node.presentationData = presentationData.withUpdated(theme: theme)
-                strongSelf.node.resolvedTheme = resolveTheme(baseTheme: presentationData.theme, theme: strongSelf.theme)
+                strongSelf.node.resolvedTheme = resolvedTheme
         
                 switch statusBarStyle {
                     case .none:
@@ -267,7 +270,7 @@ open class ViewControllerComponentContainer: ViewController {
                     strongSelf.containerLayoutUpdated(layout, transition: .immediate)
                 }
             }
-        })
+        }).strict()
         
         switch statusBarStyle {
             case .none:

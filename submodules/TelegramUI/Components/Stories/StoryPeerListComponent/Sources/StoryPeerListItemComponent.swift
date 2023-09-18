@@ -58,6 +58,15 @@ private func calculateCircleIntersection(center: CGPoint, otherCenter: CGPoint, 
 }
 
 private func calculateMergingCircleShape(center: CGPoint, leftCenter: CGPoint?, rightCenter: CGPoint?, radius: CGFloat, totalCount: Int, unseenCount: Int, isSeen: Bool, segmentFraction: CGFloat, rotationFraction: CGFloat) -> CGPath {
+    var totalCount = totalCount
+    var unseenCount = unseenCount
+    
+    let totalCountNorm = CGFloat(totalCount) / 30.0
+    if totalCountNorm > 1.0 {
+        totalCount = Int(CGFloat(totalCount) / totalCountNorm)
+        unseenCount = Int(CGFloat(unseenCount) / totalCountNorm)
+    }
+    
     let leftAngles = leftCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     let rightAngles = rightCenter.flatMap { calculateCircleIntersection(center: center, otherCenter: $0, radius: radius) }
     
@@ -321,6 +330,7 @@ public final class StoryPeerListItemComponent: Component {
             
             if let itemView {
                 if let portalView = PortalView(matchPosition: false) {
+                    portalView.view.layer.rasterizationScale = UIScreenScale
                     itemView.avatarContent.addPortal(view: portalView)
                     self.portalView = portalView
                     self.addSubview(portalView.view)

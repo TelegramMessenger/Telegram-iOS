@@ -8,9 +8,9 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
-import DrawingUI
 import SolidRoundedButtonNode
 import MediaEditor
+import DrawingUI
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -78,7 +78,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
         return self.entity.mirrored
     }
     
-    let account: Account
+    let postbox: Postbox
     let file: TelegramMediaFile?
     let entity: DrawingStickerEntity
     let animated: Bool
@@ -96,16 +96,16 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     let imagePromise = Promise<UIImage>()
     
-    init(account: Account, entity: DrawingStickerEntity) {
-        self.account = account
+    init(postbox: Postbox, entity: DrawingStickerEntity) {
+        self.postbox = postbox
         self.entity = entity
         self.animated = entity.isAnimated
 
         switch entity.content {
-        case let .file(file):
+        case let .file(file, _):
             self.file = file
             if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
+                self.source = AnimatedStickerResourceSource(postbox: postbox, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
                 if let source = self.source {
                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
@@ -132,7 +132,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     }))
                 }
             } else {
-                self.disposables.add((chatMessageSticker(account: self.account, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
+                self.disposables.add((chatMessageSticker(postbox: self.postbox, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
                 |> deliverOn(self.queue)).start(next: { [weak self] generator in
                     if let strongSelf = self {
                         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: entity.baseSize, boundingSize: entity.baseSize, intrinsicInsets: UIEdgeInsets()))
@@ -412,7 +412,7 @@ private class LegacyPaintVectorEntity: LegacyPaintEntity {
 }
 
 public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRenderer {
-    private let account: Account?
+    private let postbox: Postbox?
     private let queue = Queue()
 
     private let entities: [LegacyPaintEntity]
@@ -421,8 +421,8 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
     
     private let isAvatar: Bool
     
-    public init(account: Account?, adjustments: TGMediaEditAdjustments) {
-        self.account = account
+    public init(postbox: Postbox?, adjustments: TGMediaEditAdjustments) {
+        self.postbox = postbox
         self.originalSize = adjustments.originalSize
         self.cropRect = adjustments.cropRect.isEmpty ? nil : adjustments.cropRect
         self.isAvatar = ((adjustments as? TGVideoEditAdjustments)?.documentId ?? 0) != 0
@@ -431,14 +431,14 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         if let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
             let entities = decodeDrawingEntities(data: entitiesData)
             for entity in entities {
-                if let sticker = entity as? DrawingStickerEntity, let account {
-                    renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
+                if let sticker = entity as? DrawingStickerEntity, let postbox {
+                    renderEntities.append(LegacyPaintStickerEntity(postbox: postbox, entity: sticker))
                 } else if let text = entity as? DrawingTextEntity {
                     renderEntities.append(LegacyPaintTextEntity(entity: text))
-                    if let renderSubEntities = text.renderSubEntities, let account {
+                    if let renderSubEntities = text.renderSubEntities, let postbox {
                         for entity in renderSubEntities {
                             if let entity = entity as? DrawingStickerEntity {
-                                renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                                renderEntities.append(LegacyPaintStickerEntity(postbox: postbox, entity: entity))
                             }
                         }
                     }

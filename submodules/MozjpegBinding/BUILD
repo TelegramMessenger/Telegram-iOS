@@ -5,6 +5,7 @@ objc_library(
     enable_modules = True,
     srcs = glob([
         "Sources/**/*.m",
+        "Sources/**/*.mm",
         "Sources/**/*.h",
     ]),
     hdrs = glob([
@@ -15,6 +16,7 @@ objc_library(
     ],
     deps = [
         "//third-party/mozjpeg:mozjpeg",
+        "//third-party/libjxl:jxl",
     ],
     visibility = [
         "//visibility:public",

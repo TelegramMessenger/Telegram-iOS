@@ -1385,7 +1385,7 @@ public final class ContactListNode: ASDisplayNode {
                     }
                 }
             }
-        })
+        }).strict()
         
         self.listNode.didEndScrolling = { [weak self] _ in
             if let strongSelf = self {

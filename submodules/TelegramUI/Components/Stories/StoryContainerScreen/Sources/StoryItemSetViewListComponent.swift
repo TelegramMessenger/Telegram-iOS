@@ -159,23 +159,27 @@ final class StoryItemSetViewListComponent: Component {
     
     private struct ItemLayout: Equatable {
         var containerSize: CGSize
+        var availableSize: CGSize
         var bottomInset: CGFloat
         var topInset: CGFloat
         var sideInset: CGFloat
         var itemHeight: CGFloat
         var itemCount: Int
         var premiumFooterSize: CGSize?
+        var isSearchActive: Bool
         
         var contentSize: CGSize
         
-        init(containerSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemHeight: CGFloat, itemCount: Int, premiumFooterSize: CGSize?) {
+        init(containerSize: CGSize, availableSize: CGSize, bottomInset: CGFloat, topInset: CGFloat, sideInset: CGFloat, itemHeight: CGFloat, itemCount: Int, premiumFooterSize: CGSize?, isSearchActive: Bool) {
             self.containerSize = containerSize
+            self.availableSize = availableSize
             self.bottomInset = bottomInset
             self.topInset = topInset
             self.sideInset = sideInset
             self.itemHeight = itemHeight
             self.itemCount = itemCount
             self.premiumFooterSize = premiumFooterSize
+            self.isSearchActive = isSearchActive
             
             self.contentSize = CGSize(width: containerSize.width, height: topInset + CGFloat(itemCount) * itemHeight + bottomInset)
             if let premiumFooterSize {
@@ -245,6 +249,7 @@ final class StoryItemSetViewListComponent: Component {
         let configuration: ContentConfigurationKey
         var query: String?
         
+        var stateComponent: StoryItemSetViewListComponent?
         var component: StoryItemSetViewListComponent?
         weak var state: EmptyComponentState?
         
@@ -283,6 +288,15 @@ final class StoryItemSetViewListComponent: Component {
         var contentLoadedUpdated: ((Bool) -> Void)?
         
         var dismissInput: (() -> Void)?
+        
+        var navigationSearch: ComponentView<Empty>?
+        var updateQuery: ((String) -> Void)?
+        var navigationBarBackground: BlurredBackgroundView?
+        var navigationSeparator: SimpleLayer?
+        var backgroundView: UIView?
+        
+        var navigationHeight: CGFloat?
+        var navigationSearchPartHeight: CGFloat?
         
         init(configuration: ContentConfigurationKey) {
             self.configuration = configuration
@@ -329,6 +343,28 @@ final class StoryItemSetViewListComponent: Component {
                 if eventCycleState.ignoreScrolling {
                     targetContentOffset.pointee.y = 0.0
                 }
+            } else {
+                if let navigationSearchPartHeight = self.navigationSearchPartHeight, navigationSearchPartHeight > 0.0 {
+                    if targetContentOffset.pointee.y < navigationSearchPartHeight {
+                        if targetContentOffset.pointee.y < navigationSearchPartHeight * 0.5 {
+                            targetContentOffset.pointee.y = 0.0
+                        } else {
+                            targetContentOffset.pointee.y = navigationSearchPartHeight
+                        }
+                    }
+                }
+            }
+        }
+        
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            if let navigationSearchPartHeight = self.navigationSearchPartHeight, navigationSearchPartHeight > 0.0 {
+                if scrollView.contentOffset.y < navigationSearchPartHeight {
+                    if scrollView.contentOffset.y < navigationSearchPartHeight * 0.5 {
+                        scrollView.setContentOffset(CGPoint(), animated: true)
+                    } else {
+                        scrollView.setContentOffset(CGPoint(x: 0.0, y: navigationSearchPartHeight), animated: true)
+                    }
+                }
             }
         }
         
@@ -343,7 +379,8 @@ final class StoryItemSetViewListComponent: Component {
                 return
             }
             
-            let visibleBounds = self.scrollView.bounds.insetBy(dx: 0.0, dy: -200.0)
+            let actualBounds = self.scrollView.bounds
+            let visibleBounds = actualBounds//.insetBy(dx: 0.0, dy: -200.0)
             
             var synchronousLoad = false
             if let hint = transition.userData(PeerListItemComponent.TransitionHint.self) {
@@ -364,6 +401,12 @@ final class StoryItemSetViewListComponent: Component {
                         continue
                     }
                     #endif
+                    
+                    /*if "".isEmpty {
+                        if index > range.lowerBound - 1 {
+                            break
+                        }
+                    }*/
                     
                     let itemFrame = itemLayout.itemFrame(for: index)
                     
@@ -538,15 +581,80 @@ final class StoryItemSetViewListComponent: Component {
                     viewList.loadMore()
                 }
             }
+            
+            let navigationSearchCollapseFraction: CGFloat
+            let navigationSearchFieldCollapseFraction: CGFloat
+            if itemLayout.isSearchActive {
+                navigationSearchCollapseFraction = 0.0
+                navigationSearchFieldCollapseFraction = 0.0
+            } else if let navigationSearchPartHeight = self.navigationSearchPartHeight, navigationSearchPartHeight > 8.0 {
+                let searchCollapseDistance: CGFloat = navigationSearchPartHeight
+                navigationSearchCollapseFraction = max(0.0, min(1.0, actualBounds.minY / searchCollapseDistance))
+                
+                let searchFieldCollapseDistance: CGFloat = navigationSearchPartHeight - 8.0
+                navigationSearchFieldCollapseFraction = max(0.0, min(1.0, actualBounds.minY / searchFieldCollapseDistance))
+            } else {
+                navigationSearchCollapseFraction = 1.0
+                navigationSearchFieldCollapseFraction = 1.0
+            }
+            
+            if let navigationSearch = self.navigationSearch {
+                let _ = navigationSearch.update(
+                    transition: transition,
+                    component: AnyComponent(NavigationSearchComponent(
+                        colors: NavigationSearchComponent.Colors(
+                            background: UIColor(white: 1.0, alpha: 0.05),
+                            inactiveForeground: UIColor(rgb: 0x8E8E93),
+                            foreground: .white,
+                            button: component.theme.rootController.navigationBar.accentTextColor
+                        ),
+                        cancel: component.strings.Common_Cancel,
+                        placeholder: component.strings.Common_Search,
+                        isSearchActive: component.isSearchActive,
+                        collapseFraction: navigationSearchFieldCollapseFraction,
+                        activateSearch: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.setIsSearchActive(true)
+                        },
+                        deactivateSearch: { [weak self] in
+                            guard let self, let component = self.component else {
+                                return
+                            }
+                            component.setIsSearchActive(false)
+                        },
+                        updateQuery: { [weak self] query in
+                            guard let self else {
+                                return
+                            }
+                            self.updateQuery?(query)
+                        }
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: itemLayout.containerSize.width - component.safeInsets.left - component.safeInsets.right, height: 100.0)
+                )
+            }
+            
+            if let navigationHeight = self.navigationHeight, let navigationSearchPartHeight = self.navigationSearchPartHeight, let navigationBarBackground = self.navigationBarBackground, let navigationSeparator = self.navigationSeparator, let backgroundView = self.backgroundView {
+                let effectiveNavigationHeight = navigationHeight - navigationSearchPartHeight * navigationSearchCollapseFraction
+                let navigationBarBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: itemLayout.containerSize.width, height: effectiveNavigationHeight))
+                
+                transition.setFrame(view: navigationBarBackground, frame: navigationBarBackgroundFrame)
+                navigationBarBackground.update(size: navigationBarBackgroundFrame.size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
+                transition.setFrame(layer: navigationSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarBackgroundFrame.height - UIScreenPixel), size: CGSize(width: navigationBarBackgroundFrame.width, height: UIScreenPixel)))
+                
+                let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: itemLayout.availableSize.height - itemLayout.containerSize.height + 12.0), size: CGSize(width: itemLayout.availableSize.width, height: effectiveNavigationHeight))
+                transition.setFrame(view: backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: itemLayout.availableSize.width, height: itemLayout.availableSize.height)))
+            }
         }
         
-        func update(component: StoryItemSetViewListComponent, state: EmptyComponentState?, baseContentView: ContentView?, query: String?, availableSize: CGSize, visualHeight: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, transition: Transition) {
-            let themeUpdated = self.component?.theme !== component.theme
-            let itemUpdated = self.component?.storyItem.id != component.storyItem.id
-            let viewsNilUpdated = (self.component?.storyItem.views == nil) != (component.storyItem.views == nil)
+        func updateState(component: StoryItemSetViewListComponent, state: EmptyComponentState?, baseContentView: ContentView?, query: String?) {
+            let itemUpdated = self.stateComponent?.storyItem.id != component.storyItem.id
+            let viewsNilUpdated = (self.stateComponent?.storyItem.views == nil) != (component.storyItem.views == nil)
             let queryUpdated = self.query != query
             
-            self.component = component
+            self.stateComponent = component
             self.state = state
             self.query = query
             
@@ -594,7 +702,7 @@ final class StoryItemSetViewListComponent: Component {
                                 parentSource = nil
                             }
                             
-                            self.viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
+                            self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, searchQuery: query, parentSource: parentSource)
                         }
                     }
                 } else {
@@ -603,7 +711,7 @@ final class StoryItemSetViewListComponent: Component {
                         if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
                             viewList = current
                         } else {
-                            viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                            viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
                             component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
                         }
                         self.viewList = viewList
@@ -622,14 +730,9 @@ final class StoryItemSetViewListComponent: Component {
                         case .recentFirst:
                             mappedSortMode = .recentFirst
                         }
-                        self.viewList = component.context.engine.messages.storyViewList(id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
+                        self.viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: mappedListMode, sortMode: mappedSortMode, parentSource: component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)])
                     }
                 }
-            }
-            
-            var synchronous = false
-            if let animationHint = transition.userData(AnimationHint.self) {
-                synchronous = animationHint.synchronous
             }
             
             if itemUpdated || viewsNilUpdated || queryUpdated {
@@ -693,7 +796,6 @@ final class StoryItemSetViewListComponent: Component {
                         }
                     })
                     applyState = true
-                    let _ = synchronous
                 } else {
                     if let _ = component.storyItem.views {
                     } else {
@@ -708,10 +810,21 @@ final class StoryItemSetViewListComponent: Component {
                             hasContent = true
                         }
                         self.hasContent = hasContent
-                        self.contentLoaded = true
+                        if self.contentLoaded != true {
+                            self.contentLoaded = true
+                            self.contentLoadedUpdated?(self.contentLoaded)
+                        }
                     }
                 }
             }
+        }
+        
+        func update(component: StoryItemSetViewListComponent, availableSize: CGSize, visualHeight: CGFloat, sideInset: CGFloat, navigationHeight: CGFloat, navigationSearchPartHeight: CGFloat, isSearchActive: Bool, transition: Transition) {
+            let themeUpdated = self.component?.theme !== component.theme
+            self.component = component
+            
+            self.navigationHeight = navigationHeight
+            self.navigationSearchPartHeight = navigationSearchPartHeight
             
             let measureItemSize = self.measureItem.update(
                 transition: .immediate,
@@ -818,12 +931,14 @@ final class StoryItemSetViewListComponent: Component {
             
             let itemLayout = ItemLayout(
                 containerSize: CGSize(width: availableSize.width, height: visualHeight),
+                availableSize: availableSize,
                 bottomInset: component.safeInsets.bottom,
                 topInset: navigationHeight,
                 sideInset: sideInset,
                 itemHeight: measureItemSize.height,
                 itemCount: self.viewListState?.items.count ?? 0,
-                premiumFooterSize: premiumFooterSize
+                premiumFooterSize: premiumFooterSize,
+                isSearchActive: isSearchActive
             )
             self.itemLayout = itemLayout
             
@@ -1087,6 +1202,10 @@ final class StoryItemSetViewListComponent: Component {
         private let title = ComponentView<Empty>()
         private let orderSelector = ComponentView<Empty>()
         
+        private var mainViewListDisposable: Disposable?
+        private var mainViewList: EngineStoryViewListContext?
+        private var mainViewListState: EngineStoryViewListContext.State?
+        
         private var currentContentView: ContentView?
         private weak var disappearingCurrentContentView: ContentView?
         
@@ -1115,8 +1234,8 @@ final class StoryItemSetViewListComponent: Component {
 
             self.addSubview(self.backgroundView)
             
-            self.addSubview(self.navigationBarBackground)
-            self.layer.addSublayer(self.navigationSeparator)
+            self.navigationContainerView.addSubview(self.navigationBarBackground)
+            self.navigationContainerView.layer.addSublayer(self.navigationSeparator)
             self.addSubview(self.navigationContainerView)
         }
         
@@ -1125,10 +1244,11 @@ final class StoryItemSetViewListComponent: Component {
         }
         
         deinit {
+            self.mainViewListDisposable?.dispose()
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if !self.backgroundView.frame.contains(point) && !self.navigationBarBackground.frame.contains(point) {
+            if !self.backgroundView.frame.contains(point) && !self.navigationContainerView.frame.contains(point) {
                 return nil
             }
             
@@ -1212,7 +1332,7 @@ final class StoryItemSetViewListComponent: Component {
             
             let contextItems = ContextController.Items(content: .list(items))
             
-            let contextController = ContextController(account: component.context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: nil)
+            let contextController = ContextController(presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: controller, sourceView: sourceView, position: .bottom)), items: .single(contextItems), gesture: nil)
             
             sourceView.alpha = 0.5
             contextController.dismissed = { [weak self, weak sourceView] in
@@ -1245,12 +1365,108 @@ final class StoryItemSetViewListComponent: Component {
                 self.currentSearchQuery = ""
             }
             
+            var updateSubState = false
+            
+            if self.mainViewList == nil {
+                self.mainViewListDisposable?.dispose()
+                self.mainViewListDisposable = nil
+                
+                if let views = component.storyItem.views {
+                    let viewList: EngineStoryViewListContext
+                    if let current = component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] {
+                        viewList = current
+                    } else {
+                        viewList = component.context.engine.messages.storyViewList(peerId: component.peerId, id: component.storyItem.id, views: views, listMode: .everyone, sortMode: .reactionsFirst)
+                        component.sharedListsContext.viewLists[StoryId(peerId: component.peerId, id: component.storyItem.id)] = viewList
+                    }
+                    self.mainViewList = viewList
+                    self.mainViewListDisposable = (viewList.state
+                    |> deliverOnMainQueue).start(next: { [weak self] listState in
+                        guard let self else {
+                            return
+                        }
+                        self.mainViewListState = listState
+                        
+                        if updateSubState {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    })
+                } else {
+                    self.mainViewList = nil
+                    self.mainViewListState = nil
+                }
+            }
+            
+            let currentConfiguration = ContentConfigurationKey(listMode: self.listMode, sortMode: self.sortMode)
+            if self.currentContentView?.configuration != currentConfiguration {
+                let previousContentView = self.currentContentView
+                self.disappearingCurrentContentView?.removeFromSuperview()
+                self.disappearingCurrentContentView = self.currentContentView
+                self.currentContentView = nil
+                
+                let currentContentView = ContentView(configuration: currentConfiguration)
+                self.currentContentView = currentContentView
+                currentContentView.updateQuery = { [weak self] query in
+                    guard let self else {
+                        return
+                    }
+                    if self.currentSearchQuery != query {
+                        self.currentSearchQuery = query
+                        self.state?.updated(transition: .immediate)
+                    }
+                }
+                currentContentView.isHidden = true
+                currentContentView.contentLoadedUpdated = { [weak self, weak currentContentView, weak previousContentView] value in
+                    guard value, let self, let currentContentView else {
+                        return
+                    }
+                    currentContentView.isHidden = false
+                    if let previousContentView {
+                        previousContentView.removeFromSuperview()
+                        if self.disappearingCurrentContentView === previousContentView {
+                            self.disappearingCurrentContentView = nil
+                        }
+                    }
+                    
+                    currentContentView.navigationSearch = self.navigationSearch
+                    currentContentView.navigationBarBackground = self.navigationBarBackground
+                    currentContentView.navigationSeparator = self.navigationSeparator
+                    currentContentView.backgroundView = self.backgroundView
+                    if updateSubState {
+                        self.state?.updated(transition: .immediate)
+                    }
+                }
+            }
+            
+            if let currentContentView = self.currentContentView {
+                var contentViewTransition = transition
+                if currentContentView.superview == nil {
+                    contentViewTransition = contentViewTransition.withAnimation(.none)
+                    self.insertSubview(currentContentView, belowSubview: self.navigationContainerView)
+                }
+                
+                contentViewTransition.setFrame(view: currentContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
+                currentContentView.updateState(
+                    component: component,
+                    state: state,
+                    baseContentView: nil,
+                    query: nil
+                )
+                if currentContentView.contentLoaded {
+                    currentContentView.isHidden = false
+                }
+            }
+            
             let sideInset: CGFloat = 16.0
             
             let visualHeight: CGFloat = max(component.minHeight, component.effectiveHeight)
             
+            var tabSelectorTransition = transition
+            if transition.animation.isImmediate, self.tabSelector.view != nil {
+                tabSelectorTransition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+            }
             let tabSelectorSize = self.tabSelector.update(
-                transition: transition,
+                transition: tabSelectorTransition,
                 component: AnyComponent(TabSelectorComponent(
                     colors: TabSelectorComponent.Colors(
                         foreground: .white,
@@ -1273,7 +1489,7 @@ final class StoryItemSetViewListComponent: Component {
                         }
                         if self.listMode != listMode {
                             self.listMode = listMode
-                            self.state?.updated(transition: Transition(animation: .curve(duration: 0.35, curve: .spring)))
+                            self.state?.updated(transition: .immediate)
                         }
                     }
                 )),
@@ -1281,10 +1497,20 @@ final class StoryItemSetViewListComponent: Component {
                 containerSize: CGSize(width: availableSize.width - 10.0 * 2.0, height: 50.0)
             )
             
+            var currentTotalCount: Int?
+            var currentTotalReactionCount: Int?
+            if let mainViewListState = self.mainViewListState {
+                currentTotalCount = mainViewListState.totalCount
+                currentTotalReactionCount = mainViewListState.totalReactedCount
+            } else {
+                currentTotalCount = component.storyItem.views?.seenCount
+                currentTotalReactionCount = component.storyItem.views?.reactedCount
+            }
+            
             let titleText: String
-            if let views = component.storyItem.views, views.seenCount != 0 {
-                if component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
-                    titleText = component.strings.Story_Footer_Views(Int32(views.seenCount))
+            if let totalCount = currentTotalCount, let currentTotalReactionCount {
+                if totalCount > 0 && totalCount > currentTotalReactionCount {
+                    titleText = component.strings.Story_ViewList_ViewerCount(Int32(totalCount))
                 } else {
                     titleText = component.strings.Story_ViewList_TitleViewers
                 }
@@ -1319,44 +1545,7 @@ final class StoryItemSetViewListComponent: Component {
                 containerSize: CGSize(width: 100.0, height: 100.0)
             )
             
-            let navigationSearchSize = self.navigationSearch.update(
-                transition: transition,
-                component: AnyComponent(NavigationSearchComponent(
-                    colors: NavigationSearchComponent.Colors(
-                        background: UIColor(white: 1.0, alpha: 0.05),
-                        inactiveForeground: UIColor(rgb: 0x8E8E93),
-                        foreground: .white,
-                        button: component.theme.rootController.navigationBar.accentTextColor
-                    ),
-                    cancel: component.strings.Common_Cancel,
-                    placeholder: component.strings.Common_Search,
-                    isSearchActive: component.isSearchActive,
-                    collapseFraction: 1.0,
-                    activateSearch: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.setIsSearchActive(true)
-                    },
-                    deactivateSearch: { [weak self] in
-                        guard let self, let component = self.component else {
-                            return
-                        }
-                        component.setIsSearchActive(false)
-                    },
-                    updateQuery: { [weak self] query in
-                        guard let self else {
-                            return
-                        }
-                        if self.currentSearchQuery != query {
-                            self.currentSearchQuery = query
-                            self.state?.updated(transition: .immediate)
-                        }
-                    }
-                )),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - component.safeInsets.left - component.safeInsets.right, height: 100.0)
-            )
+            let navigationSearchSize = CGSize(width: availableSize.width - component.safeInsets.left - component.safeInsets.right, height: 52.0)
             
             var displayModeSelector = false
             var displaySearchBar = false
@@ -1365,7 +1554,7 @@ final class StoryItemSetViewListComponent: Component {
             if !component.hasPremium, component.storyItem.expirationTimestamp <= Int32(Date().timeIntervalSince1970) {
             } else {
                 if let views = component.storyItem.views, views.hasList {
-                    if let currentContentView = self.currentContentView, let totalCount = currentContentView.totalCount {
+                    if let totalCount = currentTotalCount {
                         if totalCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                             displayModeSelector = true
                             displaySearchBar = true
@@ -1374,13 +1563,13 @@ final class StoryItemSetViewListComponent: Component {
                             displaySortSelector = true
                         }
                     } else {
-                        if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
+                        /*if views.seenCount >= 20 || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                             displayModeSelector = true
                             displaySearchBar = true
                         }
                         if (views.reactedCount >= 10 && views.seenCount >= 20) || component.context.sharedContext.immediateExperimentalUISettings.storiesExperiment {
                             displaySortSelector = true
-                        }
+                        }*/
                     }
                 }
                 if let privacy = component.storyItem.privacy, case .everyone = privacy.base {
@@ -1390,17 +1579,17 @@ final class StoryItemSetViewListComponent: Component {
             }
             
             let navigationHeight: CGFloat
+            let navigationSearchPartHeight: CGFloat
             if component.isSearchActive {
                 navigationHeight = navigationSearchSize.height
+                navigationSearchPartHeight = 0.0
             } else if displaySearchBar {
                 navigationHeight = 56.0 + navigationSearchSize.height - 6.0
+                navigationSearchPartHeight = navigationSearchSize.height - 6.0
             } else {
                 navigationHeight = 56.0
+                navigationSearchPartHeight = 0.0
             }
-            
-            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - visualHeight + 12.0), size: CGSize(width: availableSize.width, height: navigationHeight))
-            transition.setFrame(view: self.navigationBarBackground, frame: navigationBarFrame)
-            self.navigationBarBackground.update(size: navigationBarFrame.size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
             
             if let tabSelectorView = self.tabSelector.view {
                 if tabSelectorView.superview == nil {
@@ -1432,60 +1621,26 @@ final class StoryItemSetViewListComponent: Component {
                 orderSelectorView.isHidden = !displaySortSelector
             }
             
-            if let navigationSearchView = self.navigationSearch.view {
-                if navigationSearchView.superview == nil {
-                    self.navigationContainerView.addSubview(navigationSearchView)
-                }
-                transition.setFrame(view: navigationSearchView, frame: CGRect(origin: CGPoint(x: component.safeInsets.left, y: component.isSearchActive ? 0.0 : 50.0), size: navigationSearchSize))
-                transition.setAlpha(view: navigationSearchView, alpha: (displaySearchBar || component.isSearchActive) ? 1.0 : 0.0)
-            }
+            let navigationBarFrame = CGRect(origin: CGPoint(x: 0.0, y: availableSize.height - visualHeight + 12.0), size: CGSize(width: availableSize.width, height: navigationHeight))
             
             transition.setFrame(view: self.navigationContainerView, frame: navigationBarFrame)
-            transition.setFrame(layer: self.navigationSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: UIScreenPixel)))
-            
-            transition.setFrame(view: self.backgroundView, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarFrame.maxY), size: CGSize(width: availableSize.width, height: availableSize.height)))
-            
-            let currentConfiguration = ContentConfigurationKey(listMode: self.listMode, sortMode: self.sortMode)
-            if self.currentContentView?.configuration != currentConfiguration {
-                let previousContentView = self.currentContentView
-                self.disappearingCurrentContentView?.removeFromSuperview()
-                self.disappearingCurrentContentView = self.currentContentView
-                self.currentContentView = nil
-                
-                let currentContentView = ContentView(configuration: currentConfiguration)
-                self.currentContentView = currentContentView
-                currentContentView.isHidden = true
-                currentContentView.contentLoadedUpdated = { [weak self, weak currentContentView, weak previousContentView] value in
-                    guard value, let self, let currentContentView else {
-                        return
-                    }
-                    currentContentView.isHidden = false
-                    if let previousContentView {
-                        previousContentView.removeFromSuperview()
-                        if self.disappearingCurrentContentView === previousContentView {
-                            self.disappearingCurrentContentView = nil
-                        }
-                    }
-                }
-            }
             
             if let currentContentView = self.currentContentView {
                 var contentViewTransition = transition
                 if currentContentView.superview == nil {
                     contentViewTransition = contentViewTransition.withAnimation(.none)
-                    self.insertSubview(currentContentView, belowSubview: self.navigationBarBackground)
+                    self.insertSubview(currentContentView, belowSubview: self.navigationContainerView)
                 }
                 
                 contentViewTransition.setFrame(view: currentContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 currentContentView.update(
                     component: component,
-                    state: state,
-                    baseContentView: nil,
-                    query: nil,
                     availableSize: availableSize,
                     visualHeight: visualHeight,
                     sideInset: sideInset,
                     navigationHeight: navigationHeight,
+                    navigationSearchPartHeight: navigationSearchPartHeight,
+                    isSearchActive: component.isSearchActive,
                     transition: contentViewTransition
                 )
                 if currentContentView.contentLoaded {
@@ -1512,7 +1667,7 @@ final class StoryItemSetViewListComponent: Component {
                 var contentViewTransition = transition
                 if currentSearchContentView.superview == nil {
                     contentViewTransition = contentViewTransition.withAnimation(.none)
-                    self.insertSubview(currentSearchContentView, belowSubview: self.navigationBarBackground)
+                    self.insertSubview(currentSearchContentView, belowSubview: self.navigationContainerView)
                 }
                 
                 currentSearchContentView.hasContentUpdated = { [weak self] hasContent in
@@ -1523,15 +1678,20 @@ final class StoryItemSetViewListComponent: Component {
                     self.currentSearchContentView?.isHidden = !hasContent
                 }
                 contentViewTransition.setFrame(view: currentSearchContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
-                currentSearchContentView.update(
+                currentSearchContentView.updateState(
                     component: component,
                     state: state,
                     baseContentView: self.currentContentView,
-                    query: self.currentSearchQuery,
+                    query: self.currentSearchQuery
+                )
+                currentSearchContentView.update(
+                    component: component,
                     availableSize: availableSize,
                     visualHeight: visualHeight,
                     sideInset: sideInset,
                     navigationHeight: navigationHeight,
+                    navigationSearchPartHeight: navigationSearchPartHeight,
+                    isSearchActive: component.isSearchActive,
                     transition: contentViewTransition
                 )
                 
@@ -1564,13 +1724,12 @@ final class StoryItemSetViewListComponent: Component {
                 transition.setFrame(view: disappearingCurrentContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 disappearingCurrentContentView.update(
                     component: component,
-                    state: state,
-                    baseContentView: nil,
-                    query: disappearingCurrentContentView.query,
                     availableSize: availableSize,
                     visualHeight: visualHeight,
                     sideInset: sideInset,
                     navigationHeight: navigationHeight,
+                    navigationSearchPartHeight: navigationSearchPartHeight,
+                    isSearchActive: component.isSearchActive,
                     transition: transition
                 )
             }
@@ -1578,18 +1737,27 @@ final class StoryItemSetViewListComponent: Component {
                 transition.setFrame(view: disappearingSearchContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 disappearingSearchContentView.update(
                     component: component,
-                    state: state,
-                    baseContentView: nil,
-                    query: disappearingSearchContentView.query,
                     availableSize: availableSize,
                     visualHeight: visualHeight,
                     sideInset: sideInset,
                     navigationHeight: navigationHeight,
+                    navigationSearchPartHeight: navigationSearchPartHeight,
+                    isSearchActive: component.isSearchActive,
                     transition: transition
                 )
             }
             
+            if let navigationSearchView = self.navigationSearch.view {
+                if navigationSearchView.superview == nil {
+                    self.navigationContainerView.addSubview(navigationSearchView)
+                }
+                transition.setFrame(view: navigationSearchView, frame: CGRect(origin: CGPoint(x: component.safeInsets.left, y: component.isSearchActive ? 0.0 : 50.0), size: navigationSearchSize))
+                transition.setAlpha(view: navigationSearchView, alpha: (displaySearchBar || component.isSearchActive) ? 1.0 : 0.0)
+            }
+            
             transition.setBoundsOrigin(view: self, origin: CGPoint(x: 0.0, y: -max(0.0, visualHeight - component.effectiveHeight)))
+            
+            updateSubState = true
             
             return availableSize
         }

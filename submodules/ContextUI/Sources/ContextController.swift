@@ -296,7 +296,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     init(
-        account: Account,
         controller: ContextController,
         presentationData: PresentationData,
         source: ContextContentSource,
@@ -2465,7 +2464,6 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
     }
 
-    private let account: Account
     private var presentationData: PresentationData
     private let source: ContextContentSource
     private var items: Signal<ContextController.Items, NoError>
@@ -2520,8 +2518,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     public var getOverlayViews: (() -> [UIView])?
     
-    public init(account: Account, presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
-        self.account = account
+    public init(presentationData: PresentationData, source: ContextContentSource, items: Signal<ContextController.Items, NoError>, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, workaroundUseLegacyImplementation: Bool = false) {
         self.presentationData = presentationData
         self.source = source
         self.items = items
@@ -2543,7 +2540,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case let .reference(referenceSource):
                 self.statusBar.statusBarStyle = .Ignore
                 
@@ -2555,7 +2552,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case let .extracted(extractedSource):
                 if extractedSource.blurBackground {
                     self.statusBar.statusBarStyle = .Hide
@@ -2570,7 +2567,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
                         return
                     }
                     strongSelf.dismiss(result: .default, completion: {})
-                })
+                }).strict()
             case .controller:
                 self.statusBar.statusBarStyle = .Hide
         }
@@ -2588,7 +2585,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, beginDismiss: { [weak self] result in
+        self.displayNode = ContextControllerNode(controller: self, presentationData: self.presentationData, source: self.source, items: self.items, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
         }, recognizer: self.recognizer, gesture: self.gesture, beganAnimatingOut: { [weak self] in
             guard let strongSelf = self else {

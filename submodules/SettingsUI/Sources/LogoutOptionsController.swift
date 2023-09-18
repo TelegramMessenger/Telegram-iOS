@@ -158,6 +158,7 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 let controller = PremiumLimitScreen(context: context, subject: .accounts, count: Int32(count), action: {
                     let controller = PremiumIntroScreen(context: context, source: .accounts)
                     replaceImpl?(controller)
+                    return true
                 })
                 replaceImpl = { [weak controller] c in
                     controller?.replace(with: c)

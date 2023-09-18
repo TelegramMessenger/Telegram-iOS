@@ -109,7 +109,7 @@ private final class ContentNode: ASDisplayNode {
                         strongSelf.updateImage(image: image, size: size, spacing: spacing)
                     }
                 })
-                self.disposable = disposable
+                self.disposable = disposable.strict()
             } else {
                 let image = generateImage(size, rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -342,7 +342,7 @@ public final class AnimatedAvatarSetView: UIView {
                             strongSelf.updateImage(image: image, size: size, spacing: spacing)
                         }
                     })
-                    self.disposable = disposable
+                    self.disposable = disposable.strict()
                 } else {
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))

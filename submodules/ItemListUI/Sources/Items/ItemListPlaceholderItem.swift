@@ -56,12 +56,13 @@ public class ItemListPlaceholderItem: ListViewItem, ItemListItem {
     public let selectable = false
 }
 
-private let textFont = Font.regular(13.0)
+private let textFont = Font.regular(15.0)
 
 public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     public let textNode: TextNode
     
@@ -79,6 +80,9 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
+        
+        self.maskNode = ASImageNode()
+        self.maskNode.isUserInteractionEnabled = false
         
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -118,7 +122,7 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.text, font: textFont, textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-            let height: CGFloat = 34.0 + textLayout.size.height
+            let height: CGFloat = 42.0 + textLayout.size.height
             
             switch item.style {
                 case .plain:
@@ -156,7 +160,9 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
                             if strongSelf.bottomStripeNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
                             }
-                            
+                            if strongSelf.maskNode.supernode != nil {
+                                strongSelf.maskNode.removeFromSupernode()
+                            }
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                         case .blocks:
                             if strongSelf.backgroundNode.supernode == nil {
@@ -168,26 +174,39 @@ public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
                             if strongSelf.bottomStripeNode.supernode == nil {
                                 strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                             }
+                            if strongSelf.maskNode.supernode == nil {
+                                strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                            }
+                            let hasCorners = itemListHasRoundedBlockLayout(params)
+                            var hasTopCorners = false
+                            var hasBottomCorners = false
                             switch neighbors.top {
                                 case .sameSection(false):
                                     strongSelf.topStripeNode.isHidden = true
                                 default:
-                                    strongSelf.topStripeNode.isHidden = false
+                                    hasTopCorners = true
+                                    strongSelf.topStripeNode.isHidden = hasCorners
                             }
                             let bottomStripeInset: CGFloat
                             switch neighbors.bottom {
                                 case .sameSection(false):
                                     bottomStripeInset = leftInset
+                                    strongSelf.bottomStripeNode.isHidden = false
                                 default:
                                     bottomStripeInset = 0.0
+                                    hasBottomCorners = true
+                                    strongSelf.bottomStripeNode.isHidden = hasCorners
                             }
                             
+                            strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                        
                             strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                            strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                             strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
                             strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
                     }
                     
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - textLayout.size.width) / 2.0), y: 17.0), size: textLayout.size)
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((params.width - textLayout.size.width) / 2.0), y: floorToScreenPixels((height - textLayout.size.height) / 2.0)), size: textLayout.size)
                 }
             })
         }

@@ -380,9 +380,9 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             }
         case let .messageMediaDice(value, emoticon):
             return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil)
-        case let .messageMediaStory(flags, userId, id, _):
+        case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
-            return (TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id), isMention: isMention), nil, nil, nil)
+            return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil)
         }
     }
     
@@ -423,6 +423,19 @@ func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
             longitude = 0.0
         }
         return .venue(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), venue: MediaArea.Venue(latitude: latitude, longitude: longitude, venue: MapVenue(title: title, address: address, provider: provider, id: venueId, type: venueType), queryId: nil, resultId: nil))
+    case let .mediaAreaSuggestedReaction(flags, coordinates, reaction):
+        if let reaction = MessageReaction.Reaction(apiReaction: reaction) {
+            var parsedFlags = MediaArea.ReactionFlags()
+            if (flags & (1 << 0)) != 0 {
+                parsedFlags.insert(.isDark)
+            }
+            if (flags & (1 << 1)) != 0 {
+                parsedFlags.insert(.isFlipped)
+            }
+            return .reaction(coordinates: coodinatesFromApiMediaAreaCoordinates(coordinates), reaction: reaction, flags: parsedFlags)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -440,6 +453,15 @@ func apiMediaAreasFromMediaAreas(_ mediaAreas: [MediaArea]) -> [Api.MediaArea] {
             } else {
                 apiMediaAreas.append(.mediaAreaGeoPoint(coordinates: inputCoordinates, geo: .geoPoint(flags: 0, long: venue.longitude, lat: venue.latitude, accessHash: 0, accuracyRadius: nil)))
             }
+        case let .reaction(_, reaction, flags):
+            var apiFlags: Int32 = 0
+            if flags.contains(.isDark) {
+                apiFlags |= (1 << 0)
+            }
+            if flags.contains(.isFlipped) {
+                apiFlags |= (1 << 1)
+            }
+            apiMediaAreas.append(.mediaAreaSuggestedReaction(flags: apiFlags, coordinates: inputCoordinates, reaction: reaction.apiReaction))
         }
     }
     return apiMediaAreas

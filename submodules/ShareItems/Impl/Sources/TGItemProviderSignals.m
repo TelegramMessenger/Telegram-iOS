@@ -173,9 +173,6 @@ static CGSize TGFitSize(CGSize size, CGSize maxSize) {
     return [[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber)
     {
         bool preferAsFile = false;
-#if DEBUG
-        preferAsFile = true;
-#endif
         
         CGSize maxSize = CGSizeMake(1280.0, 1280.0);
         NSDictionary *imageOptions = @{

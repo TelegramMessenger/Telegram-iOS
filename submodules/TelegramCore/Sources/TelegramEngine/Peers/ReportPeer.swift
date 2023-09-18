@@ -172,8 +172,8 @@ func _internal_reportPeerMessages(account: Account, messageIds: [MessageId], rea
 
 func _internal_reportPeerStory(account: Account, peerId: PeerId, storyId: Int32, reason: ReportReason, message: String) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
-        if let peer = transaction.getPeer(peerId), let inputUser = apiInputUser(peer) {
-            return account.network.request(Api.functions.stories.report(userId: inputUser, id: [storyId], reason: reason.apiReason, message: message))
+        if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+            return account.network.request(Api.functions.stories.report(peer: inputPeer, id: [storyId], reason: reason.apiReason, message: message))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }

@@ -19,10 +19,8 @@ public struct FoundPeer: Equatable {
     }
 }
 
-func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
-    let accountPeerId = account.peerId
-    
-    let searchResult = account.network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
+public func _internal_searchPeers(accountPeerId: PeerId, postbox: Postbox, network: Network, query: String) -> Signal<([FoundPeer], [FoundPeer]), NoError> {
+    let searchResult = network.request(Api.functions.contacts.search(q: query, limit: 20), automaticFloodWait: false)
     |> map(Optional.init)
     |> `catch` { _ in
         return Signal<Api.contacts.Found?, NoError>.single(nil)
@@ -32,7 +30,7 @@ func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPee
         if let result = result {
             switch result {
             case let .found(myResults, results, chats, users):
-                return account.postbox.transaction { transaction -> ([FoundPeer], [FoundPeer]) in
+                return postbox.transaction { transaction -> ([FoundPeer], [FoundPeer]) in
                     var subscribers: [PeerId: Int32] = [:]
                     
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
@@ -40,7 +38,7 @@ func _internal_searchPeers(account: Account, query: String) -> Signal<([FoundPee
                     for chat in chats {
                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                             switch chat {
-                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
+                            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _, _):
                                 if let participantsCount = participantsCount {
                                     subscribers[groupOrChannel.id] = participantsCount
                                 }

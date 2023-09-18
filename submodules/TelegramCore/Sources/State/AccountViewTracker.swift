@@ -1304,17 +1304,17 @@ public final class AccountViewTracker {
                 self.nextUpdatedUnsupportedMediaDisposableId += 1
                 
                 if let account = self.account {
-                    let signal = account.postbox.transaction { transaction -> [(PeerId, Api.InputUser)] in
-                        return addedPeerIds.compactMap { id -> (PeerId, Api.InputUser)? in
-                            if let user = transaction.getPeer(id).flatMap(apiInputUser) {
+                    let signal = account.postbox.transaction { transaction -> [(PeerId, Api.InputPeer)] in
+                        return addedPeerIds.compactMap { id -> (PeerId, Api.InputPeer)? in
+                            if let user = transaction.getPeer(id).flatMap(apiInputPeer) {
                                 return (id, user)
                             } else {
                                 return nil
                             }
                         }
                     }
-                    |> mapToSignal { inputUsers -> Signal<Never, NoError> in
-                        guard !inputUsers.isEmpty else {
+                    |> mapToSignal { inputPeers -> Signal<Never, NoError> in
+                        guard !inputPeers.isEmpty else {
                             return .complete()
                         }
                         
@@ -1322,13 +1322,13 @@ public final class AccountViewTracker {
                         
                         let batchCount = 100
                         var startIndex = 0
-                        while startIndex < inputUsers.count {
-                            var slice: [(PeerId, Api.InputUser)] = []
-                            for i in startIndex ..< min(startIndex + batchCount, inputUsers.count) {
-                                slice.append(inputUsers[i])
+                        while startIndex < inputPeers.count {
+                            var slice: [(PeerId, Api.InputPeer)] = []
+                            for i in startIndex ..< min(startIndex + batchCount, inputPeers.count) {
+                                slice.append(inputPeers[i])
                             }
                             startIndex += batchCount
-                            requests.append(account.network.request(Api.functions.users.getStoriesMaxIDs(id: slice.map(\.1)))
+                            requests.append(account.network.request(Api.functions.stories.getPeerMaxIDs(id: slice.map(\.1)))
                             |> `catch` { _ -> Signal<[Int32], NoError> in
                                 return .single([])
                             }

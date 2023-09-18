@@ -362,7 +362,8 @@ private final class PeerInfoPendingPane {
         hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
         parentController: ViewController?,
         openMediaCalendar: @escaping () -> Void,
-        paneDidScroll: @escaping () -> Void
+        paneDidScroll: @escaping () -> Void,
+        ensureRectVisible: @escaping (UIView, CGRect) -> Void
     ) {
         let captureProtected = data.peer?.isCopyProtectionEnabled ?? false
         let paneNode: PeerInfoPaneNode
@@ -375,6 +376,9 @@ private final class PeerInfoPendingPane {
             }
             visualPaneNode.paneDidScroll = {
                 paneDidScroll()
+            }
+            visualPaneNode.ensureRectVisible = { sourceView, rect in
+                ensureRectVisible(sourceView, rect)
             }
         case .media:
             let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected)
@@ -486,6 +490,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
 
     var openMediaCalendar: (() -> Void)?
     var paneDidScroll: (() -> Void)?
+    
+    var ensurePaneRectVisible: ((UIView, CGRect) -> Void)?
     
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -698,6 +704,10 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         let previousCurrentPaneKey = self.currentPaneKey
         var updateCurrentPaneStatus = false
         
+        if let previousAvailablePanes, !previousAvailablePanes.contains(.stories), availablePanes.contains(.stories) {
+            self.pendingSwitchToPaneKey = .stories
+        }
+        
         if let currentPaneKey = self.currentPaneKey, !availablePanes.contains(currentPaneKey) {
             var nextCandidatePaneKey: PeerInfoPaneKey?
             if let previousAvailablePanes = previousAvailablePanes, let index = previousAvailablePanes.firstIndex(of: currentPaneKey), index != 0 {
@@ -816,6 +826,12 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     },
                     paneDidScroll: { [weak self] in
                         self?.paneDidScroll?()
+                    },
+                    ensureRectVisible: { [weak self] sourceView, rect in
+                        guard let self else {
+                            return
+                        }
+                        self.ensurePaneRectVisible?(self.view, sourceView.convert(rect, to: self.view))
                     }
                 )
                 self.pendingPanes[key] = pane
@@ -982,6 +998,29 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
             paneTransition.updateFrame(node: pane.pane.node, frame: paneFrame)
             pane.pane.update(size: paneFrame.size, topInset: tabsHeight, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, isScrollingLockedAtTop: isScrollingLockedAtTop, expandProgress: expansionFraction, presentationData: presentationData, synchronous: true, transition: paneTransition)
         }
+        
+        var removeKeys: [PeerInfoPaneKey] = []
+        for (key, paneNode) in self.pendingPanes {
+            if !availablePanes.contains(key) {
+                removeKeys.append(key)
+                paneNode.pane.node.removeFromSupernode()
+            }
+        }
+        for key in removeKeys {
+            self.pendingPanes.removeValue(forKey: key)
+        }
+        removeKeys.removeAll()
+        
+        for (key, paneNode) in self.currentPanes {
+            if !availablePanes.contains(key) {
+                removeKeys.append(key)
+                paneNode.node.removeFromSupernode()
+            }
+        }
+        for key in removeKeys {
+            self.currentPanes.removeValue(forKey: key)
+        }
+        
         if !self.didSetIsReady && data != nil {
             if let currentPaneKey = self.currentPaneKey, let currentPane = self.currentPanes[currentPaneKey] {
                 self.didSetIsReady = true

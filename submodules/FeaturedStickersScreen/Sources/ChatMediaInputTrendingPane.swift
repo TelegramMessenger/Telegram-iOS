@@ -402,7 +402,7 @@ public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 strongSelf.didSetReady = true
                 strongSelf._ready.set(.single(Void()))
             }
-        })
+        }).strict()
     }
     
     public override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {

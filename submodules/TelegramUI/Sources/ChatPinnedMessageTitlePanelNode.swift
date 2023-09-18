@@ -854,7 +854,11 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .text:
                         controllerInteraction.sendMessage(button.title)
                     case let .url(url):
-                        controllerInteraction.openUrl(url, true, nil, nil)
+                        var isConcealed = true
+                        if url.hasPrefix("tg://") {
+                            isConcealed = false
+                        }
+                        controllerInteraction.openUrl(url, isConcealed, nil, nil)
                     case .requestMap:
                         controllerInteraction.shareCurrentLocation()
                     case .requestPhone:

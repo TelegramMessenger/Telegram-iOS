@@ -60,7 +60,7 @@ public enum PendingMessageFailureReason {
     case sendingTooFast
 }
 
-private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
+func sendMessageReasonForError(_ error: String) -> PendingMessageFailureReason? {
     if error.hasPrefix("PEER_FLOOD") {
         return .flood
     } else if error.hasPrefix("SENDING_TOO_FAST") {
@@ -109,6 +109,15 @@ private func uploadActivityTypeForMessage(_ message: Message) -> PeerInputActivi
     return nil
 }
 
+private func shouldPassFetchProgressForMessage(_ message: Message) -> Bool {
+    for media in message.media {
+        if let file = media as? TelegramMediaFile, file.isVideo {
+            return true
+        }
+    }
+    return false
+}
+
 private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, NoError> {
     let modify = postbox.transaction { transaction -> Void in
         for id in ids {
@@ -125,7 +134,7 @@ private func failMessages(postbox: Postbox, ids: [MessageId]) -> Signal<Void, No
     return modify
 }
 
-private final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
+final class PendingMessageRequestDependencyTag: NetworkRequestDependencyTag {
     let messageId: MessageId
     
     init(messageId: MessageId) {
@@ -403,7 +412,8 @@ public final class PendingMessageManager {
                     return lhs.1.index < rhs.1.index
                 }) {
                     if case let .collectingInfo(message) = messageContext.state {
-                        let contentToUpload = messageContentToUpload(accountPeerId: strongSelf.accountPeerId, network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload: messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, message: message)
+                        let passFetchProgress = shouldPassFetchProgressForMessage(message)
+                        let contentToUpload = messageContentToUpload(accountPeerId: strongSelf.accountPeerId, network: strongSelf.network, postbox: strongSelf.postbox, auxiliaryMethods: strongSelf.auxiliaryMethods, transformOutgoingMessageMedia: strongSelf.transformOutgoingMessageMedia, messageMediaPreuploadManager: strongSelf.messageMediaPreuploadManager, revalidationContext: strongSelf.revalidationContext, forceReupload: messageContext.forcedReuploadOnce, isGrouped: message.groupingKey != nil, passFetchProgress: passFetchProgress, message: message)
                         messageContext.contentType = contentToUpload.type
                         switch contentToUpload {
                         case let .immediate(result, type):
@@ -970,7 +980,7 @@ public final class PendingMessageManager {
                                     strongSelf.beginSendingMessages(messages.map({ $0.0.id }))
                                     return .complete()
                                 }
-                            } else if let failureReason = reasonForError(error.errorDescription), let message = messages.first?.0 {
+                            } else if let failureReason = sendMessageReasonForError(error.errorDescription), let message = messages.first?.0 {
                                 for (message, _) in messages {
                                     if let context = strongSelf.messageContexts[message.id] {
                                         context.error = failureReason
@@ -1292,7 +1302,7 @@ public final class PendingMessageManager {
                                 strongSelf.beginSendingMessages([messageId])
                                 return
                             }
-                        } else if let failureReason = reasonForError(error.errorDescription) {
+                        } else if let failureReason = sendMessageReasonForError(error.errorDescription) {
                             if let context = strongSelf.messageContexts[message.id] {
                                 context.error = failureReason
                                 for f in context.statusSubscribers.copyItems() {

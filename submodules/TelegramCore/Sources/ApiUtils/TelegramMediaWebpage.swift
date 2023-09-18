@@ -45,8 +45,8 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             if let attributes = attributes {
                 webpageAttributes = attributes.compactMap(telegramMediaWebpageAttributeFromApiWebpageAttribute)
                 for attribute in attributes {
-                    if case let .webPageAttributeStory(_, userId, id, _) = attribute {
-                        story = TelegramMediaStory(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id), isMention: false)
+                    if case let .webPageAttributeStory(_, peerId, id, _) = attribute {
+                        story = TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: false)
                     }
                 }
             }

@@ -199,9 +199,12 @@ private class TimerPickerItemView: UIView {
     
     var value: (Int32, String)? {
         didSet {
-            if let (_, string) = self.value {
+            if let (value, string) = self.value {
                 let components = string.components(separatedBy: " ")
-                if components.count > 1 {
+                if value == viewOnceTimeout {
+                    self.valueLabel.text = string
+                    self.unitLabel.text = ""
+                } else if components.count > 1 {
                     self.valueLabel.text = components[0]
                     self.unitLabel.text = components[1]
                 }
@@ -236,8 +239,12 @@ private class TimerPickerItemView: UIView {
         self.valueLabel.sizeToFit()
         self.unitLabel.sizeToFit()
         
-        self.valueLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 20.0 - self.valueLabel.frame.size.width, y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
-        self.unitLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 12.0, y: floor((self.frame.height - self.unitLabel.frame.height) / 2.0) + 2.0), size: self.unitLabel.frame.size)
+        if let (value, _) = self.value, value == viewOnceTimeout {
+            self.valueLabel.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.frame.width - self.valueLabel.frame.size.width) / 2.0), y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
+        } else {
+            self.valueLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 28.0 - self.valueLabel.frame.size.width, y: floor((self.frame.height - self.valueLabel.frame.height) / 2.0)), size: self.valueLabel.frame.size)
+            self.unitLabel.frame = CGRect(origin: CGPoint(x: self.frame.width / 2.0 - 20.0, y: floor((self.frame.height - self.unitLabel.frame.height) / 2.0) + 2.0), size: self.unitLabel.frame.size)
+        }
     }
 }
 
@@ -414,7 +421,14 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
                 if let pickerView = pickerView as? TimerCustomPickerView {
                     switch strongSelf.mode {
                     case .sendTimer:
-                        strongSelf.completion?(timerValues[pickerView.selectedRow(inComponent: 0)])
+                        let row = pickerView.selectedRow(inComponent: 0)
+                        let value: Int32
+                        if row == 0 {
+                            value = viewOnceTimeout
+                        } else {
+                            value = timerValues[row - 1]
+                        }
+                        strongSelf.completion?(value)
                     case .autoremove:
                         let timeInterval = strongSelf.autoremoveTimerValues[pickerView.selectedRow(inComponent: 0)]
                         strongSelf.completion?(Int32(timeInterval))
@@ -514,7 +528,7 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
         switch self.mode {
         case .sendTimer:
-            return timerValues.count
+            return timerValues.count + 1
         case .autoremove:
             return self.autoremoveTimerValues.count
         case .mute:
@@ -525,17 +539,30 @@ class ChatTimerScreenNode: ViewControllerTracingNode, UIScrollViewDelegate, UIPi
     func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
         switch self.mode {
         case .sendTimer:
-            let value = timerValues[row]
-            let string = timeIntervalString(strings: self.presentationData.strings, value: value)
-            if let view = view as? TimerPickerItemView {
+            if row == 0 {
+                let string = self.presentationData.strings.MediaPicker_Timer_ViewOnce
+                if let view = view as? TimerPickerItemView {
+                    view.value = (viewOnceTimeout, string)
+                    return view
+                }
+                
+                let view = TimerPickerItemView()
+                view.value = (viewOnceTimeout, string)
+                view.textColor = .white
+                return view
+            } else {
+                let value = timerValues[row - 1]
+                let string = timeIntervalString(strings: self.presentationData.strings, value: value)
+                if let view = view as? TimerPickerItemView {
+                    view.value = (value, string)
+                    return view
+                }
+                
+                let view = TimerPickerItemView()
                 view.value = (value, string)
+                view.textColor = .white
                 return view
             }
-            
-            let view = TimerPickerItemView()
-            view.value = (value, string)
-            view.textColor = .white
-            return view
         case .autoremove:
             let itemView: TimerPickerItemView
             if let current = view as? TimerPickerItemView {

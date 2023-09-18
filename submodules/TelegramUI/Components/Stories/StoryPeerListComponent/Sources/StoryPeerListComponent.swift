@@ -55,7 +55,7 @@ public final class StoryPeerListComponent: Component {
     public let storySubscriptions: EngineStorySubscriptions?
     public let collapseFraction: CGFloat
     public let unlocked: Bool
-    public let uploadProgress: Float?
+    public let uploadProgress: [EnginePeer.Id: Float]
     public let peerAction: (EnginePeer?) -> Void
     public let contextPeerAction: (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void
     public let openStatusSetup: (UIView) -> Void
@@ -77,7 +77,7 @@ public final class StoryPeerListComponent: Component {
         storySubscriptions: EngineStorySubscriptions?,
         collapseFraction: CGFloat,
         unlocked: Bool,
-        uploadProgress: Float?,
+        uploadProgress: [EnginePeer.Id: Float],
         peerAction: @escaping (EnginePeer?) -> Void,
         contextPeerAction: @escaping (ContextExtractedContentContainingNode, ContextGesture, EnginePeer) -> Void,
         openStatusSetup: @escaping (UIView) -> Void,
@@ -460,10 +460,33 @@ public final class StoryPeerListComponent: Component {
             })
         }
         
+        public func ensureItemVisible(peerId: EnginePeer.Id) {
+            guard let itemLayout = self.itemLayout else {
+                return
+            }
+            if let index = self.sortedItems.firstIndex(where: { $0.peer.id == peerId }) {
+                let itemFrame = itemLayout.frame(at: index)
+                if !self.scrollView.bounds.contains(itemFrame.insetBy(dx: 20.0, dy: 0.0)) {
+                    self.scrollView.scrollRectToVisible(itemFrame.insetBy(dx: -40.0, dy: 0.0), animated: false)
+                }
+            }
+        }
+        
+        public func cancelLoadingItem() {
+            self.loadingItemDisposable?.dispose()
+            self.loadingItemDisposable = nil
+            
+            if self.loadingItemId != nil {
+                self.loadingItemId = nil
+                self.state?.updated(transition: .immediate)
+            }
+        }
+        
         public func setLoadingItem(peerId: EnginePeer.Id, signal: Signal<Never, NoError>) {
             var applyLoadingItem = true
+            
             self.loadingItemDisposable?.dispose()
-            self.loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
+            let loadingItemDisposable = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -471,6 +494,7 @@ public final class StoryPeerListComponent: Component {
                 applyLoadingItem = false
                 self.state?.updated(transition: .immediate)
             })
+            self.loadingItemDisposable = loadingItemDisposable
             
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
                 guard let self else {
@@ -980,11 +1004,13 @@ public final class StoryPeerListComponent: Component {
                     } else {
                         hasItems = false
                     }
-                    if let uploadProgress = component.uploadProgress {
+                    if let uploadProgress = component.uploadProgress[peer.id] {
                         itemRingAnimation = .progress(uploadProgress)
                     }
                     
                     hasUnseenCloseFriendsItems = false
+                } else if let uploadProgress = component.uploadProgress[peer.id] {
+                    itemRingAnimation = .progress(uploadProgress)
                 } else if peer.id == self.loadingItemId {
                     itemRingAnimation = .loading
                 }
@@ -1131,11 +1157,13 @@ public final class StoryPeerListComponent: Component {
                     } else {
                         hasItems = false
                     }
-                    if let uploadProgress = component.uploadProgress {
+                    if let uploadProgress = component.uploadProgress[peer.id] {
                         itemRingAnimation = .progress(uploadProgress)
                     }
                     
                     hasUnseenCloseFriendsItems = false
+                } else if let uploadProgress = component.uploadProgress[peer.id] {
+                    itemRingAnimation = .progress(uploadProgress)
                 }
                 
                 let collapseIndex = i + effectiveFirstVisibleIndex
@@ -1269,9 +1297,8 @@ public final class StoryPeerListComponent: Component {
                 titleContentOffset = collapsedTitleOffset
             } else {
                 titleContentOffset = titleMinContentOffset.interpolate(to: ((itemLayout.containerSize.width - collapsedState.titleWidth) * 0.5) as CGFloat, amount: min(1.0, collapsedState.maxFraction) * (1.0 - collapsedState.activityFraction))
+                titleContentOffset += -expandBoundsFraction * 4.0
             }
-            
-            titleContentOffset += -expandBoundsFraction * 4.0
             
             var titleIndicatorSize: CGSize?
             if collapsedState.activityFraction != 0.0 {

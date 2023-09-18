@@ -291,6 +291,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
         var eta: Signal<(ExpectedTravelTime, ExpectedTravelTime, ExpectedTravelTime), NoError> = .single((.calculating, .calculating, .calculating))
         var address: Signal<String?, NoError> = .single(nil)
         
+        let locale = localeWithStrings(presentationData.strings)
         if let location = getLocation(from: subject), location.liveBroadcastingTimeout == nil {
             eta = .single((.calculating, .calculating, .calculating))
             |> then(combineLatest(queue: Queue.mainQueue(), getExpectedTravelTime(coordinate: location.coordinate, transportType: .automobile), getExpectedTravelTime(coordinate: location.coordinate, transportType: .transit), getExpectedTravelTime(coordinate: location.coordinate, transportType: .walking))
@@ -313,7 +314,7 @@ final class LocationViewControllerNode: ViewControllerTracingNode, CLLocationMan
             } else {
                 address = .single(nil)
                 |> then(
-                    reverseGeocodeLocation(latitude: location.latitude, longitude: location.longitude)
+                    reverseGeocodeLocation(latitude: location.latitude, longitude: location.longitude, locale: locale)
                     |> map { placemark -> String? in
                         return placemark?.compactDisplayAddress ?? ""
                     }

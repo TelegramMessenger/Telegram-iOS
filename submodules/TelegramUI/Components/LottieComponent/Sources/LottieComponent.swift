@@ -7,9 +7,15 @@ import RLottieBinding
 import SwiftSignalKit
 import AppBundle
 import GZip
+import GenerateStickerPlaceholderImage
 
 public final class LottieComponent: Component {
     public typealias EnvironmentType = Empty
+    
+    public enum ContentData {
+        case placeholder(data: Data)
+        case animation(data: Data, cacheKey: String?)
+    }
     
     open class Content: Equatable {
         open var frameRange: Range<Double> {
@@ -30,7 +36,7 @@ public final class LottieComponent: Component {
             preconditionFailure()
         }
         
-        open func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
+        open func load(_ f: @escaping (ContentData) -> Void) -> Disposable {
             preconditionFailure()
         }
     }
@@ -61,11 +67,11 @@ public final class LottieComponent: Component {
             return true
         }
         
-        override public func load(_ f: @escaping (Data, String?) -> Void) -> Disposable {
+        override public func load(_ f: @escaping (LottieComponent.ContentData) -> Void) -> Disposable {
             if let url = getAppBundle().url(forResource: self.name, withExtension: "json"), let data = try? Data(contentsOf: url) {
-                f(data, url.path)
+                f(.animation(data: data, cacheKey: url.path))
             } else if let url = getAppBundle().url(forResource: self.name, withExtension: "tgs"), let data = try? Data(contentsOf: URL(fileURLWithPath: url.path)), let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) {
-                f(unpackedData, url.path)
+                f(.animation(data: unpackedData, cacheKey: url.path))
             }
             
             return EmptyDisposable
@@ -80,21 +86,27 @@ public final class LottieComponent: Component {
 
     public let content: Content
     public let color: UIColor?
+    public let placeholderColor: UIColor?
     public let startingPosition: StartingPosition
     public let size: CGSize?
+    public let renderingScale: CGFloat?
     public let loop: Bool
     
     public init(
         content: Content,
         color: UIColor? = nil,
+        placeholderColor: UIColor? = nil,
         startingPosition: StartingPosition = .end,
         size: CGSize? = nil,
+        renderingScale: CGFloat? = nil,
         loop: Bool = false
     ) {
         self.content = content
         self.color = color
+        self.placeholderColor = placeholderColor
         self.startingPosition = startingPosition
         self.size = size
+        self.renderingScale = renderingScale
         self.loop = loop
     }
     
@@ -105,10 +117,16 @@ public final class LottieComponent: Component {
         if lhs.color != rhs.color {
             return false
         }
+        if lhs.placeholderColor != rhs.placeholderColor {
+            return false
+        }
         if lhs.startingPosition != rhs.startingPosition {
             return false
         }
         if lhs.size != rhs.size {
+            return false
+        }
+        if lhs.renderingScale != rhs.renderingScale {
             return false
         }
         if lhs.loop != rhs.loop {
@@ -139,6 +157,26 @@ public final class LottieComponent: Component {
         private var displayLink: SharedDisplayLinkDriver.Link?
         
         private var currentTemplateFrameImage: UIImage?
+        
+        public var externalShouldPlay: Bool? {
+            didSet {
+                if self.externalShouldPlay != oldValue {
+                    self.visibilityUpdated()
+                }
+            }
+        }
+        
+        var isEffectivelyVisible: Bool {
+            if !self.isVisible {
+                return false
+            }
+            if let externalShouldPlay = self.externalShouldPlay {
+                if !externalShouldPlay {
+                    return false
+                }
+            }
+            return true
+        }
         
         public weak var output: UIImageView? {
             didSet {
@@ -184,10 +222,14 @@ public final class LottieComponent: Component {
         }
         
         private func visibilityUpdated() {
-            if self.isVisible {
+            if self.isEffectivelyVisible {
                 if self.scheduledPlayOnce {
                     self.playOnce()
+                } else {
+                    self.displayLink?.isPaused = false
                 }
+            } else {
+                self.displayLink?.isPaused = true
             }
         }
         
@@ -198,7 +240,7 @@ public final class LottieComponent: Component {
                 self.scheduledPlayOnce = true
                 return
             }
-            if !self.isVisible {
+            if !self.isEffectivelyVisible {
                 self.scheduledPlayOnce = true
                 return
             }
@@ -242,6 +284,26 @@ public final class LottieComponent: Component {
             }
         }
         
+        private func loadPlaceholder(data: Data) {
+            guard let component = self.component, let placeholderColor = component.placeholderColor else {
+                return
+            }
+            guard let currentDisplaySize = self.currentDisplaySize else {
+                return
+            }
+            
+            if let image = generateStickerPlaceholderImage(
+                data: data,
+                size: currentDisplaySize,
+                scale: min(2.0, UIScreenScale),
+                imageSize: CGSize(width: 512.0, height: 512.0),
+                backgroundColor: nil,
+                foregroundColor: placeholderColor
+            ) {
+                self.image = image
+            }
+        }
+        
         private func loadAnimation(data: Data, cacheKey: String?, startingPosition: StartingPosition, frameRange: Range<Double>) {
             self.animationInstance = LottieInstance(data: data, fitzModifier: .none, colorReplacements: nil, cacheKey: cacheKey ?? "")
             if let animationInstance = self.animationInstance {
@@ -261,7 +323,7 @@ public final class LottieComponent: Component {
                 }
             }
             
-            if self.scheduledPlayOnce {
+            if self.scheduledPlayOnce && self.isEffectivelyVisible {
                 self.scheduledPlayOnce = false
                 self.playOnce()
             } else {
@@ -353,7 +415,9 @@ public final class LottieComponent: Component {
             
             var redrawImage = false
             
-            let displaySize = CGSize(width: size.width * UIScreenScale, height: size.height * UIScreenScale)
+            let renderingScale = component.renderingScale ?? UIScreenScale
+            
+            let displaySize = CGSize(width: size.width * renderingScale, height: size.height * renderingScale)
             if self.currentDisplaySize != displaySize {
                 self.currentDisplaySize = displaySize
                 redrawImage = true
@@ -363,12 +427,17 @@ public final class LottieComponent: Component {
                 self.currentContentDisposable?.dispose()
                 let content = component.content
                 let frameRange = content.frameRange
-                self.currentContentDisposable = component.content.load { [weak self, weak content] data, cacheKey in
+                self.currentContentDisposable = component.content.load { [weak self, weak content] result in
                     Queue.mainQueue().async {
                         guard let self, let component = self.component, component.content == content else {
                             return
                         }
-                        self.loadAnimation(data: data, cacheKey: cacheKey, startingPosition: component.startingPosition, frameRange: frameRange)
+                        switch result {
+                        case let .placeholder(data):
+                            self.loadPlaceholder(data: data)
+                        case let .animation(data, cacheKey):
+                            self.loadAnimation(data: data, cacheKey: cacheKey, startingPosition: component.startingPosition, frameRange: frameRange)
+                        }
                     }
                 }
             } else if redrawImage {

@@ -1,0 +1,11 @@
+cc     = clang   -arch arm64 -isysroot `xcrun --sdk iphoneos --show-sdk-path`
+cxx    = clang++ -arch arm64 -isysroot `xcrun --sdk iphoneos --show-sdk-path`
+cflags = -fcolor-diagnostics -Weverything
+out    = out/ios$mode
+
+rule run
+    command = touch $out
+    description = skipping $in
+include ninja/common
+
+disabled = (uname | grep -qv Darwin)

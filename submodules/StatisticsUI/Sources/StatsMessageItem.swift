@@ -288,7 +288,7 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                         
             let labelFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
             
-            let label = stringForFullDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+            let label = stringForMediumDate(timestamp: item.message.timestamp, strings: item.presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: label, font: labelFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - totalLeftInset - rightInset - additionalRightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

@@ -154,6 +154,8 @@ private final class CameraContext {
     }
         
     init(queue: Queue, session: CameraSession, configuration: Camera.Configuration, metrics: Camera.Metrics, previewView: CameraSimplePreviewView?, secondaryPreviewView: CameraSimplePreviewView?) {
+        Logger.shared.log("CameraContext", "Init")
+        
         self.queue = queue
         self.session = session
         self.initialConfiguration = configuration
@@ -172,17 +174,23 @@ private final class CameraContext {
             object: self.session.session
         )
     }
+    
+    deinit {
+        Logger.shared.log("CameraContext", "deinit")
+    }
         
     private var isSessionRunning = false
     func startCapture() {
         guard !self.session.session.isRunning else {
             return
         }
+        Logger.shared.log("CameraContext", "startCapture")
         self.session.session.startRunning()
         self.isSessionRunning = self.session.session.isRunning
     }
     
     func stopCapture(invalidate: Bool = false) {
+        Logger.shared.log("CameraContext", "startCapture(invalidate: \(invalidate))")
         if invalidate {
             self.mainDeviceContext?.device.resetZoom()
             
@@ -570,6 +578,8 @@ public final class Camera {
     public let metrics: Camera.Metrics
     
     public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true, photo: false, metadata: false, preferredFps: 60.0), previewView: CameraSimplePreviewView? = nil, secondaryPreviewView: CameraSimplePreviewView? = nil) {
+        Logger.shared.log("Camera", "Init")
+        
         self.metrics = Camera.Metrics(model: DeviceModel.current)
         
         let session = CameraSession()
@@ -590,6 +600,8 @@ public final class Camera {
     }
     
     deinit {
+        Logger.shared.log("Camera", "Deinit")
+        
         let contextRef = self.contextRef
         self.queue.async {
             contextRef?.release()

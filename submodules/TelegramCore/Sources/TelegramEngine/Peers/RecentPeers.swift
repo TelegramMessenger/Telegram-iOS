@@ -12,17 +12,17 @@ func cachedRecentPeersEntryId() -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: 101, key: CachedRecentPeers.cacheKey())
 }
 
-func _internal_recentPeers(account: Account) -> Signal<RecentPeers, NoError> {
+public func _internal_recentPeers(accountPeerId: EnginePeer.Id, postbox: Postbox) -> Signal<RecentPeers, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
-    return account.postbox.combinedView(keys: [key])
+    return postbox.combinedView(keys: [key])
     |> mapToSignal { views -> Signal<RecentPeers, NoError> in
         if let value = (views.views[key] as? CachedItemView)?.value?.get(CachedRecentPeers.self) {
             if value.enabled {
-                return account.postbox.multiplePeersView(value.ids)
+                return postbox.multiplePeersView(value.ids)
                 |> map { view -> RecentPeers in
                     var peers: [Peer] = []
                     for id in value.ids {
-                        if let peer = view.peers[id], id != account.peerId {
+                        if let peer = view.peers[id], id != accountPeerId {
                             peers.append(peer)
                         }
                     }
@@ -44,7 +44,7 @@ public func _internal_getRecentPeers(transaction: Transaction) -> [PeerId] {
     return entry.ids
 }
 
-func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+public func _internal_managedUpdatedRecentPeers(accountPeerId: PeerId, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
     let key = PostboxViewKey.cachedItem(cachedRecentPeersEntryId())
     let peersEnabled = postbox.combinedView(keys: [key])
     |> map { views -> Bool in

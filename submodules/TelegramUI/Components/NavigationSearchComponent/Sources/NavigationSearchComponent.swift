@@ -90,7 +90,6 @@ public final class NavigationSearchComponent: Component {
         
         override init(frame: CGRect) {
             self.backgroundView = UIView()
-            self.backgroundView.layer.cornerRadius = 10.0
             
             self.searchIconView = UIImageView(image: UIImage(bundleImageName: "Components/Search Bar/Loupe")?.withRenderingMode(.alwaysTemplate))
             
@@ -183,6 +182,9 @@ public final class NavigationSearchComponent: Component {
             let searchIconSpacing: CGFloat = 4.0
             let buttonSpacing: CGFloat = 8.0
             
+            let contentAlphaDistance: CGFloat = 0.35
+            let contentAlpha: CGFloat = 1.0 - max(0.0, min(1.0, component.collapseFraction / contentAlphaDistance))
+            
             let rightInset: CGFloat
             if component.isSearchActive {
                 var buttonTransition = transition
@@ -235,8 +237,10 @@ public final class NavigationSearchComponent: Component {
                 rightInset = sideInset
             }
             
-            let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - fieldHeight) * 0.5)), size: CGSize(width: availableSize.width - sideInset - rightInset, height: fieldHeight))
+            let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - fieldHeight) * 0.5)), size: CGSize(width: availableSize.width - sideInset - rightInset, height: fieldHeight * (1.0 - component.collapseFraction)))
+            
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
+            transition.setCornerRadius(layer: self.backgroundView.layer, cornerRadius: min(10.0, backgroundFrame.height * 0.5))
             if previousComponent?.colors.background != component.colors.background {
                 self.backgroundView.backgroundColor = component.colors.background
             }
@@ -255,7 +259,7 @@ public final class NavigationSearchComponent: Component {
             let searchIconSize = self.searchIconView.image?.size ?? CGSize(width: 20.0, height: 20.0)
             //let searchPlaceholderCombinedWidth = searchIconSize.width + searchIconSpacing + placeholderSize.width
             
-            let placeholderTextFrame = CGRect(origin: CGPoint(x: component.isSearchActive ? (backgroundFrame.minX + fieldSideInset + searchIconSize.width + searchIconSpacing) : floor(backgroundFrame.midX - placeholderSize.width * 0.5), y: backgroundFrame.minY + floor((fieldHeight - placeholderSize.height) * 0.5)), size: placeholderSize)
+            let placeholderTextFrame = CGRect(origin: CGPoint(x: component.isSearchActive ? (backgroundFrame.minX + fieldSideInset + searchIconSize.width + searchIconSpacing) : floor(backgroundFrame.midX - placeholderSize.width * 0.5), y: backgroundFrame.minY + (backgroundFrame.height - placeholderSize.height) * 0.5), size: placeholderSize)
             var placeholderDeltaX: CGFloat = 0.0
             if let placeholderTextView = self.placeholderText.view {
                 if placeholderTextView.superview == nil {
@@ -267,14 +271,16 @@ public final class NavigationSearchComponent: Component {
                 }
                 transition.setPosition(view: placeholderTextView, position: placeholderTextFrame.origin)
                 transition.setBounds(view: placeholderTextView, bounds: CGRect(origin: CGPoint(), size: placeholderTextFrame.size))
+                transition.setAlpha(view: placeholderTextView, alpha: contentAlpha)
             }
             
-            let searchIconFrame = CGRect(origin: CGPoint(x: placeholderTextFrame.minX - searchIconSpacing - searchIconSize.width, y: backgroundFrame.minY + floor((fieldHeight - searchIconSize.height) * 0.5)), size: searchIconSize)
+            let searchIconFrame = CGRect(origin: CGPoint(x: placeholderTextFrame.minX - searchIconSpacing - searchIconSize.width, y: backgroundFrame.minY + (backgroundFrame.height - searchIconSize.height) * 0.5), size: searchIconSize)
             transition.setFrame(view: self.searchIconView, frame: searchIconFrame)
+            transition.setAlpha(view: self.searchIconView, alpha: contentAlpha)
             
             if let image = self.clearIconView.image {
                 let clearSize = image.size
-                let clearFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 6.0 - clearSize.width, y: backgroundFrame.minY + floor((backgroundFrame.height - clearSize.height) / 2.0)), size: clearSize)
+                let clearFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 6.0 - clearSize.width, y: backgroundFrame.minY + (backgroundFrame.height - clearSize.height) / 2.0), size: clearSize)
                 
                 let clearButtonFrame = CGRect(origin: CGPoint(x: clearFrame.minX - 4.0, y: backgroundFrame.minY), size: CGSize(width: clearFrame.width + 8.0, height: backgroundFrame.height))
                 transition.setFrame(view: self.clearButton, frame: clearButtonFrame)

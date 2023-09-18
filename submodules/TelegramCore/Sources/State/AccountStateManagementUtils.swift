@@ -1164,6 +1164,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         
                         if type.hasPrefix("auth") {
                             updatedState.authorizationListUpdated = true
+                            let string = type.dropFirst(4).components(separatedBy: "_")
+                            if string.count == 2, let hash = Int64(string[0]), let timestamp = Int32(string[1]) {
+                                attributes.append(AuthSessionInfoAttribute(hash: hash, timestamp: timestamp))
+                            }
                         }
                         
                         let message = StoreMessage(peerId: peerId, namespace: Namespaces.Message.Local, globallyUniqueId: nil, groupingKey: nil, threadId: nil, timestamp: date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: peerId, text: messageText, attributes: attributes, media: medias)
@@ -1673,14 +1677,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 updatedState.reloadConfig()
             case let .updateMessageExtendedMedia(peer, msgId, extendedMedia):
                 updatedState.updateExtendedMedia(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), extendedMedia: extendedMedia)
-            case let .updateStory(userId, story):
-                updatedState.updateStory(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), story: story)
-            case let .updateReadStories(userId, id):
-                updatedState.readStories(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), maxId: id)
+            case let .updateStory(peerId, story):
+                updatedState.updateStory(peerId: peerId.peerId, story: story)
+            case let .updateReadStories(peerId, id):
+                updatedState.readStories(peerId: peerId.peerId, maxId: id)
             case let .updateStoriesStealthMode(stealthMode):
                 updatedState.updateStoryStealthMode(stealthMode)
-            case let .updateSentStoryReaction(userId, storyId, reaction):
-                updatedState.updateStorySentReaction(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId, reaction: reaction)
+            case let .updateSentStoryReaction(peerId, storyId, reaction):
+                updatedState.updateStorySentReaction(peerId: peerId.peerId, id: storyId, reaction: reaction)
             case let .updateNewAuthorization(flags, hash, date, device, location):
                 let isUnconfirmed = (flags & (1 << 0)) != 0
                 updatedState.updateNewAuthorization(isUnconfirmed: isUnconfirmed, hash: hash, date: date ?? 0, device: device ?? "", location: location ?? "")
@@ -4569,6 +4573,8 @@ func replayFinalState(
                     return item.id == id
                 }) {
                     if let value = updatedPeerEntries[index].value.get(Stories.StoredItem.self), case let .item(item) = value {
+                        let updatedReaction = MessageReaction.Reaction(apiReaction: reaction)
+                        
                         let updatedItem: Stories.StoredItem = .item(Stories.Item(
                             id: item.id,
                             timestamp: item.timestamp,
@@ -4577,7 +4583,7 @@ func replayFinalState(
                             mediaAreas: item.mediaAreas,
                             text: item.text,
                             entities: item.entities,
-                            views: item.views,
+                            views: _internal_updateStoryViewsForMyReaction(isChannel: peerId.namespace == Namespaces.Peer.CloudChannel, views: item.views, previousReaction: item.myReaction, reaction: updatedReaction),
                             privacy: item.privacy,
                             isPinned: item.isPinned,
                             isExpired: item.isExpired,
@@ -4587,7 +4593,8 @@ func replayFinalState(
                             isSelectedContacts: item.isSelectedContacts,
                             isForwardingDisabled: item.isForwardingDisabled,
                             isEdited: item.isEdited,
-                            myReaction: MessageReaction.Reaction(apiReaction: reaction)
+                            isMy: item.isMy,
+                            myReaction: updatedReaction
                         ))
                         if let entry = CodableEntry(updatedItem) {
                             updatedPeerEntries[index] = StoryItemsTableEntry(value: entry, id: item.id, expirationTimestamp: item.expirationTimestamp, isCloseFriends: item.isCloseFriends)
@@ -4595,8 +4602,10 @@ func replayFinalState(
                     }
                 }
                 transaction.setStoryItems(peerId: peerId, items: updatedPeerEntries)
-            
+                
                 if let value = transaction.getStory(id: StoryId(peerId: peerId, id: id))?.get(Stories.StoredItem.self), case let .item(item) = value {
+                    let updatedReaction = MessageReaction.Reaction(apiReaction: reaction)
+                    
                     let updatedItem: Stories.StoredItem = .item(Stories.Item(
                         id: item.id,
                         timestamp: item.timestamp,
@@ -4605,7 +4614,7 @@ func replayFinalState(
                         mediaAreas: item.mediaAreas,
                         text: item.text,
                         entities: item.entities,
-                        views: item.views,
+                        views: _internal_updateStoryViewsForMyReaction(isChannel: peerId.namespace == Namespaces.Peer.CloudChannel, views: item.views, previousReaction: item.myReaction, reaction: updatedReaction),
                         privacy: item.privacy,
                         isPinned: item.isPinned,
                         isExpired: item.isExpired,
@@ -4615,10 +4624,12 @@ func replayFinalState(
                         isSelectedContacts: item.isSelectedContacts,
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
+                        isMy: item.isMy,
                         myReaction: MessageReaction.Reaction(apiReaction: reaction)
                     ))
                     if let entry = CodableEntry(updatedItem) {
                         transaction.setStory(id: StoryId(peerId: peerId, id: id), value: entry)
+                        storyUpdates.append(InternalStoryUpdate.added(peerId: peerId, item: updatedItem))
                     }
                 }
             case let .UpdateNewAuthorization(isUnconfirmed, hash, date, device, location):
@@ -5092,7 +5103,20 @@ func replayFinalState(
     for update in storyUpdates {
         switch update {
         case let .added(peerId, _):
-            if shouldKeepUserStoriesInFeed(peerId: peerId, isContact: transaction.isPeerContact(peerId: peerId)) {
+            var isContactOrMember = false
+            if transaction.isPeerContact(peerId: peerId) {
+                isContactOrMember = true
+            } else if let peer = transaction.getPeer(peerId) as? TelegramChannel {
+                if peer.participationStatus == .member {
+                    isContactOrMember = true
+                }
+            } else if let peer = transaction.getPeer(peerId) as? TelegramGroup {
+                if case .Member = peer.membership {
+                    isContactOrMember = true
+                }
+            }
+            
+            if shouldKeepUserStoriesInFeed(peerId: peerId, isContactOrMember: isContactOrMember) {
                 if !transaction.storySubscriptionsContains(key: .hidden, peerId: peerId) && !transaction.storySubscriptionsContains(key: .filtered, peerId: peerId) {
                     _internal_addSynchronizePeerStoriesOperation(peerId: peerId, transaction: transaction)
                 }

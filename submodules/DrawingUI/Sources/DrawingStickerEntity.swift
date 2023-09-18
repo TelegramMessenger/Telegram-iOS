@@ -11,7 +11,12 @@ import StickerResources
 import AccountContext
 import MediaEditor
 import UniversalMediaPlayer
+import TelegramPresentationData
 import TelegramUniversalVideoContent
+import ReactionSelectionNode
+import UndoUI
+import EntityKeyboard
+import ComponentFlow
 
 public final class DrawingStickerEntityView: DrawingEntityView {    
     private var stickerEntity: DrawingStickerEntity {
@@ -24,8 +29,11 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     
     private var currentSize: CGSize?
     
+    private var backgroundView: UIImageView?
+    private var outlineView: UIImageView?
+    
     private let imageNode: TransformImageNode
-    private var animationNode: AnimatedStickerNode?
+    private var animationNode: DefaultAnimatedStickerNodeImpl?
     private var videoNode: UniversalVideoNode?
         
     private var didSetUpAnimationNode = false
@@ -39,6 +47,19 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         self.imageNode = TransformImageNode()
         
         super.init(context: context, entity: entity)
+        
+        if case .file(_, .reaction) = entity.content {
+            let backgroundView = UIImageView(image: UIImage(bundleImageName: "Stories/ReactionShadow"))
+            backgroundView.layer.zPosition = -1000.0
+            
+            let outlineView = UIImageView(image: UIImage(bundleImageName: "Stories/ReactionOutline"))
+            outlineView.tintColor = .white
+            backgroundView.addSubview(outlineView)
+            
+            self.addSubview(backgroundView)
+            self.backgroundView = backgroundView
+            self.outlineView = outlineView
+        }
         
         self.addSubview(self.imageNode.view)
                 
@@ -55,7 +76,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     }
     
     private var file: TelegramMediaFile? {
-        if case let .file(file) = self.stickerEntity.content {
+        if case let .file(file, _) = self.stickerEntity.content {
             return file
         } else {
             return nil
@@ -70,6 +91,19 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    func getRenderImage() -> UIImage? {
+        guard case let .file(_, type) = self.stickerEntity.content, case .reaction = type else {
+            return nil
+        }
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 2.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: true)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    
     private var video: TelegramMediaFile? {
         if case let .video(file) = self.stickerEntity.content {
             return file
@@ -80,7 +114,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
     
     private var dimensions: CGSize {
         switch self.stickerEntity.content {
-        case let .file(file):
+        case let .file(file, _):
             return file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0)
         case let .image(image, _):
             return image.size
@@ -91,12 +125,31 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         }
     }
     
+    private func updateAnimationColor() {
+        let color: UIColor?
+        if case let .file(file, type) = self.stickerEntity.content, file.isCustomTemplateEmoji {
+            if case let .reaction(_, style) = type {
+                if case .white = style {
+                    color = UIColor(rgb: 0x000000)
+                } else {
+                    color = UIColor(rgb: 0xffffff)
+                }
+            } else {
+                color = UIColor(rgb: 0xffffff)
+            }
+        } else {
+            color = nil
+        }
+        self.animationNode?.dynamicColor = color
+    }
+    
     private func setup() {
         if let file = self.file {
             if let dimensions = file.dimensions {
                 if file.isAnimatedSticker || file.isVideoSticker || file.mimeType == "video/webm" {
                     if self.animationNode == nil {
                         let animationNode = DefaultAnimatedStickerNodeImpl()
+                        animationNode.clipsToBounds = true
                         animationNode.autoplay = false
                         self.animationNode = animationNode
                         animationNode.started = { [weak self, weak animationNode] in
@@ -115,8 +168,10 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         }
                         self.addSubnode(animationNode)
                         
-                        if file.isCustomTemplateEmoji {
-                            animationNode.dynamicColor = UIColor(rgb: 0xffffff)
+                        self.updateAnimationColor()
+                        
+                        if !self.stickerEntity.isAnimated {
+                            self.imageNode.isHidden = true
                         }
                     }
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
@@ -129,6 +184,7 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                         self.imageNode.isHidden = false
                         self.didSetUpAnimationNode = false
                     }
+                    self.imageNode.isHidden = false
                     self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: file, small: false, synchronousLoad: false))
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: false)).start())
                 }
@@ -264,7 +320,8 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
                     let source = AnimatedStickerResourceSource(account: self.context.account, resource: file.resource, isVideo: file.isVideoSticker || file.mimeType == "video/webm")
                     let pathPrefix = self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(file.resource.id)
-                    self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: pathPrefix))
+                    let playbackMode: AnimatedStickerPlaybackMode = .loop
+                    self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: playbackMode, mode: .direct(cachePathPrefix: pathPrefix))
                     
                     self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)
                     |> deliverOn(Queue.concurrentDefaultQueue())).start())
@@ -279,18 +336,28 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         super.layoutSubviews()
         
         let size = self.bounds.size
-        
+                
         if size.width > 0 && self.currentSize != size {
             self.currentSize = size
             
             let sideSize: CGFloat = max(size.width, size.height)
-            let boundingSize = CGSize(width: sideSize, height: sideSize)
+            var boundingSize = CGSize(width: sideSize, height: sideSize)
+            
+            if let backgroundView = self.backgroundView, let outlineView = self.outlineView {
+                backgroundView.frame = CGRect(origin: .zero, size: boundingSize).insetBy(dx: -5.0, dy: -5.0)
+                outlineView.frame = backgroundView.bounds
+                boundingSize = CGSize(width: floor(sideSize * 0.63), height: floor(sideSize * 0.63))
+            }
             
             let imageSize = self.dimensions.aspectFitted(boundingSize)
             let imageFrame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: (size.height - imageSize.height) / 2.0), size: imageSize)
+
             self.imageNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))()
             self.imageNode.frame = imageFrame
             if let animationNode = self.animationNode {
+                if self.isReaction {
+                    animationNode.cornerRadius = floor(imageSize.width * 0.1)
+                }
                 animationNode.frame = imageFrame
                 animationNode.updateLayout(size: imageSize)
                 
@@ -301,13 +368,275 @@ public final class DrawingStickerEntityView: DrawingEntityView {
             }
             
             if let videoNode = self.videoNode {
-                let videoSize = self.dimensions.aspectFitted(boundingSize)
-                videoNode.cornerRadius = floor(videoSize.width * 0.03)
-                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - videoSize.width) * 0.5), y: floor((size.height - videoSize.height) * 0.5)), size: videoSize)
-                videoNode.updateLayout(size: videoSize, transition: .immediate)
+                videoNode.cornerRadius = floor(imageSize.width * 0.03)
+                videoNode.frame = CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) * 0.5), y: floor((size.height - imageSize.height) * 0.5)), size: imageSize)
+                videoNode.updateLayout(size: imageSize, transition: .immediate)
             }
             
             self.update(animated: false)
+        }
+    }
+    
+    private var isReaction: Bool {
+        if case let .file(_, type) = self.stickerEntity.content, case .reaction = type {
+            return true
+        } else {
+            return false
+        }
+    }
+    
+    override func animateInsertion() {
+        super.animateInsertion()
+        
+        if self.isReaction {
+            Queue.mainQueue().after(0.2) {
+                let _ = self.selectedTapAction()
+            }
+        }
+    }
+    
+    override func onSelection() {
+        if self.isReaction {
+            self.presentReactionSelection()
+        }
+    }
+    
+    func onDeselection() {
+        if self.isReaction {
+            let _ = self.dismissReactionSelection()
+        }
+    }
+    
+    private weak var reactionContextNode: ReactionContextNode?
+    fileprivate func presentReactionSelection() {
+        guard let containerView = self.containerView, let superview = containerView.superview?.superview?.superview?.superview, self.reactionContextNode == nil else {
+            return
+        }
+        
+        let availableSize = superview.frame.size
+        let reactionItems = containerView.getAvailableReactions()
+        
+        let insets = UIEdgeInsets(top: 64.0, left: 0.0, bottom: 64.0, right: 0.0)
+        
+        let layout: (ContainedViewLayoutTransition) -> Void = { [weak self, weak superview] transition in
+            guard let self, let superview, let reactionContextNode = self.reactionContextNode else {
+                return
+            }
+            let anchorRect = self.convert(self.bounds, to: superview).offsetBy(dx: 0.0, dy: -20.0)
+            reactionContextNode.updateLayout(size: availableSize, insets: insets, anchorRect: anchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: transition)
+        }
+        
+        let reactionContextNodeTransition: Transition = .immediate
+        let reactionContextNode: ReactionContextNode
+        reactionContextNode = ReactionContextNode(
+            context: self.context,
+            animationCache: self.context.animationCache,
+            presentationData: self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: defaultDarkPresentationTheme),
+            items: reactionItems.map(ReactionContextItem.reaction),
+            selectedItems: Set(),
+            title: nil,
+            getEmojiContent: { [weak self] animationCache, animationRenderer in
+                guard let self else {
+                    preconditionFailure()
+                }
+                
+                let mappedReactionItems: [EmojiComponentReactionItem] = reactionItems.map { reaction -> EmojiComponentReactionItem in
+                    return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
+                }
+                
+                return EmojiPagerContentComponent.emojiInputData(
+                    context: self.context,
+                    animationCache: animationCache,
+                    animationRenderer: animationRenderer,
+                    isStandalone: false,
+                    isStatusSelection: false,
+                    isReactionSelection: true,
+                    isEmojiSelection: false,
+                    hasTrending: false,
+                    topReactionItems: mappedReactionItems,
+                    areUnicodeEmojiEnabled: false,
+                    areCustomEmojiEnabled: true,
+                    chatPeerId: self.context.account.peerId,
+                    selectedItems: Set(),
+                    premiumIfSavedMessages: false
+                )
+            },
+            isExpandedUpdated: { transition in
+                layout(transition)
+            },
+            requestLayout: { transition in
+                layout(transition)
+            },
+            requestUpdateOverlayWantsToBeBelowKeyboard: { transition in
+                layout(transition)
+            }
+        )
+        reactionContextNode.displayTail = true
+        reactionContextNode.forceTailToRight = true
+        reactionContextNode.forceDark = true
+        self.reactionContextNode = reactionContextNode
+        
+        reactionContextNode.reactionSelected = { [weak self] updateReaction, _ in
+            guard let self else {
+                return
+            }
+            
+            let continueWithAnimationFile: (TelegramMediaFile) -> Void = { [weak self] animation in
+                guard let self else {
+                    return
+                }
+                
+                if case let .file(_, type) = self.stickerEntity.content, case let .reaction(_, style) = type {
+                    self.stickerEntity.content = .file(animation, .reaction(updateReaction.reaction, style))
+                }
+                
+                var nodeToTransitionOut: ASDisplayNode?
+                if let animationNode = self.animationNode {
+                    nodeToTransitionOut = animationNode
+                } else if !self.imageNode.isHidden {
+                    nodeToTransitionOut = self.imageNode
+                }
+                
+                if let nodeToTransitionOut, let snapshot = nodeToTransitionOut.view.snapshotView(afterScreenUpdates: false) {
+                    snapshot.frame = nodeToTransitionOut.frame
+                    snapshot.layer.transform = nodeToTransitionOut.transform
+                    snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                        snapshot.removeFromSuperview()
+                    })
+                    snapshot.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2)
+                    self.addSubview(snapshot)
+                }
+                
+                self.animationNode?.removeFromSupernode()
+                self.animationNode = nil
+                self.didSetUpAnimationNode = false
+                self.isPlaying = false
+                self.currentSize = nil
+                
+                self.setup()
+                self.applyVisibility()
+                self.setNeedsLayout()
+                
+                let nodeToTransitionIn: ASDisplayNode?
+                if let animationNode = self.animationNode {
+                    nodeToTransitionIn = animationNode
+                } else {
+                    nodeToTransitionIn = self.imageNode
+                }
+                
+                if let nodeToTransitionIn {
+                    nodeToTransitionIn.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    nodeToTransitionIn.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                }
+                
+                let _ = self.dismissReactionSelection()
+            }
+            
+            switch updateReaction {
+            case .builtin:
+                let _ = (self.context.engine.stickers.availableReactions()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { availableReactions in
+                    guard let availableReactions else {
+                        return
+                    }
+                    var animation: TelegramMediaFile?
+                    for reaction in availableReactions.reactions {
+                        if reaction.value == updateReaction.reaction {
+                            animation = reaction.selectAnimation
+                            break
+                        }
+                    }
+                    if let animation {
+                        continueWithAnimationFile(animation)
+                    }
+                })
+            case let .custom(fileId, file):
+                if let file {
+                    continueWithAnimationFile(file)
+                } else {
+                    let _ = (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { files in
+                        if let itemFile = files[fileId] {
+                            continueWithAnimationFile(itemFile)
+                        }
+                    })
+                }
+            }
+        }
+        
+        reactionContextNode.premiumReactionsSelected = { [weak self] file in
+            guard let self else {
+                return
+            }
+
+            if let file {
+                let context = self.context
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+                let controller = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, loop: true, title: nil, text: presentationData.strings.Story_Editor_TooltipPremiumReaction, undoText: nil, customAction: nil), elevatedLayout: true, animateInAsReplacement: false, blurred: true, action: { [weak self] action in
+                    if case .info = action, let self {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                        self.containerView?.push(controller)
+                    }
+                    return false
+                })
+                self.containerView?.present(controller)
+            } else {
+                let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .storiesExpirationDurations, forceDark: true, dismissed: nil)
+                self.containerView?.push(controller)
+            }
+        }
+        
+        let anchorRect = self.convert(self.bounds, to: superview).offsetBy(dx: 0.0, dy: -20.0)
+        reactionContextNodeTransition.setFrame(view: reactionContextNode.view, frame: CGRect(origin: CGPoint(), size: availableSize))
+        reactionContextNode.updateLayout(size: availableSize, insets: insets, anchorRect: anchorRect, centerAligned: true, isCoveredByInput: false, isAnimatingOut: false, transition: reactionContextNodeTransition.containedViewLayoutTransition)
+        
+        superview.addSubnode(reactionContextNode)
+        reactionContextNode.animateIn(from: anchorRect)
+    }
+    
+    fileprivate func dismissReactionSelection() -> Bool {
+        if let reactionContextNode = self.reactionContextNode {
+            reactionContextNode.animateOut(to: nil, animatingOutToReaction: false)
+            self.reactionContextNode = nil
+            
+            Queue.mainQueue().after(0.35) {
+                reactionContextNode.view.removeFromSuperview()
+            }
+            
+            return false
+        } else {
+            return true
+        }
+    }
+        
+    override func selectedTapAction() -> Bool {
+        if case let .file(file, type) = self.stickerEntity.content, case let .reaction(reaction, style) = type {
+            guard self.reactionContextNode == nil else {
+                let values = [self.entity.scale, self.entity.scale * 0.93, self.entity.scale]
+                let keyTimes = [0.0, 0.33, 1.0]
+                self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
+            
+                let updatedStyle: DrawingStickerEntity.Content.FileType.ReactionStyle
+                switch style {
+                case .white:
+                    updatedStyle = .black
+                case .black:
+                    updatedStyle = .white
+                }
+                self.stickerEntity.content = .file(file, .reaction(reaction, updatedStyle))
+
+                self.update(animated: false)
+                
+                return true
+            }
+            
+            self.presentReactionSelection()
+            
+            return true
+        } else {
+            return super.selectedTapAction()
         }
     }
         
@@ -319,10 +648,24 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         self.bounds = CGRect(origin: .zero, size: self.dimensions.aspectFitted(size))
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
+        if case let .file(_, type) = self.stickerEntity.content, case let .reaction(_, style) = type {
+            switch style {
+            case .white:
+                self.outlineView?.tintColor = .white
+            case .black:
+                self.outlineView?.tintColor = UIColor(rgb: 0x000000, alpha: 0.5)
+            }
+        }
+        self.updateAnimationColor()
+        
+        let isReaction = self.isReaction
         let staticTransform = CATransform3DMakeScale(self.stickerEntity.mirrored ? -1.0 : 1.0, 1.0, 1.0)
-
+        
         if animated {
-            let isCurrentlyMirrored = ((self.imageNode.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            var isCurrentlyMirrored = ((self.imageNode.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            if isReaction {
+                isCurrentlyMirrored = ((self.backgroundView?.layer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0) < 0.0
+            }
             var animationSourceTransform = CATransform3DIdentity
             var animationTargetTransform = CATransform3DIdentity
             if isCurrentlyMirrored {
@@ -333,23 +676,44 @@ public final class DrawingStickerEntityView: DrawingEntityView {
                 animationTargetTransform = CATransform3DRotate(animationTargetTransform, .pi, 0.0, 1.0, 0.0)
                 animationTargetTransform.m34 = -1.0 / self.imageNode.frame.width
             }
-            self.imageNode.transform = animationSourceTransform
-            self.animationNode?.transform = animationSourceTransform
+            if isReaction {
+                self.backgroundView?.layer.transform = animationSourceTransform
+                
+                let values = [1.0, 0.01, 1.0]
+                let keyTimes = [0.0, 0.5, 1.0]
+                self.animationNode?.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.25, keyPath: "transform.scale.x", timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+            } else {
+                self.imageNode.transform = animationSourceTransform
+                self.animationNode?.transform = animationSourceTransform
+                self.videoNode?.transform = animationSourceTransform
+            }
             UIView.animate(withDuration: 0.25, animations: {
-                self.imageNode.transform = animationTargetTransform
-                self.animationNode?.transform = animationTargetTransform
-                self.videoNode?.transform = animationTargetTransform
+                if isReaction {
+                    self.backgroundView?.layer.transform = animationTargetTransform
+                } else {
+                    self.imageNode.transform = animationTargetTransform
+                    self.animationNode?.transform = animationTargetTransform
+                    self.videoNode?.transform = animationTargetTransform
+                }
             }, completion: { finished in
-                self.imageNode.transform = staticTransform
-                self.animationNode?.transform = staticTransform
-                self.videoNode?.transform = staticTransform
+                if isReaction {
+                    self.backgroundView?.layer.transform = staticTransform
+                } else {
+                    self.imageNode.transform = staticTransform
+                    self.animationNode?.transform = staticTransform
+                    self.videoNode?.transform = staticTransform
+                }
             })
         } else {
             CATransaction.begin()
             CATransaction.setDisableActions(true)
-            self.imageNode.transform = staticTransform
-            self.animationNode?.transform = staticTransform
-            self.videoNode?.transform = staticTransform
+            if isReaction {
+                self.backgroundView?.layer.transform = staticTransform
+            } else {
+                self.imageNode.transform = staticTransform
+                self.animationNode?.transform = staticTransform
+                self.videoNode?.transform = staticTransform
+            }
             CATransaction.commit()
         }
         
@@ -367,8 +731,9 @@ public final class DrawingStickerEntityView: DrawingEntityView {
         selectionView.transform = .identity
         let maxSide = max(self.selectionBounds.width, self.selectionBounds.height)
         let center = self.selectionBounds.center
-        
+                
         let scale = self.superview?.superview?.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
+        
         selectionView.center = self.convert(center, to: selectionView.superview)
         
         selectionView.bounds = CGRect(origin: .zero, size: CGSize(width: (maxSide * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0, height: (maxSide * self.stickerEntity.scale) * scale + selectionView.selectionInset * 2.0))
@@ -392,6 +757,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     private let leftHandle = SimpleShapeLayer()
     private let rightHandle = SimpleShapeLayer()
     
+    private var longPressGestureRecognizer: UILongPressGestureRecognizer?
+    
     override init(frame: CGRect) {
         let handleBounds = CGRect(origin: .zero, size: entitySelectionViewHandleSize)
         let handles = [
@@ -406,7 +773,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         
         self.border.lineCap = .round
         self.border.fillColor = UIColor.clear.cgColor
-        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.5).cgColor
+        self.border.strokeColor = UIColor(rgb: 0xffffff, alpha: 0.75).cgColor
         self.border.shadowColor = UIColor.black.cgColor
         self.border.shadowRadius = 1.0
         self.border.shadowOpacity = 0.5
@@ -428,6 +795,10 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
                 entityView.onSnapUpdated(type, snapped)
             }
         }
+        
+        let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+        self.addGestureRecognizer(longPressGestureRecognizer)
+        self.longPressGestureRecognizer = longPressGestureRecognizer
     }
     
     required init?(coder: NSCoder) {
@@ -446,16 +817,30 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     
     private let snapTool = DrawingEntitySnapTool()
     
+    @objc private func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if case .began = gestureRecognizer.state {
+            self.longPressed()
+        }
+    }
+    
     private var currentHandle: CALayer?
     override func handlePan(_ gestureRecognizer: UIPanGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+        guard let entityView = self.entityView as? DrawingStickerEntityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
         let location = gestureRecognizer.location(in: self)
         
         switch gestureRecognizer.state {
         case .began:
+            self.tapGestureRecognizer?.isEnabled = false
+            self.tapGestureRecognizer?.isEnabled = true
+            
+            self.longPressGestureRecognizer?.isEnabled = false
+            self.longPressGestureRecognizer?.isEnabled = true
+            
             self.snapTool.maybeSkipFromStart(entityView: entityView, position: entity.position)
+            
+            let _ = entityView.dismissReactionSelection()
             
             if let sublayers = self.layer.sublayers {
                 for layer in sublayers {
@@ -515,7 +900,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
             entity.position = updatedPosition
             entity.scale = updatedScale
             entity.rotation = updatedRotation
-            entityView.update()
+            entityView.update(animated: false)
             
             gestureRecognizer.setTranslation(.zero, in: entityView)
         case .ended, .cancelled:
@@ -524,6 +909,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
                 self.snapTool.rotationReset()
             }
             entityView.onInteractionUpdated(false)
+            
+            entityView.onSelection()
         default:
             break
         }
@@ -532,7 +919,7 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
     }
     
     override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+        guard let entityView = self.entityView as? DrawingStickerEntityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
         
@@ -542,23 +929,27 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
 
         switch gestureRecognizer.state {
         case .began, .changed:
+            let _ = entityView.dismissReactionSelection()
+            
             if case .began = gestureRecognizer.state {
                 entityView.onInteractionUpdated(true)
             }
             let scale = gestureRecognizer.scale
             entity.scale = entity.scale * scale
-            entityView.update()
+            entityView.update(animated: false)
 
             gestureRecognizer.scale = 1.0
         case .cancelled, .ended:
             entityView.onInteractionUpdated(false)
+            
+            entityView.onSelection()
         default:
             break
         }
     }
     
     override func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingStickerEntity else {
+        guard let entityView = self.entityView as? DrawingStickerEntityView, let entity = entityView.entity as? DrawingStickerEntity else {
             return
         }
         
@@ -572,6 +963,8 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         
         switch gestureRecognizer.state {
         case .began:
+            let _ = entityView.dismissReactionSelection()
+            
             self.snapTool.maybeSkipFromStart(entityView: entityView, rotation: entity.rotation)
             entityView.onInteractionUpdated(true)
         case .changed:
@@ -580,12 +973,14 @@ final class DrawingStickerEntititySelectionView: DrawingEntitySelectionView {
         
             updatedRotation = self.snapTool.update(entityView: entityView, velocity: velocity, delta: rotation, updatedRotation: updatedRotation)
             entity.rotation = updatedRotation
-            entityView.update()
+            entityView.update(animated: false)
             
             gestureRecognizer.rotation = 0.0
         case .ended, .cancelled:
             self.snapTool.rotationReset()
             entityView.onInteractionUpdated(false)
+            
+            entityView.onSelection()
         default:
             break
         }

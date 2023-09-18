@@ -94,6 +94,7 @@ public final class EngineStoryViewListContext {
         let queue: Queue
         
         let account: Account
+        let peerId: EnginePeer.Id
         let storyId: Int32
         let listMode: ListMode
         let sortMode: SortMode
@@ -108,9 +109,10 @@ public final class EngineStoryViewListContext {
         private var parentSource: Impl?
         var isLoadingMore: Bool = false
         
-        init(queue: Queue, account: Account, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: Impl?) {
+        init(queue: Queue, account: Account, peerId: EnginePeer.Id, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: Impl?) {
             self.queue = queue
             self.account = account
+            self.peerId = peerId
             self.storyId = storyId
             self.listMode = listMode
             self.sortMode = sortMode
@@ -118,6 +120,11 @@ public final class EngineStoryViewListContext {
             
             if let parentSource = parentSource, (parentSource.listMode == .everyone || parentSource.listMode == listMode), let parentState = parentSource.state, parentState.totalCount <= 100 {
                 self.parentSource = parentSource
+                
+                let matchesMode = parentSource.listMode == listMode
+                if parentState.items.count < 100 && !matchesMode {
+                    parentSource.loadMore()
+                }
                 
                 self.disposable.set((parentSource.statePromise.get()
                 |> mapToSignal { state -> Signal<InternalState, NoError> in
@@ -148,10 +155,10 @@ public final class EngineStoryViewListContext {
                     return needUpdate
                     |> mapToSignal { _ -> Signal<InternalState, NoError> in
                         return account.postbox.transaction { transaction -> InternalState in
-                            if state.canLoadMore {
+                            /*if state.canLoadMore && !matchesMode {
                                 return InternalState(
-                                    totalCount: 0, totalReactedCount: 0, items: [], canLoadMore: true, nextOffset: state.nextOffset)
-                            }
+                                    totalCount: listMode == .everyone ? state.totalCount : 100, totalReactedCount: state.totalReactedCount, items: [], canLoadMore: true, nextOffset: state.nextOffset)
+                            }*/
                             
                             var items: [Item] = []
                             switch listMode {
@@ -188,6 +195,7 @@ public final class EngineStoryViewListContext {
                                 })
                             }
                             
+                            var totalCount = items.count
                             var totalReactedCount = 0
                             for item in items {
                                 if item.reaction != nil {
@@ -195,8 +203,17 @@ public final class EngineStoryViewListContext {
                                 }
                             }
                             
+                            if state.canLoadMore {
+                                totalCount = state.totalCount
+                                totalReactedCount = state.totalReactedCount
+                            }
+                            
                             return InternalState(
-                                totalCount: items.count, totalReactedCount: totalReactedCount, items: items, canLoadMore: false)
+                                totalCount: totalCount,
+                                totalReactedCount: totalReactedCount,
+                                items: items,
+                                canLoadMore: state.canLoadMore
+                            )
                         }
                     }
                 }
@@ -207,7 +224,7 @@ public final class EngineStoryViewListContext {
                     self.updateInternalState(state: state)
                 }))
             } else {
-                let initialState = State(totalCount: views.seenCount, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
+                let initialState = State(totalCount: listMode == .everyone ? views.seenCount : 100, totalReactedCount: views.reactedCount, items: [], loadMoreToken: LoadMoreToken(value: ""))
                 let state = InternalState(totalCount: initialState.totalCount, totalReactedCount: initialState.totalReactedCount, items: initialState.items, canLoadMore: initialState.loadMoreToken != nil, nextOffset: nil)
                 self.state = state
                 self.statePromise.set(.single(state))
@@ -245,15 +262,21 @@ public final class EngineStoryViewListContext {
             
             let account = self.account
             let accountPeerId = account.peerId
+            let peerId = self.peerId
             let storyId = self.storyId
             let listMode = self.listMode
             let sortMode = self.sortMode
             let searchQuery = self.searchQuery
             let currentOffset = state.nextOffset
             let limit = state.items.isEmpty ? 50 : 100
-            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Void in
+            let signal: Signal<InternalState, NoError> = self.account.postbox.transaction { transaction -> Api.InputPeer? in
+                return transaction.getPeer(peerId).flatMap(apiInputPeer)
             }
-            |> mapToSignal { _ -> Signal<InternalState, NoError> in
+            |> mapToSignal { inputPeer -> Signal<InternalState, NoError> in
+                guard let inputPeer = inputPeer else {
+                    return .complete()
+                }
+                
                 var flags: Int32 = 0
                 switch listMode {
                 case .everyone:
@@ -271,7 +294,7 @@ public final class EngineStoryViewListContext {
                     flags |= (1 << 1)
                 }
                 
-                return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
+                return account.network.request(Api.functions.stories.getStoryViewsList(flags: flags, peer: inputPeer, q: searchQuery, id: storyId, offset: currentOffset?.value ?? "", limit: Int32(limit)))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.stories.StoryViewsList?, NoError> in
                     return .single(nil)
@@ -335,7 +358,14 @@ public final class EngineStoryViewListContext {
                                         mediaAreas: item.mediaAreas,
                                         text: item.text,
                                         entities: item.entities,
-                                        views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds, hasList: currentViews.hasList),
+                                        views: Stories.Item.Views(
+                                            seenCount: Int(count),
+                                            reactedCount: Int(reactionsCount),
+                                            forwardCount: currentViews.forwardCount,
+                                            seenPeerIds: currentViews.seenPeerIds,
+                                            reactions: currentViews.reactions,
+                                            hasList: currentViews.hasList
+                                        ),
                                         privacy: item.privacy,
                                         isPinned: item.isPinned,
                                         isExpired: item.isExpired,
@@ -345,6 +375,7 @@ public final class EngineStoryViewListContext {
                                         isSelectedContacts: item.isSelectedContacts,
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited,
+                                        isMy: item.isMy,
                                         myReaction: item.myReaction
                                     ))
                                     if let entry = CodableEntry(updatedItem) {
@@ -364,7 +395,14 @@ public final class EngineStoryViewListContext {
                                                 mediaAreas: item.mediaAreas,
                                                 text: item.text,
                                                 entities: item.entities,
-                                                views: Stories.Item.Views(seenCount: Int(count), reactedCount: Int(reactionsCount), seenPeerIds: currentViews.seenPeerIds, hasList: currentViews.hasList),
+                                                views: Stories.Item.Views(
+                                                    seenCount: Int(count),
+                                                    reactedCount: Int(reactionsCount),
+                                                    forwardCount: currentViews.forwardCount,
+                                                    seenPeerIds: currentViews.seenPeerIds,
+                                                    reactions: currentViews.reactions,
+                                                    hasList: currentViews.hasList
+                                                ),
                                                 privacy: item.privacy,
                                                 isPinned: item.isPinned,
                                                 isExpired: item.isExpired,
@@ -374,6 +412,7 @@ public final class EngineStoryViewListContext {
                                                 isSelectedContacts: item.isSelectedContacts,
                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                 isEdited: item.isEdited,
+                                                isMy: item.isMy,
                                                 myReaction: item.myReaction
                                             ))
                                             if let entry = CodableEntry(updatedItem) {
@@ -508,11 +547,11 @@ public final class EngineStoryViewListContext {
         }
     }
     
-    init(account: Account, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: EngineStoryViewListContext?) {
+    init(account: Account, peerId: EnginePeer.Id, storyId: Int32, views: EngineStoryItem.Views, listMode: ListMode, sortMode: SortMode, searchQuery: String?, parentSource: EngineStoryViewListContext?) {
         let queue = Queue.mainQueue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, storyId: storyId, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource?.impl.syncWith { $0 })
+            return Impl(queue: queue, account: account, peerId: peerId, storyId: storyId, views: views, listMode: listMode, sortMode: sortMode, searchQuery: searchQuery, parentSource: parentSource?.impl.syncWith { $0 })
         })
     }
     

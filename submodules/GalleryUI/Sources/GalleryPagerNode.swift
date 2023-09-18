@@ -156,7 +156,7 @@ public final class GalleryPagerNode: ASDisplayNode, UIScrollViewDelegate, UIGest
             if let strongSelf = self {
                 strongSelf.pagingEnabled = pagingEnabled
             }
-        })
+        }).strict()
     }
     
     deinit {

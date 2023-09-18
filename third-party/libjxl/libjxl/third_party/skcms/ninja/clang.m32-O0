@@ -1,0 +1,7 @@
+mode          = .m32-O0
+extra_cflags  = -m32 -msse2 -O0
+extra_ldflags = -m32
+include ninja/clang
+
+disabled = (uname | grep -qv Linux)
+

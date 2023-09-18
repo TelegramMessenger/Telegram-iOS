@@ -143,7 +143,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     strongSelf.updateThemeAndStrings()
                 }
             }
-        })
+        }).strict()
         
         addNearbyImpl = { [weak self] in
             if let strongSelf = self {
@@ -243,7 +243,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.contactListNode.storySubscriptions.set(.single(storySubscriptions))
             
             self.storiesReady.set(.single(true))
-        })*/
+        }).strict()*/
 
         self.contactListNode.openStories = { [weak self] peer, sourceNode in
             guard let self else {
@@ -342,7 +342,7 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 secondaryTransition: 0.0,
                 storySubscriptions: nil,
                 storiesIncludeHidden: true,
-                uploadProgress: nil,
+                uploadProgress: [:],
                 tabsNode: tabsNode,
                 tabsNodeIsSearch: tabsNodeIsSearch,
                 accessoryPanelContainer: nil,
@@ -436,12 +436,12 @@ final class ContactsControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         let items = contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController, isStories: isStories) |> map { ContextController.Items(content: .list($0)) }
         
         if isStories, let node = node?.subnodes?.first(where: { $0 is ContextExtractedContentContainingNode }) as? ContextExtractedContentContainingNode {
-            let controller = ContextController(account: self.context.account, presentationData: self.presentationData, source: .extracted(ContactContextExtractedContentSource(sourceNode: node, shouldBeDismissed: .single(false))), items: items, recognizer: nil, gesture: gesture)
+            let controller = ContextController(presentationData: self.presentationData, source: .extracted(ContactContextExtractedContentSource(sourceNode: node, shouldBeDismissed: .single(false))), items: items, recognizer: nil, gesture: gesture)
             contactsController.presentInGlobalOverlay(controller)
         } else {
             let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: items, gesture: gesture)
+            let contextController = ContextController(presentationData: self.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: items, gesture: gesture)
             contactsController.presentInGlobalOverlay(contextController)
         }
     }

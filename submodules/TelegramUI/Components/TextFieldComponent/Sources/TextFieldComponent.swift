@@ -409,7 +409,15 @@ public final class TextFieldComponent: Component {
         }
         
         public func textViewDidBeginEditing(_ textView: UITextView) {
+            guard let component = self.component else {
+                return
+            }
             self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)).withUserData(AnimationHint(kind: .textFocusChanged)))
+            if component.isOneLineWhenUnfocused {
+                Queue.mainQueue().justDispatch {
+                    self.textView.selectedTextRange = self.textView.textRange(from: self.textView.endOfDocument, to: self.textView.endOfDocument)
+                }
+            }
         }
         
         public func textViewDidEndEditing(_ textView: UITextView) {
@@ -901,21 +909,30 @@ public final class TextFieldComponent: Component {
                 if self.textView.inputView == nil {
                     self.textView.inputView = inputView
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             } else if component.hideKeyboard {
                 if self.textView.inputView == nil {
                     self.textView.inputView = EmptyInputView()
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             } else {
                 if self.textView.inputView != nil {
                     self.textView.inputView = nil
                     if self.textView.isFirstResponder {
-                        self.textView.reloadInputViews()
+                        // Avoid layout cycle
+                        DispatchQueue.main.async { [weak self] in
+                            self?.textView.reloadInputViews()
+                        }
                     }
                 }
             }

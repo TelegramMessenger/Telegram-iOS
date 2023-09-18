@@ -161,8 +161,11 @@ public final class DrawingLocationEntity: DrawingEntity, Codable {
         }
     }
 
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingLocationEntity(title: self.title, style: self.style, location: self.location, icon: self.icon, queryId: self.queryId, resultId: self.resultId)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.width = self.width

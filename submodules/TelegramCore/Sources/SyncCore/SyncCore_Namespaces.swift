@@ -109,6 +109,8 @@ public struct Namespaces {
         public static let cachedEmojiQueryResults: Int8 = 26
         public static let cachedPeerStoryListHeads: Int8 = 27
         public static let displayedStoryNotifications: Int8 = 28
+        public static let storySendAsPeerIds: Int8 = 29
+        public static let cachedChannelBoosters: Int8 = 30
     }
     
     public struct UnorderedItemList {

@@ -60,7 +60,7 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
         case mirrored
     }
     
-    public let uuid: UUID
+    public var uuid: UUID
     public let content: Content
     public let size: CGSize
     
@@ -157,7 +157,7 @@ public final class DrawingMediaEntity: DrawingEntity, Codable {
         try container.encode(self.mirrored, forKey: .mirrored)
     }
         
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingMediaEntity(content: self.content, size: self.size)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position

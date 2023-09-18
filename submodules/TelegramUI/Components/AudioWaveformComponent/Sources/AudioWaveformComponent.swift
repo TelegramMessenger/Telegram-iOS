@@ -72,6 +72,9 @@ public final class AudioWaveformComponent: Component {
             var foregroundColor: UIColor
         }
         
+        public final class CloneLayer: SimpleLayer {
+        }
+        
         private final class LayerImpl: SimpleLayer {
             private var shimmerNode: ShimmerEffectNode?
             private var shimmerMask: SimpleLayer?
@@ -158,6 +161,22 @@ public final class AudioWaveformComponent: Component {
                     }
                 }
             }
+            
+            weak var cloneLayer: CloneLayer? {
+                didSet {
+                    if let cloneLayer = self.cloneLayer {
+                        cloneLayer.contents = self.contents
+                    }
+                }
+            }
+            
+            override public var contents: Any? {
+                didSet {
+                    if let cloneLayer = self.cloneLayer {
+                        cloneLayer.contents = self.contents
+                    }
+                }
+            }
         }
         
         override public static var layerClass: AnyClass {
@@ -222,6 +241,12 @@ public final class AudioWaveformComponent: Component {
         
         deinit {
             self.statusDisposable?.dispose()
+        }
+        
+        public var cloneLayer: CloneLayer? {
+            didSet {
+                (self.layer as! LayerImpl).cloneLayer = self.cloneLayer
+            }
         }
         
         @objc private func panGesture(_ recognizer: UIPanGestureRecognizer) {
@@ -392,7 +417,7 @@ public final class AudioWaveformComponent: Component {
                 }
             }
         }
-        
+    
         override public func draw(_ rect: CGRect) {
             guard let component = self.component else {
                 return
@@ -545,7 +570,11 @@ public final class AudioWaveformComponent: Component {
                         gravityMultiplierY = 0.5
                     }
                     
-                    context.setFillColor(component.backgroundColor.mixedWith(component.foregroundColor, alpha: colorMixFraction).cgColor)
+                    if component.backgroundColor.alpha > 0.0 {
+                        context.setFillColor(component.backgroundColor.mixedWith(component.foregroundColor, alpha: colorMixFraction).cgColor)
+                    } else {
+                        context.setFillColor(component.foregroundColor.cgColor)
+                    }
                     context.setBlendMode(.copy)
                     
                     let adjustedSampleHeight = sampleHeight - diff

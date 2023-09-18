@@ -51,6 +51,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var disableBackgroundAnimation: Bool
     public var logLanguageRecognition: Bool
     public var storiesExperiment: Bool
+    public var storiesJpegExperiment: Bool
+    public var crashOnMemoryPressure: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -79,7 +81,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
             disableImageContentAnalysis: false,
             disableBackgroundAnimation: false,
             logLanguageRecognition: false,
-            storiesExperiment: false
+            storiesExperiment: false,
+            storiesJpegExperiment: false,
+            crashOnMemoryPressure: false
         )
     }
     
@@ -109,7 +113,9 @@ public struct ExperimentalUISettings: Codable, Equatable {
         disableImageContentAnalysis: Bool,
         disableBackgroundAnimation: Bool,
         logLanguageRecognition: Bool,
-        storiesExperiment: Bool
+        storiesExperiment: Bool,
+        storiesJpegExperiment: Bool,
+        crashOnMemoryPressure: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -137,6 +143,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableBackgroundAnimation = disableBackgroundAnimation
         self.logLanguageRecognition = logLanguageRecognition
         self.storiesExperiment = storiesExperiment
+        self.storiesJpegExperiment = storiesJpegExperiment
+        self.crashOnMemoryPressure = crashOnMemoryPressure
     }
     
     public init(from decoder: Decoder) throws {
@@ -168,6 +176,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.disableBackgroundAnimation = try container.decodeIfPresent(Bool.self, forKey: "disableBackgroundAnimation") ?? false
         self.logLanguageRecognition = try container.decodeIfPresent(Bool.self, forKey: "logLanguageRecognition") ?? false
         self.storiesExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesExperiment") ?? false
+        self.storiesJpegExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesJpegExperiment") ?? false
+        self.crashOnMemoryPressure = try container.decodeIfPresent(Bool.self, forKey: "crashOnMemoryPressure") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -199,6 +209,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.disableBackgroundAnimation, forKey: "disableBackgroundAnimation")
         try container.encode(self.logLanguageRecognition, forKey: "logLanguageRecognition")
         try container.encode(self.storiesExperiment, forKey: "storiesExperiment")
+        try container.encode(self.storiesJpegExperiment, forKey: "storiesJpegExperiment")
+        try container.encode(self.crashOnMemoryPressure, forKey: "crashOnMemoryPressure")
     }
 }
 

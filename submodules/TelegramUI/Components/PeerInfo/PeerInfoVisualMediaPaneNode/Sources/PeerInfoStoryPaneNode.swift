@@ -129,7 +129,10 @@ private struct Month: Equatable {
     }
 }
 
-private let durationFont = Font.regular(12.0)
+private let durationFont: UIFont = {
+    Font.semibold(11.0)
+}()
+
 private let minDurationImage: UIImage = {
     let image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -140,6 +143,46 @@ private let minDurationImage: UIImage = {
             image.draw(in: CGRect(origin: CGPoint(x: (size.width - image.size.width) / 2.0, y: (size.height - image.size.height) / 2.0), size: image.size))
             UIGraphicsPopContext()
         }
+    })
+    return image!
+}()
+
+private let leftShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: -1.0, y: 1.0)
+        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let rightShadowImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridShadow")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
+    })
+    return image!
+}()
+
+private let viewCountImage: UIImage = {
+    let baseImage = UIImage(bundleImageName: "Peer Info/MediaGridViewCount")!
+    let image = generateImage(baseImage.size, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        UIGraphicsPushContext(context)
+        baseImage.draw(in: CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPopContext()
     })
     return image!
 }()
@@ -159,6 +202,42 @@ private final class DurationLayer: CALayer {
     override func action(forKey event: String) -> CAAction? {
         return nullAction
     }
+    
+    func update(viewCount: Int32, isMin: Bool) {
+        if isMin {
+            self.contents = nil
+        } else {
+            let countString: String
+            if viewCount > 1000000 {
+                countString = "\(viewCount / 1000000)M"
+            } else if viewCount > 1000 {
+                countString = "\(viewCount / 1000)K"
+            } else {
+                countString = "\(viewCount)"
+            }
+            let string = NSAttributedString(string: countString, font: durationFont, textColor: .white)
+            let bounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+            let textSize = CGSize(width: ceil(bounds.width), height: ceil(bounds.height))
+            let sideInset: CGFloat = 6.0
+            let verticalInset: CGFloat = 2.0
+            let iconSpacing: CGFloat = -3.0
+            let image = generateImage(CGSize(width: viewCountImage.size.width + iconSpacing + textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.setBlendMode(.normal)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+                
+                UIGraphicsPushContext(context)
+                
+                viewCountImage.draw(in: CGRect(origin: CGPoint(x: 0.0, y: (size.height - viewCountImage.size.height) * 0.5), size: viewCountImage.size))
+                
+                string.draw(in: bounds.offsetBy(dx: sideInset + viewCountImage.size.width + iconSpacing, dy: verticalInset))
+                UIGraphicsPopContext()
+            })
+            self.contents = image?.cgImage
+        }
+    }
 
     func update(duration: Int32, isMin: Bool) {
         if isMin {
@@ -171,14 +250,11 @@ private final class DurationLayer: CALayer {
             let verticalInset: CGFloat = 2.0
             let image = generateImage(CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height + verticalInset * 2.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-
-                context.setFillColor(UIColor(white: 0.0, alpha: 0.5).cgColor)
-                context.setBlendMode(.copy)
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                context.fillEllipse(in: CGRect(origin: CGPoint(x: size.width - size.height, y: 0.0), size: CGSize(width: size.height, height: size.height)))
-                context.fill(CGRect(origin: CGPoint(x: size.height / 2.0, y: 0.0), size: CGSize(width: size.width - size.height, height: size.height)))
-
+                
                 context.setBlendMode(.normal)
+                
+                context.setShadow(offset: CGSize(width: 0.0, height: 0.0), blur: 2.5, color: UIColor(rgb: 0x000000, alpha: 0.22).cgColor)
+                
                 UIGraphicsPushContext(context)
                 string.draw(in: bounds.offsetBy(dx: sideInset, dy: verticalInset))
                 UIGraphicsPopContext()
@@ -198,7 +274,7 @@ private protocol ItemLayer: SparseItemGridLayer {
     var hasContents: Bool { get set }
     func setSpoilerContents(_ contents: Any?)
     
-    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat)
+    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat)
     func updateSelection(theme: CheckNodeTheme, isSelected: Bool?, animated: Bool)
     func updateHasSpoiler(hasSpoiler: Bool)
     
@@ -208,7 +284,10 @@ private protocol ItemLayer: SparseItemGridLayer {
 
 private final class GenericItemLayer: CALayer, ItemLayer {
     var item: VisualMediaItem?
+    var viewCountLayer: DurationLayer?
     var durationLayer: DurationLayer?
+    var leftShadowLayer: SimpleLayer?
+    var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -254,23 +333,74 @@ private final class GenericItemLayer: CALayer, ItemLayer {
         self.item = item
     }
 
-    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
+        
+        if let viewCount {
+            if let viewCountLayer = self.viewCountLayer {
+                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
+            } else {
+                let viewCountLayer = DurationLayer()
+                viewCountLayer.contentsGravity = .topLeft
+                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
+                self.addSublayer(viewCountLayer)
+                viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: self.bounds.height - 4.0), size: CGSize())
+                viewCountLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.viewCountLayer = viewCountLayer
+            }
+        } else if let viewCountLayer = self.viewCountLayer {
+            self.viewCountLayer = nil
+            viewCountLayer.removeFromSuperlayer()
+        }
 
-        if let duration = duration {
+        if let duration {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
                 let durationLayer = DurationLayer()
                 durationLayer.update(duration: duration, isMin: isMin)
                 self.addSublayer(durationLayer)
-                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
+                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 4.0), size: CGSize())
                 durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
                 self.durationLayer = durationLayer
             }
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
             durationLayer.removeFromSuperlayer()
+        }
+        
+        let size = self.bounds.size
+        
+        if self.viewCountLayer != nil {
+            if self.leftShadowLayer == nil {
+                let leftShadowLayer = SimpleLayer()
+                self.leftShadowLayer = leftShadowLayer
+                self.insertSublayer(leftShadowLayer, at: 0)
+                leftShadowLayer.contents = leftShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
+                leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let leftShadowLayer = self.leftShadowLayer {
+                self.leftShadowLayer = nil
+                leftShadowLayer.removeFromSuperlayer()
+            }
+        }
+        
+        if self.durationLayer != nil {
+            if self.rightShadowLayer == nil {
+                let rightShadowLayer = SimpleLayer()
+                self.rightShadowLayer = rightShadowLayer
+                self.insertSublayer(rightShadowLayer, at: 0)
+                rightShadowLayer.contents = rightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let rightShadowLayer = self.rightShadowLayer {
+                self.rightShadowLayer = nil
+                rightShadowLayer.removeFromSuperlayer()
+            }
         }
     }
 
@@ -330,8 +460,21 @@ private final class GenericItemLayer: CALayer, ItemLayer {
     }
 
     func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
+        if let viewCountLayer = self.viewCountLayer {
+            viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: size.height - 4.0), size: CGSize())
+        }
         if let durationLayer = self.durationLayer {
-            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
+            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 4.0), size: CGSize())
+        }
+        
+        if let leftShadowLayer = self.leftShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
+            leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
+        }
+        
+        if let rightShadowLayer = self.rightShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
         }
         
         if let binding = binding as? SparseItemGridBindingImpl, let item = item as? VisualMediaItem, let previousItem = self.item, previousItem.story.media.id != item.story.media.id {
@@ -342,7 +485,10 @@ private final class GenericItemLayer: CALayer, ItemLayer {
 
 private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemLayer {
     var item: VisualMediaItem?
+    var viewCountLayer: DurationLayer?
     var durationLayer: DurationLayer?
+    var leftShadowLayer: SimpleLayer?
+    var rightShadowLayer: SimpleLayer?
     var minFactor: CGFloat = 1.0
     var selectionLayer: GridMessageSelectionLayer?
     var dustLayer: MediaDustLayer?
@@ -398,23 +544,74 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
         self.item = item
     }
     
-    func updateDuration(duration: Int32?, isMin: Bool, minFactor: CGFloat) {
+    func updateDuration(viewCount: Int32?, duration: Int32?, isMin: Bool, minFactor: CGFloat) {
         self.minFactor = minFactor
 
-        if let duration = duration {
+        if let viewCount {
+            if let viewCountLayer = self.viewCountLayer {
+                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
+            } else {
+                let viewCountLayer = DurationLayer()
+                viewCountLayer.contentsGravity = .topLeft
+                viewCountLayer.update(viewCount: viewCount, isMin: isMin)
+                self.addSublayer(viewCountLayer)
+                viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: self.bounds.height - 4.0), size: CGSize())
+                viewCountLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
+                self.viewCountLayer = viewCountLayer
+            }
+        } else if let viewCountLayer = self.viewCountLayer {
+            self.viewCountLayer = nil
+            viewCountLayer.removeFromSuperlayer()
+        }
+
+        if let duration {
             if let durationLayer = self.durationLayer {
                 durationLayer.update(duration: duration, isMin: isMin)
             } else {
                 let durationLayer = DurationLayer()
                 durationLayer.update(duration: duration, isMin: isMin)
                 self.addSublayer(durationLayer)
-                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 3.0), size: CGSize())
+                durationLayer.frame = CGRect(origin: CGPoint(x: self.bounds.width - 3.0, y: self.bounds.height - 4.0), size: CGSize())
                 durationLayer.transform = CATransform3DMakeScale(minFactor, minFactor, 1.0)
                 self.durationLayer = durationLayer
             }
         } else if let durationLayer = self.durationLayer {
             self.durationLayer = nil
             durationLayer.removeFromSuperlayer()
+        }
+        
+        let size = self.bounds.size
+        
+        if self.viewCountLayer != nil {
+            if self.leftShadowLayer == nil {
+                let leftShadowLayer = SimpleLayer()
+                self.leftShadowLayer = leftShadowLayer
+                self.insertSublayer(leftShadowLayer, at: 0)
+                leftShadowLayer.contents = leftShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
+                leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let leftShadowLayer = self.leftShadowLayer {
+                self.leftShadowLayer = nil
+                leftShadowLayer.removeFromSuperlayer()
+            }
+        }
+        
+        if self.durationLayer != nil {
+            if self.rightShadowLayer == nil {
+                let rightShadowLayer = SimpleLayer()
+                self.rightShadowLayer = rightShadowLayer
+                self.insertSublayer(rightShadowLayer, at: 0)
+                rightShadowLayer.contents = rightShadowImage.cgImage
+                let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+                rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
+            }
+        } else {
+            if let rightShadowLayer = self.rightShadowLayer {
+                self.rightShadowLayer = nil
+                rightShadowLayer.removeFromSuperlayer()
+            }
         }
     }
 
@@ -474,28 +671,95 @@ private final class CaptureProtectedItemLayer: AVSampleBufferDisplayLayer, ItemL
     }
 
     func update(size: CGSize, insets: UIEdgeInsets, displayItem: SparseItemGridDisplayItem, binding: SparseItemGridBinding, item: SparseItemGrid.Item?) {
+        if let viewCountLayer = self.viewCountLayer {
+            viewCountLayer.frame = CGRect(origin: CGPoint(x: 7.0, y: size.height - 4.0), size: CGSize())
+        }
         if let durationLayer = self.durationLayer {
-            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 3.0), size: CGSize())
+            durationLayer.frame = CGRect(origin: CGPoint(x: size.width - 3.0, y: size.height - 4.0), size: CGSize())
+        }
+        
+        if let leftShadowLayer = self.leftShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, leftShadowImage.size.width), height: min(size.height, leftShadowImage.size.height))
+            leftShadowLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - shadowSize.height), size: shadowSize)
+        }
+        
+        if let rightShadowLayer = self.rightShadowLayer {
+            let shadowSize = CGSize(width: min(size.width, rightShadowImage.size.width), height: min(size.height, rightShadowImage.size.height))
+            rightShadowLayer.frame = CGRect(origin: CGPoint(x: size.width - shadowSize.width, y: size.height - shadowSize.height), size: shadowSize)
         }
     }
 }
 
 private final class ItemTransitionView: UIView {
-    private weak var itemLayer: ItemLayer?
+    private weak var itemLayer: CALayer?
     private var copyDurationLayer: SimpleLayer?
+    private var copyViewCountLayer: SimpleLayer?
+    private var copyLeftShadowLayer: SimpleLayer?
+    private var copyRightShadowLayer: SimpleLayer?
     
+    private var viewCountLayerBottomLeftPosition: CGPoint?
     private var durationLayerBottomLeftPosition: CGPoint?
     
-    init(itemLayer: ItemLayer?) {
+    init(itemLayer: CALayer?) {
         self.itemLayer = itemLayer
         
         super.init(frame: CGRect())
         
         if let itemLayer {
-            self.layer.contents = itemLayer.contents
             self.layer.contentsRect = itemLayer.contentsRect
             
-            if let durationLayer = itemLayer.durationLayer {
+            var viewCountLayer: CALayer?
+            var durationLayer: CALayer?
+            var leftShadowLayer: CALayer?
+            var rightShadowLayer: CALayer?
+            if let itemLayer = itemLayer as? CaptureProtectedItemLayer {
+                viewCountLayer = itemLayer.viewCountLayer
+                durationLayer = itemLayer.durationLayer
+                self.layer.contents = itemLayer.getContents()
+            } else if let itemLayer = itemLayer as? GenericItemLayer {
+                viewCountLayer = itemLayer.viewCountLayer
+                durationLayer = itemLayer.durationLayer
+                leftShadowLayer = itemLayer.leftShadowLayer
+                rightShadowLayer = itemLayer.rightShadowLayer
+                self.layer.contents = itemLayer.contents
+            }
+            
+            if let leftShadowLayer {
+                let copyLayer = SimpleLayer()
+                copyLayer.contents = leftShadowLayer.contents
+                copyLayer.contentsRect = leftShadowLayer.contentsRect
+                copyLayer.contentsGravity = leftShadowLayer.contentsGravity
+                copyLayer.contentsScale = leftShadowLayer.contentsScale
+                copyLayer.frame = leftShadowLayer.frame
+                self.layer.addSublayer(copyLayer)
+                self.copyLeftShadowLayer = copyLayer
+            }
+            
+            if let rightShadowLayer {
+                let copyLayer = SimpleLayer()
+                copyLayer.contents = rightShadowLayer.contents
+                copyLayer.contentsRect = rightShadowLayer.contentsRect
+                copyLayer.contentsGravity = rightShadowLayer.contentsGravity
+                copyLayer.contentsScale = rightShadowLayer.contentsScale
+                copyLayer.frame = rightShadowLayer.frame
+                self.layer.addSublayer(copyLayer)
+                self.copyRightShadowLayer = copyLayer
+            }
+            
+            if let viewCountLayer {
+                let copyViewCountLayer = SimpleLayer()
+                copyViewCountLayer.contents = viewCountLayer.contents
+                copyViewCountLayer.contentsRect = viewCountLayer.contentsRect
+                copyViewCountLayer.contentsGravity = viewCountLayer.contentsGravity
+                copyViewCountLayer.contentsScale = viewCountLayer.contentsScale
+                copyViewCountLayer.frame = viewCountLayer.frame
+                self.layer.addSublayer(copyViewCountLayer)
+                self.copyViewCountLayer = copyViewCountLayer
+                
+                self.viewCountLayerBottomLeftPosition = CGPoint(x: viewCountLayer.frame.minX, y: itemLayer.bounds.height - viewCountLayer.frame.maxY)
+            }
+            
+            if let durationLayer {
                 let copyDurationLayer = SimpleLayer()
                 copyDurationLayer.contents = durationLayer.contents
                 copyDurationLayer.contentsRect = durationLayer.contentsRect
@@ -519,6 +783,18 @@ private final class ItemTransitionView: UIView {
         
         if let copyDurationLayer = self.copyDurationLayer, let durationLayerBottomLeftPosition = self.durationLayerBottomLeftPosition {
             transition.setFrame(layer: copyDurationLayer, frame: CGRect(origin: CGPoint(x: size.width - durationLayerBottomLeftPosition.x - copyDurationLayer.bounds.width, y: size.height - durationLayerBottomLeftPosition.y - copyDurationLayer.bounds.height), size: copyDurationLayer.bounds.size))
+        }
+        
+        if let copyViewCountLayer = self.copyViewCountLayer, let viewcountLayerBottomLeftPosition = self.viewCountLayerBottomLeftPosition {
+            transition.setFrame(layer: copyViewCountLayer, frame: CGRect(origin: CGPoint(x: viewcountLayerBottomLeftPosition.x, y: size.height - viewcountLayerBottomLeftPosition.y - copyViewCountLayer.bounds.height), size: copyViewCountLayer.bounds.size))
+        }
+        
+        if let copyLeftShadowLayer = self.copyLeftShadowLayer {
+            transition.setFrame(layer: copyLeftShadowLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - copyLeftShadowLayer.bounds.height), size: copyLeftShadowLayer.bounds.size))
+        }
+        
+        if let copyRightShadowLayer = self.copyRightShadowLayer {
+            transition.setFrame(layer: copyRightShadowLayer, frame: CGRect(origin: CGPoint(x: size.width - copyRightShadowLayer.bounds.width, y: size.height - copyRightShadowLayer.bounds.height), size: copyRightShadowLayer.bounds.size))
         }
     }
 }
@@ -574,8 +850,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
         return self.chatPresentationData.theme.theme.list.itemPlainSeparatorColor
     }
 
-    func createLayer() -> SparseItemGridLayer? {
-        if self.captureProtected {
+    func createLayer(item: SparseItemGrid.Item) -> SparseItemGridLayer? {
+        if let item = item as? VisualMediaItem, item.story.isForwardingDisabled {
             return CaptureProtectedItemLayer()
         } else {
             return GenericItemLayer()
@@ -720,6 +996,11 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     }
                 }
                 
+                var viewCount: Int32?
+                if let value = story.views?.seenCount {
+                    viewCount = Int32(value)
+                }
+                
                 var duration: Int32?
                 var isMin: Bool = false
                 if let file = selectedMedia as? TelegramMediaFile, !file.isAnimated {
@@ -728,7 +1009,7 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding {
                     }
                     isMin = layer.bounds.width < 80.0
                 }
-                layer.updateDuration(duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
+                layer.updateDuration(viewCount: viewCount, duration: duration, isMin: isMin, minFactor: min(1.0, layer.bounds.height / 74.0))
             }
             
             var isSelected: Bool?
@@ -911,6 +1192,8 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
     public var openCurrentDate: (() -> Void)?
     public var paneDidScroll: (() -> Void)?
     public var emptyAction: (() -> Void)?
+    
+    public var ensureRectVisible: ((UIView, CGRect) -> Void)?
 
     private weak var currentGestureItem: SparseItemGridDisplayItem?
 
@@ -1074,7 +1357,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                                 destinationView: self.view,
                                 transitionView: StoryContainerScreen.TransitionView(
                                     makeView: { [weak foundItemLayer] in
-                                        return ItemTransitionView(itemLayer: foundItemLayer as? ItemLayer)
+                                        return ItemTransitionView(itemLayer: foundItemLayer)
                                     },
                                     updateView: { view, state, transition in
                                         (view as? ItemTransitionView)?.update(state: state, transition: transition)
@@ -1104,10 +1387,30 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                         return
                     }
                     if let itemId {
+                        let anyAmount = self.itemInteraction.hiddenMedia.isEmpty
                         self.itemInteraction.hiddenMedia = Set([itemId.id])
+                        if let items = self.items, let item = items.items.first(where: { $0.id == AnyHashable(itemId.id) }) {
+                            self.itemGrid.ensureItemVisible(index: item.index, anyAmount: anyAmount)
+                            
+                            if !anyAmount {
+                                var foundItemLayer: SparseItemGridLayer?
+                                self.itemGrid.forEachVisibleItem { item in
+                                    guard let itemLayer = item.layer as? ItemLayer else {
+                                        return
+                                    }
+                                    if let listItem = itemLayer.item, listItem.story.id == itemId.id {
+                                        foundItemLayer = itemLayer
+                                    }
+                                }
+                                if let foundItemLayer {
+                                    self.ensureRectVisible?(self.view, self.itemGrid.frameForItem(layer: foundItemLayer))
+                                }
+                            }
+                        }
                     } else {
                         self.itemInteraction.hiddenMedia = Set()
                     }
+                    
                     self.updateHiddenItems()
                 })
                 
@@ -1609,7 +1912,7 @@ public final class PeerInfoStoryPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScr
                 }
                 
                 var headerText: String?
-                if strongSelf.isArchive && !mappedItems.isEmpty {
+                if strongSelf.isArchive && !mappedItems.isEmpty && strongSelf.peerId == strongSelf.context.account.peerId {
                     headerText = strongSelf.presentationData.strings.StoryList_ArchiveDescription
                 }
 

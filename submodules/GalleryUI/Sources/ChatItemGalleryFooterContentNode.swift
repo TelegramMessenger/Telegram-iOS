@@ -25,6 +25,10 @@ import InvisibleInkDustNode
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import Pasteboard
+import Speak
+import TranslateUI
+import TelegramNotices
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -133,12 +137,16 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let actionButton: UIButton
     private let editButton: UIButton
     private let maskNode: ASDisplayNode
+    private let textSelectionKnobContainer: UIView
+    private let textSelectionKnobSurface: UIView
     private let scrollWrapperNode: CaptionScrollWrapperNode
     private let scrollNode: ASScrollNode
 
     private let textNode: ImmediateTextNodeWithEntities
     private var spoilerTextNode: ImmediateTextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
+    
+    private var textSelectionNode: TextSelectionNode?
     
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
@@ -177,6 +185,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private var seekTimer: SwiftSignalKit.Timer?
     private var currentIsPaused: Bool = true
     private var seekRate: Double = 1.0
+    
+    private var currentSpeechHolder: SpeechSynthesizerHolder?
     
     var performAction: ((GalleryControllerInteractionTapAction) -> Void)?
     var openActionOptions: ((GalleryControllerInteractionTapAction, Message) -> Void)?
@@ -325,6 +335,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.actionButton.setImage(actionImage, for: [.normal])
         self.editButton.setImage(editImage, for: [.normal])
         
+        self.textSelectionKnobContainer = UIView()
+        self.textSelectionKnobSurface = UIView()
+        self.textSelectionKnobContainer.addSubview(self.textSelectionKnobSurface)
+        
         self.scrollWrapperNode = CaptionScrollWrapperNode()
         self.scrollWrapperNode.clipsToBounds = true
         
@@ -398,6 +412,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.textNode.longTapAttributeAction = { [weak self] attributes, index in
             if let strongSelf = self, let action = strongSelf.actionForAttributes(attributes, index), let message = strongSelf.currentMessage {
                 strongSelf.openActionOptions?(action, message)
+            } else {
+                
             }
         }
         
@@ -410,13 +426,159 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         )
         self.textNode.visibility = true
         
+        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: defaultDarkPresentationTheme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: defaultDarkPresentationTheme.list.itemAccentColor), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+            guard let self else {
+                return
+            }
+            let _ = self
+        }, present: { c, a in
+            present(c, a)
+        }, rootNode: { [weak self] in
+            guard let self else {
+                return nil
+            }
+            return self.controllerInteraction?.controller()?.displayNode
+        }, externalKnobSurface: self.textSelectionKnobSurface, performAction: { [weak self] text, action in
+            guard let self else {
+                return
+            }
+            
+            switch action {
+            case .copy:
+                storeAttributedTextInPasteboard(text)
+                
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: false, animateInAsReplacement: false, blurred: true, action: { _ in true })
+                
+                self.controllerInteraction?.presentController(undoController, nil)
+            case .share:
+                let theme = defaultDarkPresentationTheme
+                let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>) = (self.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: theme), self.context.sharedContext.presentationData |> map { $0.withUpdated(theme: theme) })
+                
+                let shareController = ShareController(context: self.context, subject: .text(text.string), externalShare: true, immediateExternalShare: false, updatedPresentationData: updatedPresentationData)
+                
+                self.controllerInteraction?.presentController(shareController, nil)
+            case .lookup:
+                let controller = UIReferenceLibraryViewController(term: text.string)
+                if let window = self.controllerInteraction?.controller()?.view.window {
+                    controller.popoverPresentationController?.sourceView = window
+                    controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                    window.rootViewController?.present(controller, animated: true)
+                }
+            case .speak:
+                if let speechHolder = speakText(context: self.context, text: text.string) {
+                    speechHolder.completion = { [weak self, weak speechHolder] in
+                        guard let self else {
+                            return
+                        }
+                        if self.currentSpeechHolder === speechHolder {
+                            self.currentSpeechHolder = nil
+                        }
+                    }
+                    self.currentSpeechHolder = speechHolder
+                }
+            case .translate:
+                let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+                    guard let self else {
+                        return
+                    }
+                    //let peer = component.slice.peer
+                    
+                    let translationSettings: TranslationSettings
+                    if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.translationSettings]?.get(TranslationSettings.self) {
+                        translationSettings = current
+                    } else {
+                        translationSettings = TranslationSettings.defaultSettings
+                    }
+                    
+                    /*var showTranslateIfTopical = false
+                    if case let .channel(channel) = peer, !(channel.addressName ?? "").isEmpty {
+                        showTranslateIfTopical = true
+                    }*/
+                    let showTranslateIfTopical = false
+                    
+                    let (_, language) = canTranslateText(context: self.context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
+                    
+                    let _ = ApplicationSpecificNotice.incrementTranslationSuggestion(accountManager: self.context.sharedContext.accountManager, timestamp: Int32(Date().timeIntervalSince1970)).start()
+                    
+                    let translateController = TranslateScreen(context: self.context, forceTheme: defaultDarkPresentationTheme, text: text.string, canCopy: true, fromLanguage: language, ignoredLanguages: translationSettings.ignoredLanguages)
+                    translateController.pushController = { [weak self] c in
+                        guard let self else {
+                            return
+                        }
+                        self.controllerInteraction?.pushController(c)
+                    }
+                    translateController.presentController = { [weak self] c in
+                        guard let self else {
+                            return
+                        }
+                        self.controllerInteraction?.presentController(c, nil)
+                    }
+                    
+                    //self.actionSheet = translateController
+                    //view.updateIsProgressPaused()
+                    
+                    /*translateController.wasDismissed = { [weak self, weak view] in
+                        guard let self, let view else {
+                            return
+                        }
+                        self.actionSheet = nil
+                        view.updateIsProgressPaused()
+                    }*/
+                    
+                    //component.controller()?.present(translateController, in: .window(.root))
+                    self.controllerInteraction?.presentController(translateController, nil)
+                })
+            }
+        })
+        
+        textSelectionNode.enableLookup = true
+        textSelectionNode.canBeginSelection = { [weak self] location in
+            guard let self else {
+                return false
+            }
+            
+            let textNode = self.textNode
+            
+            let titleFrame = textNode.view.bounds
+            
+            if let (index, attributes) = textNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
+                let _ = index
+                
+                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)] {
+                    return false
+                } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                    return false
+                } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+                    return false
+                } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                    return false
+                } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                    return false
+                } else if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
+                    return false
+                } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let _ = emoji.file {
+                    return false
+                }
+            }
+            
+            return true
+        }
+        
+        self.textSelectionNode = textSelectionNode
+        
         self.contentNode.view.addSubview(self.deleteButton)
         self.contentNode.view.addSubview(self.fullscreenButton)
         self.contentNode.view.addSubview(self.actionButton)
         self.contentNode.view.addSubview(self.editButton)
         self.contentNode.addSubnode(self.scrollWrapperNode)
         self.scrollWrapperNode.addSubnode(self.scrollNode)
+        self.contentNode.view.addSubview(self.textSelectionKnobContainer)
+        self.scrollNode.addSubnode(textSelectionNode.highlightAreaNode)
         self.scrollNode.addSubnode(self.textNode)
+        self.scrollNode.addSubnode(textSelectionNode)
         
         self.contentNode.addSubnode(self.authorNameNode)
         self.contentNode.addSubnode(self.dateNode)
@@ -602,6 +764,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.textNode.isHidden = false
                 self.textNode.attributedText = caption
             }
+            self.textSelectionNode?.isHidden = self.textNode.isHidden
             
             if let titleText = titleText {
                 self.authorNameNode.attributedText = NSAttributedString(string: titleText, font: titleFont, textColor: .white)
@@ -778,6 +941,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 self.textNode.attributedText = messageText
             }
             
+            self.textSelectionNode?.isHidden = self.textNode.isHidden
+            
             if let authorNameText = authorNameText {
                 self.authorNameNode.attributedText = NSAttributedString(string: authorNameText, font: titleFont, textColor: .white)
             } else {
@@ -845,6 +1010,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.textSelectionKnobContainer.frame = CGRect(origin: CGPoint(x: 0.0, y: -scrollView.bounds.origin.y), size: CGSize())
+        
         self.requestLayout?(.immediate)
     }
     
@@ -950,6 +1117,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             if self.textNode.frame != textFrame {
                 self.textNode.frame = textFrame
                 self.spoilerTextNode?.frame = textFrame
+                
+                self.textSelectionNode?.frame = textFrame
+                self.textSelectionNode?.highlightAreaNode.frame = textFrame
+                self.textSelectionKnobSurface.frame = textFrame
             }
         }
         

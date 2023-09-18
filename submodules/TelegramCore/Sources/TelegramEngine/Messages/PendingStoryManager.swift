@@ -4,8 +4,44 @@ import Postbox
 import TelegramApi
 
 public extension Stories {
+    enum PendingTarget: Codable {
+        private enum CodingKeys: String, CodingKey {
+            case discriminator = "tt"
+            case peerId = "peerId"
+        }
+        
+        case myStories
+        case peer(PeerId)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            switch try container.decode(Int32.self, forKey: .discriminator) {
+            case 0:
+                self = .myStories
+            case 1:
+                self = .peer(try container.decode(PeerId.self, forKey: .peerId))
+            default:
+                self = .myStories
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            switch self {
+            case .myStories:
+                try container.encode(0 as Int32, forKey: .discriminator)
+            case let .peer(peerId):
+                try container.encode(1 as Int32, forKey: .discriminator)
+                try container.encode(peerId, forKey: .peerId)
+            }
+        }
+    }
+    
     final class PendingItem: Equatable, Codable {
         private enum CodingKeys: CodingKey {
+            case target
             case stableId
             case timestamp
             case media
@@ -20,6 +56,7 @@ public extension Stories {
             case randomId
         }
         
+        public let target: PendingTarget
         public let stableId: Int32
         public let timestamp: Int32
         public let media: Media
@@ -34,6 +71,7 @@ public extension Stories {
         public let randomId: Int64
         
         public init(
+            target: PendingTarget,
             stableId: Int32,
             timestamp: Int32,
             media: Media,
@@ -47,6 +85,7 @@ public extension Stories {
             period: Int32,
             randomId: Int64
         ) {
+            self.target = target
             self.stableId = stableId
             self.timestamp = timestamp
             self.media = media
@@ -64,6 +103,7 @@ public extension Stories {
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             
+            self.target = try container.decodeIfPresent(PendingTarget.self, forKey: .target) ?? .myStories
             self.stableId = try container.decode(Int32.self, forKey: .stableId)
             self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
             
@@ -87,6 +127,8 @@ public extension Stories {
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.target, forKey: .target)
             
             try container.encode(self.stableId, forKey: .stableId)
             try container.encode(self.timestamp, forKey: .timestamp)
@@ -191,6 +233,7 @@ final class PendingStoryManager {
         
         var itemsDisposable: Disposable?
         var currentPendingItemContext: PendingItemContext?
+        var queuedPendingItems = Set<PeerId>()
         
         var storyObserverContexts: [Int32: Bag<(Float) -> Void>] = [:]
         
@@ -199,9 +242,9 @@ final class PendingStoryManager {
             return self.allStoriesEventsPipe.signal()
         }
         
-        private let allStoriesUploadProgressPromise = Promise<Float?>(nil)
-        private var allStoriesUploadProgressValue: Float? = nil
-        var allStoriesUploadProgress: Signal<Float?, NoError> {
+        private let allStoriesUploadProgressPromise = Promise<[PeerId: Float]>([:])
+        private var allStoriesUploadProgressValue: [PeerId: Float] = [:]
+        var allStoriesUploadProgress: Signal<[PeerId: Float], NoError> {
             return self.allStoriesUploadProgressPromise.get()
         }
         
@@ -282,6 +325,14 @@ final class PendingStoryManager {
                     print(currentPendingItemContext)
                 })
             }
+            self.queuedPendingItems = Set(localState.items.map { item -> PeerId in
+                switch item.target {
+                case .myStories:
+                    return self.accountPeerId
+                case let .peer(id):
+                    return id
+                }
+            })
             
             if self.currentPendingItemContext == nil, let firstItem = localState.items.first {
                 let queue = self.queue
@@ -301,8 +352,15 @@ final class PendingStoryManager {
                 })
                 self.currentPendingItemContext = pendingItemContext
                 
+                let toPeerId: PeerId
+                switch firstItem.target {
+                case .myStories:
+                    toPeerId = self.accountPeerId
+                case let .peer(peerId):
+                    toPeerId = peerId
+                }
                 let stableId = firstItem.stableId
-                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
+                pendingItemContext.disposable = (_internal_uploadStoryImpl(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, stateManager: self.stateManager, messageMediaPreuploadManager: self.messageMediaPreuploadManager, revalidationContext: self.revalidationContext, auxiliaryMethods: self.auxiliaryMethods, toPeerId: toPeerId, stableId: stableId, media: firstItem.media, mediaAreas: firstItem.mediaAreas, text: firstItem.text, entities: firstItem.entities, embeddedStickers: firstItem.embeddedStickers, pin: firstItem.pin, privacy: firstItem.privacy, isForwardingDisabled: firstItem.isForwardingDisabled, period: Int(firstItem.period), randomId: firstItem.randomId)
                 |> deliverOn(self.queue)).start(next: { [weak self] event in
                     guard let `self` = self else {
                         return
@@ -327,17 +385,29 @@ final class PendingStoryManager {
         }
         
         private func processContextsUpdated() {
-            let currentProgress = self.currentPendingItemContext?.progress
+            var currentProgress: [PeerId: Float] = [:]
+            for peerId in self.queuedPendingItems {
+                currentProgress[peerId] = 0.0
+            }
+            if let currentPendingItemContext = self.currentPendingItemContext {
+                switch currentPendingItemContext.item.target {
+                case .myStories:
+                    currentProgress[self.accountPeerId] = currentPendingItemContext.progress
+                case let .peer(id):
+                    currentProgress[id] = currentPendingItemContext.progress
+                }
+            }
+            
             if self.allStoriesUploadProgressValue != currentProgress {
                 let previousProgress = self.allStoriesUploadProgressValue
                 self.allStoriesUploadProgressValue = currentProgress
                 
-                if previousProgress != nil && currentProgress == nil {
+                if !previousProgress.isEmpty && currentProgress.isEmpty {
                     // Hack: the UI is updated after 2 Postbox queries
-                    let signal: Signal<Float?, NoError> = Signal { subscriber in
+                    let signal: Signal<[PeerId: Float], NoError> = Signal { subscriber in
                         Postbox.sharedQueue.justDispatch {
                             Postbox.sharedQueue.justDispatch {
-                                subscriber.putNext(nil)
+                                subscriber.putNext([:])
                             }
                         }
                         return EmptyDisposable
@@ -358,7 +428,7 @@ final class PendingStoryManager {
     private let impl: QueueLocalObject<Impl>
     private let accountPeerId: PeerId
     
-    public var allStoriesUploadProgress: Signal<Float?, NoError> {
+    public var allStoriesUploadProgress: Signal<[PeerId: Float], NoError> {
         return self.impl.signalWith { impl, subscriber in
             return impl.allStoriesUploadProgress.start(next: subscriber.putNext)
         }
@@ -391,7 +461,7 @@ final class PendingStoryManager {
         })
     }
     
-    func lookUpPendingStoryIdMapping(stableId: Int32) -> Int32? {
-        return _internal_lookUpPendingStoryIdMapping(accountPeerId: self.accountPeerId, stableId: stableId)
+    func lookUpPendingStoryIdMapping(peerId: PeerId, stableId: Int32) -> Int32? {
+        return _internal_lookUpPendingStoryIdMapping(peerId: peerId, stableId: stableId)
     }
 }

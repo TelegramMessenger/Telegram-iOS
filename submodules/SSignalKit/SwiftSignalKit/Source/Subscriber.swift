@@ -1,19 +1,31 @@
 import Foundation
 
-public final class Subscriber<T, E> {
+#if DEBUG
+// Signals keep themselves in memory until terminated (dispose, putError, putCompletion)
+private final class LiveSubscribers {
+    var dict: [ObjectIdentifier: AnyObject] = [:]
+}
+private let liveSubscribers = Atomic<LiveSubscribers>(value: LiveSubscribers())
+#endif
+
+public final class Subscriber<T, E>: CustomStringConvertible {
     private var next: ((T) -> Void)!
     private var error: ((E) -> Void)!
     private var completed: (() -> Void)!
     
     private var lock = pthread_mutex_t()
     private var terminated = false
-    internal var disposable: Disposable!
+    internal var disposable: Disposable?
     
     public init(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) {
         self.next = next
         self.error = error
         self.completed = completed
         pthread_mutex_init(&self.lock, nil)
+    }
+    
+    public var description: String {
+        return "Subscriber { next: \(self.next == nil ? "nil" : "hasValue"), error: \(self.error == nil ? "nil" : "hasValue"), completed: \(self.completed == nil ? "nil" : "hasValue"), disposable: \(self.disposable == nil ? "nil" : "hasValue"), terminated: \(self.terminated) }"
     }
     
     deinit {
@@ -34,6 +46,12 @@ public final class Subscriber<T, E> {
     }
     
     internal func assignDisposable(_ disposable: Disposable) {
+        #if DEBUG
+        liveSubscribers.with { impl in
+            //let _ = impl.dict[ObjectIdentifier(self)] = self
+        }
+        #endif
+        
         var dispose = false
         pthread_mutex_lock(&self.lock)
         if self.terminated {
@@ -49,14 +67,33 @@ public final class Subscriber<T, E> {
     }
     
     internal func markTerminatedWithoutDisposal() {
+        var freeDisposable: Disposable?
+        
         pthread_mutex_lock(&self.lock)
         if !self.terminated {
             self.terminated = true
             self.next = nil
             self.error = nil
             self.completed = nil
+            
+            if let disposable = self.disposable {
+                freeDisposable = disposable
+                self.disposable = nil
+            }
         }
         pthread_mutex_unlock(&self.lock)
+        
+        if let freeDisposableValue = freeDisposable {
+            withExtendedLifetime(freeDisposableValue, {
+            })
+            freeDisposable = nil
+        }
+        
+        #if DEBUG
+        liveSubscribers.with { impl in
+            let _ = impl.dict.removeValue(forKey: ObjectIdentifier(self))
+        }
+        #endif
     }
     
     public func putNext(_ next: T) {
@@ -86,7 +123,6 @@ public final class Subscriber<T, E> {
             self.terminated = true
             disposeDisposable = self.disposable
             self.disposable = nil
-            
         }
         pthread_mutex_unlock(&self.lock)
         
@@ -97,6 +133,12 @@ public final class Subscriber<T, E> {
         if let disposeDisposable = disposeDisposable {
             disposeDisposable.dispose()
         }
+        
+        #if DEBUG
+        liveSubscribers.with { impl in
+            let _ = impl.dict.removeValue(forKey: ObjectIdentifier(self))
+        }
+        #endif
     }
     
     public func putCompletion() {
@@ -141,5 +183,11 @@ public final class Subscriber<T, E> {
         if let disposeDisposable = disposeDisposable {
             disposeDisposable.dispose()
         }
+        
+        #if DEBUG
+        liveSubscribers.with { impl in
+            let _ = impl.dict.removeValue(forKey: ObjectIdentifier(self))
+        }
+        #endif
     }
 }

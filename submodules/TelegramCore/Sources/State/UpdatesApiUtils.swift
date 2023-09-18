@@ -88,9 +88,9 @@ extension Api.MessageMedia {
     
     var preCachedStories: [StoryId: Api.StoryItem]? {
         switch self {
-        case let .messageMediaStory(_, userId, id, story):
+        case let .messageMediaStory(_, peerId, id, story):
             if let story = story {
-                return [StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: id): story]
+                return [StoryId(peerId: peerId.peerId, id: id): story]
             } else {
                 return nil
             }
@@ -181,7 +181,7 @@ extension Api.Chat {
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
             case let .chatForbidden(id, _):
                 return PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(id))
-            case let .channel(_, _, id, _, _, _, _, _, _, _, _, _, _, _):
+            case let .channel(_, _, id, _, _, _, _, _, _, _, _, _, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))
             case let .channelForbidden(_, id, _, _, _):
                 return PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(id))

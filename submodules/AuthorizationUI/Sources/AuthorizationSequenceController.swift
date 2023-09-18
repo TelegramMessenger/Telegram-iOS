@@ -84,7 +84,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         |> distinctUntilChanged
         |> deliverOnMainQueue).start(next: { [weak self] state in
             self?.updateState(state: state)
-        })
+        }).strict()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -1061,7 +1061,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         avatarVideo = Signal<TelegramMediaResource?, NoError> { subscriber in
                             let entityRenderer: LegacyPaintEntityRenderer? = avatarAdjustments.flatMap { adjustments in
                                 if let paintingData = adjustments.paintingData, paintingData.hasAnimation {
-                                    return LegacyPaintEntityRenderer(account: nil, adjustments: adjustments)
+                                    return LegacyPaintEntityRenderer(postbox: nil, adjustments: adjustments)
                                 } else {
                                     return nil
                                 }

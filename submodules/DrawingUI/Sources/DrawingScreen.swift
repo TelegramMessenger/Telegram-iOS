@@ -984,7 +984,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             ]
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
+            let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: UIScreen.main.bounds, customPosition: CGPoint(x: 7.0, y: 3.0))), items: .single(ContextController.Items(content: .list(items))))
             self.present(contextController)
         }
         
@@ -1022,6 +1022,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 } else {
                     self?.updateCurrentMode(.drawing)
                 }
+                return true
             }
             self.present(controller)
             self.updated(transition: .easeInOut(duration: 0.2))
@@ -1241,6 +1242,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                             case .semi:
                                 nextStyle = .regular
                             case .stroke:
+                                nextStyle = .regular
+                            case .blur:
                                 nextStyle = .regular
                             }
                             textEntity.style = nextStyle
@@ -2880,13 +2883,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController, U
         
         var stickers: [Any] = []
         for entity in self.entitiesView.entities {
-            if let sticker = entity as? DrawingStickerEntity, case let .file(file) = sticker.content {
+            if let sticker = entity as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                 let coder = PostboxEncoder()
                 coder.encodeRootObject(file)
                 stickers.append(coder.makeData())
             } else if let text = entity as? DrawingTextEntity, let subEntities = text.renderSubEntities {
                 for sticker in subEntities {
-                    if let sticker = sticker as? DrawingStickerEntity, case let .file(file) = sticker.content {
+                    if let sticker = sticker as? DrawingStickerEntity, case let .file(file, _) = sticker.content {
                         let coder = PostboxEncoder()
                         coder.encodeRootObject(file)
                         stickers.append(coder.makeData())
@@ -3117,12 +3120,16 @@ public final class DrawingToolsInteraction {
                 }))
             }
             if !isVideo {
-                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
-                    if let self, let entityView {
-                        let newEntity = self.entitiesView.duplicate(entityView.entity)
-                        self.entitiesView.selectEntity(newEntity)
-                    }
-                }))
+                if let stickerEntity = entityView.entity as? DrawingStickerEntity, case let .file(_, type) = stickerEntity.content, case .reaction = type {
+                    
+                } else {
+                    actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Paint_Duplicate, accessibilityLabel: presentationData.strings.Paint_Duplicate), action: { [weak self, weak entityView] in
+                        if let self, let entityView {
+                            let newEntity = self.entitiesView.duplicate(entityView.entity)
+                            self.entitiesView.selectEntity(newEntity)
+                        }
+                    }))
+                }
             }
             let entityFrame = entityView.convert(entityView.selectionBounds, to: node.view).offsetBy(dx: 0.0, dy: -6.0)
             let controller = ContextMenuController(actions: actions)
@@ -3163,6 +3170,7 @@ public final class DrawingToolsInteraction {
             } else {
                 if self.isVideo {
                     entityView.seek(to: 0.0)
+                    entityView.play()
                 }
                 
                 entityView.animateInsertion()
@@ -3384,7 +3392,7 @@ public final class DrawingToolsInteraction {
         }
         
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-        let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: CGRect(origin: .zero, size: CGSize(width: validLayout.size.width, height: validLayout.size.height - (validLayout.inputHeight ?? 0.0))), customPosition: CGPoint(x: 0.0, y: 1.0))), items: .single(ContextController.Items(content: .list(items))))
+        let contextController = ContextController(presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView, contentArea: CGRect(origin: .zero, size: CGSize(width: validLayout.size.width, height: validLayout.size.height - (validLayout.inputHeight ?? 0.0))), customPosition: CGPoint(x: 0.0, y: 1.0))), items: .single(ContextController.Items(content: .list(items))))
         self.present(contextController, .window(.root), nil)
         self.currentFontPicker = contextController
         contextController.view.disablesInteractiveKeyboardGestureRecognizer = true
@@ -3510,6 +3518,8 @@ public final class DrawingToolsInteraction {
                                 case .semi:
                                     nextStyle = .regular
                                 case .stroke:
+                                    nextStyle = .regular
+                                case .blur:
                                     nextStyle = .regular
                                 }
                                 textEntity.style = nextStyle

@@ -1,0 +1,3 @@
+mode         = .fast
+extra_cflags = /O2 /Zc:inline
+include ninja/msvs

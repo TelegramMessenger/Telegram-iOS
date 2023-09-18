@@ -495,50 +495,128 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                         }
                                     }
                                 case let .asset(asset):
-                                    var randomId: Int64 = 0
-                                    arc4random_buf(&randomId, 8)
-                                    let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                                    let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
-                                    let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max))
-                                    representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
-                                    
-                                    let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                                    var attributes: [MessageAttribute] = []
-                                    if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
-                                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
-                                    }
-                                    if let spoiler = item.spoiler, spoiler {
-                                        attributes.append(MediaSpoilerMessageAttribute())
-                                    }
-                                
-                                    let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
-                                    let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
-                                    if !entities.isEmpty {
-                                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
-                                    }
-                                
-                                    var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
-                                    text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
-                                        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                                            if let file = value.file {
-                                                if let packId = value.interactivelySelectedFromPackId {
-                                                    bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                    if context.sharedContext.immediateExperimentalUISettings.storiesJpegExperiment {
+                                        let sizes: [Int32] = [2048, 1280]
+                                        let formats: [MediaImageFormat] = [.jxl, .jpeg]
+                                        let qualities: [Int32: [Int32]] = [
+                                            MediaImageFormat.jxl.rawValue: [
+                                                50,
+                                                75
+                                            ],
+                                            MediaImageFormat.jpeg.rawValue: [
+                                                75
+                                            ]
+                                        ]
+                                        for sizeSide in sizes {
+                                            for format in formats {
+                                                for quality in qualities[format.rawValue]! {
+                                                    var randomId: Int64 = 0
+                                                    arc4random_buf(&randomId, 8)
+                                                    let resource = PhotoLibraryMediaResource(
+                                                        localIdentifier: asset.localIdentifier,
+                                                        uniqueId: Int64.random(in: Int64.min ... Int64.max),
+                                                        width: sizeSide,
+                                                        height: sizeSide,
+                                                        format: format,
+                                                        quality: quality
+                                                    )
+                                                    
+                                                    let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
+                                                    let scaledSize = size.aspectFittedOrSmaller(CGSize(width: CGFloat(sizeSide), height: CGFloat(sizeSide)))
+                                                    
+                                                    let media: Media
+                                                    media = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: Int64.random(in: Int64.min ... Int64.max)), partialReference: nil, resource: resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: format == .jxl ? "image/jxl" : "image/jpeg", size: nil, attributes: [
+                                                        .FileName(fileName: format == .jxl ? "image\(sizeSide)-q\(quality).jxl" : "image\(sizeSide)-q\(quality).jpg"),
+                                                        .ImageSize(size: PixelDimensions(scaledSize))
+                                                    ])
+                                                    
+                                                    var attributes: [MessageAttribute] = []
+                                                    if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
+                                                        attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
+                                                    }
+                                                    if let spoiler = item.spoiler, spoiler {
+                                                        attributes.append(MediaSpoilerMessageAttribute())
+                                                    }
+                                                    
+                                                    let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                                    let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                                    if !entities.isEmpty {
+                                                        attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                                    }
+                                                    
+                                                    var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                                    text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                                        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                                            if let file = value.file {
+                                                                if let packId = value.interactivelySelectedFromPackId {
+                                                                    bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                                }
+                                                            }
+                                                        }
+                                                    })
+                                                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                                    for entity in entities {
+                                                        if case let .CustomEmoji(_, fileId) = entity.type {
+                                                            if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                                if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                                    bubbleUpEmojiOrStickersets.append(packId)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                    
+                                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: false))
                                                 }
                                             }
                                         }
-                                    })
-                                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
-                                    for entity in entities {
-                                        if case let .CustomEmoji(_, fileId) = entity.type {
-                                            if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
-                                                if !bubbleUpEmojiOrStickersets.contains(packId) {
-                                                    bubbleUpEmojiOrStickersets.append(packId)
+                                    } else {
+                                        var randomId: Int64 = 0
+                                        arc4random_buf(&randomId, 8)
+                                        let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
+                                        let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
+                                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max))
+                                    
+                                        let media: Media
+                                        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
+                                        media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
+                                    
+                                        var attributes: [MessageAttribute] = []
+                                        if let timer = item.timer, timer > 0 && (timer <= 60 || timer == viewOnceTimeout) {
+                                            attributes.append(AutoremoveTimeoutMessageAttribute(timeout: Int32(timer), countdownBeginTime: nil))
+                                        }
+                                        if let spoiler = item.spoiler, spoiler {
+                                            attributes.append(MediaSpoilerMessageAttribute())
+                                        }
+                                    
+                                        let text = trimChatInputText(convertMarkdownToAttributes(caption ?? NSAttributedString()))
+                                        let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
+                                        if !entities.isEmpty {
+                                            attributes.append(TextEntitiesMessageAttribute(entities: entities))
+                                        }
+                                    
+                                        var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
+                                        text.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: text.length), using: { value, _, _ in
+                                            if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                                if let file = value.file {
+                                                    if let packId = value.interactivelySelectedFromPackId {
+                                                        bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                                                    }
+                                                }
+                                            }
+                                        })
+                                        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                                        for entity in entities {
+                                            if case let .CustomEmoji(_, fileId) = entity.type {
+                                                if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                                    if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                                        bubbleUpEmojiOrStickersets.append(packId)
+                                                    }
                                                 }
                                             }
                                         }
+                                        
+                                        messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: false))
                                     }
-                                    
-                                    messages.append(LegacyAssetPickerEnqueueMessage(message: .message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: item.groupedId, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets), uniqueId: item.uniqueId, isFile: false))
                                 case .tempFile:
                                     break
                             }

@@ -28,7 +28,7 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         case stroke
     }
     
-    public let uuid: UUID
+    public var uuid: UUID
     public let isAnimated: Bool
     
     public var shapeType: ShapeType
@@ -102,8 +102,11 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         }
     }
         
-    public func duplicate() -> DrawingEntity {
+    public func duplicate(copy: Bool) -> DrawingEntity {
         let newEntity = DrawingSimpleShapeEntity(shapeType: self.shapeType, drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
+        if copy {
+            newEntity.uuid = self.uuid
+        }
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
         newEntity.size = self.size

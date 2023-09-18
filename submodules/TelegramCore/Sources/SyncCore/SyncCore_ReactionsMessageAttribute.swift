@@ -1,7 +1,7 @@
 import Postbox
 import TelegramApi
 
-public struct MessageReaction: Equatable, PostboxCoding {
+public struct MessageReaction: Equatable, PostboxCoding, Codable {
     public enum Reaction: Hashable, Codable, PostboxCoding {
         case builtin(String)
         case custom(Int64)
@@ -75,6 +75,24 @@ public struct MessageReaction: Equatable, PostboxCoding {
         }
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        if let value = try container.decodeIfPresent(String.self, forKey: "v") {
+            self.value = .builtin(value)
+        } else {
+            self.value = .custom(try container.decode(Int64.self, forKey: "cfid"))
+        }
+        self.count = try container.decode(Int32.self, forKey: "c")
+        if let chosenOrder = try container.decodeIfPresent(Int32.self, forKey: "cord") {
+            self.chosenOrder = Int(chosenOrder)
+        } else if let isSelected = try container.decodeIfPresent(Int32.self, forKey: "s"), isSelected != 0 {
+            self.chosenOrder = 0
+        } else {
+            self.chosenOrder = nil
+        }
+    }
+    
     public func encode(_ encoder: PostboxEncoder) {
         switch self.value {
         case let .builtin(value):
@@ -88,6 +106,19 @@ public struct MessageReaction: Equatable, PostboxCoding {
         } else {
             encoder.encodeNil(forKey: "cord")
         }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        switch self.value {
+        case let .builtin(value):
+            try container.encode(value, forKey: "v")
+        case let .custom(fileId):
+            try container.encode(fileId, forKey: "cfid")
+        }
+        try container.encode(self.count, forKey: "c")
+        try container.encodeIfPresent(self.chosenOrder.flatMap(Int32.init), forKey: "cord")
     }
 }
 

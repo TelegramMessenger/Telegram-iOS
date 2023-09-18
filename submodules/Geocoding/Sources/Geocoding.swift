@@ -1,6 +1,7 @@
 import Foundation
 import Contacts
 import CoreLocation
+import MapKit
 import SwiftSignalKit
 
 public func geocodeLocation(address: String, locale: Locale? = nil) -> Signal<[CLPlacemark]?, NoError> {
@@ -73,15 +74,17 @@ public func reverseGeocodeLocation(latitude: Double, longitude: Double, locale: 
     return Signal { subscriber in
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), preferredLocale: locale, completionHandler: { placemarks, _ in
-            if let placemarks = placemarks, let placemark = placemarks.first {
+            if let placemarks, let placemark = placemarks.first {
+                let countryName = placemark.country
+                let countryCode = placemark.isoCountryCode
                 let result: ReverseGeocodedPlacemark
                 if placemark.thoroughfare == nil && placemark.locality == nil && placemark.country == nil {
                     result = ReverseGeocodedPlacemark(name: placemark.name, street: placemark.name, city: nil, country: nil, countryCode: nil)
                 } else {
                     if placemark.thoroughfare == nil && placemark.locality == nil, let ocean = placemark.ocean {
-                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: placemark.country, countryCode: placemark.isoCountryCode)
+                        result = ReverseGeocodedPlacemark(name: ocean, street: nil, city: nil, country: countryName, countryCode: countryCode)
                     } else {
-                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: placemark.country, countryCode: placemark.isoCountryCode)
+                        result = ReverseGeocodedPlacemark(name: nil, street: placemark.thoroughfare, city: placemark.locality, country: countryName, countryCode: countryCode)
                     }
                 }
                 subscriber.putNext(result)

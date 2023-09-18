@@ -798,8 +798,12 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                             var cityName: String?
                             var streetName: String?
                             let countryCode = placemark?.countryCode
-                            if let city = placemark?.city, let countryCode = placemark?.countryCode {
-                                cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
+                            if let city = placemark?.city {
+                                if let countryCode = placemark?.countryCode {
+                                    cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
+                                } else {
+                                    cityName = city
+                                }
                             } else {
                                 cityName = ""
                             }
@@ -843,8 +847,12 @@ final class LocationPickerControllerNode: ViewControllerTracingNode, CLLocationM
                                 var cityName: String?
                                 var streetName: String?
                                 let countryCode = placemark?.countryCode
-                                if let city = placemark?.city, let countryCode = placemark?.countryCode {
-                                    cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
+                                if let city = placemark?.city {
+                                    if let countryCode = placemark?.countryCode {
+                                        cityName = "\(city), \(displayCountryName(countryCode, locale: locale))"
+                                    } else {
+                                        cityName = city
+                                    }
                                 } else {
                                     cityName = ""
                                 }

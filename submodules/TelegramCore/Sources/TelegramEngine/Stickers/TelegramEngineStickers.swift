@@ -193,7 +193,7 @@ public extension TelegramEngine {
     }
 }
 
-func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+public func _internal_resolveInlineStickers(postbox: Postbox, network: Network, fileIds: [Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
     return postbox.transaction { transaction -> [Int64: TelegramMediaFile] in
         var cachedFiles: [Int64: TelegramMediaFile] = [:]
         for fileId in fileIds {

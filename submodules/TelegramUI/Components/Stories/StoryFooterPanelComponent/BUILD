@@ -20,6 +20,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MoreHeaderButton",
         "//submodules/SemanticStatusNode",
         "//submodules/AnimatedCountLabelNode",
+        "//submodules/TelegramUI/Components/MessageInputActionButtonComponent",
     ],
     visibility = [
         "//visibility:public",

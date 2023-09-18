@@ -22,13 +22,17 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
     public static let canBeAnonymous = TelegramChatAdminRightsFlags(rawValue: 1 << 10)
     public static let canManageCalls = TelegramChatAdminRightsFlags(rawValue: 1 << 11)
     public static let canManageTopics = TelegramChatAdminRightsFlags(rawValue: 1 << 13)
+    public static let canPostStories = TelegramChatAdminRightsFlags(rawValue: 1 << 14)
+    public static let canEditStories = TelegramChatAdminRightsFlags(rawValue: 1 << 15)
+    public static let canDeleteStories = TelegramChatAdminRightsFlags(rawValue: 1 << 16)
+
     
     public static var all: TelegramChatAdminRightsFlags {
-        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canBeAnonymous, .canManageCalls, .canManageTopics]
+        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canBeAnonymous, .canManageCalls, .canManageTopics, .canPostStories, .canEditStories, .canDeleteStories]
     }
     
     public static var allChannel: TelegramChatAdminRightsFlags {
-        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canManageCalls, .canManageTopics]
+        return [.canChangeInfo, .canPostMessages, .canEditMessages, .canDeleteMessages, .canBanUsers, .canInviteUsers, .canPinMessages, .canAddAdmins, .canManageCalls, .canManageTopics, .canPostStories, .canEditStories, .canDeleteStories]
     }
     
     public static let internal_groupSpecific: TelegramChatAdminRightsFlags = [
@@ -49,7 +53,10 @@ public struct TelegramChatAdminRightsFlags: OptionSet, Hashable {
         .canDeleteMessages,
         .canManageCalls,
         .canInviteUsers,
-        .canAddAdmins
+        .canAddAdmins,
+        .canPostStories,
+        .canEditStories,
+        .canDeleteStories
     ]
     
     public static func peerSpecific(peer: EnginePeer) -> TelegramChatAdminRightsFlags {

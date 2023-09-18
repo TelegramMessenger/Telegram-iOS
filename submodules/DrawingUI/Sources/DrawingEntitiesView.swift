@@ -7,13 +7,7 @@ import AccountContext
 import MediaEditor
 import ComponentFlow
 import LottieAnimationComponent
-
-public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
-    if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
-        return codableEntities.map { $0.entity }
-    }
-    return []
-}
+import ReactionSelectionNode
 
 private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> DrawingEntityView? {
     if let entity = entity as? DrawingBubbleEntity {
@@ -36,6 +30,9 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
 }
 
 private func prepareForRendering(entityView: DrawingEntityView) {
+    if let entityView = entityView as? DrawingStickerEntityView {
+        entityView.entity.renderImage = entityView.getRenderImage()
+    }
     if let entityView = entityView as? DrawingBubbleEntityView {
         entityView.entity.renderImage = entityView.getRenderImage()
     }
@@ -69,6 +66,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public var getEntityCenterPosition: () -> CGPoint = { return .zero }
     public var getEntityInitialRotation: () -> CGFloat = { return 0.0 }
     public var getEntityAdditionalScale: () -> CGFloat = { return 1.0 }
+    
+    public var getAvailableReactions: () -> [ReactionItem] = { return [] }
+    public var present: (ViewController) -> Void = { _ in }
+    public var push: (ViewController) -> Void = { _ in }
     
     public var hasSelectionChanged: (Bool) -> Void = { _ in }
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
@@ -460,7 +461,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func duplicate(_ entity: DrawingEntity) -> DrawingEntity {
-        let newEntity = entity.duplicate()
+        let newEntity = entity.duplicate(copy: false)
         self.prepareNewEntity(newEntity, setup: false, relativeTo: entity)
         
         guard let view = makeEntityView(context: self.context, entity: newEntity) else {
@@ -482,6 +483,10 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     public func remove(uuid: UUID, animated: Bool = false, announce: Bool = true) {
         if let view = self.getView(for: uuid) {
             if self.selectedEntityView === view {
+                if let stickerEntityView = self.selectedEntityView as? DrawingStickerEntityView {
+                    stickerEntityView.onDeselection()
+                }
+                
                 self.selectedEntityView = nil
                 self.selectionChanged(nil)
                 self.hasSelectionChanged(false)
@@ -625,6 +630,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         let location = gestureRecognzier.location(in: self)
         if let entityView = self.entity(at: location) {
             self.selectEntity(entityView.entity)
+            entityView.onSelection()
         }
     }
     
@@ -654,6 +660,8 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                     } else {
                         return
                     }
+                } else if let stickerEntityView = selectedEntityView as? DrawingStickerEntityView {
+                    stickerEntityView.onDeselection()
                 }
                 
                 self.selectedEntityView = nil
@@ -939,6 +947,9 @@ public class DrawingEntityView: UIView {
         let values = [self.entity.scale, self.entity.scale * 0.88, self.entity.scale]
         let keyTimes = [0.0, 0.33, 1.0]
         self.layer.animateKeyframes(values: values as [NSNumber], keyTimes: keyTimes as [NSNumber], duration: 0.3, keyPath: "transform.scale")
+    }
+    
+    func onSelection() {
     }
     
     func selectedTapAction() -> Bool {

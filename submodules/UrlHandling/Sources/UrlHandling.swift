@@ -73,6 +73,7 @@ public enum ParsedInternalPeerUrlParameter {
     case voiceChat(String?)
     case appStart(String, String?)
     case story(Int32)
+    case boost
 }
 
 public enum ParsedInternalUrl {
@@ -272,6 +273,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     }
                                 }
                                 return .peer(.name(peerName), .groupBotStart("", botAdminRights))
+                            } else if queryItem.name == "boost" {
+                                return .peer(.name(peerName), .boost)
                             }
                         }
                     }
@@ -491,6 +494,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                 } else if pathComponents.count == 2 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]) {
                         var threadId: Int32?
+                        var boost: Bool = false
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -499,12 +503,19 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             threadId = intValue
                                         }
                                     }
+                                } else {
+                                    if queryItem.name == "boost" {
+                                        boost = true
+                                    }
                                 }
                             }
                         }
                         
-                        if let threadId = threadId {
-                            return .peer(.id(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))), .replyThread(threadId, threadId))
+                        let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                        if boost {
+                            return .peer(.id(peerId), .boost)
+                        } else if let threadId = threadId {
+                            return .peer(.id(peerId), .replyThread(threadId, threadId))
                         } else {
                             return nil
                         }
@@ -713,6 +724,14 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 |> map { _ -> ResolvedUrl? in
                                 }
                                 |> then(.single(.story(peerId: peer.id, id: id)))
+                            case .boost:
+                                return combineLatest(
+                                    context.engine.peers.getChannelBoostStatus(peerId: peer.id),
+                                    context.engine.peers.canApplyChannelBoost(peerId: peer.id)
+                                )
+                                |> map { boostStatus, canApplyStatus -> ResolvedUrl? in
+                                    return .boost(peerId: peer.id, status: boostStatus, canApplyStatus: canApplyStatus)
+                                }
                         }
                     } else {
                         return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))

@@ -11,13 +11,15 @@ public final class GalleryControllerInteraction {
     public let dismissController: () -> Void
     public let replaceRootController: (ViewController, Promise<Bool>?) -> Void
     public let editMedia: (MessageId) -> Void
+    public let controller: () -> ViewController?
     
-    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, editMedia: @escaping (MessageId) -> Void) {
+    public init(presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, dismissController: @escaping () -> Void, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, editMedia: @escaping (MessageId) -> Void, controller: @escaping () -> ViewController?) {
         self.presentController = presentController
         self.pushController = pushController
         self.dismissController = dismissController
         self.replaceRootController = replaceRootController
         self.editMedia = editMedia
+        self.controller = controller
     }
 }
 

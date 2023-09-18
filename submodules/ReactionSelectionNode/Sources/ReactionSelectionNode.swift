@@ -13,6 +13,7 @@ import AccountContext
 import AnimationCache
 import MultiAnimationRenderer
 import ShimmerEffect
+import GenerateStickerPlaceholderImage
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in

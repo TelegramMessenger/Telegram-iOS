@@ -114,12 +114,18 @@ public extension Message {
         var timeout: Int32?
         for attribute in self.attributes {
             if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+                if attribute.timeout == viewOnceTimeout {
+                    return attribute.timeout
+                }
                 if let timeoutValue = timeout {
                     timeout = min(timeoutValue, attribute.timeout)
                 } else {
                     timeout = attribute.timeout
                 }
             } else if let attribute = attribute as? AutoclearTimeoutMessageAttribute {
+                if attribute.timeout == viewOnceTimeout {
+                    return attribute.timeout
+                }
                 if let timeoutValue = timeout {
                     timeout = min(timeoutValue, attribute.timeout)
                 } else {

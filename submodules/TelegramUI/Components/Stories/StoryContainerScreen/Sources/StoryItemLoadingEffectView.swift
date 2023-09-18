@@ -4,6 +4,10 @@ import HierarchyTrackingLayer
 import ComponentFlow
 import Display
 
+private let shadowImage: UIImage? = {
+    UIImage(named: "Stories/PanelGradient")
+}()
+
 final class StoryItemLoadingEffectView: UIView {
     private let duration: Double
     private let hasCustomBorder: Bool
@@ -46,16 +50,32 @@ final class StoryItemLoadingEffectView: UIView {
         
         let generateGradient: (CGFloat) -> UIImage? = { baseAlpha in
             return generateImage(CGSize(width: self.gradientWidth, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
-                let backgroundColor = UIColor.clear
-                
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setFillColor(backgroundColor.cgColor)
-                context.fill(CGRect(origin: CGPoint(), size: size))
                 
-                context.clip(to: CGRect(origin: CGPoint(), size: size))
+                let foregroundColor = UIColor(white: 1.0, alpha: min(1.0, baseAlpha * 4.0))
                 
-                let foregroundColor = UIColor(white: 1.0, alpha: baseAlpha)
+                if let shadowImage {
+                    UIGraphicsPushContext(context)
+                    
+                    for i in 0 ..< 2 {
+                        let shadowFrame = CGRect(origin: CGPoint(x: CGFloat(i) * (size.width * 0.5), y: 0.0), size: CGSize(width: size.width * 0.5, height: size.height))
+                        
+                        context.saveGState()
+                        context.translateBy(x: shadowFrame.midX, y: shadowFrame.midY)
+                        context.rotate(by: CGFloat(i == 0 ? 1.0 : -1.0) * CGFloat.pi * 0.5)
+                        let adjustedRect = CGRect(origin: CGPoint(x: -shadowFrame.height * 0.5, y: -shadowFrame.width * 0.5), size: CGSize(width: shadowFrame.height, height: shadowFrame.width))
+                        
+                        context.clip(to: adjustedRect, mask: shadowImage.cgImage!)
+                        context.setFillColor(foregroundColor.cgColor)
+                        context.fill(adjustedRect)
+                        
+                        context.restoreGState()
+                    }
+                    
+                    UIGraphicsPopContext()
+                }
                 
+                /*
                 let numColors = 7
                 var locations: [CGFloat] = []
                 var colors: [CGColor] = []
@@ -72,7 +92,7 @@ final class StoryItemLoadingEffectView: UIView {
                 let colorSpace = CGColorSpaceCreateDeviceRGB()
                 let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
                 
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())
+                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())*/
             })
         }
         self.backgroundView.image = generateGradient(effectAlpha)
@@ -89,6 +109,11 @@ final class StoryItemLoadingEffectView: UIView {
     }
     
     private func updateAnimations(size: CGSize) {
+        /*if "".isEmpty {
+            self.backgroundView.center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
+            return
+        }*/
+        
         if self.backgroundView.layer.animation(forKey: "shimmer") != nil || (self.playOnce && self.didPlayOnce) {
             return
         }
