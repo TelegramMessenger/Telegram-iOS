@@ -1637,7 +1637,6 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode = PeerInfoHeaderNavigationButton()
                     self.leftButtonNodes[spec.key] = buttonNode
                     self.addSubnode(buttonNode)
-                    buttonNode.isWhite = self.isWhite
                     buttonNode.action = { [weak self] _, gesture in
                         guard let strongSelf = self, let buttonNode = strongSelf.leftButtonNodes[spec.key] else {
                             return
@@ -1659,6 +1658,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
+                    
+                    buttonNode.isWhite = self.isWhite
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
@@ -1722,7 +1723,6 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode = PeerInfoHeaderNavigationButton()
                     self.rightButtonNodes[key] = buttonNode
                     self.addSubnode(buttonNode)
-                    buttonNode.isWhite = self.isWhite
                 }
                 buttonNode.action = { [weak self] _, gesture in
                     guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[key] else {
@@ -1744,6 +1744,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
                 let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
+                    buttonNode.isWhite = self.isWhite
+                    
                     if key == .moreToSearch {
                         buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                     }
