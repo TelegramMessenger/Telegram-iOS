@@ -376,7 +376,7 @@ public final class ShimmerEffectNode: ASDisplayNode {
         self.effectNode.updateAbsoluteRect(rect, within: containerSize)
     }
     
-    public func update(backgroundColor: UIColor, foregroundColor: UIColor, shimmeringColor: UIColor, shapes: [Shape], horizontal: Bool = false, effectSize: CGFloat? = nil, globalTimeOffset: Bool = true, duration: Double? = nil, size: CGSize) {
+    public func update(backgroundColor: UIColor, foregroundColor: UIColor, shimmeringColor: UIColor, shapes: [Shape], horizontal: Bool = false, effectSize: CGFloat? = nil, globalTimeOffset: Bool = true, duration: Double? = nil, size: CGSize, mask: Bool = false) {
         if self.currentShapes == shapes, let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), let currentShimmeringColor = self.currentShimmeringColor, currentShimmeringColor.isEqual(shimmeringColor), horizontal == self.currentHorizontal, effectSize == self.currentEffectSize, self.currentSize == size {
             return
         }
@@ -393,11 +393,17 @@ public final class ShimmerEffectNode: ASDisplayNode {
         self.effectNode.update(backgroundColor: foregroundColor, foregroundColor: shimmeringColor, horizontal: horizontal, effectSize: effectSize, globalTimeOffset: globalTimeOffset, duration: duration)
         
         self.foregroundNode.image = generateImage(size, rotatedContext: { size, context in
-            context.setFillColor(backgroundColor.cgColor)
-            context.setBlendMode(.copy)
-            context.fill(CGRect(origin: CGPoint(), size: size))
-            
-            context.setFillColor(UIColor.clear.cgColor)
+            if !mask {
+                context.setFillColor(backgroundColor.cgColor)
+                context.setBlendMode(.copy)
+                context.fill(CGRect(origin: .zero, size: size))
+                
+                context.setFillColor(UIColor.clear.cgColor)
+            } else {
+                context.clear(CGRect(origin: .zero, size: size))
+                
+                context.setFillColor(UIColor.white.cgColor)
+            }
             for shape in shapes {
                 switch shape {
                 case let .circle(frame):
@@ -424,6 +430,20 @@ public final class ShimmerEffectNode: ASDisplayNode {
                 }
             }
         })
+        
+        if mask {
+            if self.view.mask == nil {
+                self.foregroundNode.removeFromSupernode()
+                self.view.mask = self.foregroundNode.view
+            }
+        } else {
+            if self.view.mask != nil {
+                self.view.mask = nil
+                if self.foregroundNode.supernode == nil {
+                    self.addSubnode(self.foregroundNode)
+                }
+            }
+        }
         
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.foregroundNode.frame = CGRect(origin: CGPoint(), size: size)
