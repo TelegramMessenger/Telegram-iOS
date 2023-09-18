@@ -56,7 +56,6 @@ objc_library(
         "-Drtc=rtc1",
         "-Dwebrtc=webrtc1",
     ] + select({
-        "@build_bazel_rules_apple//apple:ios_armv7": copts_arm,
         "@build_bazel_rules_apple//apple:ios_arm64": copts_arm,
         "//build-system:ios_sim_arm64": copts_arm,
         "@build_bazel_rules_apple//apple:ios_x86_64": copts_x86,
