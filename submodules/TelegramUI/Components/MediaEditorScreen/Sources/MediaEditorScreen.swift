@@ -917,12 +917,21 @@ final class MediaEditorScreenComponent: Component {
             let previousAudioData = self.appliedAudioData
             var audioData: VideoScrubberComponent.AudioData?
             if let audioTrack = mediaEditor?.values.audioTrack {
+                let artist = audioTrack.artist
+                var title = audioTrack.title
+                if artist == nil && title == nil {
+                    if let underscoreIndex = audioTrack.path.firstIndex(of: "_"), let dotIndex = audioTrack.path.lastIndex(of: ".") {
+                        title = String(audioTrack.path[audioTrack.path.index(after: underscoreIndex)..<dotIndex])
+                    } else {
+                        title = audioTrack.path
+                    }
+                }
                 let trimRange = mediaEditor?.values.audioTrackTrimRange
                 let offset = mediaEditor?.values.audioTrackOffset
                 let audioSamples = mediaEditor?.values.audioTrackSamples
                 audioData = VideoScrubberComponent.AudioData(
-                    artist: audioTrack.artist,
-                    title: audioTrack.title,
+                    artist: artist,
+                    title: title,
                     samples: audioSamples?.samples,
                     peak: audioSamples?.peak ?? 0,
                     duration: audioTrack.duration,

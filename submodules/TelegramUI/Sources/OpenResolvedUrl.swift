@@ -929,8 +929,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 navigationController?.pushViewController(controller)
                 
                 updateImpl = { [weak controller] in
-                    let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
-                    controller?.updateSubject(nextSubject, count: nextCount)
+                    if let _ = status.nextLevelBoosts {
+                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
+                        controller?.updateSubject(nextSubject, count: nextCount)
+                    } else {
+                        controller?.dismiss()
+                    }
                 }
                 dismissImpl = { [weak controller] in
                     controller?.dismiss()

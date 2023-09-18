@@ -9977,7 +9977,7 @@ Sorry for the inconvenience.";
 "ChannelBoost.EnableStoriesText" = "Your channel needs %1$@ to enable posting stories.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
 
 "ChannelBoost.IncreaseLimit" = "Increase Story Limit";
-"ChannelBoost.IncreaseLimitText" = "Your channel needs %1$@ to post **%2$@** stories per day.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+"ChannelBoost.IncreaseLimitText" = "Your channel needs %1$@ to post %2$@.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
 
 "ChannelBoost.EnableStoriesForChannel" = "Enable Stories for This Channel";
 "ChannelBoost.EnableStoriesForOtherChannel" = "Enable Stories for The Channel";
@@ -9987,10 +9987,20 @@ Sorry for the inconvenience.";
 "ChannelBoost.EnableStoriesMoreRequired" = "This channel needs **%1$@** to enable stories.";
 
 "ChannelBoost.HelpUpgradeChannel" = "Help Upgrade This Channel";
-"ChannelBoost.HelpUpgradeChannelText" = "**%1$@** needs %2$@ to be able to post **%3$@** stories per day.";
+"ChannelBoost.HelpUpgradeChannelText" = "**%1$@** needs %2$@ to be able to post %3$@.";
+
+"ChannelBoost.BoostedChannelReachedLevel" = "This channel reached **Level %1$@** and can now post %2$@.";
+"ChannelBoost.BoostedChannelMoreRequired" = "%1$@ needed to be able to post %2$@.";
+
+"ChannelBoost.MaxLevelReached" = "Maximum Level Reached";
+"ChannelBoost.MaxLevelReachedText" = "This channel reached **Level %1$@** and can now post %2$@.";
+"ChannelBoost.MaxLevelReachedTextAuthor" = "This channel reached **Level %1$@** and can now post %2$@.";
 
 "ChannelBoost.YouBoostedChannel" = "You Boosted %1$@!";
 "ChannelBoost.YouBoostedOtherChannel" = "You Boosted The Channel";
+
+"ChannelBoost.StoriesPerDay_1" = "**%@** story per day";
+"ChannelBoost.StoriesPerDay_any" = "**%@** stories per day";
 
 "ChannelBoost.MoreBoosts_1" = "**%@** more boost";
 "ChannelBoost.MoreBoosts_any" = "**%@** more boosts";

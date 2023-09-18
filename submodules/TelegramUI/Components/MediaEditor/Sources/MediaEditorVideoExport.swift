@@ -234,7 +234,7 @@ public final class MediaEditorVideoExport {
         
         var audioTimeRange: CMTimeRange? {
             if let audioTrack = self.values.audioTrack {
-                let offset = self.values.audioTrackOffset ?? 0.0
+                let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
                 if let range = self.values.audioTrackTrimRange {
                     return CMTimeRange(
                         start: CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
@@ -253,7 +253,8 @@ public final class MediaEditorVideoExport {
         
         var audioStartTime: CMTime {
             if let range = self.values.audioTrackTrimRange {
-                return CMTime(seconds: range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+                let offset = -min(0.0, self.values.audioTrackOffset ?? 0.0)
+                return CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
             } else {
                 return .zero
             }
@@ -423,9 +424,11 @@ public final class MediaEditorVideoExport {
                 print("error")
                 return
             }
-        
+            videoTrack.preferredTransform = videoAssetTrack.preferredTransform
+            
             let timeRange: CMTimeRange = CMTimeRangeMake(start: .zero, duration: duration)
             try? videoTrack.insertTimeRange(timeRange, of: videoAssetTrack, at: .zero)
+            
             if let audioAssetTrack = asset.tracks(withMediaType: .audio).first, let audioTrack = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid), !self.configuration.values.videoIsMuted {
                 try? audioTrack.insertTimeRange(timeRange, of: audioAssetTrack, at: .zero)
             }
