@@ -434,10 +434,14 @@ public final class MediaEditorVideoExport {
             }
             
             var musicRange = timeRange
+            let musicStartTime = self.configuration.audioStartTime
             if let audioTrackRange = self.configuration.audioTimeRange {
                 musicRange = audioTrackRange
             }
-            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: self.configuration.audioStartTime)
+            if musicStartTime + musicRange.duration > duration {
+                musicRange = CMTimeRange(start: musicRange.start, end: duration - musicStartTime)
+            }
+            try? musicTrack.insertTimeRange(musicRange, of: musicAssetTrack, at: musicStartTime)
             
             if let volume = self.configuration.values.audioTrackVolume, volume < 1.0 {
                 let audioMix = AVMutableAudioMix()
