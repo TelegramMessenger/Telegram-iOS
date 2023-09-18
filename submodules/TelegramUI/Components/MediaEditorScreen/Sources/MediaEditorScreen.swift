@@ -3283,7 +3283,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 }), false),
                 .action(
                     ContextMenuActionItem(
-                        text: "Remove Audio",
+                        text: self.presentationData.strings.MediaEditor_RemoveAudio,
                         icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.primaryColor)},
                         action: { [weak self] f in
                             f.dismissWithResult(.default)

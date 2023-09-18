@@ -622,10 +622,10 @@ final class VideoScrubberComponent: Component {
             if self.audioScrollView.contentSize != contentSize || audioChanged {
                 self.audioScrollView.contentSize = contentSize
                 if !component.audioOnly {
-                    let leftInset = scrubberSize.width
+                    let leftInset = scrubberSize.width - handleWidth * 2.5
                     let rightInset: CGFloat
                     if self.audioScrollView.contentSize.width > self.audioScrollView.frame.width {
-                        rightInset = scrubberSize.width
+                        rightInset = scrubberSize.width - handleWidth * 2.5
                     } else {
                         rightInset = self.audioScrollView.frame.width - self.audioScrollView.contentSize.width
                     }

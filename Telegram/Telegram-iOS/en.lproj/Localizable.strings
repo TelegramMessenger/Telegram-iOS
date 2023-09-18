@@ -10076,3 +10076,5 @@ Sorry for the inconvenience.";
 "Stats.Boosts.PremiumSubscribers" = "Premium Subscribers";
 "Stats.Boosts.ExistingBoosts" = "Existing Boosts";
 "Stats.Boosts.BoostsToLevelUp" = "Boosts to Level Up";
+
+"MediaEditor.RemoveAudio" = "Remove Audio";
