@@ -323,6 +323,7 @@ final class ShareWithPeersScreenComponent: Component {
         private var isDismissed: Bool = false
         
         private var sendAsPeerId: EnginePeer.Id?
+        private var isCustomTarget = false
         
         private var selectedPeers: [EnginePeer.Id] = []
         private var selectedGroups: [EnginePeer.Id] = []
@@ -1039,7 +1040,7 @@ final class ShareWithPeersScreenComponent: Component {
                         var isStories = false
                         var accessory: PeerListItemComponent.RightAccessory
                         if case .stories = component.stateContext.subject {
-                            accessory = .disclosure
+                            accessory = self.isCustomTarget ? .none : .disclosure
                             isStories = true
                         } else {
                             if let selectedPeerId = self.sendAsPeerId {
@@ -1070,7 +1071,9 @@ final class ShareWithPeersScreenComponent: Component {
                                         return
                                     }
                                     if isStories {
-                                        let _ = self.presentSendAsPeer()
+                                        if !self.isCustomTarget {
+                                            let _ = self.presentSendAsPeer()
+                                        }
                                     } else {
                                         if peer.id.namespace == Namespaces.Peer.CloudUser {
                                             self.component?.peerCompletion(peer.id)
@@ -1114,7 +1117,7 @@ final class ShareWithPeersScreenComponent: Component {
                                                                 
                                                                 if let previousController = navigationController?.viewControllers.reversed().first(where: { $0 is ShareWithPeersScreen}) as? ShareWithPeersScreen {
                                                                     previousController.dismiss(completion: { [weak navigationController] in
-                                                                        Queue.mainQueue().justDispatch {   
+                                                                        Queue.mainQueue().justDispatch {
                                                                             if let controller = navigationController?.viewControllers.last as? ViewController {
                                                                                 controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                                                             }
@@ -1824,7 +1827,10 @@ final class ShareWithPeersScreenComponent: Component {
             let containerSideInset = floorToScreenPixels((availableSize.width - containerWidth) / 2.0)
             
             if self.component == nil {
-                self.sendAsPeerId = component.initialSendAsPeerId
+                if let sendAsPeerId = component.initialSendAsPeerId {
+                    self.sendAsPeerId = sendAsPeerId
+                    self.isCustomTarget = true
+                }
                 
                 switch component.initialPrivacy.base {
                 case .everyone:

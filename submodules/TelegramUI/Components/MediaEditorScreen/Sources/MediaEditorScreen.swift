@@ -3836,6 +3836,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     fileprivate let context: AccountContext
     fileprivate let subject: Signal<Subject?, NoError>
     fileprivate let isEditingStory: Bool
+    fileprivate let customTarget: EnginePeer.Id?
     
     fileprivate let initialCaption: NSAttributedString?
     fileprivate let initialPrivacy: EngineStoryPrivacy?
@@ -3859,6 +3860,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     public init(
         context: AccountContext,
         subject: Signal<Subject?, NoError>,
+        customTarget: EnginePeer.Id? = nil,
         isEditing: Bool,
         initialCaption: NSAttributedString? = nil,
         initialPrivacy: EngineStoryPrivacy? = nil,
@@ -3870,6 +3872,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
     ) {
         self.context = context
         self.subject = subject
+        self.customTarget = customTarget
         self.isEditingStory = isEditing
         self.initialCaption = initialCaption
         self.initialPrivacy = initialPrivacy
@@ -3976,6 +3979,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let controller = ShareWithPeersScreen(
                 context: self.context,
                 initialPrivacy: initialPrivacy,
+                initialSendAsPeerId: self.customTarget,
                 allowScreenshots: !privacy.isForwardingDisabled,
                 pin: privacy.pin,
                 timeout: privacy.timeout,
