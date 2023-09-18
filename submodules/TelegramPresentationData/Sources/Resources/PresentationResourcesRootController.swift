@@ -169,4 +169,10 @@ public struct PresentationResourcesRootController {
             })?.stretchableImage(withLeftCapWidth: Int(inset) + 15, topCapHeight: 8 * 2 + 15)
         })
     }
+    
+    public static func navigationPostStoryIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationPostStoryIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddStoryIcon"), color: theme.rootController.navigationBar.accentTextColor)
+        })
+    }
 }

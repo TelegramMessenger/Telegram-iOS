@@ -266,7 +266,7 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
     }
     
     @discardableResult
-    public func openStoryCamera(transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
+    public func openStoryCamera(customTarget: EnginePeer.Id?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator? {
         guard let controller = self.viewControllers.last as? ViewController else {
             return nil
         }
@@ -379,12 +379,17 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                         
                         let target: Stories.PendingTarget
                         let targetPeerId: EnginePeer.Id
-                        if let sendAsPeerId = options.sendAsPeerId {
-                            target = .peer(sendAsPeerId)
-                            targetPeerId = sendAsPeerId
+                        if let customTarget {
+                            target = .peer(customTarget)
+                            targetPeerId = customTarget
                         } else {
-                            target = .myStories
-                            targetPeerId = context.account.peerId
+                            if let sendAsPeerId = options.sendAsPeerId {
+                                target = .peer(sendAsPeerId)
+                                targetPeerId = sendAsPeerId
+                            } else {
+                                target = .myStories
+                                targetPeerId = context.account.peerId
+                            }
                         }
                         storyTarget = target
                         

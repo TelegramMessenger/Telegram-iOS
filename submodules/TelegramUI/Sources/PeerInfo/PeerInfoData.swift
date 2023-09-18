@@ -203,6 +203,7 @@ final class PeerInfoScreenData {
     let threadData: MessageHistoryThreadData?
     let appConfiguration: AppConfiguration?
     let isPowerSavingEnabled: Bool?
+    let accountIsPremium: Bool
     
     let _isContact: Bool
     var forceIsContact: Bool = false
@@ -236,7 +237,8 @@ final class PeerInfoScreenData {
         requestsContext: PeerInvitationImportersContext?,
         threadData: MessageHistoryThreadData?,
         appConfiguration: AppConfiguration?,
-        isPowerSavingEnabled: Bool?
+        isPowerSavingEnabled: Bool?,
+        accountIsPremium: Bool
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -259,6 +261,7 @@ final class PeerInfoScreenData {
         self.threadData = threadData
         self.appConfiguration = appConfiguration
         self.isPowerSavingEnabled = isPowerSavingEnabled
+        self.accountIsPremium = accountIsPremium
     }
 }
 
@@ -599,7 +602,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             requestsContext: nil,
             threadData: nil,
             appConfiguration: appConfiguration,
-            isPowerSavingEnabled: isPowerSavingEnabled
+            isPowerSavingEnabled: isPowerSavingEnabled,
+            accountIsPremium: peer?.isPremium ?? false
         )
     }
 }
@@ -632,7 +636,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContext: nil,
                 threadData: nil,
                 appConfiguration: nil,
-                isPowerSavingEnabled: nil
+                isPowerSavingEnabled: nil,
+                accountIsPremium: false
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -741,15 +746,22 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             |> distinctUntilChanged
             
+            let accountIsPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                return peer?.isPremium ?? false
+            }
+            |> distinctUntilChanged
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 secretChatKeyFingerprint,
                 status,
-                hasStories
+                hasStories,
+                accountIsPremium
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, hasStories, accountIsPremium -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 
                 if let hasStories {
@@ -787,7 +799,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: nil,
                     threadData: nil,
                     appConfiguration: nil,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    accountIsPremium: accountIsPremium
                 )
             }
         case .channel:
@@ -820,6 +833,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
             }
             |> distinctUntilChanged
             
+            let accountIsPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                return peer?.isPremium ?? false
+            }
+            |> distinctUntilChanged
+            
             return combineLatest(
                 context.account.viewTracker.peerView(peerId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -829,9 +848,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                hasStories
+                hasStories,
+                accountIsPremium
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if let hasStories {
                     if hasStories {
@@ -887,7 +907,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: currentRequestsContext,
                     threadData: nil,
                     appConfiguration: nil,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    accountIsPremium: accountIsPremium
                 )
             }
         case let .group(groupId):
@@ -1006,6 +1027,12 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 threadData = .single(nil)
             }
             
+            let accountIsPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                return peer?.isPremium ?? false
+            }
+            |> distinctUntilChanged
+            
             return combineLatest(queue: .mainQueue(),
                 context.account.viewTracker.peerView(groupId, updateData: true),
                 peerInfoAvailableMediaPanes(context: context, peerId: groupId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder),
@@ -1017,9 +1044,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
                 threadData,
-                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration]),
+                accountIsPremium
             )
-            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> Signal<PeerInfoScreenData, NoError> in
+            |> mapToSignal { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView, accountIsPremium -> Signal<PeerInfoScreenData, NoError> in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -1091,7 +1119,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     requestsContext: currentRequestsContext,
                     threadData: threadData,
                     appConfiguration: appConfiguration,
-                    isPowerSavingEnabled: nil
+                    isPowerSavingEnabled: nil,
+                    accountIsPremium: accountIsPremium
                 ))
             }
         }
