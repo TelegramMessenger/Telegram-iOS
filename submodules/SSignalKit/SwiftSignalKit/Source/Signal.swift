@@ -24,7 +24,11 @@ public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
 }
 
 private final class SubscriberDisposable<T, E>: Disposable, CustomStringConvertible {
+    #if DEBUG
     private weak var subscriber: Subscriber<T, E>?
+    #else
+    private var subscriber: Subscriber<T, E>?
+    #endif
     
     private var lock = pthread_mutex_t()
     private var disposable: Disposable?
