@@ -10080,3 +10080,9 @@ Sorry for the inconvenience.";
 "Stats.Boosts.BoostsToLevelUp" = "Boosts to Level Up";
 
 "MediaEditor.RemoveAudio" = "Remove Audio";
+
+"ChannelBoost.BoostLinkCopied" = "Boost link copied to clipboard";
+"ChannelBoost.BoostLinkForwardTooltip.Chat.One" = "Boost link forwarded to **%@**";
+"ChannelBoost.BoostLinkForwardTooltip.TwoChats.One" = "Boost link forwarded to **%@** and **%@**";
+"ChannelBoost.BoostLinkForwardTooltip.ManyChats.One" = "Boost link forwarded to **%@** and %@ others";
+"ChannelBoost.BoostLinkForwardTooltip.SavedMessages.One" = "Boost link forwarded to **Saved Messages**";

@@ -1119,7 +1119,7 @@ final class ShareWithPeersScreenComponent: Component {
                                                                     previousController.dismiss(completion: { [weak navigationController] in
                                                                         Queue.mainQueue().justDispatch {
                                                                             if let controller = navigationController?.viewControllers.last as? ViewController {
-                                                                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                                                                controller.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: true, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                                                             }
                                                                         }
                                                                     })
