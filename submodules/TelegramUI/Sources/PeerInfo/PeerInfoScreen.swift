@@ -8289,7 +8289,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.postingAvailabilityDisposable?.dispose()
         
         let canPostStatus: Signal<StoriesUploadAvailability, NoError>
-        #if DEBUG
+        #if DEBUG && false
         canPostStatus = .single(.available)
         #else
         canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
@@ -8316,7 +8316,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     coordinator?.animateIn()
                 }
             case .channelBoostRequired:
-                let _ = combineLatest(
+                self.postingAvailabilityDisposable?.dispose()
+                
+                self.postingAvailabilityDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
                     self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId)
@@ -8352,7 +8354,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     
                     self.hapticFeedback.impact(.light)
-                })
+                }).strict()
             default:
                 break
             }
@@ -9873,7 +9875,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
-                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, channel.hasPermission(.postStories) {
+                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info, channel.hasPermission(.postStories) {
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 
