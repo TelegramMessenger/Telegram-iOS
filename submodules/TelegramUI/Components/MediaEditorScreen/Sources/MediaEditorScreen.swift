@@ -2739,6 +2739,34 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                         self.previewContainerView.addSubview(destinationTransitionView)
                         destinationSnapshotView = destinationTransitionView
                     }
+                } else if let destinationNode = destinationView.asyncdisplaykit_node as? AvatarNode.ContentNode {
+                    let destinationTransitionView: UIView?
+                    if let image = destinationNode.unroundedImage {
+                        destinationTransitionView = UIImageView(image: image)
+                        destinationTransitionView?.bounds = destinationNode.bounds
+                        destinationTransitionView?.layer.cornerRadius = destinationNode.bounds.width / 2.0
+                    } else if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
+                        destinationTransitionView = snapshotView
+                    } else {
+                        destinationTransitionView = nil
+                    }
+                    destinationView.isHidden = true
+                    
+                    if let destinationTransitionView {
+                        destinationTransitionView.layer.anchorPoint = CGPoint(x: 0.0, y: 0.5)
+                        let snapshotScale = self.previewContainerView.bounds.width / destinationTransitionView.frame.width
+                        destinationTransitionView.center = CGPoint(x: 0.0, y: self.previewContainerView.bounds.height / 2.0)
+                        destinationTransitionView.layer.transform = CATransform3DMakeScale(snapshotScale, snapshotScale, 1.0)
+                        
+                        destinationTransitionView.alpha = 0.0
+                        Queue.mainQueue().after(0.15) {
+                            destinationTransitionView.alpha = 1.0
+                            destinationTransitionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+                        }
+                        
+                        self.previewContainerView.addSubview(destinationTransitionView)
+                        destinationSnapshotView = destinationTransitionView
+                    }
                 }
                 
                 self.previewContainerView.layer.animatePosition(from: self.previewContainerView.center, to: destinationLocalFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
