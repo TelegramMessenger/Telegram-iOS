@@ -371,10 +371,20 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 
                                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: environment.theme)
                                 
-                                let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
+                                let title: String
+                                let text: String
+                                
+                                if component.peerId == component.context.account.peerId {
+                                    title = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(paneNode.selectedIds.count))
+                                    text = presentationData.strings.StoryList_TooltipStoriesSavedToProfileText
+                                } else {
+                                    title = presentationData.strings.StoryList_TooltipStoriesSavedToChannel(Int32(paneNode.selectedIds.count))
+                                    text = presentationData.strings.Story_ToastSavedToChannelText
+                                }
+                                
                                 environment.controller()?.present(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .info(title: title, text: presentationData.strings.StoryList_TooltipStoriesSavedToProfileText, timeout: nil),
+                                    content: .info(title: title, text: text, timeout: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { _ in return false }

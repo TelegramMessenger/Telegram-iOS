@@ -424,6 +424,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     private let playbackStartDisposable = MetaDisposable()
     
     var storyData: (totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool)?
+    var storyProgress: Float?
     
     init(context: AccountContext) {
         self.context = context
@@ -462,13 +463,23 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             theme.list.controlSecondaryColor,
             theme.list.controlSecondaryColor
         ]
-        self.avatarNode.setStoryStats(storyStats: self.storyData.flatMap { storyData in
-            return AvatarNode.StoryStats(
+        var storyStats: AvatarNode.StoryStats?
+        if let storyData = self.storyData {
+            storyStats = AvatarNode.StoryStats(
                 totalCount: storyData.totalCount,
                 unseenCount: storyData.unseenCount,
-                hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends
+                hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
+                progress: self.storyProgress
             )
-        }, presentationParams: AvatarNode.StoryPresentationParams(
+        } else if let storyProgress = self.storyProgress {
+            storyStats = AvatarNode.StoryStats(
+                totalCount: 1,
+                unseenCount: 1,
+                hasUnseenCloseFriendsItems: false,
+                progress: storyProgress
+            )
+        }
+        self.avatarNode.setStoryStats(storyStats: storyStats, presentationParams: AvatarNode.StoryPresentationParams(
             colors: colors,
             lineWidth: 3.0,
             inactiveLineWidth: 1.5

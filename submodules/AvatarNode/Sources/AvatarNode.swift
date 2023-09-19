@@ -867,15 +867,18 @@ public final class AvatarNode: ASDisplayNode {
         public var totalCount: Int
         public var unseenCount: Int
         public var hasUnseenCloseFriendsItems: Bool
+        public var progress: Float?
         
         public init(
             totalCount: Int,
             unseenCount: Int,
-            hasUnseenCloseFriendsItems: Bool
+            hasUnseenCloseFriendsItems: Bool,
+            progress: Float? = nil
         ) {
             self.totalCount = totalCount
             self.unseenCount = unseenCount
             self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
+            self.progress = progress
         }
     }
     
@@ -1135,6 +1138,12 @@ public final class AvatarNode: ASDisplayNode {
                 storyIndicator = ComponentView()
                 self.storyIndicator = storyIndicator
             }
+            var mappedProgress: AvatarStoryIndicatorComponent.Progress?
+            if let value = storyStats.progress {
+                mappedProgress = .definite(value)
+            } else if !self.loadingStatuses.isEmpty {
+                mappedProgress = .indefinite
+            }
             let _ = storyIndicator.update(
                 transition: indicatorTransition,
                 component: AnyComponent(AvatarStoryIndicatorComponent(
@@ -1151,7 +1160,7 @@ public final class AvatarNode: ASDisplayNode {
                         totalCount: storyStats.totalCount,
                         unseenCount: storyStats.unseenCount
                     ),
-                    displayProgress: !self.loadingStatuses.isEmpty
+                    progress: mappedProgress
                 )),
                 environment: {},
                 containerSize: indicatorSize

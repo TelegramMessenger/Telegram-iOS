@@ -99,7 +99,7 @@ private func generateBadgePath(rectSize: CGSize, tailPosition: CGFloat? = 0.5) -
         withCenter: CGPoint(x: rect.minX + cornerRadius, y: rect.minY + cornerRadius),
         radius: cornerRadius,
         startAngle: .pi,
-        endAngle: .pi + leftArcEndAngle,
+        endAngle: .pi + max(0.0001, leftArcEndAngle),
         clockwise: true
     )
 
@@ -136,7 +136,7 @@ private func generateBadgePath(rectSize: CGSize, tailPosition: CGFloat? = 0.5) -
     path.addArc(
         withCenter: CGPoint(x: rect.minX + rectSize.width - cornerRadius, y: rect.minY + cornerRadius),
         radius: cornerRadius,
-        startAngle: rightArcStartAngle,
+        startAngle: min(-0.0001, rightArcStartAngle),
         endAngle: 0.0,
         clockwise: true
     )

@@ -38,13 +38,18 @@ public final class AvatarStoryIndicatorComponent: Component {
         }
     }
     
+    public enum Progress: Equatable {
+        case indefinite
+        case definite(Float)
+    }
+    
     public let hasUnseen: Bool
     public let hasUnseenCloseFriendsItems: Bool
     public let colors: Colors
     public let activeLineWidth: CGFloat
     public let inactiveLineWidth: CGFloat
     public let counters: Counters?
-    public let displayProgress: Bool
+    public let progress: Progress?
     
     public init(
         hasUnseen: Bool,
@@ -53,7 +58,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         activeLineWidth: CGFloat,
         inactiveLineWidth: CGFloat,
         counters: Counters?,
-        displayProgress: Bool = false
+        progress: Progress? = nil
     ) {
         self.hasUnseen = hasUnseen
         self.hasUnseenCloseFriendsItems = hasUnseenCloseFriendsItems
@@ -61,7 +66,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         self.activeLineWidth = activeLineWidth
         self.inactiveLineWidth = inactiveLineWidth
         self.counters = counters
-        self.displayProgress = displayProgress
+        self.progress = progress
     }
     
     public static func ==(lhs: AvatarStoryIndicatorComponent, rhs: AvatarStoryIndicatorComponent) -> Bool {
@@ -83,7 +88,7 @@ public final class AvatarStoryIndicatorComponent: Component {
         if lhs.counters != rhs.counters {
             return false
         }
-        if lhs.displayProgress != rhs.displayProgress {
+        if lhs.progress != rhs.progress {
             return false
         }
         return true
@@ -364,7 +369,7 @@ public final class AvatarStoryIndicatorComponent: Component {
             transition.setFrame(view: self.indicatorView, frame: indicatorFrame)
             
             let progressTransition = Transition(animation: .curve(duration: 0.3, curve: .easeInOut))
-            if component.displayProgress {
+            if let progress = component.progress {
                 let colorLayer: SimpleGradientLayer
                 if let current = self.colorLayer {
                     colorLayer = current
@@ -379,13 +384,12 @@ public final class AvatarStoryIndicatorComponent: Component {
                 progressTransition.setAlpha(layer: colorLayer, alpha: 1.0)
                 
                 let colors: [CGColor] = activeColors
-                /*if component.hasUnseen {
-                    colors = activeColors
+                let lineWidth: CGFloat
+                if case .definite = progress {
+                    lineWidth = component.activeLineWidth
                 } else {
-                    colors = inactiveColors
-                }*/
-                
-                let lineWidth: CGFloat = component.hasUnseen ? component.activeLineWidth : component.inactiveLineWidth
+                    lineWidth = component.hasUnseen ? component.activeLineWidth : component.inactiveLineWidth
+                }
                 
                 colorLayer.colors = colors
                 colorLayer.startPoint = CGPoint(x: 0.0, y: 0.0)
@@ -402,7 +406,16 @@ public final class AvatarStoryIndicatorComponent: Component {
                 
                 colorLayer.frame = indicatorFrame
                 progressLayer.frame = CGRect(origin: CGPoint(), size: indicatorFrame.size)
-                progressLayer.update(size: indicatorFrame.size, radius: radius, lineWidth: lineWidth, value: .indefinite, transition: .immediate)
+                
+                let mappedProgress: ProgressLayer.Value
+                switch progress {
+                case .indefinite:
+                    mappedProgress = .indefinite
+                case let .definite(value):
+                    mappedProgress = .progress(value)
+                }
+                
+                progressLayer.update(size: indicatorFrame.size, radius: radius, lineWidth: lineWidth, value: mappedProgress, transition: .immediate)
             } else {
                 progressTransition.setAlpha(view: self.indicatorView, alpha: 1.0)
                 

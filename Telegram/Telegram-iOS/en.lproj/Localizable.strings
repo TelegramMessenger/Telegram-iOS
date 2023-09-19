@@ -10048,6 +10048,8 @@ Sorry for the inconvenience.";
 
 "Story.SendReactionAsMessage" = "Send reaction as a private message";
 
+"StoryList.TooltipStoriesSavedToChannel_1" = "Story saved to channel's profile";
+"StoryList.TooltipStoriesSavedToChannel_any" = "%d stories saved to channel's profile.";
 "Story.ToastRemovedFromChannelText" = "Story removed from the channel's profile";
 "Story.ToastSavedToChannelTitle" = "Story saved to the channel's profile";
 "Story.ToastSavedToChannelText" = "Saved stories can be viewed by others on the channel's profile until an admin removes them.";
@@ -10078,3 +10080,9 @@ Sorry for the inconvenience.";
 "Stats.Boosts.BoostsToLevelUp" = "Boosts to Level Up";
 
 "MediaEditor.RemoveAudio" = "Remove Audio";
+
+"ChannelBoost.BoostLinkCopied" = "Boost link copied to clipboard";
+"ChannelBoost.BoostLinkForwardTooltip.Chat.One" = "Boost link forwarded to **%@**";
+"ChannelBoost.BoostLinkForwardTooltip.TwoChats.One" = "Boost link forwarded to **%@** and **%@**";
+"ChannelBoost.BoostLinkForwardTooltip.ManyChats.One" = "Boost link forwarded to **%@** and %@ others";
+"ChannelBoost.BoostLinkForwardTooltip.SavedMessages.One" = "Boost link forwarded to **Saved Messages**";

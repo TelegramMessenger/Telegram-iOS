@@ -2169,6 +2169,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private var expiringStoryList: PeerExpiringStoryListContext?
     private var expiringStoryListState: PeerExpiringStoryListContext.State?
     private var expiringStoryListDisposable: Disposable?
+    private var storyUploadProgressDisposable: Disposable?
     private var postingAvailabilityDisposable: Disposable?
     
     private let storiesReady = ValuePromise<Bool>(true, ignoreRepeated: true)
@@ -3936,6 +3937,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.storiesReady.set(false)
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
+            self.storyUploadProgressDisposable = (context.engine.messages.allStoriesUploadProgress()
+            |> map { value -> Float? in
+                return value[peerId]
+            }
+            |> distinctUntilChanged).start(next: { [weak self] value in
+                guard let self else {
+                    return
+                }
+                var mappedValue = value
+                if let value {
+                    mappedValue = max(0.027, value)
+                }
+                
+                if self.headerNode.avatarListNode.avatarContainerNode.storyProgress != mappedValue {
+                    self.headerNode.avatarListNode.avatarContainerNode.storyProgress = mappedValue
+                    self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme)
+                }
+            })
             self.expiringStoryListDisposable = (combineLatest(queue: .mainQueue(),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
                 expiringStoryList.state
@@ -8269,7 +8288,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private func openPostStory() {
         self.postingAvailabilityDisposable?.dispose()
         
-        self.postingAvailabilityDisposable = (self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
+        let canPostStatus: Signal<StoriesUploadAvailability, NoError>
+        #if DEBUG && false
+        canPostStatus = .single(.available)
+        #else
+        canPostStatus = self.context.engine.messages.checkStoriesUploadAvailability(target: .peer(self.peerId))
+        #endif
+        
+        self.postingAvailabilityDisposable = (canPostStatus
         |> deliverOnMainQueue).start(next: { [weak self] status in
             guard let self else {
                 return
@@ -8290,7 +8316,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     coordinator?.animateIn()
                 }
             case .channelBoostRequired:
-                let _ = combineLatest(
+                self.postingAvailabilityDisposable?.dispose()
+                
+                self.postingAvailabilityDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
                     self.context.engine.peers.getChannelBoostStatus(peerId: self.peerId)
@@ -8314,7 +8342,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             UIPasteboard.general.string = "https://\(link)"
                             
                             if let self {
-                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }
                             return true
                         }, openStats: { [weak self] in
@@ -8326,7 +8354,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     
                     self.hapticFeedback.impact(.light)
-                })
+                }).strict()
             default:
                 break
             }
@@ -8338,15 +8366,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             guard let self else {
                 return nil
             }
-            let _ = self
             
-            /*if let transitionView = self.headerNode.navigationButtonContainer.rightButtonNodes[.postStory]?.view {
+            if !self.headerNode.isAvatarExpanded {
+                let transitionView = self.headerNode.avatarListNode.avatarContainerNode.avatarNode.contentNode.view
                 return StoryCameraTransitionOut(
                     destinationView: transitionView,
                     destinationRect: transitionView.bounds,
                     destinationCornerRadius: transitionView.bounds.height * 0.5
                 )
-            }*/
+            }
             
             return nil
         }
@@ -9847,7 +9875,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 } else if peerInfoCanEdit(peer: self.data?.peer, chatLocation: self.chatLocation, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
-                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, channel.hasPermission(.postStories) {
+                if let data = self.data, data.accountIsPremium, let channel = data.peer as? TelegramChannel, case .broadcast = channel.info, channel.hasPermission(.postStories) {
                     rightNavigationButtons.insert(PeerInfoHeaderNavigationButtonSpec(key: .postStory, isForExpandedView: false), at: 0)
                 }
                 
