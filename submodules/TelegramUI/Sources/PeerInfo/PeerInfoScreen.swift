@@ -8340,7 +8340,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             UIPasteboard.general.string = "https://\(link)"
                             
                             if let self {
-                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }
                             return true
                         }, openStats: { [weak self] in

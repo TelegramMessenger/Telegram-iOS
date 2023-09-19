@@ -738,7 +738,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         UIPasteboard.general.string = "https://\(link)"
                 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.InviteLink_InviteLinkCopiedText), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+        presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
     }, shareBoostLink: { link in
         let link = "https://\(link)"
         
@@ -756,19 +756,19 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 let text: String
                 var savedMessages = false
                 if peerIds.count == 1, let peerId = peerIds.first, peerId == context.account.peerId {
-                    text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_SavedMessages_One
+                    text = presentationData.strings.ChannelBoost_BoostLinkForwardTooltip_SavedMessages_One
                     savedMessages = true
                 } else {
                     if peers.count == 1, let peer = peers.first {
                         let peerName = peer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_Chat_One(peerName).string
+                        text = presentationData.strings.ChannelBoost_BoostLinkForwardTooltip_Chat_One(peerName).string
                     } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
                         let firstPeerName = firstPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         let secondPeerName = secondPeer.id == context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                        text = presentationData.strings.ChannelBoost_BoostLinkForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
                     } else if let peer = peers.first {
                         let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                        text = presentationData.strings.InviteLink_InviteLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                        text = presentationData.strings.ChannelBoost_BoostLinkForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
                     } else {
                         text = ""
                     }
@@ -779,7 +779,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         shareController.actionCompleted = {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
         }
         presentImpl?(shareController)
     },

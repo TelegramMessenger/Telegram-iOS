@@ -299,7 +299,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                 let options = PHVideoRequestOptions()
                 options.isNetworkAccessAllowed = true
                 options.deliveryMode = .highQualityFormat
-                let dimensions = PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
+//                let dimensions = PixelDimensions(width: Int32(asset.pixelWidth), height: Int32(asset.pixelHeight))
                 requestId = PHImageManager.default().requestAVAsset(forVideo: asset, options: options, resultHandler: { avAsset, _, _ in
                     if alreadyReceivedAsset.swap(true) {
                         return
@@ -342,9 +342,9 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                                 }
                             }
                         } else {
-                            if alwaysUseModernPipeline {
-                                mediaEditorValues = MediaEditorValues(dimensions: dimensions, qualityPreset: qualityPreset)
-                            }
+//                            if alwaysUseModernPipeline {
+//                                mediaEditorValues = MediaEditorValues(dimensions: dimensions, qualityPreset: qualityPreset)
+//                            }
                         }
                     }
                     let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")
@@ -506,11 +506,6 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                 } else {
                     adjustments = legacyAdjustments
                 }
-            }
-        } else {
-            if alwaysUseModernPipeline && !isImage, let track = avAsset.tracks(withMediaType: .video).first {
-                let dimensions = track.naturalSize.applying(track.preferredTransform)
-                mediaEditorValues = MediaEditorValues(dimensions: PixelDimensions(width: Int32(abs(dimensions.width)), height: Int32(abs(dimensions.height))), qualityPreset: qualityPreset)
             }
         }
         let tempFile = EngineTempBox.shared.tempFile(fileName: "video.mp4")

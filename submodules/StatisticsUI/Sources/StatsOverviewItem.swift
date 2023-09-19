@@ -234,7 +234,14 @@ class StatsOverviewItemNode: ListViewItemNode {
                 
                 bottomLeftValueLabelLayoutAndApply = makeBottomLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.boosts)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
-                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(stats.nextLevelBoosts ?? 0)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                let boostsLeft: Int32
+                if let nextLevelBoosts = stats.nextLevelBoosts {
+                    boostsLeft = Int32(nextLevelBoosts - stats.boosts)
+                } else {
+                    boostsLeft = 0
+                }
+                
+                bottomRightValueLabelLayoutAndApply = makeBottomRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(boostsLeft)", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 topLeftTitleLabelLayoutAndApply = makeTopLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Boosts_Level, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                                 
