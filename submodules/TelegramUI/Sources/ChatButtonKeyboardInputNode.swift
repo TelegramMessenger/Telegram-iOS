@@ -426,7 +426,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
                     self.controllerInteraction.openPollCreation(isQuiz)
                 case let .openUserProfile(peerId):
                     let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                         guard let self, let peer else {
                             return
                         }

@@ -242,7 +242,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
                                         let maxImageSize = photo.representations.last?.dimensions.cgSize ?? imageFrame.size
                                         let boundingImageSize = maxImageSize.aspectFilled(imageFrame.size)
                                         
-                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                                        strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
                                         
                                         let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), synchronousLoad: synchronousLoads)
                                         strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)

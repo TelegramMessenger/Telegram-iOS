@@ -40,7 +40,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
         let storyContent = SingleStoryContentContextImpl(context: params.context, storyId: story.storyId, readGlobally: true)
         let _ = (storyContent.state
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+        |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] _ in
             var transitionIn: StoryContainerScreen.TransitionIn? = nil
             
             var selectedTransitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
@@ -134,7 +134,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .pass(file):
                 let _ = (params.context.account.postbox.mediaBox.resourceData(file.resource, option: .complete(waitUntilFetchStatus: true))
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { data in
+                |> deliverOnMainQueue).startStandalone(next: { data in
                     guard let navigationController = params.navigationController else {
                         return
                     }
@@ -209,7 +209,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         case let .remove(positionInList):
                             params.navigationController?.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: params.context), elevatedLayout: true, animateInAsReplacement: animateInAsReplacement, action: { action in
                                 if case .undo = action {
-                                    let _ = params.context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                    let _ = params.context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).startStandalone()
                                 }
                                 return true
                             }))
@@ -277,13 +277,13 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .story(storyController):
                 params.dismissInput()
                 let _ = (storyController
-                |> deliverOnMainQueue).start(next: { storyController in
+                |> deliverOnMainQueue).startStandalone(next: { storyController in
                     params.navigationController?.pushViewController(storyController)
                 })
             case let .gallery(gallery):
                 params.dismissInput()
                 let _ = (gallery
-                |> deliverOnMainQueue).start(next: { gallery in
+                |> deliverOnMainQueue).startStandalone(next: { gallery in
                     gallery.centralItemUpdated = { messageId in
                         params.centralItemUpdated?(messageId)
                     }
@@ -320,7 +320,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     }
                     
                     let _ = (paramsSignal
-                    |> deliverOnMainQueue).start(next: { peer, isContact in
+                    |> deliverOnMainQueue).startStandalone(next: { peer, isContact in
                         let contactData: DeviceContactExtendedData
                         if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {
                             contactData = parsed
@@ -379,7 +379,7 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: content.url, skipUrlAuth: true)
-            |> deliverOnMainQueue).start(next: { resolvedUrl in
+            |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource
                     switch parameter {
@@ -403,7 +403,7 @@ func openChatTheme(context: AccountContext, message: Message, pushController: @e
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: content.url, skipUrlAuth: true)
-            |> deliverOnMainQueue).start(next: { resolvedUrl in
+            |> deliverOnMainQueue).startStandalone(next: { resolvedUrl in
                 var file: TelegramMediaFile?
                 var settings: TelegramThemeSettings?
                 let themeMimeType = "application/x-tgtheme-ios"

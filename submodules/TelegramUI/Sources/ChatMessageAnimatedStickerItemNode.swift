@@ -585,11 +585,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let dimensions = telegramFile.dimensions ?? PixelDimensions(width: 512, height: 512)
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.updateVisibility()
-                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile)).startStrict())
                     
                     if telegramFile.isPremiumSticker {
                         if let effect = telegramFile.videoThumbnails.first {
-                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), resource: effect.resource) .start())
+                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), resource: effect.resource).startStrict())
                         }
                     }
                 }
@@ -663,7 +663,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     let fillSize = emojiFile.isCustomEmoji ? CGSize(width: 512.0, height: 512.0) : CGSize(width: 384.0, height: 384.0)
                     
                     self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(fillSize), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
-                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: emojiFile)).start())
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: emojiFile)).startStrict())
                 }
                 
                 let textEmoji = item.message.text.strippedEmoji
@@ -687,7 +687,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let animationItems = animationItems {
                     for (_, animationItem) in animationItems {
-                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: animationItem.file)).start())
+                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: animationItem.file)).startStrict())
                     }
                 }
             }
@@ -2279,7 +2279,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             
                             if shouldPlay {
                                 let _ = (appConfiguration
-                                |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self] appConfiguration in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -2297,7 +2297,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                             strongSelf.mediaPlayer = mediaPlayer
                                             
                                             strongSelf.mediaStatusDisposable.set((mediaPlayer.status
-                                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                            |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                                                 if let strongSelf = self {
                                                     if let haptic = haptic, !haptic.active {
                                                         haptic.start(time: 0.0)

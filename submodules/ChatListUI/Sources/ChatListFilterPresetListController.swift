@@ -481,7 +481,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                                 }
                                 return filters
                             }
-                            |> deliverOnMainQueue).start()
+                            |> deliverOnMainQueue).startStandalone()
                         })
                     ]),
                     ActionSheetItemGroup(items: [
@@ -541,7 +541,7 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
                 let _ = (updatedFilterOrder.get()
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
+                |> deliverOnMainQueue).startStandalone(next: { [weak updatedFilterOrder] updatedFilterOrderValue in
                     if let updatedFilterOrderValue = updatedFilterOrderValue {
                         let _ = (context.engine.peers.updateChatListFiltersInteractively { filters in
                             var updatedFilters: [ChatListFilter] = []

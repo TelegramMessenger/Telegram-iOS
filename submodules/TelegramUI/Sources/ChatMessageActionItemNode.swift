@@ -251,7 +251,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                     strongSelf.insertSubnode(imageNode, at: 0)
                                     strongSelf.insertSubnode(strongSelf.mediaBackgroundNode, at: 0)
                                 }
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
                                 let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), synchronousLoad: synchronousLoads)
 
                                 imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)

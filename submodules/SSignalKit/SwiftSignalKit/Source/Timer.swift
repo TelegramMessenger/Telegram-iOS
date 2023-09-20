@@ -4,10 +4,19 @@ public final class Timer {
     private let timer = Atomic<DispatchSourceTimer?>(value: nil)
     private let timeout: Double
     private let `repeat`: Bool
-    private let completion: () -> Void
+    private let completion: (Timer) -> Void
     private let queue: Queue
     
-    public init(timeout: Double, `repeat`: Bool, completion: @escaping() -> Void, queue: Queue) {
+    public init(timeout: Double, `repeat`: Bool, completion: @escaping () -> Void, queue: Queue) {
+        self.timeout = timeout
+        self.`repeat` = `repeat`
+        self.completion = { _ in
+            completion()
+        }
+        self.queue = queue
+    }
+    
+    public init(timeout: Double, `repeat`: Bool, completion: @escaping (Timer) -> Void, queue: Queue) {
         self.timeout = timeout
         self.`repeat` = `repeat`
         self.completion = completion
@@ -22,7 +31,7 @@ public final class Timer {
         let timer = DispatchSource.makeTimerSource(queue: self.queue.queue)
         timer.setEventHandler(handler: { [weak self] in
             if let strongSelf = self {
-                strongSelf.completion()
+                strongSelf.completion(strongSelf)
                 if !strongSelf.`repeat` {
                     strongSelf.invalidate()
                 }

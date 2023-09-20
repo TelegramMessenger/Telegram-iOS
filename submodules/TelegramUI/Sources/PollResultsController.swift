@@ -333,7 +333,7 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     }, expandOption: { optionId in
         let _ = (resultsContext.state
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak resultsContext] state in
+        |> deliverOnMainQueue).startStandalone(next: { [weak resultsContext] state in
             if let optionState = state.options[optionId] {
                 updateState { state in
                     var state = state

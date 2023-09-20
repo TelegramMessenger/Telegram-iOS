@@ -49,7 +49,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
             if let statuses = self.interfaceInteraction?.statuses {
-                self.editingMessageDisposable.set(statuses.editingMessage.start(next: { [weak self] value in
+                self.editingMessageDisposable.set(statuses.editingMessage.startStrict(next: { [weak self] value in
                     if let strongSelf = self {
                         if let value = value {
                             if value.isZero {
@@ -161,7 +161,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.tapNode)
         self.addSubnode(self.actionArea)
         self.messageDisposable.set((context.account.postbox.messageAtId(messageId)
-        |> deliverOnMainQueue).start(next: { [weak self] message in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] message in
             self?.updateMessage(message)
         }))
     }

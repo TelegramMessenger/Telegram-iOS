@@ -16,7 +16,7 @@ func presentContactsWarningSuppressionImpl(context: AccountContext, present: (Vi
     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Contacts_PermissionsEnable, action: {
         let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { status in
+        |> deliverOnMainQueue).startStandalone(next: { status in
             switch status {
                 case .notDetermined:
                     DeviceAccess.authorizeAccess(to: .contacts)

@@ -529,7 +529,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         
         if peer.isPremium && context.sharedContext.energyUsageSettings.autoplayVideo {
             self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
-            |> deliverOnMainQueue).start(next: { [weak self] peerView in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
                 guard let strongSelf = self else {
                     return
                 }
@@ -592,7 +592,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     strongSelf.updateVideoVisibility()
                 } else {
                     if let photo = peer.largeProfileImage, photo.hasVideo {
-                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                        let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).startStandalone()
                     }
                 }
             }))

@@ -302,7 +302,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             return false
         }
         
-        self.presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDataDisposable = context.sharedContext.presentationData.startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 if strongSelf.presentationData.theme !== presentationData.theme || strongSelf.presentationData.strings !== presentationData.strings {
                     strongSelf.updatePresentationData(presentationData)
@@ -583,7 +583,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: listNodeSize, insets: insets, duration: 0.0, curve: .Default(duration: nil))
             historyNode.updateLayout(transition: .immediate, updateSizeAndInsets: updateSizeAndInsets)
         }
-        self.replacementHistoryNodeReadyDisposable.set((historyNode.historyState.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+        self.replacementHistoryNodeReadyDisposable.set((historyNode.historyState.get() |> take(1) |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
             if let strongSelf = self {
                 strongSelf.replaceWithReadyUpdatedHistoryNode()
             }

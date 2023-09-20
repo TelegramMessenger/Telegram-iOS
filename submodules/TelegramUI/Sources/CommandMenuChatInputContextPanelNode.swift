@@ -88,7 +88,7 @@ final class CommandMenuChatInputContextPanelNode: ChatInputContextPanelNode {
         self.addSubnode(self.listView)
         
         self.disposable.set((context.engine.peers.peerCommands(id: peerId)
-        |> deliverOnMainQueue).start(next: { [weak self] results in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] results in
             if let strongSelf = self {
                 strongSelf.updateResults(results.commands)
             }

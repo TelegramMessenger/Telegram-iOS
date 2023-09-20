@@ -167,7 +167,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                     self.durationLabel.status = mediaPlayer.status
                     self.waveformScubberNode.status = mediaPlayer.status
                     self.statusDisposable.set((mediaPlayer.status
-                        |> deliverOnMainQueue).start(next: { [weak self] status in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                         if let strongSelf = self {
                             switch status.status {
                                 case .playing, .buffering(_, true, _, _):

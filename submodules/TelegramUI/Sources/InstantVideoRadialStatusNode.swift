@@ -120,7 +120,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         self.isOpaque = false
         
         self.statusDisposable = (self.statusValuePromise.get()
-        |> deliverOnMainQueue).start(next: { [weak self] status in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
             if let strongSelf = self {
                 strongSelf.statusValue = status
             }

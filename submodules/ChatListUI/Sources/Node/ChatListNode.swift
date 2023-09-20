@@ -1417,7 +1417,7 @@ public final class ChatListNode: ListView {
             }
         }, setItemPinned: { [weak self] itemId, _ in
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).startStandalone(next: { peer in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1433,7 +1433,7 @@ public final class ChatListNode: ListView {
                     location = .group(groupId._asGroup())
                 }
                 let _ = (context.engine.peers.toggleItemPinned(location: location, itemId: itemId)
-                |> deliverOnMainQueue).start(next: { result in
+                |> deliverOnMainQueue).startStandalone(next: { result in
                     if let strongSelf = self {
                         switch result {
                         case .done:
@@ -1486,7 +1486,7 @@ public final class ChatListNode: ListView {
             }
             strongSelf.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
             let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: nil)
-            |> deliverOnMainQueue).start(completed: {
+            |> deliverOnMainQueue).startStandalone(completed: {
                 self?.updateState { state in
                     var state = state
                     state.peerIdWithRevealedOptions = nil
@@ -1497,7 +1497,7 @@ public final class ChatListNode: ListView {
         }, setPeerThreadMuted: { [weak self] peerId, threadId, value in
             self?.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
             let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: value ? Int32.max : 0)
-            |> deliverOnMainQueue).start(completed: {
+            |> deliverOnMainQueue).startStandalone(completed: {
                 self?.updateState { state in
                     var state = state
                     state.peerIdWithRevealedOptions = nil
@@ -1523,7 +1523,7 @@ public final class ChatListNode: ListView {
             }
             self?.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
             let _ = (context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil)
-            |> deliverOnMainQueue).start(completed: {
+            |> deliverOnMainQueue).startStandalone(completed: {
                 self?.updateState { state in
                     var state = state
                     state.peerIdWithRevealedOptions = nil
@@ -1568,7 +1568,7 @@ public final class ChatListNode: ListView {
                 return
             }
             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                 guard let self, let peer else {
                     return
                 }
@@ -1586,7 +1586,7 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).start()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .setupPassword).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makeSetupTwoFactorAuthController(context: self.context)
@@ -1597,9 +1597,9 @@ public final class ChatListNode: ListView {
             }
             Queue.mainQueue().after(0.6) { [weak self] in
                 if let self {
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .annualPremium).start()
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .upgradePremium).start()
-                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .restorePremium).start()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .annualPremium).startStandalone()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .upgradePremium).startStandalone()
+                    let _ = dismissServerProvidedSuggestion(account: self.context.account, suggestion: .restorePremium).startStandalone()
                 }
             }
             let controller = self.context.sharedContext.makePremiumIntroController(context: self.context, source: .ads, forceDark: false, dismissed: nil)
@@ -1615,7 +1615,7 @@ public final class ChatListNode: ListView {
                 return !state.sessions.isEmpty
             }
             |> take(1)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
+            |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -1648,13 +1648,13 @@ public final class ChatListNode: ListView {
                     return true
                 }))
                 
-                let _ = self.context.engine.privacy.confirmNewSessionReview(id: newSessionReview.id).start()
+                let _ = self.context.engine.privacy.confirmNewSessionReview(id: newSessionReview.id).startStandalone()
             } else {
                 self.push?(NewSessionInfoScreen(context: self.context, newSessionReview: newSessionReview))
                 
                 //#if DEBUG
                 //#else
-                let _ = self.context.engine.privacy.terminateAnotherSession(id: newSessionReview.id).start()
+                let _ = self.context.engine.privacy.terminateAnotherSession(id: newSessionReview.id).startStandalone()
                 //#endif
             }
         }, openChatFolderUpdates: { [weak self] in
@@ -1663,7 +1663,7 @@ public final class ChatListNode: ListView {
             }
             let _ = (self.chatFolderUpdates.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] result in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                 guard let self, let result else {
                     return
                 }
@@ -1676,13 +1676,13 @@ public final class ChatListNode: ListView {
             }
             let _ = (self.chatFolderUpdates.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] result in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                 guard let self, let result else {
                     return
                 }
                 
                 if let localFilterId = result.chatFolderLinkContents.localFilterId {
-                    let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).start()
+                    let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: localFilterId).startStandalone()
                 }
             })
         }, openStories: { [weak self] subject, itemNode in
@@ -1743,7 +1743,7 @@ public final class ChatListNode: ListView {
                     if value {
                         let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
                             ApplicationSpecificNotice.setArchiveIntroDismissed(transaction: transaction, value: true)
-                        }).start()
+                        }).startStandalone()
                     }
                 }
             }
@@ -1756,7 +1756,7 @@ public final class ChatListNode: ListView {
         }
     
         self.updateIsMainTabDisposable = (self.isMainTab.get()
-        |> deliverOnMainQueue).start(next: { [weak self] isMainTab in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] isMainTab in
             guard let self else {
                 return
             }
@@ -1766,7 +1766,7 @@ public final class ChatListNode: ListView {
                 return
             }
             
-            let _ = context.engine.privacy.cleanupSessionReviews().start()
+            let _ = context.engine.privacy.cleanupSessionReviews().startStandalone()
             
             let twoStepData: Signal<TwoStepVerificationConfiguration?, NoError> = .single(nil) |> then(context.engine.auth.twoStepVerificationConfiguration() |> map(Optional.init))
             
@@ -2558,7 +2558,7 @@ public final class ChatListNode: ListView {
         
         self.interaction = nodeInteraction
         
-        self.chatListDisposable.set(appliedTransition.start())
+        self.chatListDisposable.set(appliedTransition.startStrict())
         
         let initialLocation: ChatListNodeLocation
         switch mode {
@@ -2715,7 +2715,7 @@ public final class ChatListNode: ListView {
                 }
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] activities in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] activities in
             if let strongSelf = self {
                 strongSelf.updateState { state in
                     var state = state
@@ -2723,7 +2723,7 @@ public final class ChatListNode: ListView {
                     return state
                 }
             }
-        }).strict()
+        })
         
         self.reorderItem = { [weak self] fromIndex, toIndex, transactionOpaqueState -> Signal<Bool, NoError> in
             guard let strongSelf = self, let filteredEntries = (transactionOpaqueState as? ChatListOpaqueTransactionState)?.chatListView.filteredEntries else {
@@ -3089,7 +3089,7 @@ public final class ChatListNode: ListView {
                 }
                 return nil
             }
-            |> deliverOnMainQueue).start(next: { [weak self] updatedFilter in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] updatedFilter in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3619,7 +3619,7 @@ public final class ChatListNode: ListView {
                         return .single(nil)
                     }
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] indexAndPeer in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] indexAndPeer in
                     guard let strongSelf = self, let (index, peer) = indexAndPeer else {
                         return
                     }
@@ -3653,7 +3653,7 @@ public final class ChatListNode: ListView {
                 }
             case let .peerId(peerId):
                 let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
@@ -3665,7 +3665,7 @@ public final class ChatListNode: ListView {
                 }
                 let _ = (self.chatListFilterValue.get()
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] filter in
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] filter in
                     guard let self = self else {
                         return
                     }
@@ -3674,7 +3674,7 @@ public final class ChatListNode: ListView {
                     }
                     let _ = (chatListViewForLocation(chatListLocation: .chatList(groupId: groupId), location: .initial(count: 10, filter: filter), account: self.context.account)
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { update in
+                    |> deliverOnMainQueue).startStandalone(next: { update in
                         let items = update.list.items
                         if items.count > index {
                             let item = items[9 - index - 1]
@@ -4070,5 +4070,5 @@ public class ChatHistoryListSelectionRecognizer: UIPanGestureRecognizer {
 }
 
 func hideChatListContacts(context: AccountContext) {
-    let _ = ApplicationSpecificNotice.setDisplayChatListContacts(accountManager: context.sharedContext.accountManager).start()
+    let _ = ApplicationSpecificNotice.setDisplayChatListContacts(accountManager: context.sharedContext.accountManager).startStandalone()
 }

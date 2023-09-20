@@ -359,7 +359,7 @@ class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
                             if mediaUpdated {
                                 if item.message.id.namespace == Namespaces.Message.Local {
                                     strongSelf.statusDisposable.set((item.context.account.pendingPeerMediaUploadManager.uploadProgress(messageId: item.message.id)
-                                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                                    |> deliverOnMainQueue).startStrict(next: { [weak self] progress in
                                         if let strongSelf = self {
                                             strongSelf.updateProgress(progress)
                                         }

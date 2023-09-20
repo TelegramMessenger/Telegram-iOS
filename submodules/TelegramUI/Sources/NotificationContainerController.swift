@@ -25,7 +25,7 @@ public final class NotificationContainerController: ViewController {
         self.statusBar.statusBarStyle = .Ignore
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
                     let previousStrings = strongSelf.presentationData.strings

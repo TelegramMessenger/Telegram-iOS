@@ -513,7 +513,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         animatedStickerNode.autoplay = true
                         animatedStickerNode.visibility = strongSelf.visibilityStatus
                         
-                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).start())
+                        strongSelf.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: MediaResourceReference.media(media: .standalone(media: file), resource: file.resource)).startStrict())
                         
                         let thumbnailDimensions = PixelDimensions(width: 512, height: 512)
                         strongSelf.placeholderNode.update(backgroundColor: nil, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.2), shimmeringColor: UIColor(rgb: 0xffffff, alpha: 0.3), data: file.immediateThumbnailData, size: emojiFrame.size, enableEffect: item.context.sharedContext.energyUsageSettings.fullTranslucency, imageSize: thumbnailDimensions.cgSize)
@@ -625,7 +625,7 @@ final class ChatQrCodeScreen: ViewController {
         self.presentationThemePromise.set(.single(nil))
         
         self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, self.presentationThemePromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, theme in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, theme in
             if let strongSelf = self {
                 var presentationData = presentationData
                 if let theme = theme {
@@ -1045,7 +1045,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         if case .messages = controller.subject {
             isMessage = true
         }
-        self.disposable.set(combineLatest(queue: Queue.mainQueue(), animatedEmojiStickers, initiallySelectedEmoticon, self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).start(next: { [weak self] animatedEmojiStickers, initiallySelectedEmoticon, themes, selectedEmoticon, isDarkAppearance in
+        self.disposable.set(combineLatest(queue: Queue.mainQueue(), animatedEmojiStickers, initiallySelectedEmoticon, self.context.engine.themes.getChatThemes(accountManager: self.context.sharedContext.accountManager), self.selectedEmoticonPromise.get(), self.isDarkAppearancePromise.get()).startStrict(next: { [weak self] animatedEmojiStickers, initiallySelectedEmoticon, themes, selectedEmoticon, isDarkAppearance in
             guard let strongSelf = self else {
                 return
             }
@@ -1173,7 +1173,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         if case let .peer(_, _, temporary) = controller.subject, temporary {
             self.contactDisposable.set(
                 (context.engine.peers.exportContactToken()
-                 |> deliverOnMainQueue).start(next: { [weak self] token in
+                 |> deliverOnMainQueue).startStrict(next: { [weak self] token in
                      if let strongSelf = self {
                          strongSelf.currentContactToken = token
                          if let contentNode = strongSelf.contentNode as? QrContentNode, let token = token {
@@ -1188,7 +1188,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
                     if let strongSelf = self {
                         strongSelf.contactDisposable.set(
                             (context.engine.peers.exportContactToken()
-                             |> deliverOnMainQueue).start(next: { [weak self] token in
+                             |> deliverOnMainQueue).startStrict(next: { [weak self] token in
                                  if let strongSelf = self {
                                      strongSelf.currentContactToken = token
                                      if let contentNode = strongSelf.contentNode as? QrContentNode, let token = token {
@@ -1322,9 +1322,9 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.isDarkAppearance = isDarkAppearance
         
         if isDarkAppearance {
-            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).start()
+            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeDarkPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
         } else {
-            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeLightPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).start()
+            let _ = ApplicationSpecificNotice.incrementChatSpecificThemeLightPreviewTip(accountManager: self.context.sharedContext.accountManager, count: 3, timestamp: Int32(Date().timeIntervalSince1970)).startStandalone()
         }
     }
     
@@ -1818,7 +1818,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         
         let _ = (copyNode.isReady
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak copyNode] _ in
+        |> deliverOnMainQueue).startStandalone(next: { [weak copyNode] _ in
             Queue.mainQueue().after(0.1) {
                 if #available(iOS 10.0, *) {
                     let format = UIGraphicsImageRendererFormat()
@@ -2138,7 +2138,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
         
         let _ = (copyNode.isReady
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak copyNode] _ in
+        |> deliverOnMainQueue).startStandalone(next: { [weak copyNode] _ in
             Queue.mainQueue().after(0.1) {
                 let image: UIImage?
                 if #available(iOS 10.0, *) {
@@ -2285,7 +2285,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
                             let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: self.context.sharedContext.mediaManager.audioSession, manager: self.context.sharedContext.mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .overlay, autoplay: !self.isStatic)
                             
                             self.videoStatusDisposable.set((videoNode.status
-                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                            |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                                 if let strongSelf = self {
                                     strongSelf.videoStatus = status
                                     if let (size, topInset, bottomInset) = strongSelf.validLayout {
@@ -2416,7 +2416,7 @@ private enum RenderVideoResult {
 
 private func renderVideo(context: AccountContext, backgroundImage: UIImage, userLocation: MediaResourceUserLocation, media: TelegramMediaFile, videoFrame: CGRect, completion: @escaping (URL?) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: userLocation, mediaReference: AnyMediaReference.standalone(media: media))
-    |> deliverOnMainQueue).start(next: { value, isImage in
+    |> deliverOnMainQueue).startStandalone(next: { value, isImage in
         guard case let .data(data) = value, data.complete else {
             return
         }

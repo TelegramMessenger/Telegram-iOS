@@ -34,6 +34,8 @@ def generate_xcodeproj(build_environment: BuildEnvironment, disable_extensions, 
         project_bazel_arguments += ['--//{}:disableExtensions'.format(app_target)]
     project_bazel_arguments += ['--//{}:disableStripping'.format('Telegram')]
 
+    project_bazel_arguments += ['--features=-swift.debug_prefix_map']
+    
     xcodeproj_bazelrc = os.path.join(build_environment.base_path, 'xcodeproj.bazelrc')
     if os.path.isfile(xcodeproj_bazelrc):
         os.unlink(xcodeproj_bazelrc)

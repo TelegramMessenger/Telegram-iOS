@@ -588,16 +588,16 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             if let statuses = self.interfaceInteraction?.statuses {
                 self.statusDisposable.set((statuses.inlineSearch
                 |> distinctUntilChanged
-                |> deliverOnMainQueue).start(next: { [weak self] value in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                     self?.updateIsProcessingInlineRequest(value)
-                }))
+                }).strict())
             }
             if let startingBot = self.interfaceInteraction?.statuses?.startingBot {
-                self.startingBotDisposable.set((startingBot |> deliverOnMainQueue).start(next: { [weak self] value in
+                self.startingBotDisposable.set((startingBot |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                     if let strongSelf = self {
                         strongSelf.startingBotProgress = value
                     }
-                }))
+                }).strict())
             }
         }
     }
@@ -1022,6 +1022,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     
     deinit {
         self.statusDisposable.dispose()
+        self.startingBotDisposable.dispose()
         self.tooltipController?.dismiss()
     }
     
@@ -2790,7 +2791,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                 
                                 if beginRequest {
                                     suggestionContext.disposable.set((EmojiSuggestionsComponent.suggestionData(context: context, isSavedMessages: self.presentationInterfaceState?.chatLocation.peerId == self.context?.account.peerId, query: String(lastCharacter))
-                                    |> deliverOnMainQueue).start(next: { [weak self, weak suggestionContext] result in
+                                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak suggestionContext] result in
                                         guard let strongSelf = self, let suggestionContext = suggestionContext, strongSelf.currentEmojiSuggestion === suggestionContext else {
                                             return
                                         }
@@ -2800,7 +2801,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                         if let textInputNode = strongSelf.textInputNode {
                                             strongSelf.updateInputField(textInputFrame: textInputNode.frame, transition: .immediate)
                                         }
-                                    }))
+                                    }).strict())
                                 }
                             }
                         }
@@ -3125,7 +3126,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         return
                     }
                     
-                    let _ = context.engine.accountData.setEmojiStatus(file: file, expirationDate: nil).start()
+                    let _ = context.engine.accountData.setEmojiStatus(file: file, expirationDate: nil).startStandalone()
                     
                     var animateInAsReplacement = false
                     animateInAsReplacement = false

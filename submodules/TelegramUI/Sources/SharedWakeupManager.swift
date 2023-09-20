@@ -80,7 +80,7 @@ public final class SharedWakeupManager {
         self.acquireIdleExtension = acquireIdleExtension
         
         self.inForegroundDisposable = (inForeground
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -99,7 +99,7 @@ public final class SharedWakeupManager {
         })
         
         self.hasActiveAudioSessionDisposable = (hasActiveAudioSession
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -107,7 +107,7 @@ public final class SharedWakeupManager {
             strongSelf.checkTasks()
         })
         
-        self.managedPausedInBackgroundPlayer = combineLatest(queue: .mainQueue(), mediaManager.activeGlobalMediaPlayerAccountId, inForeground).start(next: { [weak mediaManager] accountAndActive, inForeground in
+        self.managedPausedInBackgroundPlayer = combineLatest(queue: .mainQueue(), mediaManager.activeGlobalMediaPlayerAccountId, inForeground).startStrict(next: { [weak mediaManager] accountAndActive, inForeground in
             guard let mediaManager = mediaManager else {
                 return
             }
@@ -180,7 +180,7 @@ public final class SharedWakeupManager {
             }
             return combineLatest(signals)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] accountsAndTasks in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] accountsAndTasks in
             guard let strongSelf = self else {
                 return
             }

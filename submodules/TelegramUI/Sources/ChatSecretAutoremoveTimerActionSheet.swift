@@ -23,7 +23,7 @@ final class ChatSecretAutoremoveTimerActionSheetController: ActionSheetControlle
         
         super.init(theme: ActionSheetControllerTheme(presentationData: presentationData))
         
-        self.presentationDisposable = context.sharedContext.presentationData.start(next: { [weak self] presentationData in
+        self.presentationDisposable = context.sharedContext.presentationData.startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.theme = ActionSheetControllerTheme(presentationData: presentationData)
             }

@@ -434,8 +434,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let historyDisposable = MetaDisposable()
     private let readHistoryDisposable = MetaDisposable()
     
-    //private let messageViewQueue = Queue(name: "ChatHistoryListNode processing")
-    
     private var dequeuedInitialTransitionOnLayout = false
     private var enqueuedHistoryViewTransitions: [ChatHistoryListViewTransition] = []
     private var hasActiveTransition = false
@@ -667,10 +665,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNode? = { nil }) {
         var tagMask = tagMask
-        var appendMessagesFromTheSameGroup = false
         if case .pinnedMessages = subject {
             tagMask = .pinned
-            appendMessagesFromTheSameGroup = true
         }
         
         self.context = context
@@ -692,14 +688,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.chatPresentationDataPromise = Promise()
         
         self.prefetchManager = InChatPrefetchManager(context: context)
-
+        
         var displayAdPeer: PeerId?
-        //var sparseScrollPeerId: PeerId?
         switch subject {
         case .none, .message:
             if case let .peer(peerId) = chatLocation {
                 displayAdPeer = peerId
-                //sparseScrollPeerId = peerId
             }
         default:
             break
@@ -713,12 +707,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.adMessagesContext = nil
             adMessages = .single((nil, []))
         }
-
-        /*if case .bubbles = mode, let peerId = sparseScrollPeerId {
-            self.sparseScrollingContext = context.engine.messages.sparseMessageScrollingContext(peerId: peerId)
-        } else {
-            self.sparseScrollingContext = nil
-        }*/
         
         let clientId = Atomic<Int32>(value: nextClientId)
         self.clientId = clientId
@@ -726,45 +714,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         super.init()
 
-        self.adMessagesDisposable = (adMessages
-        |> deliverOnMainQueue).start(next: { [weak self] interPostInterval, messages in
-            guard let self else {
-                return
-            }
-            
-            if let interPostInterval = interPostInterval {
-                self.pendingDynamicAdMessages = messages
-                self.pendingDynamicAdMessageInterval = Int(interPostInterval)
-                
-                if self.remainingDynamicAdMessageInterval == nil {
-                    self.remainingDynamicAdMessageInterval = Int(interPostInterval)
-                }
-                if self.remainingDynamicAdMessageDistance == nil {
-                    self.remainingDynamicAdMessageDistance = self.bounds.height
-                }
-                
-                self.allAdMessages = (messages.first, [], 0)
-            } else {
-                var adPeerId: PeerId?
-                adPeerId = messages.first?.author?.id
-                
-                if self.preloadAdPeerId != adPeerId {
-                    self.preloadAdPeerId = adPeerId
-                    if let adPeerId = adPeerId {
-                        let combinedDisposable = DisposableSet()
-                        self.preloadAdPeerDisposable.set(combinedDisposable)
-                        combinedDisposable.add(self.context.account.viewTracker.polledChannel(peerId: adPeerId).start())
-                        combinedDisposable.add(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
-                    } else {
-                        self.preloadAdPeerDisposable.set(nil)
-                    }
-                }
-                
-                self.allAdMessages = (messages.first, [], 0)
-            }
-        })
-
         self.clipsToBounds = false
+        
+        self.beginAdMessageManagement(adMessages: adMessages)
         
         self.accessibilityPageScrolledString = { [weak self] row, count in
             if let strongSelf = self {
@@ -799,7 +751,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         self.translationProcessingManager.process = { [weak self, weak context] messageIds in
             if let context = context, let toLang = self?.toLang {
-                let _ = translateMessageIds(context: context, messageIds: Array(messageIds), toLang: toLang).start()
+                let _ = translateMessageIds(context: context, messageIds: Array(messageIds), toLang: toLang).startStandalone()
             }
         }
         
@@ -838,23 +790,261 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             case .list:
                 break
         }
-        //self.snapToBottomInsetUntilFirstInteraction = true
         
-        let messageViewQueue = Queue.mainQueue() //self.messageViewQueue
+        self.beginChatHistoryTransitions(
+            selectedMessages: selectedMessages,
+            messageTransitionNode: messageTransitionNode
+        )
+        
+        self.beginReadHistoryManagement()
+        
+        if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
+            let initialSearchLocation: ChatHistoryInitialSearchLocation
+            switch messageSubject {
+            case let .id(id):
+                initialSearchLocation = .id(id)
+            case let .timestamp(timestamp):
+                if let peerId = self.chatLocation.peerId {
+                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
+                } else {
+                    //TODO:implement
+                    initialSearchLocation = .index(MessageIndex.absoluteUpperBound())
+                }
+            }
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: historyMessageCount, highlight: highlight), id: 0)
+        } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: historyMessageCount, highlight: true), id: 0)
+        } else {
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: 0)
+        }
+        self.chatHistoryLocationPromise.set(self.chatHistoryLocationValue!)
+        
+        self.generalScrollDirectionUpdated = { [weak self] direction in
+            guard let strongSelf = self else {
+                return
+            }
+            let prefetchDirectionIsToLater = direction == .up
+            if strongSelf.currentPrefetchDirectionIsToLater != prefetchDirectionIsToLater {
+                strongSelf.currentPrefetchDirectionIsToLater = prefetchDirectionIsToLater
+                if strongSelf.currentPrefetchDirectionIsToLater {
+                    strongSelf.prefetchManager.updateMessages(strongSelf.currentLaterPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
+                } else {
+                    strongSelf.prefetchManager.updateMessages(strongSelf.currentEarlierPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
+                }
+            }
+        }
+        
+        self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
+            if let strongSelf = self, let transactionState = opaqueTransactionState as? ChatHistoryTransactionOpaqueState {
+                strongSelf.processDisplayedItemRangeChanged(displayedRange: displayedRange, transactionState: transactionState)
+            }
+        }
+        
+        self.refreshDisplayedItemRangeTimer = SwiftSignalKit.Timer(timeout: 10.0, repeat: true, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.updateVisibleItemRange(force: true)
+        }, queue: .mainQueue())
+        self.refreshDisplayedItemRangeTimer?.start()
+        
+        self.beginPresentationDataManagement(updated: updatedPresentationData.signal)
+        
+        self.visibleContentOffsetChanged = { [weak self] offset in
+            if let strongSelf = self {
+                strongSelf.contentPositionChanged(offset)
+                
+                if strongSelf.tagMask == nil {
+                    var atBottom = false
+                    var offsetFromBottom: CGFloat?
+                    switch offset {
+                        case let .known(offsetValue):
+                            if offsetValue.isLessThanOrEqualTo(0.0) {
+                                atBottom = true
+                                offsetFromBottom = offsetValue
+                            }
+                            //print("offsetValue: \(offsetValue)")
+                        default:
+                            break
+                    }
+                    
+                    if atBottom != strongSelf.isScrollAtBottomPosition {
+                        strongSelf.isScrollAtBottomPosition = atBottom
+                        strongSelf.updateReadHistoryActions()
+                        
+                        strongSelf.isScrollAtBottomPositionUpdated?()
+                    }
+
+                    strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
+                }
+            }
+        }
+        
+        self.loadedMessagesFromCachedDataDisposable = (self._cachedPeerDataAndMessages.get() |> map { dataAndMessages -> MessageId? in
+            return dataAndMessages.0?.messageIds.first
+        } |> distinctUntilChanged(isEqual: { $0 == $1 })
+        |> mapToSignal { messageId -> Signal<Void, NoError> in
+            if let messageId = messageId {
+                return context.engine.messages.getMessagesLoadIfNecessary([messageId]) |> map { _ -> Void in return Void() }
+            } else {
+                return .complete()
+            }
+        }).startStrict()
+        
+        self.beganInteractiveDragging = { [weak self] _ in
+            self?.isInteractivelyScrollingValue = true
+            self?.isInteractivelyScrollingPromise.set(true)
+            self?.beganDragging?()
+            //self?.updateHistoryScrollingArea(transition: .immediate)
+        }
+
+        self.endedInteractiveDragging = { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.offerNextChannelToRead, strongSelf.currentOverscrollExpandProgress >= 0.99 {
+                if let nextChannelToRead = strongSelf.nextChannelToRead {
+                    strongSelf.freezeOverscrollControl = true
+                    strongSelf.openNextChannelToRead?(nextChannelToRead.peer, nextChannelToRead.location)
+                } else {
+                    strongSelf.freezeOverscrollControlProgress = true
+                    strongSelf.scroller.contentInset = UIEdgeInsets(top: 94.0 + 12.0, left: 0.0, bottom: 0.0, right: 0.0)
+                    Queue.mainQueue().after(0.3, {
+                        let animator = DisplayLinkAnimator(duration: 0.2, from: 1.0, to: 0.0, update: { rawT in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            let t = listViewAnimationCurveEaseInOut(rawT)
+                            let value = (94.0 + 12.0) * t
+                            strongSelf.scroller.contentInset = UIEdgeInsets(top: value, left: 0.0, bottom: 0.0, right: 0.0)
+                        }, completion: {
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.contentInsetAnimator = nil
+                            strongSelf.scroller.contentInset = UIEdgeInsets()
+                            strongSelf.freezeOverscrollControlProgress = false
+                        })
+                        strongSelf.contentInsetAnimator = animator
+                    })
+                }
+            }
+        }
+        
+        self.didEndScrolling = { [weak self] _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isInteractivelyScrollingValue = false
+            strongSelf.isInteractivelyScrollingPromise.set(false)
+            //strongSelf.updateHistoryScrollingArea(transition: .immediate)
+        }
+
+        /*self.updateScrollingIndicator = { [weak self] scrollingState, transition in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.scrollingState = scrollingState
+            strongSelf.updateHistoryScrollingArea(transition: transition)
+        }*/
+        
+        let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
+        selectionRecognizer.shouldBegin = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.isSelectionGestureEnabled
+        }
+        self.view.addGestureRecognizer(selectionRecognizer)
+        
+        self.loadNextGenericReactionEffect(context: context)
+    }
+    
+    deinit {
+        self.historyDisposable.dispose()
+        self.readHistoryDisposable.dispose()
+        self.interactiveReadActionDisposable?.dispose()
+        self.interactiveReadReactionsDisposable?.dispose()
+        self.canReadHistoryDisposable?.dispose()
+        self.loadedMessagesFromCachedDataDisposable?.dispose()
+        self.preloadAdPeerDisposable.dispose()
+        self.refreshDisplayedItemRangeTimer?.invalidate()
+        self.genericReactionEffectDisposable?.dispose()
+        self.adMessagesDisposable?.dispose()
+        self.presentationDataDisposable?.dispose()
+    }
+    
+    private func beginAdMessageManagement(adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>) {
+        self.adMessagesDisposable = (adMessages
+        |> deliverOnMainQueue).startStrict(next: { [weak self] interPostInterval, messages in
+            guard let self else {
+                return
+            }
+            
+            if let interPostInterval = interPostInterval {
+                self.pendingDynamicAdMessages = messages
+                self.pendingDynamicAdMessageInterval = Int(interPostInterval)
+                
+                if self.remainingDynamicAdMessageInterval == nil {
+                    self.remainingDynamicAdMessageInterval = Int(interPostInterval)
+                }
+                if self.remainingDynamicAdMessageDistance == nil {
+                    self.remainingDynamicAdMessageDistance = self.bounds.height
+                }
+                
+                self.allAdMessages = (messages.first, [], 0)
+            } else {
+                var adPeerId: PeerId?
+                adPeerId = messages.first?.author?.id
+                
+                if self.preloadAdPeerId != adPeerId {
+                    self.preloadAdPeerId = adPeerId
+                    if let adPeerId = adPeerId {
+                        let combinedDisposable = DisposableSet()
+                        self.preloadAdPeerDisposable.set(combinedDisposable)
+                        combinedDisposable.add(self.context.account.viewTracker.polledChannel(peerId: adPeerId).startStrict())
+                        combinedDisposable.add(self.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
+                    } else {
+                        self.preloadAdPeerDisposable.set(nil)
+                    }
+                }
+                
+                self.allAdMessages = (messages.first, [], 0)
+            }
+        }).strict()
+    }
+    
+    private func beginChatHistoryTransitions(
+        selectedMessages: Signal<Set<MessageId>?, NoError>,
+        messageTransitionNode: @escaping () -> ChatMessageTransitionNode?
+    ) {
+        let context = self.context
+        let chatLocation = self.chatLocation
+        let subject = self.subject
+        let source = self.source
+        let tagMask = self.tagMask
+        let chatLocationContextHolder = self.chatLocationContextHolder
+        let controllerInteraction = self.controllerInteraction
+        let mode = self.mode
+        
+        var appendMessagesFromTheSameGroup = false
+        if case .pinnedMessages = subject {
+            appendMessagesFromTheSameGroup = true
+        }
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
         var isScheduledMessages = false
-        if let subject = subject, case .scheduledMessages = subject {
+        if let subject = self.subject, case .scheduledMessages = subject {
             isScheduledMessages = true
         }
         var isAuxiliaryChat = isScheduledMessages
-        if case .replyThread = chatLocation {
+        if case .replyThread = self.chatLocation {
             isAuxiliaryChat = true
         }
         
         var additionalData: [AdditionalMessageHistoryViewData] = []
-        if case let .peer(peerId) = chatLocation {
+        if case let .peer(peerId) = self.chatLocation {
             additionalData.append(.cachedPeerData(peerId))
             additionalData.append(.cachedPeerDataMessages(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
@@ -871,7 +1061,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         if !isAuxiliaryChat {
             additionalData.append(.totalUnreadState)
         }
-        if case let .replyThread(replyThreadMessage) = chatLocation {
+        if case let .replyThread(replyThreadMessage) = self.chatLocation {
             additionalData.append(.cachedPeerData(replyThreadMessage.messageId.peerId))
             additionalData.append(.peerNotificationSettings(replyThreadMessage.messageId.peerId))
             if replyThreadMessage.messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -887,7 +1077,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?, ClosedRange<Int32>?), NoError>
         var isFirstTime = true
         var updateAllOnEachVersion = false
-        if case let .custom(messages, at, _) = source {
+        if case let .custom(messages, at, _) = self.source {
             updateAllOnEachVersion = true
             historyViewUpdate = messages
             |> map { messages, _, hasMore in
@@ -1030,8 +1220,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let availableReactions: Signal<AvailableReactions?, NoError> = (context as! AccountContextImpl).availableReactions
         
         let defaultReaction = combineLatest(
-            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
-            context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
+            self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+            self.context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
         )
         |> map { peer, preferencesView -> MessageReaction.Reaction? in
             let reactionSettings: ReactionSettings
@@ -1087,8 +1277,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         )
         
         let maxReadStoryId: Signal<Int32?, NoError>
-        if let peerId = chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
-            maxReadStoryId = context.account.postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .peer(peerId))])
+        if let peerId = self.chatLocation.peerId, peerId.namespace == Namespaces.Peer.CloudUser {
+            maxReadStoryId = self.context.account.postbox.combinedView(keys: [PostboxViewKey.storiesState(key: .peer(peerId))])
             |> map { views -> Int32? in
                 guard let view = views.views[PostboxViewKey.storiesState(key: .peer(peerId))] as? StoryStatesView else {
                     return nil
@@ -1104,6 +1294,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             maxReadStoryId = .single(nil)
         }
         
+        let messageViewQueue = Queue.mainQueue()
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
@@ -1123,7 +1314,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.allAdMessagesPromise.get(),
             translationState,
             maxReadStoryId
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages, translationState, maxReadStoryId in
+        ).startStrict(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages, translationState, maxReadStoryId in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots) = promises
             
             func applyHole() {
@@ -1266,7 +1457,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var translateToLanguage: String?
                 if let translationState, isPremium && translationState.isEnabled {
-                    var languageCode = translationState.toLang ?? presentationData.strings.baseLanguageCode
+                    var languageCode = translationState.toLang ?? chatPresentationData.strings.baseLanguageCode
                     let rawSuffix = "-raw"
                     if languageCode.hasSuffix(rawSuffix) {
                         languageCode = String(languageCode.dropLast(rawSuffix.count))
@@ -1487,12 +1678,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         })
         
-        self.historyDisposable.set(historyViewTransitionDisposable)
-        
+        self.historyDisposable.set(historyViewTransitionDisposable.strict())
+    }
+    
+    private func beginReadHistoryManagement() {
         let previousMaxIncomingMessageIndexByNamespace = Atomic<[MessageId.Namespace: MessageIndex]>(value: [:])
         let readHistory = combineLatest(self.maxVisibleIncomingMessageIndex.get(), self.canReadHistory.get())
         
-        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).start(next: { [weak self] messageIndex, canRead in
+        self.readHistoryDisposable.set((readHistory |> deliverOnMainQueue).startStrict(next: { [weak self] messageIndex, canRead in
             guard let strongSelf = self else {
                 return
             }
@@ -1512,16 +1705,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 return dict
             }
             if apply {
-                switch chatLocation {
+                switch strongSelf.chatLocation {
                 case .peer, .replyThread, .feed:
                     if !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                        strongSelf.context.applyMaxReadIndex(for: chatLocation, contextHolder: chatLocationContextHolder, messageIndex: messageIndex)
+                        strongSelf.context.applyMaxReadIndex(for: strongSelf.chatLocation, contextHolder: strongSelf.chatLocationContextHolder, messageIndex: messageIndex)
                     }
                 }
             }
-        }))
+        }).strict())
         
-        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).start(next: { [weak self, weak context] value in
+        self.canReadHistoryDisposable = (self.canReadHistory.get() |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] value in
             if let strongSelf = self {
                 if strongSelf.canReadHistoryValue != value {
                     strongSelf.canReadHistoryValue = value
@@ -1536,70 +1729,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.attemptReadingReactions()
                 }
             }
-        })
-        
-        if let subject = subject, case let .message(messageSubject, highlight, _) = subject {
-            let initialSearchLocation: ChatHistoryInitialSearchLocation
-            switch messageSubject {
-            case let .id(id):
-                initialSearchLocation = .id(id)
-            case let .timestamp(timestamp):
-                if let peerId = self.chatLocation.peerId {
-                    initialSearchLocation = .index(MessageIndex(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1), timestamp: timestamp))
-                } else {
-                    //TODO:implement
-                    initialSearchLocation = .index(MessageIndex.absoluteUpperBound())
-                }
-            }
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: historyMessageCount, highlight: highlight), id: 0)
-        } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: historyMessageCount, highlight: true), id: 0)
-        } else {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: 0)
-        }
-        self.chatHistoryLocationPromise.set(self.chatHistoryLocationValue!)
-        
-        self.generalScrollDirectionUpdated = { [weak self] direction in
-            guard let strongSelf = self else {
-                return
-            }
-            let prefetchDirectionIsToLater = direction == .up
-            if strongSelf.currentPrefetchDirectionIsToLater != prefetchDirectionIsToLater {
-                strongSelf.currentPrefetchDirectionIsToLater = prefetchDirectionIsToLater
-                if strongSelf.currentPrefetchDirectionIsToLater {
-                    strongSelf.prefetchManager.updateMessages(strongSelf.currentLaterPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
-                } else {
-                    strongSelf.prefetchManager.updateMessages(strongSelf.currentEarlierPrefetchMessages, directionIsToLater: strongSelf.currentPrefetchDirectionIsToLater)
-                }
-            }
-        }
-        
-        self.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
-            if let strongSelf = self, let transactionState = opaqueTransactionState as? ChatHistoryTransactionOpaqueState {
-                strongSelf.processDisplayedItemRangeChanged(displayedRange: displayedRange, transactionState: transactionState)
-            }
-        }
-        
-        self.refreshDisplayedItemRangeTimer = SwiftSignalKit.Timer(timeout: 10.0, repeat: true, completion: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.updateVisibleItemRange(force: true)
-        }, queue: .mainQueue())
-        self.refreshDisplayedItemRangeTimer?.start()
-        
-        let appConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        }).strict()
+    }
+    
+    private func beginPresentationDataManagement(updated: Signal<PresentationData, NoError>) {
+        let appConfiguration = self.context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> take(1)
         |> map { view in
             return view.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
         }
         
         var didSetPresentationData = false
-        self.presentationDataDisposable = (
-            combineLatest(queue: .mainQueue(),
-                updatedPresentationData.signal,
-                appConfiguration)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, appConfiguration in
+        self.presentationDataDisposable = (combineLatest(queue: .mainQueue(),
+            updated,
+            appConfiguration
+        )
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, appConfiguration in
             if let strongSelf = self {
                 let previousTheme = strongSelf.currentPresentationData.theme
                 let previousStrings = strongSelf.currentPresentationData.strings
@@ -1619,9 +1764,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in
                         if let dateNode = itemHeaderNode as? ChatMessageDateHeaderNode {
-                            dateNode.updatePresentationData(chatPresentationData, context: context)
+                            dateNode.updatePresentationData(chatPresentationData, context: strongSelf.context)
                         } else if let avatarNode = itemHeaderNode as? ChatMessageAvatarHeaderNode {
-                            avatarNode.updatePresentationData(chatPresentationData, context: context)
+                            avatarNode.updatePresentationData(chatPresentationData, context: strongSelf.context)
                         } else if let dateNode = itemHeaderNode as? ListMessageDateHeaderNode {
                             dateNode.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
                         }
@@ -1629,129 +1774,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.chatPresentationDataPromise.set(.single(chatPresentationData))
                 }
             }
-        })
-        
-        self.visibleContentOffsetChanged = { [weak self] offset in
-            if let strongSelf = self {
-                strongSelf.contentPositionChanged(offset)
-                
-                if strongSelf.tagMask == nil {
-                    var atBottom = false
-                    var offsetFromBottom: CGFloat?
-                    switch offset {
-                        case let .known(offsetValue):
-                            if offsetValue.isLessThanOrEqualTo(0.0) {
-                                atBottom = true
-                                offsetFromBottom = offsetValue
-                            }
-                            //print("offsetValue: \(offsetValue)")
-                        default:
-                            break
-                    }
-                    
-                    if atBottom != strongSelf.isScrollAtBottomPosition {
-                        strongSelf.isScrollAtBottomPosition = atBottom
-                        strongSelf.updateReadHistoryActions()
-                        
-                        strongSelf.isScrollAtBottomPositionUpdated?()
-                    }
-
-                    strongSelf.maybeUpdateOverscrollAction(offset: offsetFromBottom)
-                }
-            }
-        }
-        
-        self.loadedMessagesFromCachedDataDisposable = (self._cachedPeerDataAndMessages.get() |> map { dataAndMessages -> MessageId? in
-            return dataAndMessages.0?.messageIds.first
-        } |> distinctUntilChanged(isEqual: { $0 == $1 })
-        |> mapToSignal { messageId -> Signal<Void, NoError> in
-            if let messageId = messageId {
-                return context.engine.messages.getMessagesLoadIfNecessary([messageId]) |> map { _ -> Void in return Void() }
-            } else {
-                return .complete()
-            }
-        }).start()
-        
-        self.beganInteractiveDragging = { [weak self] _ in
-            self?.isInteractivelyScrollingValue = true
-            self?.isInteractivelyScrollingPromise.set(true)
-            self?.beganDragging?()
-            //self?.updateHistoryScrollingArea(transition: .immediate)
-        }
-
-        self.endedInteractiveDragging = { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.offerNextChannelToRead, strongSelf.currentOverscrollExpandProgress >= 0.99 {
-                if let nextChannelToRead = strongSelf.nextChannelToRead {
-                    strongSelf.freezeOverscrollControl = true
-                    strongSelf.openNextChannelToRead?(nextChannelToRead.peer, nextChannelToRead.location)
-                } else {
-                    strongSelf.freezeOverscrollControlProgress = true
-                    strongSelf.scroller.contentInset = UIEdgeInsets(top: 94.0 + 12.0, left: 0.0, bottom: 0.0, right: 0.0)
-                    Queue.mainQueue().after(0.3, {
-                        let animator = DisplayLinkAnimator(duration: 0.2, from: 1.0, to: 0.0, update: { rawT in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let t = listViewAnimationCurveEaseInOut(rawT)
-                            let value = (94.0 + 12.0) * t
-                            strongSelf.scroller.contentInset = UIEdgeInsets(top: value, left: 0.0, bottom: 0.0, right: 0.0)
-                        }, completion: {
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.contentInsetAnimator = nil
-                            strongSelf.scroller.contentInset = UIEdgeInsets()
-                            strongSelf.freezeOverscrollControlProgress = false
-                        })
-                        strongSelf.contentInsetAnimator = animator
-                    })
-                }
-            }
-        }
-        
-        self.didEndScrolling = { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.isInteractivelyScrollingValue = false
-            strongSelf.isInteractivelyScrollingPromise.set(false)
-            //strongSelf.updateHistoryScrollingArea(transition: .immediate)
-        }
-
-        /*self.updateScrollingIndicator = { [weak self] scrollingState, transition in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.scrollingState = scrollingState
-            strongSelf.updateHistoryScrollingArea(transition: transition)
-        }*/
-        
-        let selectionRecognizer = ChatHistoryListSelectionRecognizer(target: self, action: #selector(self.selectionPanGesture(_:)))
-        selectionRecognizer.shouldBegin = { [weak self] in
-            guard let strongSelf = self else {
-                return false
-            }
-            return strongSelf.isSelectionGestureEnabled
-        }
-        self.view.addGestureRecognizer(selectionRecognizer)
-        
-        self.loadNextGenericReactionEffect(context: context)
-    }
-    
-    deinit {
-        self.historyDisposable.dispose()
-        self.readHistoryDisposable.dispose()
-        self.interactiveReadActionDisposable?.dispose()
-        self.interactiveReadReactionsDisposable?.dispose()
-        self.canReadHistoryDisposable?.dispose()
-        self.loadedMessagesFromCachedDataDisposable?.dispose()
-        self.preloadAdPeerDisposable.dispose()
-        self.refreshDisplayedItemRangeTimer?.invalidate()
-        self.genericReactionEffectDisposable?.dispose()
-        self.adMessagesDisposable?.dispose()
+        }).strict()
     }
     
     private func attemptReadingReactions() {
@@ -1774,7 +1797,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private func loadNextGenericReactionEffect(context: AccountContext) {
         self.genericReactionEffectDisposable?.dispose()
-        self.genericReactionEffectDisposable = (ReactionContextNode.randomGenericReactionEffect(context: context) |> deliverOnMainQueue).start(next: { [weak self] path in
+        self.genericReactionEffectDisposable = (ReactionContextNode.randomGenericReactionEffect(context: context) |> deliverOnMainQueue).startStrict(next: { [weak self] path in
             guard let strongSelf = self else {
                 return
             }
@@ -2389,7 +2412,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 self.messageWithReactionsProcessingManager.add(messageIdsWithPossibleReactions)
             }
             if !downloadableResourceIds.isEmpty {
-                let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).start()
+                let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).startStandalone()
             }
             if !messageIdsWithInactiveExtendedMedia.isEmpty {
                 self.extendedMediaProcessingManager.update(messageIdsWithInactiveExtendedMedia)

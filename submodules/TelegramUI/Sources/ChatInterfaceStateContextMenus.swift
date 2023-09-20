@@ -800,7 +800,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
                                         let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         
-                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
+                                        let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).startStandalone()
                                     }
                                 }
                                 controllerInteraction.navigationController()?.pushViewController(controller)
@@ -838,7 +838,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     return
                 }
                 
-                let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).start()
+                let _ = context.engine.messages.rateAudioTranscription(messageId: message.id, id: audioTranscription.id, isGood: value).startStandalone()
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 let content: UndoOverlayContent = .info(title: nil, text: presentationData.strings.Chat_AudioTranscriptionFeedbackTip, timeout: nil)
@@ -873,7 +873,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string, timeout: nil))
                             } else {
                                 let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
-                                         |> deliverOnMainQueue).start(completed: {
+                                |> deliverOnMainQueue).startStandalone(completed: {
                                     controllerInteraction.displayUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_SaveSuccess_Text, action: {
                                         controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
                                     }))
@@ -1061,7 +1061,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
                                             let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
                                             |> take(1)
-                                            |> deliverOnMainQueue).start(next: { data in
+                                            |> deliverOnMainQueue).startStandalone(next: { data in
                                                 if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
                                                     if let image = UIImage(data: imageData) {
                                                         if !messageText.isEmpty {
@@ -1145,7 +1145,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
                 }, action: { _, f in
                     let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: mediaReference)
-                    |> deliverOnMainQueue).start(completed: {
+                    |> deliverOnMainQueue).startStandalone(completed: {
                         Queue.mainQueue().after(0.2) {
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             controllerInteraction.presentControllerInCurrent(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: isVideo ? presentationData.strings.Gallery_VideoSaved : presentationData.strings.Gallery_ImageSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return true }), nil)
@@ -1367,7 +1367,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 |> map { result -> String? in
                     return result
                 }
-                |> deliverOnMainQueue).start(next: { link in
+                |> deliverOnMainQueue).startStandalone(next: { link in
                     if let link = link {
                         UIPasteboard.general.string = link
                         
@@ -1434,7 +1434,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 }, action: { _, f in
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     let _ = (toggleGifSaved(account: context.account, fileReference: .message(message: MessageReference(message), media: file), saved: true)
-                                    |> deliverOnMainQueue).start(next: { result in
+                                    |> deliverOnMainQueue).startStandalone(next: { result in
                                         Queue.mainQueue().after(0.2) {
                                             switch result {
                                                 case .generic:
@@ -2442,7 +2442,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                     return (stickerPacks.compactMap { $0 }, firstCustomEmojiReaction)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] customEmojiPacks, firstCustomEmojiReaction in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] customEmojiPacks, firstCustomEmojiReaction in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2457,7 +2457,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             self.buttonNode.isUserInteractionEnabled = reactionCount != 0
 
             self.disposable = (item.context.engine.messages.messageReadStats(id: item.message.id)
-            |> deliverOnMainQueue).start(next: { [weak self] value in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                 guard let strongSelf = self else {
                     return
                 }

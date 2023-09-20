@@ -105,20 +105,20 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         if payload.isEmpty {
                             if peerId.namespace == Namespaces.Peer.CloudGroup {
                                 let _ = (context.engine.peers.addGroupMember(peerId: peerId, memberId: botPeerId)
-                                |> deliverOnMainQueue).start(completed: {
+                                |> deliverOnMainQueue).startStandalone(completed: {
                                     controller?.dismiss()
                                 })
                             } else {
                                 let _ = (context.engine.peers.addChannelMember(peerId: peerId, memberId: botPeerId)
-                                |> deliverOnMainQueue).start(completed: {
+                                |> deliverOnMainQueue).startStandalone(completed: {
                                     controller?.dismiss()
                                 })
                             }
                         } else {
                             let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
-                            |> deliverOnMainQueue).start(next: { result in
+                            |> deliverOnMainQueue).startStandalone(next: { result in
                                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                |> deliverOnMainQueue).start(next: { peer in
+                                |> deliverOnMainQueue).startStandalone(next: { peer in
                                     guard let peer = peer else {
                                         return
                                     }
@@ -192,11 +192,11 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             if let navigationController = navigationController {
                 let _ = ChatControllerImpl.openMessageReplies(context: context, navigationController: navigationController, present: { c, a in
                     present(c, a)
-                }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
+                }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).startStandalone()
             }
         case let .replyThread(messageId):
             if let navigationController = navigationController {
-                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
             }
         case let .stickerPack(name, _):
             dismissInput()
@@ -219,7 +219,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     case let .remove(positionInList):
                         present(UndoOverlayController(presentationData: presentationData, content: .stickersModified(title: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedTitle : presentationData.strings.StickerPackActionInfo_RemovedTitle, text: isEmoji ? presentationData.strings.EmojiPackActionInfo_RemovedText(info.title).string : presentationData.strings.StickerPackActionInfo_RemovedText(info.title).string, undo: true, info: info, topItem: items.first, context: context), elevatedLayout: true, animateInAsReplacement: false, action: { action in
                             if case .undo = action {
-                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).start()
+                                let _ = context.engine.stickers.addStickerPackInteractively(info: info, items: items, positionInList: positionInList).startStandalone()
                             }
                             return true
                         }), nil)
@@ -268,7 +268,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             present(controller, nil)
             let _ = (context.engine.auth.requestCancelAccountResetData(hash: hash)
-            |> deliverOnMainQueue).start(next: { [weak controller] data in
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller] data in
                 controller?.dismiss()
                 present(confirmPhoneNumberCodeController(context: context, phoneNumber: phone, codeData: data), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, error: { [weak controller] error in
@@ -307,7 +307,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     let _ = (ChatInterfaceState.update(engine: context.engine, peerId: peerId, threadId: nil, { currentState in
                         return currentState.withUpdatedComposeInputState(textInputState)
                     })
-                    |> deliverOnMainQueue).start(completed: {
+                    |> deliverOnMainQueue).startStandalone(completed: {
                         navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(id: peerId)))
                     })
                 } else {
@@ -318,7 +318,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             if let to = to {
                 if to.hasPrefix("@") {
                     let _ = (context.engine.peers.resolvePeerByName(name: String(to[to.index(to.startIndex, offsetBy: 1)...]))
-                    |> deliverOnMainQueue).start(next: { peer in
+                    |> deliverOnMainQueue).startStandalone(next: { peer in
                         if let peer = peer {
                             context.sharedContext.applicationBindings.dismissNativeController()
                             continueWithPeer(peer.id)
@@ -326,7 +326,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     })
                 } else {
                     let _ = (context.engine.peers.resolvePeerByPhone(phone: to)
-                    |> deliverOnMainQueue).start(next: { peer in
+                    |> deliverOnMainQueue).startStandalone(next: { peer in
                         if let peer = peer {
                             context.sharedContext.applicationBindings.dismissNativeController()
                             continueWithPeer(peer.id)
@@ -334,7 +334,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     })
                     /*let query = to.trimmingCharacters(in: CharacterSet(charactersIn: "0123456789").inverted)
                     let _ = (context.account.postbox.searchContacts(query: query)
-                    |> deliverOnMainQueue).start(next: { (peers, _) in
+                    |> deliverOnMainQueue).startStandalone(next: { (peers, _) in
                         for case let peer as TelegramUser in peers {
                             if peer.phone == query {
                                 context.sharedContext.applicationBindings.dismissNativeController()
@@ -390,7 +390,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
             
             let _ = (signal
-            |> deliverOnMainQueue).start(next: { [weak controller] wallpaper in
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller] wallpaper in
                 controller?.dismiss()
                 let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, colors, intensity, rotation, nil))
                 navigationController?.pushViewController(galleryController)
@@ -805,12 +805,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return false
                 }
             }
-            |> deliverOnMainQueue).start(next: { exists in
+            |> deliverOnMainQueue).startStandalone(next: { exists in
                 if exists {
                     let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: id), readGlobally: true)
                     let _ = (storyContent.state
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] _ in
                         let transitionIn: StoryContainerScreen.TransitionIn? = nil
                         
                         let storyContainerScreen = StoryContainerScreen(
@@ -837,7 +837,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             })
         case let .boost(peerId, status, canApplyStatus):
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).startStandalone(next: { peer in
                 guard let peer, let status else {
                     return
                 }
@@ -930,7 +930,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 updateImpl = { [weak controller] in
                     if let _ = status.nextLevelBoosts {
-                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).start()
+                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).startStandalone()
                         controller?.updateSubject(nextSubject, count: nextCount)
                     } else {
                         controller?.dismiss()

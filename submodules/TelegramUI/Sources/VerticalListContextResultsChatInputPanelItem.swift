@@ -350,7 +350,7 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                     let progressFrame = CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - progressSize.width) / 2.0), y: iconFrame.minY + floorToScreenPixels((iconFrame.height - progressSize.height) / 2.0)), size: progressSize)
                     
                     if let updatedStatusSignal = updatedStatusSignal {
-                        strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                        strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] status in
                             displayLinkDispatcher.dispatch {
                                 if let strongSelf = strongSelf {
                                     strongSelf.resourceStatus = status

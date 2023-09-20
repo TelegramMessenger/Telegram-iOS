@@ -38,7 +38,7 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         didSet {
             if self.audioRecorder !== oldValue {
                 if let audioRecorder = self.audioRecorder {
-                    self.stateDisposable.set(audioRecorder.recordingState.start(next: { [weak self] state in
+                    self.stateDisposable.set(audioRecorder.recordingState.startStrict(next: { [weak self] state in
                         if let strongSelf = self {
                             switch state {
                                 case let .paused(duration):
@@ -69,11 +69,11 @@ final class ChatTextInputAudioRecordingTimeNode: ASDisplayNode {
         didSet {
             if self.videoRecordingStatus !== oldValue {
                 if self.durationDisposable == nil {
-                    durationDisposable = MetaDisposable()
+                    self.durationDisposable = MetaDisposable()
                 }
                 
                 if let videoRecordingStatus = self.videoRecordingStatus {
-                    self.durationDisposable?.set(videoRecordingStatus.duration.start(next: { [weak self] duration in
+                    self.durationDisposable?.set(videoRecordingStatus.duration.startStrict(next: { [weak self] duration in
                         Queue.mainQueue().async { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.timestamp = duration

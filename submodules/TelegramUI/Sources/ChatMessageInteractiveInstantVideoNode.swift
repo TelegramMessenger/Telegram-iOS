@@ -623,7 +623,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedFile = updatedFile, updatedMedia {
                         if let resource = updatedFile.previewRepresentations.first?.resource {
-                            strongSelf.fetchedThumbnailDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .peer(item.message.id.peerId), userContentType: .video, reference: FileMediaReference.message(message: MessageReference(item.message), media: updatedFile).resourceReference(resource)).start())
+                            strongSelf.fetchedThumbnailDisposable.set(fetchedMediaResource(mediaBox: item.context.account.postbox.mediaBox, userLocation: .peer(item.message.id.peerId), userContentType: .video, reference: FileMediaReference.message(message: MessageReference(item.message), media: updatedFile).resourceReference(resource)).startStrict())
                         } else {
                             strongSelf.fetchedThumbnailDisposable.set(nil)
                         }
@@ -731,7 +731,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedPlaybackStatus = updatedPlaybackStatus {
                         strongSelf.playbackStatusDisposable.set((updatedPlaybackStatus
-                        |> deliverOnMainQueue).start(next: { status in
+                        |> deliverOnMainQueue).startStrict(next: { status in
                             if let strongSelf = self {
                                 strongSelf.status = status
                                 strongSelf.updateStatus(animator: nil)
@@ -741,7 +741,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedPlayerStatusSignal = updatedPlayerStatusSignal {
                         strongSelf.playerStatusDisposable.set((updatedPlayerStatusSignal
-                        |> deliverOnMainQueue).start(next: { [weak self] status in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                             displayLinkDispatcher.dispatch {
                                 if let strongSelf = self {
                                     strongSelf.playerStatus = status
@@ -892,7 +892,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.updateStatus(animator: animation.animator)
                     
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
-                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).start())
+                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).startStrict())
                     }
                     
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
@@ -1384,13 +1384,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     switch fetchStatus {
                         case .Fetching:
                             if item.message.flags.isSending {
-                                let _ = item.context.engine.messages.deleteMessagesInteractively(messageIds: [item.message.id], type: .forEveryone).start()
+                                let _ = item.context.engine.messages.deleteMessagesInteractively(messageIds: [item.message.id], type: .forEveryone).startStandalone()
                             } else {
                                 messageMediaFileCancelInteractiveFetch(context: item.context, messageId: item.message.id, file: file)
                             }
                         case .Remote, .Paused:
                             if let file = self.media {
-                                self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: file, userInitiated: true).start())
+                                self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: file, userInitiated: true).startStrict())
                             }
                         case .Local:
                             self.activateVideoPlayback()
@@ -1476,7 +1476,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if !self.infoBackgroundNode.alpha.isZero {
                     let _ = (item.context.sharedContext.mediaManager.globalMediaPlayerState
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { playlistStateAndType in
+                    |> deliverOnMainQueue).startStandalone(next: { playlistStateAndType in
                         var canPlay = true
                         if let (_, state, _) = playlistStateAndType {
                             switch state {
@@ -1551,7 +1551,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
                     
-                    let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).start()
+                    let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).startStandalone()
                 }
                 return false })
             item.controllerInteraction.presentControllerInCurrent(tipController, nil)
@@ -1583,7 +1583,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 self.requestUpdateLayout(true)
                 
                 self.transcribeDisposable = (item.context.engine.messages.transcribeAudio(messageId: item.message.id)
-                |> deliverOnMainQueue).start(next: { [weak self] result in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
                     }

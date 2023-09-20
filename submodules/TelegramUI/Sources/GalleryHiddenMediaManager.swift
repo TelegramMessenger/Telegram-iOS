@@ -102,7 +102,7 @@ final class GalleryHiddenMediaManagerImpl: GalleryHiddenMediaManager {
         let context = SourceContext(disposable: disposable)
         self.sourceContexts[index] = context
 
-        disposable.set((signal |> deliverOnMainQueue).start(next: { [weak self, weak context] id in
+        disposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] id in
             guard let strongSelf = self, let context = context else {
                 return
             }

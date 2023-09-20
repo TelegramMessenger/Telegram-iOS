@@ -39,7 +39,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
                     self.canDeleteMessagesDisposable.set((context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: self.selectedMessages)
-                    |> deliverOnMainQueue).start(next: { [weak self] actions in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] actions in
                         if let strongSelf = self {
                             strongSelf.actions = actions
                             if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {

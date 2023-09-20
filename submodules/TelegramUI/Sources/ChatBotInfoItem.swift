@@ -298,7 +298,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         if let updatedImageSignal = updatedImageSignal {
                             strongSelf.imageNode.setSignal(updatedImageSignal)
                             if let image = item.photo {
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerId: nil).startStrict())
                             }
                         }
                         strongSelf.imageNode.isHidden = false
@@ -458,7 +458,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                 case let .peerMention(peerId, _, _):
                                     if let item = self.item {
                                         let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                                             if let peer = peer {
                                                 self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                             }

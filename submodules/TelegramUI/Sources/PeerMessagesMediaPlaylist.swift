@@ -517,7 +517,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                     }
                 }
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                     self?.currentItemDisappeared?()
                 }))
             } else {
@@ -559,7 +559,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                         |> take(1)
                         |> deliverOnMainQueue
-                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
+                        self.navigationDisposable.set(historySignal.startStrict(next: { [weak self] messageAndAroundMessages in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -578,7 +578,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                     case let .custom(messages, at, _):
                         self.navigationDisposable.set((messages
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] messages in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] messages in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -602,7 +602,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                     default:
                         self.navigationDisposable.set((self.context.account.postbox.messageAtId(messageId)
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] message in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] message in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -712,7 +712,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                         |> take(1)
                         |> deliverOnMainQueue
-                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages in
+                        self.navigationDisposable.set(historySignal.startStrict(next: { [weak self] messageAndAroundMessages in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -734,7 +734,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                     case .singleMessage:
                         self.navigationDisposable.set((self.context.account.postbox.messageAtId(index.id)
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] message in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] message in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -816,7 +816,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                         |> take(1)
                         |> deliverOnMainQueue
-                        self.navigationDisposable.set(historySignal.start(next: { [weak self] messageAndAroundMessages, previousMessagesCount, shouldLoadMore in
+                        self.navigationDisposable.set(historySignal.startStrict(next: { [weak self] messageAndAroundMessages, previousMessagesCount, shouldLoadMore in
                             if let strongSelf = self {
                                 assert(strongSelf.loadingItem)
                                 
@@ -828,7 +828,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     loadMore?()
                                     
                                     strongSelf.loadMoreDisposable.set((messages
-                                    |> deliverOnMainQueue).start(next: { messages, totalCount, hasMore in
+                                    |> deliverOnMainQueue).startStrict(next: { messages, totalCount, hasMore in
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -869,7 +869,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                 default:
                     break
             }
-            let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).start()
+            let _ = self.context.engine.messages.markMessageContentAsConsumedInteractively(messageId: item.message.id).startStandalone()
         }
     }
 }

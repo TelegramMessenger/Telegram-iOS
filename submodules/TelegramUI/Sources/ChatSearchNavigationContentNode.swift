@@ -66,7 +66,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
         
         if let statuses = interaction.statuses {
             self.searchingActivityDisposable = (statuses.searching
-            |> deliverOnMainQueue).start(next: { [weak self] value in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                 self?.searchBar.activity = value
             })
         }

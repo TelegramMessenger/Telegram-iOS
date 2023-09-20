@@ -180,7 +180,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
             
             self.didSetupSticker = true
             self.disposable.set((sticker
-            |> deliverOnMainQueue).start(next: { [weak self] sticker in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] sticker in
                 if let strongSelf = self, let sticker = sticker {
                     let inputNodeInteraction = ChatMediaInputNodeInteraction(
                         navigateToCollectionId: { _ in
@@ -351,7 +351,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
             
             self.didSetupSticker = true
             self.disposable.set((sticker
-            |> deliverOnMainQueue).start(next: { [weak self] sticker in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] sticker in
                 if let strongSelf = self, let sticker = sticker {
                     let inputNodeInteraction = ChatMediaInputNodeInteraction(
                         navigateToCollectionId: { _ in

@@ -246,7 +246,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         
         let handleInternalUrl: (String) -> Void = { url in
             let _ = (context.sharedContext.resolveUrl(context: context, peerId: nil, url: url, skipUrlAuth: true)
-            |> deliverOnMainQueue).start(next: handleResolvedUrl)
+            |> deliverOnMainQueue).startStandalone(next: handleResolvedUrl)
         }
         
         if let scheme = parsedUrl.scheme, (scheme == "tg" || scheme == context.sharedContext.applicationBindings.appSpecificScheme) {
@@ -526,7 +526,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         
                         if let id = id, !id.isEmpty, let idValue = Int64(id), idValue > 0 {
                             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(idValue))))
-                            |> deliverOnMainQueue).start(next: { peer in
+                            |> deliverOnMainQueue).startStandalone(next: { peer in
                                 if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                     navigationController?.pushViewController(controller)
                                 }
@@ -824,7 +824,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                 var settings = settings
                                 settings.backupHostOverride = host
                                 return settings
-                            }).start()
+                            }).startStandalone()
                             return
                         }
                     }
@@ -961,7 +961,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                 }
                 
                 let _ = (settings
-                |> deliverOnMainQueue).start(next: { settings in
+                |> deliverOnMainQueue).startStandalone(next: { settings in
                     if settings.defaultWebBrowser == nil {
                         if !"".isEmpty && isCompact {
                             let controller = BrowserScreen(context: context, subject: .webPage(url: parsedUrl.absoluteString))

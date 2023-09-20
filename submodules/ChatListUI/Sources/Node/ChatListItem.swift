@@ -1395,7 +1395,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context
                 self.cachedDataDisposable.set((context.account.postbox.peerView(id: peer.id)
-                |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1457,7 +1457,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.updateVideoVisibility()
                     } else {
                         if let photo = peer.largeProfileImage, photo.hasVideo {
-                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
+                            let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).startStandalone()
                         }
                     }
                 }))

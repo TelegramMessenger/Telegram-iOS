@@ -2154,7 +2154,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }, peerSelected: { [weak self] peer, chatPeer, threadId, _ in
             interaction.dismissInput()
             interaction.openPeer(peer, chatPeer, threadId, false)
-            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
+            let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
             self?.listNode.clearHighlightAnimated(true)
         }, disabledPeerSelected: { _, _ in
         }, togglePeerSelected: { _, _ in
@@ -2205,7 +2205,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 return
             }
             let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
                 guard let self, let peer else {
                     return
                 }
@@ -2325,14 +2325,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousExpandGlobalSearch = Atomic<Bool>(value: false)
         
         let _ = (searchQuery
-        |> deliverOnMainQueue).start(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
             self?.searchQueryValue = query
             listInteraction?.searchTextHighightState = query
             chatListInteraction?.searchTextHighightState = query
         })
         
         let _ = (searchOptions
-        |> deliverOnMainQueue).start(next: { [weak self] options in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
             self?.searchOptionsValue = options
         })
 
@@ -2384,7 +2384,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 return (mappedItems, isSearching)
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] foundItems in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] foundItems in
             if let strongSelf = self {
                 let previousSelectedMessageIds = previousSelectedMessages.swap(strongSelf.selectedMessages)
                 let previousExpandGlobalSearch = previousExpandGlobalSearch.swap(strongSelf.searchStateValue.expandGlobalSearch)
@@ -2475,7 +2475,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             return
                         }
                         
-                        let _ = clearRecentDownloadList(postbox: strongSelf.context.account.postbox).start()
+                        let _ = clearRecentDownloadList(postbox: strongSelf.context.account.postbox).startStandalone()
                     }))
                     
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -2492,7 +2492,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     
                     let _ = ((strongSelf.context.fetchManager as! FetchManagerImpl).entriesSummary
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { entries in
+                    |> deliverOnMainQueue).startStandalone(next: { entries in
                         guard let strongSelf = self, !entries.isEmpty else {
                             return
                         }
@@ -2599,14 +2599,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         if case .chats = key, !peersFilter.contains(.excludeRecent) {
-            self.updatedRecentPeersDisposable.set(context.engine.peers.managedUpdatedRecentPeers().start())
+            self.updatedRecentPeersDisposable.set(context.engine.peers.managedUpdatedRecentPeers().startStrict())
         }
         
         self.recentDisposable.set((combineLatest(queue: .mainQueue(),
             presentationDataPromise.get(),
             recentItems
         )
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData, entries in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData, entries in
             if let strongSelf = self {
                 let previousEntries = previousRecentItems.swap(entries)
                 
@@ -2614,7 +2614,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 let transition = chatListSearchContainerPreparedRecentTransition(from: previousEntries ?? [], to: entries, context: context, presentationData: presentationData, filter: peersFilter, peerSelected: { peer, threadId in
                     interaction.openPeer(peer, nil, threadId, true)
                     if threadId == nil {
-                        let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).start()
+                        let _ = context.engine.peers.addRecentlySearchedPeer(peerId: peer.id).startStandalone()
                     }
                     self?.recentListNode.clearHighlightAnimated(true)
                 }, disabledPeerSelected: { peer, threadId in
@@ -2628,7 +2628,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }, clearRecentlySearchedPeers: {
                     interaction.clearRecentSearch()
                 }, deletePeer: { peerId in
-                    let _ = context.engine.peers.removeRecentlySearchedPeer(peerId: peerId).start()
+                    let _ = context.engine.peers.removeRecentlySearchedPeer(peerId: peerId).startStandalone()
                 }, animationCache: strongSelf.animationCache, animationRenderer: strongSelf.animationRenderer, openStories: { peerId, avatarNode in
                     interaction.openStories?(peerId, avatarNode)
                 })
@@ -2637,7 +2637,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }))
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 strongSelf.presentationDataPromise.set(.single(ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)))
@@ -2713,7 +2713,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return .single(nil)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] playlistStateAndType in
                 guard let strongSelf = self else {
                     return
                 }
@@ -2737,7 +2737,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         self.deletedMessagesDisposable = (context.account.stateManager.deletedMessages
-        |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] messageIds in
             if let strongSelf = self {
                 strongSelf.updateState { state in
                     var state = state
@@ -2810,7 +2810,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     return
                 }
                 strongSelf.scheduledMarkRecentDownloadsAsSeen = false
-                let _ = markAllRecentDownloadItemsAsSeen(postbox: strongSelf.context.account.postbox).start()
+                let _ = markAllRecentDownloadItemsAsSeen(postbox: strongSelf.context.account.postbox).startStandalone()
             })
         }
     }
@@ -2907,7 +2907,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         })
                         return rate
                     }
-                    |> deliverOnMainQueue).start(next: { baseRate in
+                    |> deliverOnMainQueue).startStandalone(next: { baseRate in
                         guard let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType else {
                             return
                         }
@@ -3035,7 +3035,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                         progressDisposable.dispose()
                                     }
                                 }
-                                |> deliverOnMainQueue).start(next: { index in
+                                |> deliverOnMainQueue).startStrict(next: { index in
                                     guard let strongSelf = self else {
                                         return
                                     }

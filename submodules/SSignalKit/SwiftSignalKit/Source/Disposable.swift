@@ -6,15 +6,21 @@ public protocol Disposable: AnyObject {
 
 public final class StrictDisposable: Disposable {
     private let disposable: Disposable
+    private let file: String
+    private let line: Int
     private let isDisposed = Atomic<Bool>(value: false)
     
-    public init(_ disposable: Disposable) {
+    public init(_ disposable: Disposable, file: String, line: Int) {
         self.disposable = disposable
+        self.file = file
+        self.line = line
     }
     
     deinit {
         #if DEBUG
-        assert(self.isDisposed.with({ $0 }))
+        if !self.isDisposed.with({ $0 }) {
+            assertionFailure("Leaked disposable \(self.disposable) from \(self.file):\(self.line)")
+        }
         #endif
     }
     
@@ -25,8 +31,8 @@ public final class StrictDisposable: Disposable {
 }
 
 public extension Disposable {
-    func strict() -> Disposable {
-        return StrictDisposable(self)
+    func strict(file: String = #file, line: Int = #line) -> Disposable {
+        return StrictDisposable(self, file: file, line: line)
     }
 }
 

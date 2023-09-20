@@ -198,9 +198,9 @@ final class ChatListContainerItemNode: ASDisplayNode {
         }
         
         if let filter, case let .filter(id, _, _, data) = filter, data.isShared {
-            self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).start().strict()
+            self.pollFilterUpdatesDisposable = self.context.engine.peers.pollChatFolderUpdates(folderId: id).startStrict()
             self.chatFilterUpdatesDisposable = (self.context.engine.peers.subscribedChatFolderUpdates(folderId: id)
-            |> deliverOnMainQueue).start(next: { [weak self] result in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                 guard let self else {
                     return
                 }
@@ -221,14 +221,14 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
-            }).strict()
+            })
         }
         
         if case let .forum(peerId) = location {
             self.peerDataDisposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Peer.StatusSettings(id: peerId)
             )
-            |> deliverOnMainQueue).start(next: { [weak self] statusSettings in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] statusSettings in
                 guard let self else {
                     return
                 }
@@ -242,7 +242,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         self.updateLayout(size: size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, storiesInset: storiesInset, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
-            }).strict()
+            })
         }
     }
     
@@ -333,7 +333,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         guard let self, let chatFolderUpdates = self.chatFolderUpdates else {
                             return
                         }
-                        let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: chatFolderUpdates.folderId).start()
+                        let _ = self.context.engine.peers.hideChatFolderUpdates(folderId: chatFolderUpdates.folderId).startStandalone()
                     }
                 )),
                 environment: {},
@@ -383,7 +383,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                                     
                                     if let self {
                                         self.controller?.setInlineChatList(location: nil)
-                                        let _ = self.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: true).start()
+                                        let _ = self.context.engine.peers.removePeerChat(peerId: peerId, reportChatSpam: true).startStandalone()
                                     }
                                 })
                             ]),
@@ -399,7 +399,7 @@ final class ChatListContainerItemNode: ASDisplayNode {
                         guard let self, case let .forum(peerId) = self.location else {
                             return
                         }
-                        let _ = self.context.engine.peers.dismissPeerStatusOptions(peerId: peerId).start()
+                        let _ = self.context.engine.peers.dismissPeerStatusOptions(peerId: peerId).startStandalone()
                     }
                 )),
                 environment: {},

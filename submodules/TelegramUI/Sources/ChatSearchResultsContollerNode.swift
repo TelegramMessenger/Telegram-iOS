@@ -276,7 +276,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.interaction = interaction
         
         self.disposable.set((signal
-        |> deliverOnMainQueue).start(next: { [weak self] entries in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] entries in
             if let strongSelf = self {
                 let previousEntries = strongSelf.previousEntries.swap(entries)
                 
@@ -312,7 +312,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.isLoadingMore = true
         
         self.loadMoreDisposable.set((self.context.engine.messages.searchMessages(location: self.location, query: self.searchQuery, state: self.searchState)
-        |> deliverOnMainQueue).start(next: { [weak self] (updatedResult, updatedState) in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] (updatedResult, updatedState) in
             guard let strongSelf = self else {
                 return
             }
@@ -345,7 +345,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
             }
             
             strongSelf.disposable.set((signal
-            |> deliverOnMainQueue).start(next: { entries in
+            |> deliverOnMainQueue).startStrict(next: { entries in
                 if let strongSelf = self {
                     let previousEntries = strongSelf.previousEntries.swap(entries)
                     

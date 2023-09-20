@@ -136,12 +136,12 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.animationNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.animationTapGesture(_:))))
         
         if case .archive = subject {
-            let _ = self.context.engine.privacy.updateGlobalPrivacySettings().start()
+            let _ = self.context.engine.privacy.updateGlobalPrivacySettings().startStandalone()
             
             self.archiveSettingsDisposable = (context.engine.data.subscribe(
                 TelegramEngine.EngineData.Item.Configuration.GlobalPrivacy()
             )
-            |> deliverOnMainQueue).start(next: { [weak self] settings in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] settings in
                 guard let self else {
                     return
                 }
@@ -149,7 +149,7 @@ final class ChatListEmptyNode: ASDisplayNode {
                 if let (size, insets) = self.validLayout {
                     self.updateLayout(size: size, insets: insets, transition: .immediate)
                 }
-            }).strict()
+            })
         }
     }
     

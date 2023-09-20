@@ -26,7 +26,7 @@ func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatP
     for id in missingEmoji {
         result["emoji-\(id)"] = {
             return (context.engine.stickers.resolveInlineStickers(fileIds: [id])
-            |> deliverOnMainQueue).start(next: { result in
+            |> deliverOnMainQueue).startStrict(next: { result in
                 if let file = result[id] {
                     updateState({ state -> ChatPresentationInterfaceState in
                         return state.updatedInterfaceState { interfaceState -> ChatInterfaceState in

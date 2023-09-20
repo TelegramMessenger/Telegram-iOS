@@ -142,7 +142,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                     if let strongSelf = self {
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                         let _ = (strongSelf.context.engine.stickers.toggleStickerSaved(file: item.file, saved: !isStarred)
-                                        |> deliverOnMainQueue).start(next: { result in
+                                        |> deliverOnMainQueue).startStandalone(next: { result in
                                             switch result {
                                                 case .generic:
                                                     strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, loop: true, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
@@ -585,7 +585,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         self.view.disablesInteractiveKeyboardGestureRecognizer = true
         
         self.choosingStickerDisposable = (self.stickersNode.choosingSticker
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.controllerInteraction?.updateChoosingSticker(value)
             }

@@ -577,7 +577,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             switch fetchStatus {
                 case .Fetching:
                     if let context = self.context, let message = self.message, message.flags.isSending {
-                        let _ = context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
+                        let _ = context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).startStandalone()
                     } else if let media = self.media, let context = self.context, let message = self.message {
                         if let media = media as? TelegramMediaFile {
                             messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: media)
@@ -1054,7 +1054,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     updatedFetchControls = FetchControls(fetch: { manual in
                                         if let strongSelf = self {
                                             if let representation = largestRepresentationForPhoto(image) {
-                                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                                strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).startStrict())
                                             }
                                         }
                                     }, cancel: {
@@ -1135,9 +1135,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     updatedFetchControls = FetchControls(fetch: { manual in
                                         if let strongSelf = self {
                                             if file.isAnimated {
-                                                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+                                                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).startStrict())
                                             } else {
-                                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                                strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).startStrict())
                                             }
                                         }
                                     }, cancel: {
@@ -1172,7 +1172,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if let representation = largestRepresentationForPhoto(image) {
-                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                        strongSelf.fetchDisposable.set(messageMediaImageInteractiveFetched(context: context, message: message, image: image, resource: representation.resource, range: representationFetchRangeForDisplayAtSize(representation: representation, dimension: nil/*isSecretMedia ? nil : 600*/), userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).startStrict())
                                     }
                                 }
                             }, cancel: {
@@ -1194,7 +1194,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).start())
+                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).startStrict())
                                 }
                             }, cancel: {
                                 chatMessageWebFileCancelInteractiveFetch(account: context.account, image: image)
@@ -1271,9 +1271,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if file.isAnimated {
-                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).startStrict())
                                     } else {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual, storeToDownloadsPeerId: storeToDownloadsPeerId).startStrict())
                                     }
                                 }
                             }, cancel: {
@@ -1321,7 +1321,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             if case let .file(file, _, _, _, _, _) = wallpaper.content {
                                 updatedFetchControls = FetchControls(fetch: { manual in
                                     if let strongSelf = self {
-                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
+                                        strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).startStrict())
                                     }
                                 }, cancel: {
                                     messageMediaFileCancelInteractiveFetch(context: context, messageId: message.id, file: file)
@@ -1466,7 +1466,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         guard let context, let peerId else {
                                             return
                                         }
-                                        let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).start()
+                                        let _ = storeDownloadedMedia(storeManager: context.downloadedMediaStoreManager, media: .message(message: MessageReference(message), media: updatedVideoFile), peerId: peerId).startStandalone()
                                     })
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
@@ -1582,7 +1582,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             if let updatedStatusSignal = updatedStatusSignal {
                                 strongSelf.statusDisposable.set((updatedStatusSignal
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
+                                |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.fetchStatus = status
@@ -1595,7 +1595,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             if let updatedVideoNodeReadySignal = updatedVideoNodeReadySignal {
                                 strongSelf.videoNodeReadyDisposable.set((updatedVideoNodeReadySignal
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                                |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf, let videoNode = strongSelf.videoNode {
                                             strongSelf.pinchContainerNode.contentNode.insertSubnode(videoNode, aboveSubnode: strongSelf.imageNode)
@@ -1606,7 +1606,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             if let updatedPlayerStatusSignal = updatedPlayerStatusSignal {
                                 strongSelf.playerStatusDisposable.set((updatedPlayerStatusSignal
-                                |> deliverOnMainQueue).start(next: { [weak strongSelf] status in
+                                |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] status in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
                                             strongSelf.playerStatus = status
@@ -1632,7 +1632,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     if let _ = media as? TelegramMediaImage {
                                         updatedFetchControls.fetch(false)
                                     } else if let image = media as? TelegramMediaWebFile {
-                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).start())
+                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).startStrict())
                                     } else if let file = media as? TelegramMediaFile {
                                         let fetchSignal = messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false, storeToDownloadsPeerId: peerId)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
@@ -1646,7 +1646,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 return .complete()
                                             }
                                         }
-                                        strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
+                                        strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.startStrict())
                                     }
                                 } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming /*&& message.id.namespace != Namespaces.Message.Local*/ {
                                     if let file = media as? TelegramMediaFile {
@@ -1661,7 +1661,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                                 return .complete()
                                             }
                                         }
-                                        strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
+                                        strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.startStrict())
                                     }
                                 }
                             } else if currentAutomaticDownload != automaticDownload, case .full = automaticDownload {
@@ -2354,7 +2354,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 } else {
                     let _ = (context.sharedContext.mediaManager.globalMediaPlayerState
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { playlistStateAndType in
+                    |> deliverOnMainQueue).startStandalone(next: { playlistStateAndType in
                         var canPlay = true
                         if let (_, state, _) = playlistStateAndType {
                             switch state {

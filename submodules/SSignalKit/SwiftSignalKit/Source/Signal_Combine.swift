@@ -72,7 +72,7 @@ private func combineLatestAny<E, R>(_ signals: [Signal<Any, E>], combine: @escap
             disposable.add(signalDisposable)
         }
         
-        return disposable;
+        return disposable
     }
 }
 

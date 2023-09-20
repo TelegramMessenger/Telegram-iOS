@@ -184,7 +184,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     }
                     animationNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: item.file.resource, isVideo: item.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).startStrict())
                 } else {
                     self.imageNode.alpha = 1.0
                     self.imageNode.setSignal(chatMessageSticker(account: context.account, userLocation: .other, file: item.file, small: true))
@@ -194,7 +194,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                         currentAnimationNode.removeFromSupernode()
                     }
                     
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: stickerPackFileReference(item.file), resource: chatMessageStickerResource(file: item.file, small: true)).startStrict())
                 }
                 
                 if item.file.isPremiumSticker {

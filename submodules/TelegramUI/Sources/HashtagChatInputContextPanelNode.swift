@@ -143,7 +143,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             }
         }, removeRequested: { [weak self] text in
             if let strongSelf = self {
-                let _ = strongSelf.context.engine.messages.removeRecentlyUsedHashtag(string: text).start()
+                let _ = strongSelf.context.engine.messages.removeRecentlyUsedHashtag(string: text).startStandalone()
                 strongSelf.revealedHashtag = nil
             }
         })

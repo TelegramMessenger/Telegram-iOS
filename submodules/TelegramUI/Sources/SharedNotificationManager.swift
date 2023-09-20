@@ -57,7 +57,7 @@ public final class SharedNotificationManager {
         self.pollLiveLocationOnce = pollLiveLocationOnce
         
         self.inForegroundDisposable = (inForeground
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -74,7 +74,7 @@ public final class SharedNotificationManager {
             }
             return combineLatest(signals)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] accountsAndKeys in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] accountsAndKeys in
             guard let strongSelf = self else {
                 return
             }
@@ -133,7 +133,7 @@ public final class SharedNotificationManager {
             return .single(messageIds)
             |> delay(1.0, queue: Queue.mainQueue())
         }
-        |> deliverOnMainQueue).start(next: { [weak self, weak context] _ in
+        |> deliverOnMainQueue).startStrict(next: { [weak self, weak context] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -375,7 +375,7 @@ public final class SharedNotificationManager {
                 self.clearNotificationsManager?.clearAll()
                 
                 if let accountManager = self.accountManager {
-                    let _ = logoutFromAccount(id: account.id, accountManager: accountManager, alreadyLoggedOutRemotely: true).start()
+                    let _ = logoutFromAccount(id: account.id, accountManager: accountManager, alreadyLoggedOutRemotely: true).startStandalone()
                 }
                 return
             }
@@ -497,7 +497,7 @@ public final class SharedNotificationManager {
                             return nil
                         }
                     }
-                    |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).start(next: { [weak self] peerAndInternalId in
+                    |> distinctUntilChanged(isEqual: { $0?.1 == $1?.1 })).startStrict(next: { [weak self] peerAndInternalId in
                         self?.updateNotificationCall(call: peerAndInternalId, strings: strings, nameOrder: .firstLast)
                     }))
             } else {

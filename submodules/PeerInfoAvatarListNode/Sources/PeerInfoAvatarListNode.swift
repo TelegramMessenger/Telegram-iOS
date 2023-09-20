@@ -261,7 +261,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 }
                 if let videoContent = self.videoContent {
                     let duration: Double = (self.videoStartTimestamp ?? 0.0) + 4.0
-                    self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: videoContent.fileReference.resourceReference(videoContent.fileReference.media.resource), duration: duration).start())
+                    self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: videoContent.fileReference.resourceReference(videoContent.fileReference.media.resource), duration: duration).startStrict())
                 }
             }
             self.markupNode?.updateVisibility(isCentral)
@@ -291,7 +291,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
             } else {
                 return .single(value)
             }
-        } |> distinctUntilChanged, self.loadingProgress.get() |> distinctUntilChanged)).start(next: { [weak self] isLoading, progress in
+        } |> distinctUntilChanged, self.loadingProgress.get() |> distinctUntilChanged)).startStrict(next: { [weak self] isLoading, progress in
             guard let strongSelf = self else {
                 return
             }
@@ -318,6 +318,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.statusDisposable.dispose()
         self.playbackStartDisposable.dispose()
         self.preloadDisposable.dispose()
+        self.loadingProgressDisposable.dispose()
     }
     
     private func updateStatus() {
@@ -387,7 +388,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 return playing
             }
             |> take(1)
-            |> deliverOnMainQueue).start(error: { [weak self] _ in
+            |> deliverOnMainQueue).startStrict(error: { [weak self] _ in
                 if let strongSelf = self {
                     if let _ = strongSelf.videoNode {
                         videoNode.seek(0.0)
@@ -419,7 +420,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         self.statusPromise.set(videoNode.status |> map { ($0, videoStartTimestamp) })
         
         self.statusDisposable.set((self.mediaStatus
-        |> deliverOnMainQueue).start(next: { [weak self] mediaStatus in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] mediaStatus in
             if let strongSelf = self {
                 if let mediaStatusAndStartTimestamp = mediaStatus {
                     strongSelf.playerStatus = mediaStatusAndStartTimestamp.0
@@ -1188,7 +1189,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 return representation.flatMap { AvatarGalleryEntry(representation: $0.0, peer: peer) }
             }
             
-            self.disposable.set(combineLatest(queue: Queue.mainQueue(), peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id), entry).start(next: { [weak self] completeAndEntries, entry in
+            self.disposable.set(combineLatest(queue: Queue.mainQueue(), peerInfoProfilePhotosWithCache(context: self.context, peerId: peer.id), entry).startStrict(next: { [weak self] completeAndEntries, entry in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1321,7 +1322,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             
             if let currentItemNode = self.currentItemNode {
                 self.positionDisposable.set((currentItemNode.mediaStatus
-                    |> deliverOnMainQueue).start(next: { [weak self] statusAndVideoStartTimestamp in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] statusAndVideoStartTimestamp in
                         if let strongSelf = self {
                             strongSelf.playerStatus = statusAndVideoStartTimestamp
                         }

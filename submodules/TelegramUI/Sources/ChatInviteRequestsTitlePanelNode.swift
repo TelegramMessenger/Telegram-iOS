@@ -221,7 +221,7 @@ final class ChatInviteRequestsTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
 
         let ids = peers.map { $0.id.toInt64() }
-        let _ = ApplicationSpecificNotice.setDismissedInvitationRequests(accountManager: context.sharedContext.accountManager, peerId: peerId, values: ids).start()
+        let _ = ApplicationSpecificNotice.setDismissedInvitationRequests(accountManager: context.sharedContext.accountManager, peerId: peerId, values: ids).startStandalone()
     }
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

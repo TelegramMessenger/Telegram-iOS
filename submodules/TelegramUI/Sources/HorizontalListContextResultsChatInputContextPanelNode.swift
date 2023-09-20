@@ -201,7 +201,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                     let interfaceInteraction = strongSelf.interfaceInteraction
                                     let _ = (toggleGifSaved(account: context.account, fileReference: .standalone(media: file), saved: true)
-                                    |> deliverOnMainQueue).start(next: { result in
+                                    |> deliverOnMainQueue).startStandalone(next: { result in
                                         switch result {
                                             case .generic:
                                             interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
@@ -275,7 +275,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         |> map { results -> ChatContextResultCollection? in
             return results?.results
         }
-        |> deliverOnMainQueue).start(next: { [weak self] nextResults in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] nextResults in
             guard let strongSelf = self, let nextResults = nextResults else {
                 return
             }

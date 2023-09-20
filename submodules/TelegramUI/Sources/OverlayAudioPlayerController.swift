@@ -59,7 +59,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
         }, requestShare: { [weak self] messageId in
             if let strongSelf = self {
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
-                |> deliverOnMainQueue).start(next: { message in
+                |> deliverOnMainQueue).startStandalone(next: { message in
                     if let strongSelf = self, let message = message {
                         let shareController = ShareController(context: strongSelf.context, subject: .messages([message._asMessage()]), showInChat: { message in
                             if let strongSelf = self {
@@ -74,7 +74,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
                                         peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                                     )
                                 )
-                                |> deliverOnMainQueue).start(next: { [weak self] peerList in
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
                                     if let strongSelf = self {
                                         let peers = peerList.compactMap { $0 }
                                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }

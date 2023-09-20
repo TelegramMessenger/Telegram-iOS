@@ -56,7 +56,7 @@ final class WallpaperUploadManagerImpl: WallpaperUploadManager {
     init(sharedContext: SharedAccountContext, account: Account, presentationData: Signal<PresentationData, NoError>) {
         self.sharedContext = sharedContext
         self.account = account
-        self.presentationDataDisposable.set(presentationData.start(next: { [weak self] presentationData in
+        self.presentationDataDisposable.set(presentationData.startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationDataUpdated(presentationData)
             }

@@ -166,7 +166,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
             case .Local:
                 self.interaction.openMessage(message)
             case .Remote, .Paused:
-                self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: self.context, message: message, file: file, userInitiated: true).start())
+                self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: self.context, message: message, file: file, userInitiated: true).startStrict())
             }
         }
     }
@@ -220,7 +220,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.item = (item, media, size, mediaDimensions)
                 
                 self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: message.id, file: file)
-                |> deliverOnMainQueue).start(next: { [weak self] status in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                     if let strongSelf = self, let _ = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
@@ -669,7 +669,7 @@ final class ChatListSearchMediaNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.scrollNode)
         self.addSubnode(self.floatingHeaderNode)
         
-        self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+        self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
             guard let strongSelf = self else {
                 return
             }

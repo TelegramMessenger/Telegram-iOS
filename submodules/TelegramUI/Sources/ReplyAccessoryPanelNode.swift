@@ -103,7 +103,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.actionArea)
         
         self.messageDisposable.set((context.account.postbox.messageView(messageId)
-        |> deliverOnMainQueue).start(next: { [weak self] messageView in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] messageView in
             if let strongSelf = self {
                 if messageView.message == nil {
                     Queue.mainQueue().justDispatch {

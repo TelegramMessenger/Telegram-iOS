@@ -192,7 +192,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }
         |> distinctUntilChanged
         
-        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: true), themeEmoticon).start(next: { [weak self] presentationData, chatThemes, themeEmoticon in
+        self.presentationDataDisposable = combineLatest(queue: Queue.mainQueue(), context.sharedContext.presentationData, context.engine.themes.getChatThemes(accountManager: context.sharedContext.accountManager, onlyCached: true), themeEmoticon).startStrict(next: { [weak self] presentationData, chatThemes, themeEmoticon in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings

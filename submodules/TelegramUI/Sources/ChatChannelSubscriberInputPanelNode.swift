@@ -224,7 +224,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                         strongSelf.isJoining = false
                     }
                 }
-            }).start(error: { [weak self] error in
+            }).startStrict(error: { [weak self] error in
                 guard let strongSelf = self, let presentationInterfaceState = strongSelf.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
                     return
                 }
@@ -256,7 +256,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
             break
         case .muteNotifications, .unmuteNotifications:
             if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer {
-                self.actionDisposable.set(context.engine.peers.togglePeerMuted(peerId: peer.id, threadId: nil).start())
+                self.actionDisposable.set(context.engine.peers.togglePeerMuted(peerId: peer.id, threadId: nil).startStrict())
             }
         case .hidePinnedMessages, .unpinMessages:
             self.interfaceInteraction?.unpinAllMessages()

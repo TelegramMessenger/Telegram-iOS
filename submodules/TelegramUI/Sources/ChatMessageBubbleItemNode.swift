@@ -3826,7 +3826,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return .action({ [weak self] in
                             if let item = self?.item {
                                 let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                |> deliverOnMainQueue).start(next: { peer in
+                                |> deliverOnMainQueue).startStandalone(next: { peer in
                                     if let self = self, let item = self.item, let peer = peer {
                                         item.controllerInteraction.openPeer(peer, openProfile ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     }

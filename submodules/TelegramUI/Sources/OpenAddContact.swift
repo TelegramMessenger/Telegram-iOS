@@ -11,7 +11,7 @@ import PeerInfoUI
 func openAddContactImpl(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
     let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
     |> take(1)
-    |> deliverOnMainQueue).start(next: { value in
+    |> deliverOnMainQueue).startStandalone(next: { value in
         switch value {
             case .allowed:
                 let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: label, value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [], note: "")

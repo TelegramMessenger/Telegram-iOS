@@ -129,7 +129,7 @@ final class AttachmentFileSearchItem: ItemListControllerSearch {
             } else {
                 return .single(value)
             }
-        }).start(next: { [weak self] value in
+        }).startStrict(next: { [weak self] value in
             self?.updateActivity?(value)
         }))
     }
@@ -421,7 +421,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         
         let previousSearchItems = Atomic<[AttachmentFileSearchEntry]?>(value: nil)
         self.searchDisposable.set((combineLatest(searchQuery, foundItems, self.presentationDataPromise.get())
-        |> deliverOnMainQueue).start(next: { [weak self] query, entries, presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] query, entries, presentationData in
             if let strongSelf = self {
                 let previousEntries = previousSearchItems.swap(entries)
                 updateActivity(false)
@@ -432,7 +432,7 @@ public final class AttachmentFileSearchContainerNode: SearchDisplayControllerCon
         }))
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 var presentationData = presentationData
                 

@@ -390,7 +390,7 @@ public func channelRecentActionsFilterController(context: AccountContext, update
     }, toggleAllAdmins: { value in
         let _ = (adminsPromise.get()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { admins in
+        |> deliverOnMainQueue).startStandalone(next: { admins in
             if let _ = admins {
                 updateState { current in
                     if value {
@@ -404,7 +404,7 @@ public func channelRecentActionsFilterController(context: AccountContext, update
     }, toggleAdmin: { adminId in
         let _ = (adminsPromise.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { admins in
+            |> deliverOnMainQueue).startStandalone(next: { admins in
                 if let admins = admins {
                     updateState { current in
                         if let adminPeerIds = current.adminPeerIds, let index = adminPeerIds.firstIndex(of: adminId) {

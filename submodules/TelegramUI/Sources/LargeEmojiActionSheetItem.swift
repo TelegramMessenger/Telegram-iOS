@@ -93,7 +93,7 @@ private final class LargeEmojiActionSheetItemNode: ActionSheetItemNode {
         
         let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
         self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .other, file: file, small: false, size: dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0)), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: true), attemptSynchronously: true)
-        self.disposable.set(freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file)).start())
+        self.disposable.set(freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file)).startStrict())
         
         self.setupTimestamp = CACurrentMediaTime()
         

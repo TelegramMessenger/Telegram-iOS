@@ -127,7 +127,7 @@ private final class DownloadedMediaStoreContext {
                     return combineLatest(collection |> take(1), postbox.mediaBox.resourceData(resource))
                 }
             }
-            |> deliverOn(queue)).start(next: { collection, data in
+            |> deliverOn(queue)).startStrict(next: { collection, data in
                 if !data.complete {
                     return
                 }
@@ -293,7 +293,7 @@ final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
         let _ = (self.postbox.transaction({ transaction -> [(index: Int32, message: Message, mediaId: MediaId)] in
             return _internal_getSynchronizeAutosaveItemOperations(transaction: transaction)
         })
-        |> deliverOnMainQueue).start(next: { [weak self] items in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] items in
             guard let self else {
                 return
             }
@@ -308,7 +308,7 @@ final class DownloadedMediaStoreManagerImpl: DownloadedMediaStoreManager {
             
             let _ = self.postbox.transaction({ transaction -> Void in
                 return _internal_removeSyncrhonizeAutosaveItemOperations(transaction: transaction, indices: items.map(\.index))
-            }).start()
+            }).startStandalone()
         })
     }
 }

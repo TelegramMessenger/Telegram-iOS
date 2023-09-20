@@ -116,7 +116,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }
         
         self.presentationDataDisposable = ((params.updatedPresentationData?.signal ?? params.context.sharedContext.presentationData)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
@@ -327,7 +327,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     
     private func openPeer(peer: ContactListPeer, action: ContactListAction) {
         self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-        self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
                     strongSelf._result.set(.single(([peer], action, false, nil, nil)))

@@ -796,7 +796,7 @@ public final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDele
                 
                 disposable.set((itemNode.listNode.ready
                 |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self, weak itemNode] _ in
+                |> deliverOnMainQueue).startStrict(next: { [weak self, weak itemNode] _ in
                     guard let strongSelf = self, let itemNode = itemNode, itemNode === strongSelf.pendingItemNode?.1 else {
                         return
                     }

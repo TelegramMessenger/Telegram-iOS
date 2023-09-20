@@ -33,7 +33,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
             if let statuses = self.interfaceInteraction?.statuses {
-                self.activityDisposable.set((combineLatest((statuses.searching |> deliverOnMainQueue), (statuses.loadingMessage |> deliverOnMainQueue))).start(next: { [weak self] searching, loadingMessage in
+                self.activityDisposable.set((combineLatest((statuses.searching |> deliverOnMainQueue), (statuses.loadingMessage |> deliverOnMainQueue))).startStrict(next: { [weak self] searching, loadingMessage in
                     let value = searching || loadingMessage == .generic
                     if let strongSelf = self, strongSelf.displayActivity != value {
                         strongSelf.displayActivity = value
@@ -91,7 +91,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
         
         let _ = (ApplicationSpecificNotice.getChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager)
-        |> deliverOnMainQueue).start(next: { [weak self] counter in
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] counter in
             guard let strongSelf = self else {
                 return
             }
@@ -101,7 +101,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             } else if arc4random_uniform(4) == 1 {
                 strongSelf.needsSearchResultsTooltip = false
                 
-                let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager).start()
+                let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager).startStandalone()
                 strongSelf.interfaceInteraction?.displaySearchResultsTooltip(strongSelf.resultsButton, strongSelf.resultsButton.bounds)
             }
         })
@@ -123,7 +123,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.interfaceInteraction?.openSearchResults()
         
         if let context = self.context {
-            let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager, count: 4).start()
+            let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager, count: 4).startStandalone()
         }
     }
     

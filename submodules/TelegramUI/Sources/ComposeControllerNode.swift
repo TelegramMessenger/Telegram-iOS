@@ -75,7 +75,7 @@ final class ComposeControllerNode: ASDisplayNode {
         }
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
-            |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
                 if let strongSelf = self {
                     let previousTheme = strongSelf.presentationData.theme
                     let previousStrings = strongSelf.presentationData.strings

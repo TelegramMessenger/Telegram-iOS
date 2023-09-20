@@ -342,7 +342,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.rightDurationLabel.status = mappedStatus
         
         self.scrubbingDisposable = (self.scrubberNode.scrubbingPosition
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -370,7 +370,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         })
         
         self.statusDisposable = (delayedStatus
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -483,7 +483,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         })
         
         self.chapterDisposable = combineLatest(queue: Queue.mainQueue(), mappedStatus, self.chaptersPromise.get())
-        .start(next: { [weak self] status, chapters in
+        .startStrict(next: { [weak self] status, chapters in
             if let strongSelf = self, status.duration > 1.0, chapters.count > 0 {
                 let previousChapter = strongSelf.currentChapter
                 var currentChapter: MediaPlayerScrubbingChapter?
@@ -968,7 +968,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             let _ = updateMusicPlaybackSettingsInteractively(accountManager: self.accountManager, {
                 return $0.withUpdatedOrder(nextOrder)
-            }).start()
+            }).startStandalone()
             self.control?(.setOrder(nextOrder))
         }
     }
@@ -986,7 +986,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             }
             let _ = updateMusicPlaybackSettingsInteractively(accountManager: self.accountManager, {
                 return $0.withUpdatedLooping(nextLooping)
-            }).start()
+            }).startStandalone()
             self.control?(.setLooping(nextLooping))
         }
     }

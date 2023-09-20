@@ -108,7 +108,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         }
         
         self.presentationDataDisposable = ((params.updatedPresentationData?.signal ?? params.context.sharedContext.presentationData)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme
                 let previousStrings = strongSelf.presentationData.strings
@@ -122,7 +122,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         })
         
         self.limitsConfigurationDisposable = (context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.Limits())
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             if let strongSelf = self {
                 strongSelf.limitsConfiguration = value._asLimits()
                 strongSelf.updateTitle()
@@ -139,7 +139,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                     selectedChats.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                 )
             )
-            |> deliverOnMainQueue).start(next: { [weak self] peerList in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerList in
                 guard let strongSelf = self else {
                     return
                 }

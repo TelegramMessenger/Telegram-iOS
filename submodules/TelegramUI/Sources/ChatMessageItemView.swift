@@ -891,7 +891,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                     break
                 case let .openUserProfile(peerId):
                     let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                    |> deliverOnMainQueue).start(next: { peer in
+                    |> deliverOnMainQueue).startStandalone(next: { peer in
                         if let peer = peer {
                             item.controllerInteraction.openPeer(peer, .info, nil, .default)
                         }

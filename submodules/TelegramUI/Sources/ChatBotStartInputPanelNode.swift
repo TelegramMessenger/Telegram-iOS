@@ -22,7 +22,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
             if let _ = self.interfaceInteraction {
                 if self.statusDisposable == nil {
                     if let startingBot = self.interfaceInteraction?.statuses?.startingBot {
-                        self.statusDisposable = (startingBot |> deliverOnMainQueue).start(next: { [weak self] value in
+                        self.statusDisposable = (startingBot |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                             if let strongSelf = self {
                                 strongSelf.inProgress = value
                             }

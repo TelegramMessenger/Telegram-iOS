@@ -235,7 +235,7 @@ final class GridMessageItemNode: GridItemNode {
                 self.mediaBadgeNode.isHidden = false
                 
                 self.resourceStatus = nil
-                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: messageId, file: file) |> deliverOnMainQueue).start(next: { [weak self] status in
+                self.fetchStatusDisposable.set((messageMediaFileStatus(context: context, messageId: messageId, file: file) |> deliverOnMainQueue).startStrict(next: { [weak self] status in
                     if let strongSelf = self, let item = strongSelf.item {
                         strongSelf.resourceStatus = status
                         
@@ -434,7 +434,7 @@ final class GridMessageItemNode: GridItemNode {
                 case .Local:
                     let _ = controllerInteraction.openMessage(message, .default)
                 case .Remote, .Paused:
-                    self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).start())
+                    self.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: true).startStrict())
             }
         }
     }

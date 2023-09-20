@@ -115,7 +115,7 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
                 }
                 
                 if peer.peer.id != item.selectedPeerId {
-                    let _ = item.context.engine.peers.updatePeerSendAsPeer(peerId: item.chatPeerId, sendAs: peer.peer.id).start()
+                    let _ = item.context.engine.peers.updatePeerSendAsPeer(peerId: item.chatPeerId, sendAs: peer.peer.id).startStandalone()
                 }
             })
             let actionNode = ContextActionNode(presentationData: presentationData, action: action, getController: getController, actionSelected: actionSelected, requestLayout: {}, requestUpdateAction: { _, _ in

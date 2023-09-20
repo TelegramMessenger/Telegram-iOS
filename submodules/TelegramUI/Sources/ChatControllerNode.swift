@@ -612,7 +612,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
             return InteractiveEmojiConfiguration.with(appConfiguration: appConfiguration)
         }
-        |> deliverOnMainQueue).start(next: { [weak self] emojis in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] emojis in
             if let strongSelf = self {
                 strongSelf.interactiveEmojis = emojis
             }
@@ -748,7 +748,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         self.inputMediaNodeDataDisposable = (self.inputMediaNodeDataPromise.get()
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -823,7 +823,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             } else {
                 return .single(display)
             }
-        }).start(next: { [weak self] display in
+        }).startStrict(next: { [weak self] display in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
                 if display {
                     var nodes: [(CGFloat, ChatMessageItemView, ASDisplayNode)] = []
@@ -3154,7 +3154,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if self.openStickersDisposable == nil {
             self.openStickersDisposable = (self.inputMediaNodeDataPromise.get()
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

@@ -175,7 +175,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                             actionSheet?.dismissAnimated()
                                             if let strongSelf = self {
                                                 let _ = (strongSelf.context.engine.peers.revokePeerExportedInvitation(peerId: peer.id, link: inviteLink)
-                                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                                |> deliverOnMainQueue).startStandalone(completed: { [weak self] in
                                                     self?.eventLogContext.reload()
                                                 })
                                             }
@@ -237,7 +237,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, enqueueMessage: { _ in
                 }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
                     if let strongSelf = self {
-                        strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { messageId in
+                        strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { messageId in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                 var messageIdAndMedia: [MessageId: [Media]] = [:]
                                 
@@ -302,7 +302,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 |> map(Optional.init)
             }
             strongSelf.resolvePeerByNameDisposable.set((resolveSignal
-            |> deliverOnMainQueue).start(next: { peer in
+            |> deliverOnMainQueue).startStrict(next: { peer in
                 if let strongSelf = self, !hashtag.isEmpty {
                     let searchController = HashtagSearchController(context: strongSelf.context, peer: peer.flatMap(EnginePeer.init), query: hashtag)
                     strongSelf.pushController(searchController)
@@ -390,7 +390,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                |> deliverOnMainQueue).start(next: { peer in
+                                |> deliverOnMainQueue).startStandalone(next: { peer in
                                     if let strongSelf = self, let peer = peer {
                                         strongSelf.openPeer(peer: peer)
                                     }
@@ -608,10 +608,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return .complete()
         }
         
-        self.historyDisposable = appliedTransition.start()
+        self.historyDisposable = appliedTransition.startStrict()
         
         let mediaManager = self.context.sharedContext.mediaManager
-        self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
+        self.galleryHiddenMesageAndMediaDisposable.set(mediaManager.galleryHiddenMediaManager.hiddenIds().startStrict(next: { [weak self] ids in
             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                 var messageIdAndMedia: [MessageId: [Media]] = [:]
                 
@@ -806,7 +806,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }), .window(.root), nil)
         } else {
             let peerSignal: Signal<Peer?, NoError> = .single(peer._asPeer())
-            self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
+            self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
                 if let strongSelf = self, let peer = peer {
                     if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), peekData: peekData, animated: true))
@@ -823,7 +823,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private func openPeerMention(_ name: String) {
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] peer in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
                     if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
@@ -903,7 +903,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let strongSelf = self {
                             f(.default)
                             strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
-                            |> deliverOnMainQueue).start(next: { participant in
+                            |> deliverOnMainQueue).startStrict(next: { participant in
                                 if let strongSelf = self {
                                     strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 }
@@ -926,7 +926,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         
                         if let strongSelf = self {
                             strongSelf.reportFalsePositiveDisposables.set((strongSelf.context.engine.peers.reportAntiSpamFalsePositive(peerId: message.id.peerId, messageId: message.id)
-                            |> deliverOnMainQueue).start(), forKey: message.id)
+                            |> deliverOnMainQueue).startStrict(), forKey: message.id)
                             
                             Queue.mainQueue().after(0.2, {
                                 strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_antispam", scale: 0.066, colors: [:], title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, customUndoText: nil, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
@@ -956,7 +956,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openUrl(_ url: String) {
-        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: url, skipUrlAuth: true) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(context: self.context, peerId: nil, url: url, skipUrlAuth: true) |> deliverOnMainQueue).startStrict(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .externalUrl(url):
@@ -991,7 +991,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         }
                     case let .replyThread(messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
                         }
                     case let .stickerPack(name, type):
                         let _ = type

@@ -154,7 +154,7 @@ final class SharedMediaPlayer {
                 switch playbackItem {
                 case let .audio(player):
                     let audioLevelPipe = self.audioLevelPipe
-                    self.audioLevelDisposable.set((player.audioLevelEvents.start(next: { [weak audioLevelPipe] value in
+                    self.audioLevelDisposable.set((player.audioLevelEvents.startStrict(next: { [weak audioLevelPipe] value in
                         audioLevelPipe?.putNext(value)
                     })))
                 default:
@@ -203,7 +203,7 @@ final class SharedMediaPlayer {
         }
         
         self.stateDisposable = (playlist.state
-        |> deliverOnMainQueue).start(next: { [weak self] state in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             if let strongSelf = self {
                 let previousPlaybackItem = strongSelf.playbackItem
                 strongSelf.updatePrefetchItems(item: state.item, previousItem: state.previousItem, nextItem: state.nextItem, ordering: state.order)
@@ -341,7 +341,7 @@ final class SharedMediaPlayer {
                             }
                         }
                         |> take(1)
-                        |> deliverOnMainQueue).start(next: { next in
+                        |> deliverOnMainQueue).startStrict(next: { next in
                             if let strongSelf = self {
                                 strongSelf.playlist.onItemPlaybackStarted(item)
                             }
@@ -363,7 +363,7 @@ final class SharedMediaPlayer {
         })
         
         self.playbackStateValueDisposable = (self.playbackState
-        |> deliverOnMainQueue).start(next: { [weak self] value in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             self?._playbackStateValue = value
         })
         
@@ -512,7 +512,7 @@ final class SharedMediaPlayer {
                             return .complete()
                         }
                 }
-                self.prefetchDisposable.set((fetchedCurrentSignal |> then(fetchedNextSignal)).start())
+                self.prefetchDisposable.set((fetchedCurrentSignal |> then(fetchedNextSignal)).startStrict())
             } else {
                 self.prefetchDisposable.set(nil)
             }

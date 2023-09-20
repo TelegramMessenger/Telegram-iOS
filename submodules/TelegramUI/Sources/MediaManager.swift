@@ -23,7 +23,7 @@ enum SharedMediaPlayerGroup: Int {
 
 private let sharedAudioSession: ManagedAudioSession = {
     let audioSession = ManagedAudioSession()
-    let _ = (audioSession.headsetConnected() |> deliverOnMainQueue).start(next: { value in
+    let _ = (audioSession.headsetConnected() |> deliverOnMainQueue).startStandalone(next: { value in
         DeviceProximityManager.shared().setGloballyEnabled(!value)
     })
     return audioSession
@@ -77,7 +77,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                 if let voiceMediaPlayer = self.voiceMediaPlayer {
                     let account = voiceMediaPlayer.account
                     self.voiceMediaPlayerStateDisposable.set((voiceMediaPlayer.playbackState
-                    |> deliverOnMainQueue).start(next: { [weak self, weak voiceMediaPlayer] state in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak voiceMediaPlayer] state in
                         guard let strongSelf = self else {
                             return
                         }
@@ -222,7 +222,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         var currentGlobalControlsOptions = GlobalControlOptions()
         
         self.globalControlsDisposable.set((combineLatest(self.globalMediaPlayerState, self.presentationData)
-        |> deliverOnMainQueue).start(next: { stateAndType, presentationData in
+        |> deliverOnMainQueue).startStrict(next: { stateAndType, presentationData in
             var updatedGlobalControlOptions = GlobalControlOptions()
             if let (_, stateOrLoading, type) = stateAndType, case let .state(state) = stateOrLoading {
                 if type == .music {
@@ -332,7 +332,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             } else {
                 return .single(nil)
             }
-        } |> deliverOnMainQueue).start(next: { image in
+        } |> deliverOnMainQueue).startStrict(next: { image in
             if var nowPlayingInfo = baseNowPlayingInfo {
                 if let image = image {
                     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -351,7 +351,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         }))
         
         self.globalControlsStatusDisposable.set((self.globalControlsStatus.get()
-        |> deliverOnMainQueue).start(next: { next in
+        |> deliverOnMainQueue).startStrict(next: { next in
             if let next = next {
                 if var nowPlayingInfo = baseNowPlayingInfo {
                     nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = next.duration as NSNumber
@@ -403,7 +403,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
             return .single(next) |> then(.complete() |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
         }
         
-        self.mediaPlaybackStateDisposable.set(throttledSignal.start(next: { accountStateAndType in
+        self.mediaPlaybackStateDisposable.set(throttledSignal.startStrict(next: { accountStateAndType in
             let minimumStoreDuration: Double?
             if let (account, stateOrLoading, type) = accountStateAndType {
                 switch type {
@@ -421,13 +421,13 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                         if state.status.timestamp > 5.0 && state.status.timestamp < state.status.duration - 5.0 {
                             storedState = MediaPlaybackStoredState(timestamp: state.status.timestamp, playbackRate: state.status.baseRate > 1.0 ? .x2 : .x1)
                         }
-                        let _ = updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine(account: account), messageId: item.message.id, state: storedState).start()
+                        let _ = updateMediaPlaybackStoredStateInteractively(engine: TelegramEngine(account: account), messageId: item.message.id, state: storedState).startStandalone()
                     }
                 }
             }
         }))
         
-        self.globalAudioSessionForegroundDisposable.set((shouldKeepAudioSession |> deliverOnMainQueue).start(next: { [weak self] value in
+        self.globalAudioSessionForegroundDisposable.set((shouldKeepAudioSession |> deliverOnMainQueue).startStrict(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
             }
@@ -487,7 +487,7 @@ public final class MediaManagerImpl: NSObject, MediaManager {
         }
         
         self.setPlaylistByTypeDisposables.set((inputData
-        |> deliverOnMainQueue).start(next: { [weak self] inputData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] inputData in
             if let strongSelf = self {
                 let nextPlayerIndex = strongSelf.nextPlayerIndex
                 strongSelf.nextPlayerIndex += 1

@@ -235,7 +235,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchResultsNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                         }
                         
-                        strongSelf.searchResultsReadyDisposable.set((searchResultsNode.ready |> deliverOnMainQueue).start(next: { _ in
+                        strongSelf.searchResultsReadyDisposable.set((searchResultsNode.ready |> deliverOnMainQueue).startStrict(next: { _ in
                             if let strongSelf = self, let searchResultsNode = strongSelf.searchResultsNode {
                                 strongSelf.insertSubnode(searchResultsNode, aboveSubnode: strongSelf.contentNode.node)
                             }
