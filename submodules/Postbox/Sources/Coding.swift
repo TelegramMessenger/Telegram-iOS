@@ -158,6 +158,9 @@ public final class WriteBuffer: MemoryBuffer {
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
             if self.length == 0 {
+                if self.freeWhenDone {
+                    free(self.memory)
+                }
                 self.memory = malloc(self.capacity)!
             } else {
                 self.memory = realloc(self.memory, self.capacity)
@@ -173,6 +176,9 @@ public final class WriteBuffer: MemoryBuffer {
         if self.offset + length > self.capacity {
             self.capacity = self.offset + length + 256
             if self.length == 0 {
+                if self.freeWhenDone {
+                    free(self.memory)
+                }
                 self.memory = malloc(self.capacity)!
             } else {
                 self.memory = realloc(self.memory, self.capacity)
