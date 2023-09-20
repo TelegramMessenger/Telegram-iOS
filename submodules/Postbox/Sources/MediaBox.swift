@@ -1080,7 +1080,7 @@ public final class MediaBox {
                                 |> map(Optional.init)
                             }
                             |> deliverOn(self.dataQueue)
-                            context.disposable.set(signal.start(next: { [weak self, weak context] next in
+                            context.disposable.set(signal.startStrict(next: { [weak self, weak context] next in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1263,7 +1263,7 @@ public final class MediaBox {
                             let cacheStorageBox = self.cacheStorageBox
                             let signal = fetch()
                             |> deliverOn(self.dataQueue)
-                            context.disposable.set(signal.start(next: { [weak self, weak context] next in
+                            context.disposable.set(signal.startStrict(next: { [weak self, weak context] next in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1414,7 +1414,7 @@ public final class MediaBox {
             
             func processStale(nextId: Data?) {
                 let _ = (storageBox.enumerateItems(startingWith: nextId, limit: 1000)
-                |> deliverOn(processQueue)).start(next: { ids, realNextId in
+                |> deliverOn(processQueue)).startStandalone(next: { ids, realNextId in
                     var staleIds: [Data] = []
                     
                     for id in ids {
@@ -1506,7 +1506,7 @@ public final class MediaBox {
             
             func processStale(nextId: Data?) {
                 let _ = (storageBox.enumerateItems(startingWith: nextId, limit: 1000)
-                |> deliverOn(processQueue)).start(next: { ids, realNextId in
+                |> deliverOn(processQueue)).startStandalone(next: { ids, realNextId in
                     var staleIds: [Data] = []
                     
                     for id in ids {

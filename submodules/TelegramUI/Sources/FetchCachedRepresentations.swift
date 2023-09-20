@@ -56,9 +56,10 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                         break
                     }
                 })
+                
+                subscriber.keepAlive(videoSource)
+                
                 return ActionDisposable {
-                    // keep the reference
-                    let _ = videoSource.takeFrame(at: 0.0)
                     disposable.dispose()
                 }
             } else {

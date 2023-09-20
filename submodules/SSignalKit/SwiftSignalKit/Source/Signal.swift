@@ -70,22 +70,22 @@ public final class Signal<T, E> {
     public func start(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
-        subscriber.assignDisposable(disposable)
-        return SubscriberDisposable(subscriber: subscriber, disposable: disposable)
+        let wrappedDisposable = subscriber.assignDisposable(disposable)
+        return SubscriberDisposable(subscriber: subscriber, disposable: wrappedDisposable)
     }
     
     public func startStandalone(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
-        subscriber.assignDisposable(disposable)
-        return SubscriberDisposable(subscriber: subscriber, disposable: disposable)
+        let wrappedDisposable = subscriber.assignDisposable(disposable)
+        return SubscriberDisposable(subscriber: subscriber, disposable: wrappedDisposable)
     }
     
     public func startStrict(next: ((T) -> Void)! = nil, error: ((E) -> Void)! = nil, completed: (() -> Void)! = nil, file: String = #file, line: Int = #line) -> Disposable {
         let subscriber = Subscriber<T, E>(next: next, error: error, completed: completed)
         let disposable = self.generator(subscriber)
-        subscriber.assignDisposable(disposable)
-        return SubscriberDisposable(subscriber: subscriber, disposable: disposable).strict(file: file, line: line)
+        let wrappedDisposable = subscriber.assignDisposable(disposable)
+        return SubscriberDisposable(subscriber: subscriber, disposable: wrappedDisposable).strict(file: file, line: line)
     }
     
     public static func single(_ value: T) -> Signal<T, E> {
