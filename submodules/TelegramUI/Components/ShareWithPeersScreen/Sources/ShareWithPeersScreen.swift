@@ -987,10 +987,16 @@ final class ShareWithPeersScreenComponent: Component {
                                     sectionHeaderView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
                                 }
                             }
+                            let sectionXOffset: CGFloat
+                            if case .stories = component.stateContext.subject {
+                                sectionXOffset = 0.0
+                            } else {
+                                sectionXOffset = self.scrollView.frame.minX
+                            }
                             if minSectionHeader == nil {
                                 minSectionHeader = sectionHeaderView
                             }
-                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame.offsetBy(dx: self.scrollView.frame.minX, dy: 0.0))
+                            sectionHeaderTransition.setFrame(view: sectionHeaderView, frame: sectionHeaderFrame.offsetBy(dx: sectionXOffset, dy: 0.0))
                         }
                     }
                 }
@@ -1819,8 +1825,8 @@ final class ShareWithPeersScreenComponent: Component {
             }
             
             let containerWidth: CGFloat
-            if case .regular = environment.metrics.widthClass {
-                containerWidth = 390.0
+            if environment.metrics.isTablet {
+                containerWidth = 414.0
             } else {
                 containerWidth = availableSize.width
             }
@@ -2308,7 +2314,11 @@ final class ShareWithPeersScreenComponent: Component {
                             inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
                         } else {
                             if hasChannels {
-                                inset = 1000.0
+                                if environment.metrics.isTablet {
+                                    inset = 725.0
+                                } else {
+                                    inset = 1000.0
+                                }
                             } else {
                                 inset = 464.0
                                 inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight

@@ -1376,9 +1376,12 @@ final class MediaEditorScreenComponent: Component {
                                         
                                         var start = -audioOffset + audioStart
                                         if let duration = mediaEditor.duration {
+                                            let lowerBound = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
                                             let upperBound = mediaEditor.values.videoTrimRange?.upperBound ?? duration
                                             if start >= upperBound {
-                                                start = mediaEditor.values.videoTrimRange?.lowerBound ?? 0.0
+                                                start = lowerBound
+                                            } else if start < lowerBound {
+                                                start = lowerBound
                                             }
                                         }
 
