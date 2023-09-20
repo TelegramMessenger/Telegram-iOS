@@ -34,6 +34,9 @@ private func withImageBytes(image: UIImage, _ f: (UnsafePointer<UInt8>, Int, Int
     let bytesPerRow = DeviceGraphicsContextSettings.shared.bytesPerRow(forWidth: Int(scaledSize.width))
     let length = bytesPerRow * Int(scaledSize.height)
     let bytes = malloc(length)!.assumingMemoryBound(to: UInt8.self)
+    defer {
+        free(bytes)
+    }
     memset(bytes, 0, length)
     
     let bitmapInfo = DeviceGraphicsContextSettings.shared.transparentBitmapInfo
