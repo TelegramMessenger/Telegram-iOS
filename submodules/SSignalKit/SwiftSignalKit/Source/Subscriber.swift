@@ -31,7 +31,7 @@ final class WrappedSubscriberDisposable: Disposable {
         self.disposable = nil
         pthread_mutex_unlock(&self.lock)
         
-        if let disposableValue {
+        if let disposableValue = disposableValue {
             withExtendedLifetime(disposableValue, {
             })
         }
@@ -79,7 +79,7 @@ public final class Subscriber<T, E>: CustomStringConvertible {
             freeDisposable = nil
         }
         
-        if let keepAliveObjects {
+        if let keepAliveObjects = keepAliveObjects {
             withExtendedLifetime(keepAliveObjects, {
             })
         }
@@ -104,7 +104,7 @@ public final class Subscriber<T, E>: CustomStringConvertible {
             disposable.dispose()
         }
         
-        if let updatedWrappedDisposable {
+        if let updatedWrappedDisposable = updatedWrappedDisposable {
             return updatedWrappedDisposable
         } else {
             return EmptyDisposable
@@ -143,7 +143,7 @@ public final class Subscriber<T, E>: CustomStringConvertible {
             wrappedDisposable.markTerminated()
         }
         
-        if let keepAliveObjects {
+        if let keepAliveObjects = keepAliveObjects {
             withExtendedLifetime(keepAliveObjects, {
             })
         }
@@ -194,7 +194,7 @@ public final class Subscriber<T, E>: CustomStringConvertible {
             wrappedDisposable.markTerminated()
         }
         
-        if let keepAliveObjects {
+        if let keepAliveObjects = keepAliveObjects {
             withExtendedLifetime(keepAliveObjects, {
             })
         }
@@ -250,7 +250,7 @@ public final class Subscriber<T, E>: CustomStringConvertible {
             wrappedDisposable.markTerminated()
         }
         
-        if let keepAliveObjects {
+        if let keepAliveObjects = keepAliveObjects {
             withExtendedLifetime(keepAliveObjects, {
             })
         }
