@@ -8,7 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 
-private let sceneVersion: Int = 4
+private let sceneVersion: Int = 5
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -97,6 +97,7 @@ class PremiumStarComponent: Component {
             self.sceneView.isUserInteractionEnabled = false
             self.sceneView.preferredFramesPerSecond = 60
             self.sceneView.isJitteringEnabled = true
+            self.sceneView.autoenablesDefaultLighting = true
             
             super.init(frame: frame)
             
