@@ -219,6 +219,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
     private var dataImportSplash: LegacyDataImportSplash?
+    private var memoryUsageOverlayView: UILabel?
     
     private var buildConfig: BuildConfig?
     let episodeId = arc4random()
@@ -1483,15 +1484,39 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 previousReportedMemoryConsumption = value
                 Logger.shared.log("App \(self.episodeId)", "Memory consumption: \(value / (1024 * 1024)) MB")
                 
+                if self.contextValue?.context.sharedContext.immediateExperimentalUISettings.crashOnMemoryPressure == true {
+                    let memoryUsageOverlayView: UILabel
+                    if let current = self.memoryUsageOverlayView {
+                        memoryUsageOverlayView = current
+                    } else {
+                        memoryUsageOverlayView = UILabel()
+                        if #available(iOS 13.0, *) {
+                            memoryUsageOverlayView.textColor = .label
+                        } else {
+                            memoryUsageOverlayView.textColor = .black
+                        }
+                        memoryUsageOverlayView.font = Font.regular(11.0)
+                        memoryUsageOverlayView.layer.zPosition = 1000.0
+                        self.memoryUsageOverlayView = memoryUsageOverlayView
+                        self.window?.addSubview(memoryUsageOverlayView)
+                        
+                        memoryUsageOverlayView.center = CGPoint(x: 5.0, y: 36.0)
+                    }
+                    
+                    memoryUsageOverlayView.text = "\(value / (1024 * 1024)) MB"
+                    memoryUsageOverlayView.sizeToFit()
+                } else {
+                    if let memoryUsageOverlayView = self.memoryUsageOverlayView {
+                        self.memoryUsageOverlayView = nil
+                        memoryUsageOverlayView.removeFromSuperview()
+                    }
+                }
+                
                 if !buildConfig.isAppStoreBuild {
                     if value >= 800 * 1024 * 1024 {
-                        #if targetEnvironment(simulator)
-                        print("Debug memory")
-                        #else
                         if self.contextValue?.context.sharedContext.immediateExperimentalUISettings.crashOnMemoryPressure == true {
                             preconditionFailure()
                         }
-                        #endif
                     }
                 }
             }
