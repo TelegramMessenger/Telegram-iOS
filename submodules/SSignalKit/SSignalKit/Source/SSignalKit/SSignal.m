@@ -91,9 +91,11 @@
 }
 
 - (void)dispose {
+#if DEBUG
     pthread_mutex_lock(&_lock);
     _isDisposed = true;
     pthread_mutex_unlock(&_lock);
+#endif
     
     [_disposable dispose];
 }
