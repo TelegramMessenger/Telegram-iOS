@@ -723,6 +723,9 @@ public final class StoryItemSetContainerComponent: Component {
             guard let itemView = visibleItem.view.view as? StoryItemContentComponent.View else {
                 return false
             }
+            if let captionItem = self.captionItem, (captionItem.externalState.isExpanded || captionItem.externalState.isSelectingText) {
+                return false
+            }
             
             let localPoint = self.convert(point, to: itemView)
             if itemView.bounds.contains(localPoint) {

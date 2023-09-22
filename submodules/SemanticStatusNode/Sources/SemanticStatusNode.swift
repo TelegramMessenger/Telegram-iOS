@@ -863,7 +863,7 @@ public final class SemanticStatusNode: ASControlNode {
             self.setNeedsDisplay()
         }
     }
-        
+    
     public func setBackgroundImage(_ image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>, size: CGSize) {
         let start = CACurrentMediaTime()
         let imageSignal: Signal<UIImage?, NoError> = image
@@ -871,7 +871,8 @@ public final class SemanticStatusNode: ASControlNode {
             let context = transform(TransformImageArguments(corners: ImageCorners(radius: size.width / 2.0), imageSize: size, boundingSize: size, intrinsicInsets: UIEdgeInsets()))
             return context?.generateImage()
         }
-        self.disposable = combineLatest(queue: Queue.mainQueue(), imageSignal, self.hasLayoutPromise.get()).start(next: { [weak self] image, ready in
+        self.disposable?.dispose()
+        self.disposable = combineLatest(queue: Queue.mainQueue(), imageSignal, self.hasLayoutPromise.get()).startStrict(next: { [weak self] image, ready in
             guard let strongSelf = self, ready else {
                 return
             }
