@@ -1236,7 +1236,7 @@ extension UIBezierPath {
 }
 
 private func generateMaskImage(size: CGSize, recognitions: [RecognizedContent]) -> UIImage? {
-    return generateImage(size, opaque: false, rotatedContext: { size, c in
+    return generateImage(size, opaque: false, scale: 1.0, rotatedContext: { size, c in
         let bounds = CGRect(origin: CGPoint(), size: size)
         c.clear(bounds)
         

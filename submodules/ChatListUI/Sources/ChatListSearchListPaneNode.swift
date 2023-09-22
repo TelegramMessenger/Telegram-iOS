@@ -1074,6 +1074,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     }
     
     private var hiddenMediaDisposable: Disposable?
+    private var searchQueryDisposable: Disposable?
+    private var searchOptionsDisposable: Disposable?
   
     init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, requestPeerType: [ReplyMarkupButtonRequestPeerType]?, location: ChatListControllerLocation, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
@@ -2324,15 +2326,15 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
         let previousExpandGlobalSearch = Atomic<Bool>(value: false)
         
-        let _ = (searchQuery
-        |> deliverOnMainQueue).startStandalone(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
+        self.searchQueryDisposable = (searchQuery
+        |> deliverOnMainQueue).startStrict(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
             self?.searchQueryValue = query
             listInteraction?.searchTextHighightState = query
             chatListInteraction?.searchTextHighightState = query
         })
         
-        let _ = (searchOptions
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] options in
+        self.searchOptionsDisposable = (searchOptions
+        |> deliverOnMainQueue).startStrict(next: { [weak self] options in
             self?.searchOptionsValue = options
         })
 
@@ -2682,6 +2684,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         if [.file, .music, .voiceOrInstantVideo].contains(tagMask) || self.key == .downloads {
+            let key = self.key
             self.mediaStatusDisposable = (context.sharedContext.mediaManager.globalMediaPlayerState
             |> mapToSignal { playlistStateAndType -> Signal<(Account, SharedMediaPlayerItemPlaybackState, MediaManagerPlayerType)?, NoError> in
                 if let (account, state, type) = playlistStateAndType {
@@ -2694,7 +2697,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             case .music:
-                                if tagMask != .music && self.key != .downloads {
+                                if tagMask != .music && key != .downloads {
                                     return .single(nil) |> delay(0.2, queue: .mainQueue())
                                 }
                             case .file:
@@ -2714,26 +2717,26 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             }
             |> deliverOnMainQueue).startStrict(next: { [weak self] playlistStateAndType in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                if !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.0, playlistStateAndType?.1.item) ||
-                    !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.1, playlistStateAndType?.1.previousItem) ||
-                    !arePlaylistItemsEqual(strongSelf.playlistStateAndType?.2, playlistStateAndType?.1.nextItem) ||
-                    strongSelf.playlistStateAndType?.3 != playlistStateAndType?.1.order || strongSelf.playlistStateAndType?.4 != playlistStateAndType?.2 {
+                if !arePlaylistItemsEqual(self.playlistStateAndType?.0, playlistStateAndType?.1.item) ||
+                    !arePlaylistItemsEqual(self.playlistStateAndType?.1, playlistStateAndType?.1.previousItem) ||
+                    !arePlaylistItemsEqual(self.playlistStateAndType?.2, playlistStateAndType?.1.nextItem) ||
+                    self.playlistStateAndType?.3 != playlistStateAndType?.1.order || self.playlistStateAndType?.4 != playlistStateAndType?.2 {
                     
                     if let playlistStateAndType = playlistStateAndType {
-                        strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
+                        self.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
                     } else {
-                        strongSelf.playlistStateAndType = nil
+                        self.playlistStateAndType = nil
                     }
                     
-                    if let (size, sideInset, bottomInset, visibleHeight, presentationData) = strongSelf.currentParams {
-                        strongSelf.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
+                    if let (size, sideInset, bottomInset, visibleHeight, presentationData) = self.currentParams {
+                        self.update(size: size, sideInset: sideInset, bottomInset: bottomInset, visibleHeight: visibleHeight, presentationData: presentationData, synchronous: true, transition: .animated(duration: 0.4, curve: .spring))
                     }
                 }
-                strongSelf.playlistLocation = playlistStateAndType?.1.playlistLocation
-            }).strict()
+                self.playlistLocation = playlistStateAndType?.1.playlistLocation
+            })
         }
         
         self.deletedMessagesDisposable = (context.account.stateManager.deletedMessages
@@ -2770,6 +2773,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.recentDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
         self.deletedMessagesDisposable?.dispose()
+        self.searchQueryDisposable?.dispose()
+        self.searchOptionsDisposable?.dispose()
     }
     
     override func didLoad() {

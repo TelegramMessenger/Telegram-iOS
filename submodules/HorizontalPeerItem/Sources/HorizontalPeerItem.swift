@@ -151,6 +151,10 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
         }
     }
     
+    deinit {
+        assert(true)
+    }
+    
     override public func didLoad() {
         super.didLoad()
         

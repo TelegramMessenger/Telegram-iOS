@@ -1513,7 +1513,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
                 
                 if !buildConfig.isAppStoreBuild {
-                    if value >= 800 * 1024 * 1024 {
+                    if value >= 2000 * 1024 * 1024 {
                         if self.contextValue?.context.sharedContext.immediateExperimentalUISettings.crashOnMemoryPressure == true {
                             preconditionFailure()
                         }
