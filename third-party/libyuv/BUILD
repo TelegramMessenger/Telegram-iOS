@@ -26,7 +26,6 @@ x86_64_specific_flags = [
 ]
 
 arch_specific_cflags = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": common_flags + arm_specific_flags,
     "@build_bazel_rules_apple//apple:ios_arm64": common_flags + arm64_specific_flags,
     "//build-system:ios_sim_arm64": common_flags + arm64_specific_flags,
     "@build_bazel_rules_apple//apple:ios_x86_64": common_flags + x86_64_specific_flags,

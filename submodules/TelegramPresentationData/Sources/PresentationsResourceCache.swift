@@ -2,9 +2,48 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 
+#if DEBUG
+private final class CacheStats {
+    var totalSize: Int = 0
+    var reportSize: Int = 0
+    
+    func logImage(image: UIImage, added: Bool) {
+        let sign = added ? 1 : -1
+        
+        self.totalSize += sign * Int(image.size.width * image.scale) * Int(image.size.height * image.scale) * 4
+        if abs(self.totalSize - self.reportSize) >= 1024 * 1024 {
+            self.reportSize = self.totalSize
+            print("UI resource cache: \((self.totalSize) / (1024 * 1024)) MB")
+        }
+    }
+}
+private let cacheStats = Atomic<CacheStats>(value: CacheStats())
+#endif
+
 private final class PresentationsResourceCacheHolder {
     var images: [Int32: UIImage] = [:]
     var parameterImages: [PresentationResourceParameterKey: UIImage] = [:]
+    
+    deinit {
+        #if DEBUG
+        cacheStats.with { cacheStats in
+            for (_, image) in self.images {
+                cacheStats.logImage(image: image, added: false)
+            }
+            for (_, image) in self.parameterImages {
+                cacheStats.logImage(image: image, added: false)
+            }
+        }
+        #endif
+    }
+    
+    func logAddedImage(image: UIImage) {
+        #if DEBUG
+        cacheStats.with { cacheStats in
+            cacheStats.logImage(image: image, added: true)
+        }
+        #endif
+    }
 }
 
 private final class PresentationsResourceAnyCacheHolder {
@@ -26,6 +65,7 @@ public final class PresentationsResourceCache {
             if let image = generate(theme) {
                 self.imageCache.with { holder -> Void in
                     holder.images[key] = image
+                    holder.logAddedImage(image: image)
                 }
                 return image
             } else {
@@ -44,6 +84,7 @@ public final class PresentationsResourceCache {
             if let image = generate(theme) {
                 self.imageCache.with { holder -> Void in
                     holder.parameterImages[key] = image
+                    holder.logAddedImage(image: image)
                 }
                 return image
             } else {

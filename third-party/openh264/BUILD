@@ -54,21 +54,18 @@ arm_specific_copts = [
 ]
 
 arch_specific_sources = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": arm_specific_sources,
     "@build_bazel_rules_apple//apple:ios_arm64": arm64_specific_sources,
     "//build-system:ios_sim_arm64": arm64_specific_sources,
     "@build_bazel_rules_apple//apple:ios_x86_64": [],
 })
 
 arch_specific_copts = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": arm_specific_copts,
     "@build_bazel_rules_apple//apple:ios_arm64": arm64_specific_copts,
     "//build-system:ios_sim_arm64": arm64_specific_copts,
     "@build_bazel_rules_apple//apple:ios_x86_64": [],
 })
 
 arch_specific_textual_hdrs = select({
-    "@build_bazel_rules_apple//apple:ios_armv7": arm_specific_textual_hdrs,
     "@build_bazel_rules_apple//apple:ios_arm64": arm64_specific_textual_hdrs,
     "//build-system:ios_sim_arm64": arm64_specific_textual_hdrs,
     "@build_bazel_rules_apple//apple:ios_x86_64": [],
