@@ -8,7 +8,7 @@ import GZip
 import AppBundle
 import LegacyComponents
 
-private let sceneVersion: Int = 4
+private let sceneVersion: Int = 6
 
 private func deg2rad(_ number: Float) -> Float {
     return number * .pi / 180
@@ -409,6 +409,10 @@ class PremiumStarComponent: Component {
             }
             guard let initial = node.geometry?.materials.first?.emission.contentsTransform else {
                 return
+            }
+            
+            if #available(iOS 17.0, *), let material = node.geometry?.materials.first {
+                material.metalness.intensity = 0.2
             }
             
             let animation = CABasicAnimation(keyPath: "contentsTransform")
