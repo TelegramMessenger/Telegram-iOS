@@ -5514,8 +5514,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             if isRegularChat, strongSelf.nextChannelToReadDisposable == nil {
                                 //TODO:loc optimize
+                                let accountPeerId = strongSelf.context.account.peerId
                                 strongSelf.nextChannelToReadDisposable = (combineLatest(queue: .mainQueue(),
-                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: chatListFilterPredicate),
+                                    strongSelf.context.engine.peers.getNextUnreadChannel(peerId: channel.id, chatListFilterId: strongSelf.currentChatListFilter, getFilterPredicate: { data in
+                                    return chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
+                                }),
                                     ApplicationSpecificNotice.getNextChatSuggestionTip(accountManager: strongSelf.context.sharedContext.accountManager)
                                 )
                                 |> then(.complete() |> delay(1.0, queue: .mainQueue()))
