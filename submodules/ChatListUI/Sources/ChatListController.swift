@@ -1469,7 +1469,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return .single(nil)
                 }
                 
-                let filterPredicate: ChatListFilterPredicate = chatListFilterPredicate(filter: data)
+                let filterPredicate: ChatListFilterPredicate = chatListFilterPredicate(filter: data, accountPeerId: context.account.peerId)
                 return context.engine.peers.getChatListPeers(filterPredicate: filterPredicate)
                 |> mapToSignal { peers -> Signal<(areMuted: Bool, peerIds: [EnginePeer.Id])?, NoError> in
                     let peerIds = peers.map(\.id)
@@ -3703,7 +3703,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func readAllInFilter(id: Int32) {
         for filter in self.chatListDisplayNode.mainContainerNode.availableFilters {
             if case let .filter(filter) = filter, case let .filter(filterId, _, _, data) = filter, filterId == id {
-                let filterPredicate = chatListFilterPredicate(filter: data)
+                let filterPredicate = chatListFilterPredicate(filter: data, accountPeerId: self.context.account.peerId)
                 var markItems: [(groupId: EngineChatList.Group, filterPredicate: ChatListFilterPredicate?)] = []
                 markItems.append((.root, filterPredicate))
                 for additionalGroupId in filterPredicate.includeAdditionalPeerGroupIds {
@@ -4461,7 +4461,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else if case let .chatList(groupId) = self.chatListDisplayNode.effectiveContainerNode.location {
                 let filterPredicate: ChatListFilterPredicate?
                 if let filter = self.chatListDisplayNode.effectiveContainerNode.currentItemNode.chatListFilter, case let .filter(_, _, _, data) = filter {
-                    filterPredicate = chatListFilterPredicate(filter: data)
+                    filterPredicate = chatListFilterPredicate(filter: data, accountPeerId: self.context.account.peerId)
                 } else {
                     filterPredicate = nil
                 }

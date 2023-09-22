@@ -224,7 +224,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         var hasFolders = false
 
                         for case let .filter(_, _, _, data) in filters {
-                            let predicate = chatListFilterPredicate(filter: data)
+                            let predicate = chatListFilterPredicate(filter: data, accountPeerId: context.account.peerId)
                             if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
                                 continue
                             }
@@ -242,7 +242,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
 
                                 for filter in filters {
                                     if case let .filter(_, title, _, data) = filter {
-                                        let predicate = chatListFilterPredicate(filter: data)
+                                        let predicate = chatListFilterPredicate(filter: data, accountPeerId: context.account.peerId)
                                         if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: false) {
                                             continue
                                         }

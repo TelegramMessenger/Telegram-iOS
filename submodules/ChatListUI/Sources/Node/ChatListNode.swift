@@ -3961,7 +3961,7 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
     if let chatListFilters = chatListFilters {
         var result = ""
         for case let .filter(_, title, _, data) in chatListFilters {
-            let predicate = chatListFilterPredicate(filter: data)
+            let predicate = chatListFilterPredicate(filter: data, accountPeerId: accountPeerId)
             if predicate.includes(peer: peer._asPeer(), groupId: .root, isRemovedFromTotalUnreadCount: isMuted, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: hasUnseenMentions) {
                 if !result.isEmpty {
                     result.append(", ")
