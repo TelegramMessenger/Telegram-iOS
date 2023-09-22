@@ -217,7 +217,7 @@
 - (void)setHistogramSignal:(SSignal *)signal
 {
     __weak TGPhotoEditorCurvesHistogramView *weakSelf = self;
-    [_histogramDisposable setDisposable:[[signal deliverOn:[SQueue mainQueue]] startWithNext:^(PGPhotoHistogram *next)
+    [_histogramDisposable setDisposable:[[signal deliverOn:[SQueue mainQueue]] startStrictWithNext:^(PGPhotoHistogram *next)
     {
         __strong TGPhotoEditorCurvesHistogramView *strongSelf = weakSelf;
         if (strongSelf != nil)
@@ -225,7 +225,7 @@
             strongSelf->_histogram = next;
             [strongSelf updateHistogram];
         }
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 @synthesize interactionBegan;

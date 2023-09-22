@@ -215,7 +215,7 @@
             }];
             
             SSignal *adjustmentsSignal = [item.editingContext adjustmentsSignalForItem:item.editableMediaItem];
-            [_adjustmentsDisposable setDisposable:[[adjustmentsSignal deliverOn:[SQueue mainQueue]] startWithNext:^(__unused id<TGMediaEditAdjustments> next)
+            [_adjustmentsDisposable setDisposable:[[adjustmentsSignal deliverOn:[SQueue mainQueue]] startStrictWithNext:^(__unused id<TGMediaEditAdjustments> next)
             {
                 __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -223,7 +223,7 @@
                 
                 [strongSelf layoutEntities];
                 [strongSelf->_entitiesView setupWithEntitiesData:next.paintingData.entitiesData];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
         
         if (item.immediateThumbnailImage != nil)
@@ -249,7 +249,7 @@
         }]];
         
         if (!item.asFile) {
-            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startWithNext:nil]];
+            [_facesDisposable setDisposable:[[TGPaintFaceDetector detectFacesInItem:item.editableMediaItem editingContext:item.editingContext] startStrictWithNext:nil file:__FILE_NAME__ line:__LINE__]];
             
             return;
         }
@@ -261,7 +261,7 @@
         
         if ([item.asset isKindOfClass:[TGMediaAsset class]])
         {
-            [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:(TGMediaAsset *)item.asset] deliverOn:[SQueue mainQueue]] startWithNext:^(TGMediaAssetImageFileAttributes *next)
+            [_attributesDisposable setDisposable:[[[TGMediaAssetImageSignals fileAttributesForAsset:(TGMediaAsset *)item.asset] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(TGMediaAssetImageFileAttributes *next)
             {
                 __strong TGMediaPickerGalleryPhotoItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -276,7 +276,7 @@
                 } else {
                     strongSelf->_fileInfoLabel.text = dimensions;
                 }
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
     }
 }

@@ -661,7 +661,7 @@ static void adjustFrameRate(CAAnimation *animation) {
             if (_asyncTransitionIn) {
                 __weak TGModernGalleryController *weakSelf = self;
                 self.view.hidden = true;
-                _transitionInDisposable = [[[[transitionFromItemView readyForTransitionIn] take:1] timeout:1.0 onQueue:[SQueue mainQueue] orSignal:[SSignal single:@true]] startWithNext:^(__unused id next) {
+                _transitionInDisposable = [[[[transitionFromItemView readyForTransitionIn] take:1] timeout:1.0 onQueue:[SQueue mainQueue] orSignal:[SSignal single:@true]] startStrictWithNext:^(__unused id next) {
                     __strong TGModernGalleryController *strongSelf = weakSelf;
                     if (strongSelf != nil) {
                         [strongSelf animateTransitionInFromView:transitionInFromView toView:transitionInToView toViewContentRect:transitionInToViewContentRect];
@@ -674,7 +674,7 @@ static void adjustFrameRate(CAAnimation *animation) {
                             strongSelf->_startedTransitionIn();
                         }
                     }
-                }];
+                } file:__FILE_NAME__ line:__LINE__];
             } else {
                 if (_startedTransitionIn) {
                     _startedTransitionIn();

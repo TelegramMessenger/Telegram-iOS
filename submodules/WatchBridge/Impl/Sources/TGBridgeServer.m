@@ -316,7 +316,7 @@
     {
         [_signalManager startSignalForKey:[NSString stringWithFormat:@"%lld", subscription.identifier] producer:^SSignal *
         {
-            STimer *timer = [[STimer alloc] initWithTimeout:2.0 repeat:false completion:^
+            STimer *timer = [[STimer alloc] initWithTimeout:2.0 repeat:false completion:^(__unused STimer *timer)
             {
                 os_unfair_lock_lock(&_replyHandlerMapLock);
                 void (^reply)(NSData *) = _replyHandlerMap[@(subscription.identifier)];

@@ -2618,7 +2618,7 @@
     [_faceDetectorDisposable setDisposable:[[[cachedSignal catch:^SSignal *(__unused id error)
     {
         return detectSignal;
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *next)
+    }] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(NSArray *next)
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -2630,7 +2630,7 @@
             return;
         
         strongSelf->_faces = next;
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 + (TGPhotoEditorTab)defaultTabsForAvatarIntent:(bool)hasStickers
@@ -3014,7 +3014,7 @@
         } else {
             return images;
         }
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *images)
+    }] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(NSArray *images)
     {
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -3039,7 +3039,7 @@
         __strong TGPhotoEditorController *strongSelf = weakSelf;
         if (strongSelf != nil)
             strongSelf->_requestingThumbnails = false;
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)videoScrubberDidFinishRequestingThumbnails:(TGMediaPickerGalleryVideoScrubber *)__unused videoScrubber

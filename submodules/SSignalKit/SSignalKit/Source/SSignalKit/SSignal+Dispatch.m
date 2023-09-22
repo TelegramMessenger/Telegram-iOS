@@ -157,7 +157,7 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         SAtomic *value = [[SAtomic alloc] initWithValue:nil];
-        STimer *timer = [[STimer alloc] initWithTimeout:delay repeat:false completion:^{
+        STimer *timer = [[STimer alloc] initWithTimeout:delay repeat:false completion:^(__unused STimer *timer) {
             [value modify:^id(SSignal_ThrottleContainer *container) {
                 if (container != nil) {
                     if (!container.committed) {

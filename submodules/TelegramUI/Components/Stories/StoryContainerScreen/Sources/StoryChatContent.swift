@@ -107,7 +107,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     return (views, peers, globalNotificationSettings, allEntityFiles)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles in
                 guard let self else {
                     return
                 }
@@ -384,7 +384,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             self.nextPeerContext = nextPeerContext
             
             self.centralDisposable = (centralPeerContext.updated.get()
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                 guard let self else {
                     return
                 }
@@ -393,7 +393,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             
             if let previousPeerContext {
                 self.previousDisposable = (previousPeerContext.updated.get()
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                     guard let self else {
                         return
                     }
@@ -403,7 +403,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             
             if let nextPeerContext {
                 self.nextDisposable = (nextPeerContext.updated.get()
-                |> deliverOnMainQueue).start(next: { [weak self] _ in
+                |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                     guard let self else {
                         return
                     }
@@ -493,7 +493,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: focusedPeerId)),
                 singlePeerListContext.state
             )
-            |> deliverOnMainQueue).start(next: { [weak self] peer, state in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] peer, state in
                 guard let self, let peer else {
                     return
                 }
@@ -587,7 +587,7 @@ public final class StoryContentContextImpl: StoryContentContext {
             })
         } else {
             self.storySubscriptionsDisposable = (context.engine.messages.storySubscriptions(isHidden: isHidden, tempKeepNewlyArchived: true)
-            |> deliverOnMainQueue).start(next: { [weak self] storySubscriptions in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] storySubscriptions in
                 guard let self else {
                     return
                 }
@@ -689,6 +689,8 @@ public final class StoryContentContextImpl: StoryContentContext {
             disposable.dispose()
         }
         self.storySubscriptionsDisposable?.dispose()
+        self.currentStateUpdatedDisposable?.dispose()
+        self.pendingStateReadyDisposable?.dispose()
     }
     
     private func updatePeerContexts() {
@@ -721,7 +723,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                             }
                         }
                         for (peerId, ids) in idsByPeerId {
-                            self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: peerId, ids: ids).start())
+                            self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: peerId, ids: ids).startStrict())
                         }
                     }
                 }
@@ -771,7 +773,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     )
                     self.pendingState = pendingState
                     self.pendingStateReadyDisposable = (pendingState.updated.get()
-                    |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self, weak pendingState] _ in
                         guard let self, let pendingState, self.pendingState === pendingState, pendingState.isReady else {
                             return
                         }
@@ -785,7 +787,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                         
                         self.currentStateUpdatedDisposable?.dispose()
                         self.currentStateUpdatedDisposable = (pendingState.updated.get()
-                        |> deliverOnMainQueue).start(next: { [weak self, weak pendingState] _ in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self, weak pendingState] _ in
                             guard let self, let pendingState, self.currentState === pendingState else {
                                 return
                             }
@@ -864,7 +866,7 @@ public final class StoryContentContextImpl: StoryContentContext {
         for (id, info) in resultResources.sorted(by: { $0.value.priority < $1.value.priority }) {
             validIds.append(id)
             if self.preloadStoryResourceDisposables[id] == nil {
-                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).start()
+                self.preloadStoryResourceDisposables[id] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).startStrict()
             }
         }
         
@@ -890,7 +892,7 @@ public final class StoryContentContextImpl: StoryContentContext {
         for (peerId, ids) in pollIdByPeerId {
             for id in ids {
                 if self.pollStoryMetadataDisposables[StoryId(peerId: peerId, id: id)] == nil {
-                    self.pollStoryMetadataDisposables[StoryId(peerId: peerId, id: id)] = self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).start()
+                    self.pollStoryMetadataDisposables[StoryId(peerId: peerId, id: id)] = self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).startStrict()
                 }
             }
         }
@@ -953,7 +955,7 @@ public final class StoryContentContextImpl: StoryContentContext {
     
     public func markAsSeen(id: StoryId) {
         if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).startStandalone()
         }
     }
 }
@@ -1038,7 +1040,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 }
             }
         )
-        |> deliverOnMainQueue).start(next: { [weak self] data, itemAndPeers in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] data, itemAndPeers in
             guard let self else {
                 return
             }
@@ -1063,7 +1065,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 if !self.requestedStoryKeys.contains(storyKey) {
                     self.requestedStoryKeys.insert(storyKey)
                     
-                    self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: storyId.peerId, ids: [storyId.id]).start())
+                    self.requestStoryDisposables.add(self.context.engine.messages.refreshStories(peerId: storyId.peerId, ids: [storyId.id]).startStrict())
                 }
             }
             
@@ -1158,7 +1160,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     public func markAsSeen(id: StoryId) {
         if self.readGlobally {
             if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-                let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).start()
+                let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: false).startStandalone()
             }
         }
     }
@@ -1205,7 +1207,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
             listContext.state,
             self.focusedIdUpdated.get()
         )
-        |> deliverOnMainQueue).start(next: { [weak self] data, state, _ in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] data, state, _ in
             guard let self else {
                 return
             }
@@ -1391,7 +1393,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     if let mediaId = info.media.id {
                         validIds.append(mediaId)
                         if self.preloadStoryResourceDisposables[mediaId] == nil {
-                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).start()
+                            self.preloadStoryResourceDisposables[mediaId] = preloadStoryMedia(context: context, peer: info.peer, storyId: info.storyId, media: info.media, reactions: info.reactions).startStrict()
                         }
                     }
                 }
@@ -1416,7 +1418,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
                     }
                 }
                 for (peerId, ids) in pollIdByPeerId {
-                    self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).start())
+                    self.pollStoryMetadataDisposables.add(self.context.engine.messages.refreshStoryViews(peerId: peerId, ids: ids).startStrict())
                 }
             }
         })
@@ -1472,7 +1474,7 @@ public final class PeerStoryListContentContextImpl: StoryContentContext {
     
     public func markAsSeen(id: StoryId) {
         if !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
-            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: true).start()
+            let _ = self.context.engine.messages.markStoryAsSeen(peerId: id.peerId, id: id.id, asPinned: true).startStandalone()
         }
     }
 }

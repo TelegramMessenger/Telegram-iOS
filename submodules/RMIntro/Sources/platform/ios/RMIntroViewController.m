@@ -184,7 +184,7 @@ typedef enum {
         
         _alternativeLocalization = [[SVariable alloc] init];
         
-        _localizationsDisposable = [[suggestedLocalizationSignal deliverOn:[SQueue mainQueue]] startWithNext:^(TGSuggestedLocalization *next) {
+        _localizationsDisposable = [[suggestedLocalizationSignal deliverOn:[SQueue mainQueue]] startStrictWithNext:^(TGSuggestedLocalization *next) {
             __strong RMIntroViewController *strongSelf = weakSelf;
             if (strongSelf != nil && next != nil) {
                 if (strongSelf->_alternativeLocalizationInfo == nil) {
@@ -203,7 +203,7 @@ typedef enum {
                     }
                 }
             }
-        }];
+        } file:__FILE_NAME__ line:__LINE__];
     }
     return self;
 }

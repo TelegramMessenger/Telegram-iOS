@@ -1,10 +1,10 @@
 #import "SMetaDisposable.h"
 
-#import <os/lock.h>
+#import <pthread/pthread.h>
 
 @interface SMetaDisposable ()
 {
-    os_unfair_lock _lock;
+    pthread_mutex_t _lock;
     bool _disposed;
     id<SDisposable> _disposable;
 }
@@ -13,41 +13,64 @@
 
 @implementation SMetaDisposable
 
-- (void)setDisposable:(id<SDisposable>)disposable
-{
-    id<SDisposable> previousDisposable = nil;
-    bool dispose = false;
+- (instancetype)init {
+    self = [super init];
+    if (self != nil) {
+        pthread_mutex_init(&_lock, nil);
+    }
+    return self;
+}
+
+- (void)dealloc {
+    id<SDisposable> freeDisposable = nil;
+    pthread_mutex_lock(&_lock);
+    if (_disposable) {
+        freeDisposable = _disposable;
+        _disposable = nil;
+    }
+    pthread_mutex_unlock(&_lock);
     
-    os_unfair_lock_lock(&_lock);
-    dispose = _disposed;
-    if (!dispose)
-    {
+    if (freeDisposable) {
+    }
+    
+    pthread_mutex_destroy(&_lock);
+}
+
+- (void)setDisposable:(id<SDisposable>)disposable {
+    id<SDisposable> previousDisposable = nil;
+    bool disposeImmediately = false;
+    
+    pthread_mutex_lock(&_lock);
+    disposeImmediately = _disposed;
+    if (!disposeImmediately) {
         previousDisposable = _disposable;
         _disposable = disposable;
     }
-    os_unfair_lock_unlock(&_lock);
+    pthread_mutex_unlock(&_lock);
     
-    if (previousDisposable != nil)
+    if (previousDisposable) {
         [previousDisposable dispose];
+    }
     
-    if (dispose)
+    if (disposeImmediately) {
         [disposable dispose];
+    }
 }
 
-- (void)dispose
-{
+- (void)dispose {
     id<SDisposable> disposable = nil;
     
-    os_unfair_lock_lock(&_lock);
-    if (!_disposed)
-    {
-        disposable = _disposable;
+    pthread_mutex_lock(&_lock);
+    if (!_disposed) {
         _disposed = true;
+        disposable = _disposable;
+        _disposable = nil;
     }
-    os_unfair_lock_unlock(&_lock);
+    pthread_mutex_unlock(&_lock);
     
-    if (disposable != nil)
+    if (disposable) {
         [disposable dispose];
+    }
 }
 
 @end

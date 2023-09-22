@@ -231,7 +231,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     let hasActiveAudioSession = Promise<Bool>(false)
     
     private let sharedContextPromise = Promise<SharedApplicationContext>()
-    private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
+    //private let watchCommunicationManagerPromise = Promise<WatchCommunicationManager?>()
 
     private var accountManager: AccountManager<TelegramAccountManagerTypes>?
     private var accountManagerState: AccountManagerState?
@@ -973,7 +973,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return .single(nil)
                 }
             }
-            let watchTasks = self.context.get()
+            /*let watchTasks = self.context.get()
             |> mapToSignal { context -> Signal<AccountRecordId?, NoError> in
                 if let context = context, let watchManager = context.context.watchManager {
                     let accountId = context.context.account.id
@@ -992,7 +992,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 } else {
                     return .single(nil)
                 }
-            }
+            }*/
             let wakeupManager = SharedWakeupManager(beginBackgroundTask: { name, expiration in
                 let id = application.beginBackgroundTask(withName: name, expirationHandler: expiration)
                 Logger.shared.log("App \(self.episodeId)", "Begin background task \(name): \(id)")
@@ -1004,7 +1004,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 application.endBackgroundTask(id)
             }, backgroundTimeRemaining: { application.backgroundTimeRemaining }, acquireIdleExtension: {
                 return applicationBindings.pushIdleTimerExtension()
-            }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: liveLocationPolling, watchTasks: watchTasks, inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
+            }, activeAccounts: sharedContext.activeAccountContexts |> map { ($0.0?.account, $0.1.map { ($0.0, $0.1.account) }) }, liveLocationPolling: liveLocationPolling, watchTasks: .single(nil), inForeground: applicationBindings.applicationInForeground, hasActiveAudioSession: self.hasActiveAudioSession.get(), notificationManager: notificationManager, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
                 return sharedContext.accountUserInterfaceInUse(id)
             })
             let sharedApplicationContext = SharedApplicationContext(sharedContext: sharedContext, notificationManager: notificationManager, wakeupManager: wakeupManager)
@@ -1023,7 +1023,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return .single(sharedApplicationContext)
         })
         
-        let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
+        //let watchManagerArgumentsPromise = Promise<WatchManagerArguments?>()
             
         self.context.set(self.sharedContextPromise.get()
         |> deliverOnMainQueue
@@ -1062,7 +1062,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { context, callListSettings in
-                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
+                    return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: .single(nil), context: context as! AccountContextImpl, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { context in
@@ -1305,7 +1305,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }).start()
         }))
         
-        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
+        /*self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
             let _ = (self.sharedContextPromise.get()
             |> take(1)).start(next: { sharedContext in
                 sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)
@@ -1317,7 +1317,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             } else {
                 watchManagerArgumentsPromise.set(.single(nil))
             }
-        })
+        })*/
         
         self.resetBadge()
         

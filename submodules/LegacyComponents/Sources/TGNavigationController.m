@@ -304,7 +304,7 @@
     {
         __weak TGNavigationController *weakSelf = self;
         [_playerStatusDisposable dispose];
-        _playerStatusDisposable = [[[TGNavigationBar musicPlayerProvider].musicPlayerIsActive deliverOn:[SQueue mainQueue]] startWithNext:^(NSNumber *nIsActive)
+        _playerStatusDisposable = [[[TGNavigationBar musicPlayerProvider].musicPlayerIsActive deliverOn:[SQueue mainQueue]] startStrictWithNext:^(NSNumber *nIsActive)
         {
             __strong TGNavigationController *strongSelf = weakSelf;
             if (strongSelf != nil)
@@ -327,7 +327,7 @@
                     }];
                 }
             }
-        }];
+        } file:__FILE_NAME__ line:__LINE__];
     }
     else
     {

@@ -112,7 +112,7 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
     SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:(id<TGMediaEditableItem>)self.item];
     
     __weak TGMediaAssetsVideoCell *weakSelf = self;
-    [_adjustmentsDisposable setDisposable:[adjustmentsSignal startWithNext:^(TGVideoEditAdjustments *next)
+    [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
     {
         __strong TGMediaAssetsVideoCell *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -122,7 +122,7 @@ NSString *const TGMediaAssetsVideoCellKind = @"TGMediaAssetsVideoCellKind";
             [strongSelf _layoutImageForOriginalSize:next.originalSize cropRect:next.cropRect cropOrientation:next.cropOrientation];
         else
             [strongSelf _layoutImageWithoutAdjustments];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)_transformLayoutForOrientation:(UIImageOrientation)orientation originalSize:(CGSize *)inOriginalSize cropRect:(CGRect *)inCropRect

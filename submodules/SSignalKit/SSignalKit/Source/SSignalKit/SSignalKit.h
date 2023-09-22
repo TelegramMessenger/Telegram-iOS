@@ -22,9 +22,7 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SMetaDisposable.h>
 #import <SSignalKit/SSignal+Single.h>
 #import <SSignalKit/SSignal+Mapping.h>
-#import <SSignalKit/SSignal+Multicast.h>
 #import <SSignalKit/SSignal+Meta.h>
-#import <SSignalKit/SSignal+Accumulate.h>
 #import <SSignalKit/SSignal+Dispatch.h>
 #import <SSignalKit/SSignal+Catch.h>
 #import <SSignalKit/SSignal+SideEffects.h>
@@ -32,7 +30,6 @@ FOUNDATION_EXPORT const unsigned char SSignalKitVersionString[];
 #import <SSignalKit/SSignal+Timing.h>
 #import <SSignalKit/SSignal+Take.h>
 #import <SSignalKit/SSignal+Pipe.h>
-#import <SSignalKit/SMulticastSignalManager.h>
 #import <SSignalKit/STimer.h>
 #import <SSignalKit/SVariable.h>
 #import <SSignalKit/SQueueLocalObject.h>

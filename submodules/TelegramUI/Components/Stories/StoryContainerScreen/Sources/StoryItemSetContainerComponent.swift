@@ -605,7 +605,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.addGestureRecognizer(viewListSwipeRecognizer)
             
             self.audioRecorderDisposable = (self.sendMessageContext.audioRecorder.get()
-            |> deliverOnMainQueue).start(next: { [weak self] audioRecorder in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] audioRecorder in
                 guard let self else {
                     return
                 }
@@ -624,7 +624,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         audioRecorder.start()
                         self.audioRecorderStatusDisposable = (audioRecorder.recordingState
-                        |> deliverOnMainQueue).start(next: { [weak self] value in
+                        |> deliverOnMainQueue).startStrict(next: { [weak self] value in
                             guard let self else {
                                 return
                             }
@@ -639,7 +639,7 @@ public final class StoryItemSetContainerComponent: Component {
             })
             
             self.videoRecorderDisposable = (self.sendMessageContext.videoRecorder.get()
-            |> deliverOnMainQueue).start(next: { [weak self] videoRecorder in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] videoRecorder in
                 guard let self else {
                     return
                 }
@@ -703,6 +703,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.audioRecorderDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
+            self.videoRecorderDisposable?.dispose()
         }
         
         func allowsExternalGestures(point: CGPoint) -> Bool {
@@ -2473,7 +2474,7 @@ public final class StoryItemSetContainerComponent: Component {
             self.updateIsProgressPaused()
             component.controller()?.present(tooltipScreen, in: .current)
             
-            let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).start()
+            let _ = ApplicationSpecificNotice.setDisplayStoryReactionTooltip(accountManager: component.context.sharedContext.accountManager).startStandalone()
         }
         
         func saveDraft() {
@@ -3270,7 +3271,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     TelegramEngine.EngineData.Item.Peer.IsContact(id: peer.id),
                                     TelegramEngine.EngineData.Item.Peer.IsBlocked(id: peer.id),
                                     TelegramEngine.EngineData.Item.Peer.IsBlockedFromStories(id: peer.id)
-                                ) |> deliverOnMainQueue).start(next: { [weak self] isContact, maybeIsBlocked, maybeIsBlockedFromStories in
+                                ) |> deliverOnMainQueue).startStandalone(next: { [weak self] isContact, maybeIsBlocked, maybeIsBlockedFromStories in
                                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                     var itemList: [ContextMenuItem] = []
                                     
@@ -3289,7 +3290,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         }, action: { [weak self] _, f in
                                             f(.default)
                                             
-                                            let _ = component.blockedPeers?.remove(peerId: peer.id).start()
+                                            let _ = component.blockedPeers?.remove(peerId: peer.id).startStandalone()
                                             
                                             guard let self else {
                                                 return
@@ -3311,7 +3312,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Stories"), color: theme.contextMenu.primaryColor)
                                         }, action: { [weak self] _, f in
                                             f(.default)
-                                            let _ = component.blockedPeers?.add(peerId: peer.id).start()
+                                            let _ = component.blockedPeers?.add(peerId: peer.id).startStandalone()
                                             
                                             guard let self else {
                                                 return
@@ -3335,7 +3336,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         }, action: { [weak self] _, f in
                                             f(.default)
                                             
-                                            let _ = component.context.engine.contacts.deleteContactPeerInteractively(peerId: peer.id).start()
+                                            let _ = component.context.engine.contacts.deleteContactPeerInteractively(peerId: peer.id).startStandalone()
                                             
                                             guard let self else {
                                                 return
@@ -3368,7 +3369,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                         return false
                                                     }
                                                     if case .undo = action {
-                                                        let _ =  component.context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: user.phone ?? "", addToPrivacyExceptions: false).start()
+                                                        let _ =  component.context.engine.contacts.addContactInteractively(peerId: peer.id, firstName: user.firstName ?? "", lastName: user.lastName ?? "", phoneNumber: user.phone ?? "", addToPrivacyExceptions: false).startStandalone()
                                                     }
                                                     return false
                                                 }
@@ -3382,7 +3383,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             }, action: { [weak self] _, f in
                                                 f(.default)
                                                 
-                                                let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).start()
+                                                let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: true).startStandalone()
                                                 
                                                 guard let self else {
                                                     return
@@ -3412,7 +3413,7 @@ public final class StoryItemSetContainerComponent: Component {
                                                             return false
                                                         }
                                                         if case .undo = action {
-                                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: false).start()
+                                                            let _ = component.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: false).startStandalone()
                                                         }
                                                         return false
                                                     }
@@ -4295,7 +4296,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             if self.displayLikeReactions {
                                 if component.slice.item.storyItem.myReaction == updateReaction.reaction {
-                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: nil).start()
+                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: nil).startStandalone()
                                     self.displayLikeReactions = false
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                                 } else {
@@ -4306,12 +4307,12 @@ public final class StoryItemSetContainerComponent: Component {
                                     self.state?.updated(transition: Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                                     
                                     self.waitingForReactionAnimateOutToLike = updateReaction.reaction
-                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).start()
+                                    let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: updateReaction.reaction).startStandalone()
                                 }
                             } else {
                                 let _ = (component.context.engine.stickers.availableReactions()
                                 |> take(1)
-                                |> deliverOnMainQueue).start(next: { [weak self, weak reactionContextNode] availableReactions in
+                                |> deliverOnMainQueue).startStandalone(next: { [weak self, weak reactionContextNode] availableReactions in
                                     guard let self, let component = self.component, let availableReactions else {
                                         return
                                     }
@@ -4401,7 +4402,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     let peer = component.slice.peer
                                     
                                     let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: [message])
-                                    |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak self] messageIds in
                                         if let animation, let self, let component = self.component {
                                             let controller = UndoOverlayController(
                                                 presentationData: presentationData,
@@ -4771,7 +4772,7 @@ public final class StoryItemSetContainerComponent: Component {
                 closeFriends: component.closeFriends.get(),
                 blockedPeersContext: component.blockedPeers
             )
-            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                 guard let self else {
                     return
                 }
@@ -4788,7 +4789,7 @@ public final class StoryItemSetContainerComponent: Component {
                             self.updateIsProgressPaused()
                             return
                         }
-                        let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).start()
+                        let _ = component.context.engine.messages.editStoryPrivacy(id: component.slice.item.storyItem.id, privacy: privacy).startStandalone()
                         
                         self.presentPrivacyTooltip(privacy: privacy)
                         
@@ -4852,7 +4853,7 @@ public final class StoryItemSetContainerComponent: Component {
                 initialPeerIds: Set(privacy.additionallyIncludePeers),
                 blockedPeersContext: component.blockedPeers
             )
-            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+            let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
                 guard let self else {
                     return
                 }
@@ -4865,10 +4866,10 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         if blockedPeers, let blockedPeers = self?.component?.blockedPeers {
-                            let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).start()
+                            let _ = blockedPeers.updatePeerIds(result.additionallyIncludePeers).startStandalone()
                             completion(privacy)
                         } else if case .closeFriends = privacy.base {
-                            let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).start()
+                            let _ = context.engine.privacy.updateCloseFriends(peerIds: result.additionallyIncludePeers).startStandalone()
                             if let component = self?.component {
                                 component.closeFriends.set(.single(peers))
                             }
@@ -5096,7 +5097,7 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             if let imageData = compressImageToJPEG(image, quality: 0.7) {
                                 updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
-                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                                     guard let self else {
                                         return
                                     }
@@ -5146,7 +5147,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                                 
                                 updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .video(dimensions: dimensions, duration: duration, resource: resource, firstFrameFile: firstFrameFile, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
-                                |> deliverOnMainQueue).start(next: { [weak self] result in
+                                |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                                     guard let self else {
                                         return
                                     }
@@ -5170,7 +5171,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                     } else if updatedText != nil {
                         let _ = (context.engine.messages.editStory(peerId: peerId, id: id, media: nil, mediaAreas: nil, text: updatedText, entities: updatedEntities, privacy: nil)
-                        |> deliverOnMainQueue).start(next: { [weak self] result in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] result in
                             switch result {
                             case .completed:
                                 Queue.mainQueue().after(0.1) {
@@ -5414,7 +5415,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: component.slice.item.storyItem.myReaction == nil ? .builtin("❤") : nil).start()
+                let _ = component.context.engine.messages.setStoryReaction(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id, reaction: component.slice.item.storyItem.myReaction == nil ? .builtin("❤") : nil).startStandalone()
                 
                 if component.slice.item.storyItem.myReaction != nil {
                     return
@@ -5701,7 +5702,7 @@ public final class StoryItemSetContainerComponent: Component {
                     return
                 }
                 
-                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
+                let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).startStandalone()
                 
                 let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                 if component.slice.item.storyItem.isPinned {
@@ -5765,7 +5766,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                    |> deliverOnMainQueue).start(next: { [weak self] link in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -5852,7 +5853,7 @@ public final class StoryItemSetContainerComponent: Component {
                         return
                     }
                     
-                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).start()
+                    let _ = component.context.engine.messages.updateStoriesArePinned(peerId: component.slice.peer.id, ids: [component.slice.item.storyItem.id: component.slice.item.storyItem], isPinned: !component.slice.item.storyItem.isPinned).startStandalone()
                     
                     let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                     if component.slice.item.storyItem.isPinned {
@@ -5900,7 +5901,7 @@ public final class StoryItemSetContainerComponent: Component {
                     }
                     
                     let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                             |> deliverOnMainQueue).start(next: { [weak self] link in
+                    |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
                         guard let self, let component = self.component else {
                             return
                         }
@@ -6053,7 +6054,7 @@ public final class StoryItemSetContainerComponent: Component {
                 return translationSettings
             }
             
-            let _ = combineLatest(
+            let _ = (combineLatest(
                 queue: Queue.mainQueue(),
                 component.context.engine.data.get(
                     TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: component.slice.peer.id),
@@ -6063,7 +6064,8 @@ public final class StoryItemSetContainerComponent: Component {
                     TelegramEngine.EngineData.Item.Peer.Peer(id: component.context.account.peerId)
                 ),
                 translationSettings
-            ).start(next: { [weak self] result, translationSettings in
+            )
+            |> take(1)).startStandalone(next: { [weak self] result, translationSettings in
                 guard let self, let component = self.component, let controller = component.controller() else {
                     return
                 }
@@ -6091,7 +6093,7 @@ public final class StoryItemSetContainerComponent: Component {
                             return
                         }
                         
-                        let _ = component.context.engine.peers.togglePeerStoriesMuted(peerId: component.slice.peer.id).start()
+                        let _ = component.context.engine.peers.togglePeerStoriesMuted(peerId: component.slice.peer.id).startStandalone()
                         
                         let iconColor = UIColor.white
                         let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
@@ -6237,7 +6239,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
                         
                         let _ = (component.context.engine.messages.exportStoryLink(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id)
-                        |> deliverOnMainQueue).start(next: { [weak self] link in
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] link in
                             guard let self, let component = self.component else {
                                 return
                             }
@@ -6302,7 +6304,7 @@ public final class StoryItemSetContainerComponent: Component {
                                 guard let self, let component = self.component, let controller = component.controller(), let reason else {
                                     return
                                 }
-                                let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.peer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").start()
+                                let _ = component.context.engine.peers.reportPeerStory(peerId: component.slice.peer.id, storyId: component.slice.item.storyItem.id, reason: reason, message: "").startStandalone()
                                 controller.present(
                                     UndoOverlayController(
                                         presentationData: presentationData,
@@ -6376,7 +6378,7 @@ public final class StoryItemSetContainerComponent: Component {
             
             let _ = (ApplicationSpecificNotice.displayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager)
             |> delay(0.3, queue: .mainQueue())
-            |> deliverOnMainQueue).start(next: { [weak self] value in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] value in
                 guard let self, let component = self.component else {
                     return
                 }
@@ -6390,7 +6392,7 @@ public final class StoryItemSetContainerComponent: Component {
                     )
                     component.controller()?.present(tooltipScreen, in: .current)
                     
-                    let _ = ApplicationSpecificNotice.setDisplayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager).start()
+                    let _ = ApplicationSpecificNotice.setDisplayStoryUnmuteTooltip(accountManager: component.context.sharedContext.accountManager).startStandalone()
                 }
             })
         }

@@ -104,7 +104,7 @@
     
     __weak TGMediaGroupsController *weakSelf = self;
     _groupsDisposable = [[SMetaDisposable alloc] init];
-    [_groupsDisposable setDisposable:[[[_assetsLibrary assetGroups] deliverOn:[SQueue mainQueue]] startWithNext:^(NSArray *next)
+    [_groupsDisposable setDisposable:[[[_assetsLibrary assetGroups] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(NSArray *next)
     {
         __strong TGMediaGroupsController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -131,7 +131,7 @@
             if (![next containsObject:pickerController.assetGroup])
                 [strongSelf.navigationController popToRootViewControllerAnimated:false];
         }
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)viewWillAppear:(BOOL)animated

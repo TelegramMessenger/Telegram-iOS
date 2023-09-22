@@ -708,7 +708,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         }];
     }
     
-    [_disposable setDisposable:[[urlSignal deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
+    [_disposable setDisposable:[[urlSignal deliverOn:[SQueue mainQueue]] startStrictWithNext:^(id next)
     {
         __strong TGPhotoQualityController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -781,7 +781,7 @@ const NSTimeInterval TGPhotoQualityPreviewDuration = 15.0f;
         }
     } error:^(id error) {
         TGLegacyLog(@"Video Quality Preview Error: %@", error);
-    } completed:nil]];
+    } completed:nil file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)_setupPlaybackReachedEndObserver

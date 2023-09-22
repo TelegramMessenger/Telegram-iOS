@@ -491,7 +491,7 @@
         };
         
         _selectionChangedDisposable = [[SMetaDisposable alloc] init];
-        [_selectionChangedDisposable setDisposable:[[_selectionContext selectionChangedSignal] startWithNext:^(__unused id next)
+        [_selectionChangedDisposable setDisposable:[[_selectionContext selectionChangedSignal] startStrictWithNext:^(__unused id next)
         {
             __strong TGMediaAssetsController *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -540,7 +540,7 @@
             }
 
             UIAccessibilityPostNotification(UIAccessibilityAnnouncementNotification, text);
-        }]];
+        } file:__FILE_NAME__ line:__LINE__]];
         
         if (intent == TGMediaAssetsControllerSendMediaIntent || intent == TGMediaAssetsControllerSetProfilePhotoIntent || intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || intent == TGMediaAssetsControllerPassportIntent || intent == TGMediaAssetsControllerPassportMultipleIntent)
             _editingContext = [[TGMediaEditingContext alloc] init];
@@ -550,28 +550,28 @@
         if (allowGrouping)
         {
             _groupingChangedDisposable = [[SMetaDisposable alloc] init];
-            [_groupingChangedDisposable setDisposable:[_selectionContext.groupingChangedSignal startWithNext:^(NSNumber *next)
+            [_groupingChangedDisposable setDisposable:[_selectionContext.groupingChangedSignal startStrictWithNext:^(NSNumber *next)
             {
                 __strong TGMediaAssetsController *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
                 
                 [strongSelf->_toolbarView setCenterButtonSelected:next.boolValue];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
             
             if (_editingContext != nil)
             {
                 _timersChangedDisposable = [[SMetaDisposable alloc] init];
-                [_timersChangedDisposable setDisposable:[_editingContext.timersUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                [_timersChangedDisposable setDisposable:[_editingContext.timersUpdatedSignal startStrictWithNext:^(__unused NSNumber *next)
                 {
                     updateGroupingButtonVisibility();
-                }]];
+                } file:__FILE_NAME__ line:__LINE__]];
                 
                 _adjustmentsChangedDisposable = [[SMetaDisposable alloc] init];
-                [_adjustmentsChangedDisposable setDisposable:[_editingContext.adjustmentsUpdatedSignal startWithNext:^(__unused NSNumber *next)
+                [_adjustmentsChangedDisposable setDisposable:[_editingContext.adjustmentsUpdatedSignal startStrictWithNext:^(__unused NSNumber *next)
                 {
                     updateGroupingButtonVisibility();
-                }]];
+                } file:__FILE_NAME__ line:__LINE__]];
             }
         }
     }
@@ -1873,11 +1873,11 @@
         _tooltipDismissDisposable = [[SMetaDisposable alloc] init];
     
     __weak TGTooltipContainerView *weakContainerView = _groupingTooltipContainerView;
-    [_tooltipDismissDisposable setDisposable:[[[SSignal complete] delay:duration onQueue:[SQueue mainQueue]] startWithNext:nil completed:^{
+    [_tooltipDismissDisposable setDisposable:[[[SSignal complete] delay:duration onQueue:[SQueue mainQueue]] startStrictWithNext:nil completed:^{
         __strong TGTooltipContainerView *strongContainerView = weakContainerView;
         if (strongContainerView != nil)
             [strongContainerView hideTooltip];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (BOOL)prefersStatusBarHidden

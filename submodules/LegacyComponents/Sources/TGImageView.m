@@ -304,7 +304,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
     int version = _version;
     __weak TGImageView *weakSelf = self;
     
-    [_disposable setDisposable:[signal startWithNext:^(id next)
+    [_disposable setDisposable:[signal startStrictWithNext:^(id next)
     {
         bool synchronous = [NSThread isMainThread];
         TGDispatchOnMainThread(^
@@ -323,7 +323,7 @@ NSString *TGImageViewOptionSynchronous = @"TGImageViewOptionSynchronous";
         TGLegacyLog(@"TGImageView signal error: %@", error);
     } completed:^
     {
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 @end

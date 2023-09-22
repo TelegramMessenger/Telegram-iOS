@@ -404,7 +404,7 @@ static CGRect viewFrame(UIView *view)
                 [self addSubview:_slowmodeView];
                 
                 __weak TGVideoMessageControls *weakSelf = self;
-                _slowmodeTimer = [[STimer alloc] initWithTimeout:0.5 repeat:true completion:^{
+                _slowmodeTimer = [[STimer alloc] initWithTimeout:0.5 repeat:true completion:^(__unused STimer *timer) {
                     __strong TGVideoMessageControls *strongSelf = weakSelf;
                     if (strongSelf != nil) {
                         int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];

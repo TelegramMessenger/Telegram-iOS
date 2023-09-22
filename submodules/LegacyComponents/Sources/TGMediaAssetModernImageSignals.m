@@ -639,8 +639,7 @@
                     }
                 }
                 
-                STimer *progressTimer = [[STimer alloc] initWithTimeout:0.5 repeat:true completion:^
-                {
+                STimer *progressTimer = [[STimer alloc] initWithTimeout:0.5 repeat:true completion:^(__unused STimer *timer) {
                     [subscriber putNext:@(exportSession.progress)];
                 } queue:[SQueue concurrentDefaultQueue]];
                 [progressTimer start];

@@ -96,7 +96,7 @@
         
         [self setChecked:[self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)asset] animated:false];
         __weak TGAttachmentAssetCell *weakSelf = self;
-        [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)asset] startWithNext:^(TGMediaSelectionChange *next)
+        [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)asset] startStrictWithNext:^(TGMediaSelectionChange *next)
         {
             __strong TGAttachmentAssetCell *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -104,7 +104,7 @@
             
             if (next.sender != strongSelf->_checkButton)
                 [strongSelf setChecked:next.selected animated:next.animated];
-        }]];
+        } file:__FILE_NAME__ line:__LINE__]];
     }
     
     if (_asset == nil)

@@ -80,7 +80,7 @@
         
         __weak TGMediaPickerCell *weakSelf = self;
         [self setChecked:[self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)item] animated:false];
-        [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startWithNext:^(TGMediaSelectionChange *next)
+        [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startStrictWithNext:^(TGMediaSelectionChange *next)
         {
             __strong TGMediaPickerCell *strongSelf = weakSelf;
             if (strongSelf == nil)
@@ -88,7 +88,7 @@
             
             if (next.sender != strongSelf->_checkButton)
                 [strongSelf setChecked:next.selected animated:next.animated];
-        }]];
+        } file:__FILE_NAME__ line:__LINE__]];
     }
     
     if (_item == nil)

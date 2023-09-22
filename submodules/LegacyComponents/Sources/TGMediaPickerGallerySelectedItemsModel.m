@@ -37,7 +37,7 @@
         {
             __weak TGMediaPickerGallerySelectedItemsModel *weakSelf = self;
             _selectionChangedDisposable = [[SMetaDisposable alloc] init];
-            [_selectionChangedDisposable setDisposable:[[selectionContext selectionChangedSignal] startWithNext:^(TGMediaSelectionChange *next)
+            [_selectionChangedDisposable setDisposable:[[selectionContext selectionChangedSignal] startStrictWithNext:^(TGMediaSelectionChange *next)
             {
                 __strong TGMediaPickerGallerySelectedItemsModel *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -53,7 +53,7 @@
                     [strongSelf addSelectedItem:next.item];
                 else if (!strongSelf->_keepItems)
                     [strongSelf removeSelectedItem:next.item];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
     }
     return self;

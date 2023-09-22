@@ -1293,12 +1293,12 @@ typedef enum
 - (void)capturePipelineRecordingDidStart:(TGVideoCameraPipeline *)__unused capturePipeline
 {
     __weak TGVideoMessageCaptureController *weakSelf = self;
-    [_activityDisposable setDisposable:[[[SSignal complete] delay:0.3 onQueue:[SQueue mainQueue]] startWithNext:nil error:nil completed:^{
+    [_activityDisposable setDisposable:[[[SSignal complete] delay:0.3 onQueue:[SQueue mainQueue]] startStrictWithNext:nil error:nil completed:^{
         __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
         if (strongSelf != nil && strongSelf->_requestActivityHolder) {
             strongSelf->_activityHolder = strongSelf->_requestActivityHolder();
         }
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)capturePipelineRecordingWillStop:(TGVideoCameraPipeline *)__unused capturePipeline

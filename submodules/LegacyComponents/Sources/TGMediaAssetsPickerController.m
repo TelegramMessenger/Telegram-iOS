@@ -134,12 +134,12 @@
         return [strongSelf _itemAtIndexPath:indexPath];
     };
     
-    _selectionChangedDisposable = [[self.selectionContext selectionChangedSignal] startWithNext:^(id next)
+    _selectionChangedDisposable = [[self.selectionContext selectionChangedSignal] startStrictWithNext:^(id next)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
         if (strongSelf != nil)
             return [strongSelf updateSelectionIndexes];
-    }];
+    } file:__FILE_NAME__ line:__LINE__];
 }
 
 - (void)updateSelectionIndexes
@@ -194,7 +194,7 @@
             [strongSelf setTitle:assetGroup.title];
         }
         return [strongSelf->_assetsLibrary assetsOfAssetGroup:assetGroup reversed:reversed];
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
+    }] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(id next)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -238,7 +238,7 @@
         
         if (strongSelf->_galleryMixin != nil && strongSelf->_fetchResult != nil)
             [strongSelf->_galleryMixin updateWithFetchResult:strongSelf->_fetchResult];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)viewWillAppear:(BOOL)animated

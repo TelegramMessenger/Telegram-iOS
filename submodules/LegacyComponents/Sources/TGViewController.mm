@@ -395,7 +395,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     _currentSizeClass = UIUserInterfaceSizeClassCompact;
     
     __weak TGViewController *weakSelf = self;
-    _sizeClassDisposable = [[_context sizeClassSignal] startWithNext:^(NSNumber *next) {
+    _sizeClassDisposable = [[_context sizeClassSignal] startStrictWithNext:^(NSNumber *next) {
         __strong TGViewController *strongSelf = weakSelf;
         if (strongSelf != nil) {
             if (strongSelf->_currentSizeClass != [next integerValue]) {
@@ -405,7 +405,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
                 }
             }
         }
-    }];
+    } file:__FILE_NAME__ line:__LINE__];
     initializedSizeClass = true;
     
     if ([self respondsToSelector:@selector(setAutomaticallyAdjustsScrollViewInsets:)])

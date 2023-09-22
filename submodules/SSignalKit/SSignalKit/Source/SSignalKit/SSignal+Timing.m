@@ -14,11 +14,11 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
+        SMetaDisposable *startDisposable = [[SMetaDisposable alloc] init];
+        SMetaDisposable *timerDisposable = [[SMetaDisposable alloc] init];
         
-        STimer *timer = [[STimer alloc] initWithTimeout:seconds repeat:false completion:^
-        {
-            [disposable setDisposable:[self startWithNext:^(id next)
+        STimer *timer = [[STimer alloc] initWithTimeout:seconds repeat:false completion:^(__unused STimer *timer) {
+            [startDisposable setDisposable:[self startWithNext:^(id next)
             {
                 [subscriber putNext:next];
             } error:^(id error)
@@ -32,12 +32,15 @@
         
         [timer start];
         
-        [disposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
+        [timerDisposable setDisposable:[[SBlockDisposable alloc] initWithBlock:^
         {
             [timer invalidate];
         }]];
         
-        return disposable;
+        return [[SBlockDisposable alloc] initWithBlock:^{
+            [startDisposable dispose];
+            [timerDisposable dispose];
+        }];
     }];
 }
 
@@ -45,11 +48,12 @@
 {
     return [[SSignal alloc] initWithGenerator:^id<SDisposable> (SSubscriber *subscriber)
     {
-        SMetaDisposable *disposable = [[SMetaDisposable alloc] init];
+        SMetaDisposable *startDisposable = [[SMetaDisposable alloc] init];
+        SMetaDisposable *timerDisposable = [[SMetaDisposable alloc] init];
 
-        STimer *timer = [[STimer alloc] initWithTimeout:seconds repeat:false completion:^
+        STimer *timer = [[STimer alloc] initWithTimeout:seconds repeat:false completion:^(__unused STimer *timer)
         {
-            [disposable setDisposable:[signal startWithNext:^(id next)
+            [startDisposable setDisposable:[signal startWithNext:^(id next)
             {
                 [subscriber putNext:next];
             } error:^(id error)
@@ -62,7 +66,7 @@
         } queue:queue];
         [timer start];
         
-        [disposable setDisposable:[self startWithNext:^(id next)
+        [timerDisposable setDisposable:[self startWithNext:^(id next)
         {
             [timer invalidate];
             [subscriber putNext:next];
@@ -76,7 +80,10 @@
             [subscriber putCompletion];
         }]];
         
-        return disposable;
+        return [[SBlockDisposable alloc] initWithBlock:^{
+            [startDisposable dispose];
+            [timerDisposable dispose];
+        }];
     }];
 }
 

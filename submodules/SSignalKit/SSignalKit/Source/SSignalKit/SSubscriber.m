@@ -65,6 +65,7 @@
 
 - (void)_markTerminatedWithoutDisposal
 {
+    id<SDisposable> disposable = nil;
     os_unfair_lock_lock(&_lock);
     SSubscriberBlocks *blocks = nil;
     if (!_terminated)
@@ -74,10 +75,15 @@
         
         _terminated = true;
     }
+    disposable = _disposable;
+    _disposable = nil;
     os_unfair_lock_unlock(&_lock);
     
     if (blocks) {
         blocks = nil;
+    }
+    if (disposable) {
+        disposable = nil;
     }
 }
 
@@ -116,8 +122,10 @@
         blocks->_error(error);
     }
     
-    if (shouldDispose)
+    if (shouldDispose) {
         [self->_disposable dispose];
+        self->_disposable = nil;
+    }
 }
 
 - (void)putCompletion
@@ -139,13 +147,16 @@
     if (blocks && blocks->_completed)
         blocks->_completed();
     
-    if (shouldDispose)
+    if (shouldDispose) {
         [self->_disposable dispose];
+        self->_disposable = nil;
+    }
 }
 
 - (void)dispose
 {
     [self->_disposable dispose];
+    self->_disposable = nil;
 }
 
 @end

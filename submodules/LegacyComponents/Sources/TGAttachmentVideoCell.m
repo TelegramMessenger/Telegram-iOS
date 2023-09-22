@@ -64,7 +64,7 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
     SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:self.asset];
     
     __weak TGAttachmentVideoCell *weakSelf = self;
-    [_adjustmentsDisposable setDisposable:[adjustmentsSignal startWithNext:^(TGVideoEditAdjustments *next)
+    [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
     {
         __strong TGAttachmentVideoCell *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -74,7 +74,7 @@ NSString *const TGAttachmentVideoCellIdentifier = @"AttachmentVideoCell";
             [strongSelf _layoutImageForOriginalSize:next.originalSize cropRect:next.cropRect cropOrientation:next.cropOrientation];
         else
             [strongSelf _layoutImageWithoutAdjustments];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (void)_transformLayoutForOrientation:(UIImageOrientation)orientation originalSize:(CGSize *)inOriginalSize cropRect:(CGRect *)inCropRect

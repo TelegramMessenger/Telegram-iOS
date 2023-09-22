@@ -140,7 +140,7 @@ typedef enum
     
     __weak TGMenuSheetController *weakSelf = self;
     _sizeClassDisposable = [[SMetaDisposable alloc] init];
-    [_sizeClassDisposable setDisposable:[[_context sizeClassSignal] startWithNext:^(NSNumber *next)
+    [_sizeClassDisposable setDisposable:[[_context sizeClassSignal] startStrictWithNext:^(NSNumber *next)
     {
         __strong TGMenuSheetController *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -148,7 +148,7 @@ typedef enum
         
         UIUserInterfaceSizeClass sizeClass = next.integerValue;
         [strongSelf updateTraitsWithSizeClass:sizeClass];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
     
     _containerView = [[TGMenuSheetContainerView alloc] initWithFrame:CGRectZero];
     [self.view addSubview:_containerView];

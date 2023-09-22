@@ -1189,8 +1189,7 @@ ActionStage *ActionStageInstance()
         {
             TGLegacyLog(@"Will cancel request to \"%@\" in %f s", path, cancelTimeout);
             NSDictionary *cancelDict = [NSDictionary dictionaryWithObjectsAndKeys:path, @"path", [NSNumber numberWithInt:0], @"type", nil];
-            STimer *timer = [[STimer alloc] initWithTimeout:cancelTimeout repeat:false completion:^
-            {
+            STimer *timer = [[STimer alloc] initWithTimeout:cancelTimeout repeat:false completion:^(__unused STimer *timer) {
                 [self performCancelRequest:cancelDict];
             } nativeQueue:[ActionStageInstance() globalStageDispatchQueue]];
             

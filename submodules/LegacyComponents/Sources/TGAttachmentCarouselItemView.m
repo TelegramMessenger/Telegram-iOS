@@ -174,7 +174,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                     return [SSignal complete];
                 
                 return [[strongSelf->_collectionView noOngoingTransitionSignal] then:[SSignal single:value]];
-            }] startWithNext:^(__unused TGMediaSelectionChange *change)
+            }] startStrictWithNext:^(__unused TGMediaSelectionChange *change)
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -190,7 +190,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 [strongSelf updateSendButtonsFromIndex:index];
                 
                 [strongSelf updateSelectionIndexes];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
         
         if (allowEditing)
@@ -198,7 +198,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             _editingContext = [[TGMediaEditingContext alloc] init];
             
             _itemsSizeChangedDisposable = [[SMetaDisposable alloc] init];
-            [_itemsSizeChangedDisposable setDisposable:[[[_editingContext cropAdjustmentsUpdatedSignal] deliverOn:[SQueue mainQueue]] startWithNext:^(__unused id next)
+            [_itemsSizeChangedDisposable setDisposable:[[[_editingContext cropAdjustmentsUpdatedSignal] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(__unused id next)
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -217,7 +217,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                             [strongSelf centerOnItemWithIndex:indexPath.row animated:false];
                     }
                 }
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
         
         _smallLayout = [[UICollectionViewFlowLayout alloc] init];
@@ -430,7 +430,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             return [SSignal complete];
         
         return [[strongSelf->_collectionView noOngoingTransitionSignal] then:[SSignal single:value]];
-    }] deliverOn:[SQueue mainQueue]] startWithNext:^(id next)
+    }] deliverOn:[SQueue mainQueue]] startStrictWithNext:^(id next)
     {
         __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -456,7 +456,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         
         if (strongSelf->_galleryMixin != nil && strongSelf->_fetchResult != nil)
             [strongSelf->_galleryMixin updateWithFetchResult:strongSelf->_fetchResult];
-    }]];
+    } file:__FILE_NAME__ line:__LINE__]];
 }
 
 - (SSignal *)_signalForItem:(TGMediaAsset *)asset

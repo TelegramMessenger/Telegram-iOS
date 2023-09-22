@@ -149,7 +149,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             
             [self setChecked:[self.selectionContext isItemSelected:(id<TGMediaSelectableItem>)item] animated:false];
             __weak TGMediaPickerPhotoStripCell *weakSelf = self;
-            [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startWithNext:^(TGMediaSelectionChange *next)
+            [_itemSelectedDisposable setDisposable:[[self.selectionContext itemInformativeSelectedSignal:(id<TGMediaSelectableItem>)item] startStrictWithNext:^(TGMediaSelectionChange *next)
             {
                 __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -157,7 +157,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
                 
                 if (![next.sender isKindOfClass:[TGMediaPickerGallerySelectedItemsModel class]])
                     [strongSelf setChecked:next.selected animated:next.animated];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
     }
     
@@ -181,7 +181,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:video];
             
             __weak TGMediaPickerPhotoStripCell *weakSelf = self;
-            [_adjustmentsDisposable setDisposable:[adjustmentsSignal startWithNext:^(TGVideoEditAdjustments *next)
+            [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
             {
                 __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -191,7 +191,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
                     [strongSelf _layoutImageForOriginalSize:next.originalSize cropRect:next.cropRect cropOrientation:next.cropOrientation];
                 else
                     [strongSelf _layoutImageWithoutAdjustments];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
         return;
     }
@@ -221,7 +221,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
                 SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:asset];
                 
                 __weak TGMediaPickerPhotoStripCell *weakSelf = self;
-                [_adjustmentsDisposable setDisposable:[adjustmentsSignal startWithNext:^(TGVideoEditAdjustments *next)
+                [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
                 {
                     __strong TGMediaPickerPhotoStripCell *strongSelf = weakSelf;
                     if (strongSelf == nil)
@@ -231,7 +231,7 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
                         [strongSelf _layoutImageForOriginalSize:next.originalSize cropRect:next.cropRect cropOrientation:next.cropOrientation];
                     else
                         [strongSelf _layoutImageWithoutAdjustments];
-                }]];
+                } file:__FILE_NAME__ line:__LINE__]];
             }
         }
             break;
