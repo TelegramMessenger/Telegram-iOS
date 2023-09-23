@@ -1126,19 +1126,36 @@ class Keychain: NSObject, MTKeychain {
             return
         }
         MTContext.perform(objCTry: {
-            let data = NSKeyedArchiver.archivedData(withRootObject: object)
-            self.set(group + ":" + aKey, data)
+            if let data = try? NSKeyedArchiver.archivedData(withRootObject: object, requiringSecureCoding: false) {
+                self.set(group + ":" + aKey, data)
+            }
         })
     }
     
-    func object(forKey aKey: String!, group: String!) -> Any! {
+    func dictionary(forKey aKey: String!, group: String!) -> [AnyHashable : Any]? {
         guard let aKey = aKey, let group = group else {
             return nil
         }
         if let data = self.get(group + ":" + aKey) {
-            var result: Any?
+            var result: NSDictionary?
             MTContext.perform(objCTry: {
-                result = NSKeyedUnarchiver.unarchiveObject(with: data as Data)
+                result = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDictionary.self, from: data as Data)
+            })
+            if let result = result {
+                return result as? [AnyHashable : Any]
+            }
+        }
+        return nil
+    }
+    
+    func number(forKey aKey: String!, group: String!) -> NSNumber? {
+        guard let aKey = aKey, let group = group else {
+            return nil
+        }
+        if let data = self.get(group + ":" + aKey) {
+            var result: NSNumber?
+            MTContext.perform(objCTry: {
+                result = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSNumber.self, from: data as Data)
             })
             return result
         }

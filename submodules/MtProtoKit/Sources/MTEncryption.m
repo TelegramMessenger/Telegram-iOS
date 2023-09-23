@@ -541,7 +541,7 @@ bool MTCheckIsSafePrime(id<EncryptionProvider> provider, NSData *numberBytes, id
 {
     NSString *primeKey = [[NSString alloc] initWithFormat:@"isPrimeSafe_%@", hexStringFromData(numberBytes)];
     
-    NSNumber *nCachedResult = [keychain objectForKey:primeKey group:@"primes"];
+    NSNumber *nCachedResult = [keychain numberForKey:primeKey group:@"primes"];
     if (nCachedResult != nil) {
         return [nCachedResult boolValue];
     }
@@ -652,7 +652,7 @@ bool MTCheckIsSafeGAOrB(id<EncryptionProvider> provider, NSData *gAOrB, NSData *
 bool MTCheckMod(id<EncryptionProvider> provider, NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
 {
     NSString *modKey = [[NSString alloc] initWithFormat:@"isPrimeModSafe_%@_%d", hexStringFromData(numberBytes), g];
-    NSNumber *nCachedResult = [keychain objectForKey:modKey group:@"primes"];
+    NSNumber *nCachedResult = [keychain numberForKey:modKey group:@"primes"];
     if (nCachedResult != nil) {
         return [nCachedResult boolValue];
     }

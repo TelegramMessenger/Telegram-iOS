@@ -1302,7 +1302,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     public static func defaultCountryCode() -> Int32 {
         var countryId: String? = nil
         let networkInfo = CTTelephonyNetworkInfo()
-        if let carrier = networkInfo.subscriberCellularProvider {
+        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
             countryId = carrier.isoCountryCode
         }
         

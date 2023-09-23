@@ -7,7 +7,13 @@
 //
 
 #import <UIKit/UIKit.h>
+
+#define GLES_SILENCE_DEPRECATION
+
 #import <GLKit/GLKit.h>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 @class SSignal;
 
@@ -74,3 +80,5 @@
 - (void)stopTimer;
 
 @end
+
+#pragma clang diagnostic pop

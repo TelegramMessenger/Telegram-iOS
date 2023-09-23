@@ -31,12 +31,6 @@
 NS_AVAILABLE_IOS(10)
 NS_INLINE void ASConfigureExtendedRange(UIGraphicsImageRendererFormat *format)
 {
-  if (AS_AVAILABLE_IOS_TVOS(12, 12)) {
-    // nop. We always use automatic range on iOS >= 12.
-  } else {
-    // Currently we never do wide color. One day we could pipe this information through from the ASImageNode if it was worth it.
-    format.prefersExtendedRange = NO;
-  }
 }
 
 UIImage *ASGraphicsCreateImageWithOptions(CGSize size, BOOL opaque, CGFloat scale, UIImage *sourceImage,

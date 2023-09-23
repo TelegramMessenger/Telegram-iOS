@@ -202,9 +202,11 @@ public func legacyInstantVideoController(theme: PresentationTheme, forStory: Boo
                         finalDuration = adjustments.trimEndValue - adjustments.trimStartValue
                     }
                     
-                    let adjustmentsData = MemoryBuffer(data: NSKeyedArchiver.archivedData(withRootObject: adjustments.dictionary()!))
-                    let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
-                    resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
+                    if let dict = adjustments.dictionary(), let data = try? NSKeyedArchiver.archivedData(withRootObject: dict, requiringSecureCoding: false) {
+                        let adjustmentsData = MemoryBuffer(data: data)
+                        let digest = MemoryBuffer(data: adjustmentsData.md5Digest())
+                        resourceAdjustments = VideoMediaResourceAdjustments(data: adjustmentsData, digest: digest, isStory: false)
+                    }
                 }
                 
                 if finalDuration.isZero || finalDuration.isNaN {

@@ -70,10 +70,8 @@ public final class InAppPurchaseManager: NSObject {
         public var isSubscription: Bool {
             if #available(iOS 12.0, *) {
                 return self.skProduct.subscriptionGroupIdentifier != nil
-            } else if #available(iOS 11.2, *) {
-                return self.skProduct.subscriptionPeriod != nil
             } else {
-                return self.id.hasSuffix(".monthly") || self.id.hasSuffix(".annual") || self.id.hasSuffix(".semiannual")
+                return self.skProduct.subscriptionPeriod != nil
             }
         }
         

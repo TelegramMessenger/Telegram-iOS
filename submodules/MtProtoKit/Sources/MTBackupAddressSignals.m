@@ -42,8 +42,22 @@
     _dict[[self itemKeyForGroup:group key:aKey]] = object;
 }
 
-- (id)objectForKey:(NSString *)aKey group:(NSString *)group {
-    return _dict[[self itemKeyForGroup:group key:aKey]];
+- (NSDictionary *)dictionaryForKey:(NSString *)aKey group:(NSString *)group {
+    id result = _dict[[self itemKeyForGroup:group key:aKey]];
+    if ([result isKindOfClass:[NSDictionary class]]) {
+        return result;
+    } else {
+        return nil;
+    }
+}
+
+- (NSNumber *)numberForKey:(NSString *)aKey group:(NSString *)group {
+    id result = _dict[[self itemKeyForGroup:group key:aKey]];
+    if ([result isKindOfClass:[NSNumber class]]) {
+        return result;
+    } else {
+        return nil;
+    }
 }
 
 - (void)removeObjectForKey:(NSString *)aKey group:(NSString *)group {

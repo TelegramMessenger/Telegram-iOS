@@ -82,15 +82,14 @@ private final class NetworkTypeManagerImpl {
         self.updated = updated
         
         #if os(iOS)
-        let telephonyInfo = CTTelephonyNetworkInfo()
-        let accessTechnology = telephonyInfo.currentRadioAccessTechnology ?? ""
+        let accessTechnology = CTTelephonyNetworkInfo().serviceCurrentRadioAccessTechnology?.values.first ?? ""
         self.currentCellularType = CellularNetworkType(accessTechnology: accessTechnology)
-        self.cellularTypeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.CTRadioAccessTechnologyDidChange, object: nil, queue: nil, using: { [weak self] notification in
+        self.cellularTypeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.CTServiceRadioAccessTechnologyDidChange, object: nil, queue: nil, using: { [weak self] notification in
             queue.async {
                 guard let strongSelf = self else {
                     return
                 }
-                let accessTechnology = telephonyInfo.currentRadioAccessTechnology ?? ""
+                let accessTechnology = CTTelephonyNetworkInfo().serviceCurrentRadioAccessTechnology?.values.first ?? ""
                 let cellularType = CellularNetworkType(accessTechnology: accessTechnology)
                 if strongSelf.currentCellularType != cellularType {
                     strongSelf.currentCellularType = cellularType
@@ -137,7 +136,7 @@ private final class NetworkTypeManagerImpl {
         self.networkTypeDisposable?.dispose()
         #if os(iOS)
         if let observer = self.cellularTypeObserver {
-            NotificationCenter.default.removeObserver(observer, name: NSNotification.Name.CTRadioAccessTechnologyDidChange, object: nil)
+            NotificationCenter.default.removeObserver(observer, name: NSNotification.Name.CTServiceRadioAccessTechnologyDidChange, object: nil)
         }
         #endif
     }

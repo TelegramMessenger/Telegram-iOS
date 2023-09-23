@@ -291,18 +291,25 @@ static int32_t fixedTimeDifferenceValue = 0;
     }
 }
 
-static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, id<MTKeychain> _Nonnull fromKeychain, id<MTKeychain> _Nonnull toKeychain) {
-    id value = [fromKeychain objectForKey:key group:group];
+static void copyKeychainNumberKey(NSString * _Nonnull group, NSString * _Nonnull key, id<MTKeychain> _Nonnull fromKeychain, id<MTKeychain> _Nonnull toKeychain) {
+    id value = [fromKeychain numberForKey:key group:group];
+    if (value) {
+        [toKeychain setObject:value forKey:key group:group];
+    }
+}
+
+static void copyKeychainDictionaryKey(NSString * _Nonnull group, NSString * _Nonnull key, id<MTKeychain> _Nonnull fromKeychain, id<MTKeychain> _Nonnull toKeychain) {
+    id value = [fromKeychain dictionaryForKey:key group:group];
     if (value) {
         [toKeychain setObject:value forKey:key group:group];
     }
 }
 
 + (void)copyAuthInfoFrom:(id<MTKeychain> _Nonnull)keychain toTempKeychain:(id<MTKeychain> _Nonnull)tempKeychain {
-    copyKeychainKey(@"temp", @"globalTimeDifference", keychain, tempKeychain);
-    copyKeychainKey(@"persistent", @"datacenterAddressSetById", keychain, tempKeychain);
-    copyKeychainKey(@"persistent", @"datacenterAuthInfoById", keychain, tempKeychain);
-    copyKeychainKey(@"ephemeral", @"datacenterPublicKeysById", keychain, tempKeychain);
+    copyKeychainNumberKey(@"temp", @"globalTimeDifference", keychain, tempKeychain);
+    copyKeychainDictionaryKey(@"persistent", @"datacenterAddressSetById", keychain, tempKeychain);
+    copyKeychainDictionaryKey(@"persistent", @"datacenterAuthInfoById", keychain, tempKeychain);
+    copyKeychainDictionaryKey(@"ephemeral", @"datacenterPublicKeysById", keychain, tempKeychain);
     //copyKeychainKey(@"persistent", @"authTokenById", keychain, tempKeychain);
 }
 
@@ -375,11 +382,11 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
         
         if (_keychain != nil)
         {
-            NSNumber *nGlobalTimeDifference = [keychain objectForKey:@"globalTimeDifference" group:@"temp"];
+            NSNumber *nGlobalTimeDifference = [keychain numberForKey:@"globalTimeDifference" group:@"temp"];
             if (nGlobalTimeDifference != nil)
                 _globalTimeDifference = [nGlobalTimeDifference doubleValue];
             
-            NSDictionary *datacenterAddressSetById = [keychain objectForKey:@"datacenterAddressSetById" group:@"persistent"];
+            NSDictionary *datacenterAddressSetById = [keychain dictionaryForKey:@"datacenterAddressSetById" group:@"persistent"];
             if (datacenterAddressSetById != nil) {
                 _datacenterAddressSetById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAddressSetById];
                 if (MTLogEnabled()) {
@@ -387,7 +394,7 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
                 }
             }
             
-            NSDictionary *datacenterManuallySelectedSchemeById = [keychain objectForKey:@"datacenterManuallySelectedSchemeById_v1" group:@"persistent"];
+            NSDictionary *datacenterManuallySelectedSchemeById = [keychain dictionaryForKey:@"datacenterManuallySelectedSchemeById_v1" group:@"persistent"];
             if (datacenterManuallySelectedSchemeById != nil) {
                 _datacenterManuallySelectedSchemeById = [[NSMutableDictionary alloc] initWithDictionary:datacenterManuallySelectedSchemeById];
                 if (MTLogEnabled()) {
@@ -399,7 +406,7 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
                 _datacenterAddressSetById[nDatacenterId] = [[MTDatacenterAddressSet alloc] initWithAddressList:@[address]];
             }];
             
-            NSDictionary *datacenterAuthInfoById = [keychain objectForKey:@"datacenterAuthInfoById" group:@"persistent"];
+            NSDictionary *datacenterAuthInfoById = [keychain dictionaryForKey:@"datacenterAuthInfoById" group:@"persistent"];
             if (datacenterAuthInfoById != nil) {
                 _datacenterAuthInfoById = [[NSMutableDictionary alloc] initWithDictionary:datacenterAuthInfoById];
 
@@ -417,12 +424,12 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
                 }
             }
             
-            NSDictionary *datacenterPublicKeysById = [keychain objectForKey:@"datacenterPublicKeysById" group:@"ephemeral"];
+            NSDictionary *datacenterPublicKeysById = [keychain dictionaryForKey:@"datacenterPublicKeysById" group:@"ephemeral"];
             if (datacenterPublicKeysById != nil) {
                 _datacenterPublicKeysById = [[NSMutableDictionary alloc] initWithDictionary:datacenterPublicKeysById];
             }
             
-            NSDictionary *transportSchemeStats = [keychain objectForKey:@"transportSchemeStats_v1" group:@"temp"];
+            NSDictionary *transportSchemeStats = [keychain dictionaryForKey:@"transportSchemeStats_v1" group:@"temp"];
             if (transportSchemeStats != nil) {
                 [_transportSchemeStats removeAllObjects];
                 [transportSchemeStats enumerateKeysAndObjectsUsingBlock:^(NSNumber *nDatacenterId, NSDictionary<MTDatacenterAddress *, MTTransportSchemeStats *> *values, __unused BOOL *stop) {
@@ -433,11 +440,11 @@ static void copyKeychainKey(NSString * _Nonnull group, NSString * _Nonnull key, 
                 }
             }
             
-            NSDictionary *authTokenById = [keychain objectForKey:@"authTokenById" group:@"persistent"];
+            NSDictionary *authTokenById = [keychain dictionaryForKey:@"authTokenById" group:@"persistent"];
             if (authTokenById != nil)
                 _authTokenById = [[NSMutableDictionary alloc] initWithDictionary:authTokenById];
             
-            NSDictionary *cleanupSessionIdsByAuthKeyId = [keychain objectForKey:@"cleanupSessionIdsByAuthKeyId" group:@"cleanup"];
+            NSDictionary *cleanupSessionIdsByAuthKeyId = [keychain dictionaryForKey:@"cleanupSessionIdsByAuthKeyId" group:@"cleanup"];
             if (cleanupSessionIdsByAuthKeyId != nil)
                 _cleanupSessionIdsByAuthKeyId = [[NSMutableDictionary alloc] initWithDictionary:cleanupSessionIdsByAuthKeyId];
             

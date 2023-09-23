@@ -549,9 +549,12 @@ ASSynthesizeLockingMethodsWithMutex(__instanceLock__);
     }
       
     // CAEAGLLayer
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if([[view.layer class] isSubclassOfClass:[CAEAGLLayer class]]){
       _flags.canClearContentsOfLayer = NO;
     }
+#pragma clang diagnostic pop
   }
 
   return view;

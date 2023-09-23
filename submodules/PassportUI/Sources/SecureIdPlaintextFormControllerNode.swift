@@ -383,8 +383,7 @@ extension SecureIdPlaintextFormInnerState {
         switch type {
             case .phone:
                 var countryId: String? = nil
-                let networkInfo = CTTelephonyNetworkInfo()
-                if let carrier = networkInfo.subscriberCellularProvider {
+                if let carrier = CTTelephonyNetworkInfo().serviceSubscriberCellularProviders?.values.first {
                     countryId = carrier.isoCountryCode
                 }
                 

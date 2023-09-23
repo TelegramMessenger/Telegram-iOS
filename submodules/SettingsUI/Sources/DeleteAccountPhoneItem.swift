@@ -236,7 +236,7 @@ class DeleteAccountPhoneItemNode: ListViewItemNode, ItemListItemNode {
         
         var countryId: String? = nil
         let networkInfo = CTTelephonyNetworkInfo()
-        if let carrier = networkInfo.subscriberCellularProvider {
+        if let carrier = networkInfo.serviceSubscriberCellularProviders?.values.first {
             countryId = carrier.isoCountryCode
         }
         
