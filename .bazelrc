@@ -17,16 +17,7 @@ build --swiftcopt=-whole-module-optimization
 build --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
 build --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
 
-# Uncomment for address sanitizer
-#build --swiftcopt=-sanitize=address
-#build --copt=-fsanitize=address
-#build --cxxopt=-fsanitize=address
-#build --features=asan
-#build --copt='-D_FORTIFY_SOURCE=0'
-#build --copt='-D_FORTIFY_SOURCE=0'
-#build --copt="-Wno-macro-redefined"
-#build --cxxopt="-Wno-macro-redefined"
-#build --linkopt="-fsanitize=address"
+build --linkopt="-ld_classic"
 
 build --features=debug_prefix_map_pwd_is_dot
 build --features=swift.cacheable_swiftmodules
