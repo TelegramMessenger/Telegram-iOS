@@ -10,3 +10,9 @@
 - (void)removeObjectForKey:(NSString *)aKey group:(NSString *)group;
 
 @end
+
+@interface MTDeprecated : NSObject
+
++ (id)unarchiveDeprecatedWithData:(NSData *)data;
+
+@end

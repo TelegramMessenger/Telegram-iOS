@@ -18,6 +18,10 @@ public enum ConnectionStatus: Equatable {
     case online(proxyAddress: String?)
 }
 
+public func legacy_unarchiveDeprecated(data: Data) -> Any? {
+    return MTDeprecated.unarchiveDeprecated(with: data)
+}
+
 private struct MTProtoConnectionFlags: OptionSet {
     let rawValue: Int
     
@@ -1138,12 +1142,11 @@ class Keychain: NSObject, MTKeychain {
         }
         if let data = self.get(group + ":" + aKey) {
             var result: NSDictionary?
-            MTContext.perform(objCTry: {
-                result = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDictionary.self, from: data as Data)
-            })
+            result = MTDeprecated.unarchiveDeprecated(with: data as Data) as? NSDictionary
             if let result = result {
                 return result as? [AnyHashable : Any]
             }
+            assertionFailure("Unexpected keychain entry type")
         }
         return nil
     }
@@ -1154,10 +1157,11 @@ class Keychain: NSObject, MTKeychain {
         }
         if let data = self.get(group + ":" + aKey) {
             var result: NSNumber?
-            MTContext.perform(objCTry: {
-                result = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSNumber.self, from: data as Data)
-            })
-            return result
+            result = MTDeprecated.unarchiveDeprecated(with: data as Data) as? NSNumber
+            if let result = result {
+                return result
+            }
+            assertionFailure("Unexpected keychain entry type")
         }
         return nil
     }

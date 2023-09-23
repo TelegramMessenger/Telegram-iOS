@@ -334,7 +334,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                                 if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: adjustmentsValue.data.makeData()) {
                                     mediaEditorValues = values
                                 }
-                            } else if let dict = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDictionary.self, from: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                            } else if let dict = legacy_unarchiveDeprecated(data: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
                                 if alwaysUseModernPipeline {
                                     mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
                                 } else {
@@ -500,7 +500,7 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
                 if let values = try? JSONDecoder().decode(MediaEditorValues.self, from: videoAdjustments.data.makeData()) {
                     mediaEditorValues = values
                 }
-            } else if let dict = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDictionary.self, from: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+            } else if let dict = legacy_unarchiveDeprecated(data: videoAdjustments.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
                 if alwaysUseModernPipeline && !isImage {
                     mediaEditorValues = MediaEditorValues(legacyAdjustments: legacyAdjustments, defaultPreset: qualityPreset)
                 } else {
@@ -710,7 +710,7 @@ public func fetchVideoLibraryMediaResourceHash(resource: VideoLibraryMediaResour
                         adjustments = nil
                     case let .compress(adjustmentsValue):
                         if let adjustmentsValue = adjustmentsValue {
-                            if let dict = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSDictionary.self, from: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
+                            if let dict = legacy_unarchiveDeprecated(data: adjustmentsValue.data.makeData()) as? [AnyHashable : Any], let legacyAdjustments = TGVideoEditAdjustments(dictionary: dict) {
                                 adjustments = legacyAdjustments
                             }
                         }
