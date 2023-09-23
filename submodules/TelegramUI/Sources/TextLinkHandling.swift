@@ -90,6 +90,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: EnginePeer.Id?, n
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                             openResolvedPeerImpl(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
                         }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
+                    case .boost:
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            openResolvedUrlImpl(result, context: context, urlContext: peerId.flatMap { .chat(peerId: $0, updatedPresentationData: nil) } ?? .generic, navigationController: navigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, joinVoiceChat: nil, present: { c, a in }, dismissInput: {}, contentContext: nil)
+                        }
                     default:
                         break
                 }

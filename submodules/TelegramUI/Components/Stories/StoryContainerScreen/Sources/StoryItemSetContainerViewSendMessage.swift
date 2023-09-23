@@ -69,6 +69,7 @@ final class StoryItemSetContainerSendMessage {
     weak var statusController: ViewController?
     weak var lookupController: UIViewController?
     weak var menuController: ViewController?
+    var progressPauseContext = StoryProgressPauseContext()
     var isViewingAttachedStickers = false
     
     var currentTooltipUpdateTimer: Foundation.Timer?
@@ -2617,78 +2618,96 @@ final class StoryItemSetContainerSendMessage {
         guard let component = view.component, let navigationController = component.controller()?.navigationController as? NavigationController else {
             return
         }
-        let peerId = component.slice.peer.id
-        component.context.sharedContext.openResolvedUrl(result, context: component.context, urlContext: .chat(peerId: peerId, updatedPresentationData: nil), navigationController: navigationController, forceExternal: forceExternal, openPeer: { [weak self, weak view] peerId, navigation in
-            guard let self, let view, let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+        
+        self.progressPauseContext.update = { [weak self, weak view] controller in
+            guard let self, let view else {
                 return
             }
-            
-            switch navigation {
-            case let .chat(_, subject, peekData):
-                if let navigationController = controller.navigationController as? NavigationController {
-                    if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
-                        controller.dismissWithoutTransitionOut()
-                        component.context.sharedContext.navigateToForumChannel(context: component.context, peerId: peerId.id, navigationController: navigationController)
-                    } else {
-                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
-                            guard let controller, let navigationController else {
-                                return
-                            }
-                            if "".isEmpty {
-                                navigationController.pushViewController(chatController)
-                            } else {
-                                var viewControllers = navigationController.viewControllers
-                                if let index = viewControllers.firstIndex(where: { $0 === controller }) {
-                                    viewControllers.insert(chatController, at: index)
-                                } else {
-                                    viewControllers.append(chatController)
-                                }
-                                navigationController.setViewControllers(viewControllers, animated: animated)
-                            }
-                        }))
-                    }
+            self.progressPauseContext.externalController = controller
+            view.updateIsProgressPaused()
+        }
+        
+        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+        let updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) = (presentationData, .single(presentationData))
+        let peerId = component.slice.peer.id
+        component.context.sharedContext.openResolvedUrl(
+            result,
+            context: component.context,
+            urlContext: .chat(peerId: peerId, updatedPresentationData: updatedPresentationData),
+            navigationController: navigationController,
+            forceExternal: forceExternal,
+            openPeer: { [weak self, weak view] peerId, navigation in
+                guard let self, let view, let component = view.component, let controller = component.controller() as? StoryContainerScreen else {
+                    return
                 }
-            case .info:
-                self.navigationActionDisposable.set((component.context.account.postbox.loadedPeerWithId(peerId.id)
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak view] peer in
-                    guard let view, let component = view.component else {
-                        return
-                    }
-                    if peer.restrictionText(platform: "ios", contentSettings: component.context.currentContentSettings.with { $0 }) == nil {
-                        if let infoController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                            component.controller()?.push(infoController)
+                
+                switch navigation {
+                case let .chat(_, subject, peekData):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                            controller.dismissWithoutTransitionOut()
+                            component.context.sharedContext.navigateToForumChannel(context: component.context, peerId: peerId.id, navigationController: navigationController)
+                        } else {
+                            component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always, peekData: peekData, pushController: { [weak controller, weak navigationController] chatController, animated, completion in
+                                guard let controller, let navigationController else {
+                                    return
+                                }
+                                if "".isEmpty {
+                                    navigationController.pushViewController(chatController)
+                                } else {
+                                    var viewControllers = navigationController.viewControllers
+                                    if let index = viewControllers.firstIndex(where: { $0 === controller }) {
+                                        viewControllers.insert(chatController, at: index)
+                                    } else {
+                                        viewControllers.append(chatController)
+                                    }
+                                    navigationController.setViewControllers(viewControllers, animated: animated)
+                                }
+                            }))
                         }
                     }
-                }))
-            case let .withBotStartPayload(startPayload):
-                if let navigationController = controller.navigationController as? NavigationController {
-                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
+                case .info:
+                    self.navigationActionDisposable.set((component.context.account.postbox.loadedPeerWithId(peerId.id)
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak view] peer in
+                        guard let view, let component = view.component else {
+                            return
+                        }
+                        if peer.restrictionText(platform: "ios", contentSettings: component.context.currentContentSettings.with { $0 }) == nil {
+                            if let infoController = component.context.sharedContext.makePeerInfoController(context: component.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                component.controller()?.push(infoController)
+                            }
+                        }
+                    }))
+                case let .withBotStartPayload(startPayload):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), botStart: startPayload, keepStack: .always))
+                    }
+                case let .withAttachBot(attachBotStart):
+                    if let navigationController = controller.navigationController as? NavigationController {
+                        component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
+                    }
+                default:
+                    break
                 }
-            case let .withAttachBot(attachBotStart):
-                if let navigationController = controller.navigationController as? NavigationController {
-                    component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peerId), attachBotStart: attachBotStart))
+            },
+            sendFile: nil,
+            sendSticker: nil,
+            requestMessageActionUrlAuth: nil,
+            joinVoiceChat: nil,
+            present: { [weak view] c, a in
+                guard let view, let component = view.component, let controller = component.controller() else {
+                    return
                 }
-            default:
-                break
-            }
-        },
-        sendFile: nil,
-        sendSticker: nil,
-        requestMessageActionUrlAuth: nil,
-        joinVoiceChat: nil,
-        present: { [weak view] c, a in
-            guard let view, let component = view.component, let controller = component.controller() else {
-                return
-            }
-            controller.present(c, in: .window(.root), with: a)
-        }, dismissInput: { [weak view] in
-            guard let view else {
-                return
-            }
-            view.endEditing(true)
-        },
-        contentContext: nil
+                controller.present(c, in: .window(.root), with: a)
+            }, 
+            dismissInput: { [weak view] in
+                guard let view else {
+                    return
+                }
+                view.endEditing(true)
+            },
+            contentContext: self.progressPauseContext
         )
     }
     
@@ -3395,5 +3414,14 @@ final class StoryItemSetContainerSendMessage {
                 }
             })
         }
+    }
+}
+
+public class StoryProgressPauseContext {
+    fileprivate weak var externalController: ViewController?
+    public fileprivate(set) var update: (ViewController?) -> Void = { _ in }
+    
+    var hasExternalController: Bool {
+        return self.externalController != nil
     }
 }

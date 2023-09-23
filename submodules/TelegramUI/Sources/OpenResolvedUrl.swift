@@ -836,6 +836,10 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             })
         case let .boost(peerId, status, canApplyStatus):
+            var forceDark = false
+            if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
+                forceDark = true
+            }
             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).startStandalone(next: { peer in
                 guard let peer, let status else {
@@ -868,7 +872,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 var updateImpl: (() -> Void)?
                 var dismissImpl: (() -> Void)?
-                let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), action: {
+                let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), forceDark: forceDark, action: {
                     if isBoosted {
                         return true
                     }
@@ -918,7 +922,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             return true
                         }
                         
-                        let controller = textAlertController(sharedContext: context.sharedContext, title: title, text: text, actions: actions, parseMarkdown: true)
+                        let controller = textAlertController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, title: title, text: text, actions: actions, parseMarkdown: true)
                         present(controller, nil)
                     }
                     return dismiss
@@ -928,12 +932,21 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 })
                 navigationController?.pushViewController(controller)
                 
+                if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                    storyProgressPauseContext.update(controller)
+                    
+                    let updateExternalController = storyProgressPauseContext.update
+                    controller.disposed = {
+                        updateExternalController(nil)
+                    }
+                }
+                
                 updateImpl = { [weak controller] in
                     if let _ = status.nextLevelBoosts {
                         let _ = context.engine.peers.applyChannelBoost(peerId: peerId).startStandalone()
                         controller?.updateSubject(nextSubject, count: nextCount)
                     } else {
-                        controller?.dismiss()
+                        dismissImpl?()
                     }
                 }
                 dismissImpl = { [weak controller] in

@@ -1676,6 +1676,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     private let context: AccountContext
     private var action: (() -> Bool)?
     private let openPeer: (EnginePeer) -> Void
+    public var disposed: () -> Void = {}
     
     private let hapticFeedback = HapticFeedback()
     
@@ -1705,6 +1706,10 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.disposed()
     }
     
     public override func viewDidLoad() {

@@ -1382,6 +1382,9 @@ public final class StoryItemSetContainerComponent: Component {
             if self.sendMessageContext.menuController != nil {
                 return .pause
             }
+            if self.sendMessageContext.progressPauseContext.hasExternalController {
+                return .pause
+            }
             if let navigationController = component.controller()?.navigationController as? NavigationController {
                 let topViewController = navigationController.topViewController
                 if !(topViewController is StoryContainerScreen) && !(topViewController is MediaEditorScreen) && !(topViewController is ShareWithPeersScreen) && !(topViewController is AttachmentController) {
