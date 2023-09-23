@@ -86,4 +86,12 @@ public class TelegramMediaWebFile: Media, Codable, Equatable {
     public func isSemanticallyEqual(to other: Media) -> Bool {
         return self.isEqual(to: other)
     }
+    
+    public var dimensions: PixelDimensions? {
+        return dimensionsForFileAttributes(self.attributes)
+    }
+    
+    public var duration: Double? {
+        return durationForFileAttributes(self.attributes)
+    }
 }

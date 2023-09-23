@@ -25,10 +25,18 @@
 import Foundation
 import sqlcipher
 
+private let ensureInitialized: Void = {
+    sqlite3_initialize()
+    
+    return Void()
+}()
+
 public final class Database {
     internal var handle: OpaquePointer? = nil
 
     public init?(_ location: String, readOnly: Bool) {
+        let _ = ensureInitialized
+        
         if location != ":memory:" {
             let _ = open(location + "-guard", O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)
         }

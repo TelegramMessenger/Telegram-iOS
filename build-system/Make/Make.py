@@ -100,7 +100,7 @@ class BazelCommandLine:
 
             # https://github.com/bazelbuild/rules_swift
             # Use -Osize instead of -O when building swift modules.
-            '--features=swift.opt_uses_osize',
+            #'--features=swift.opt_uses_osize',
 
             # --num-threads 0 forces swiftc to generate one object file per module; it:
             # 1. resolves issues with the linker caused by the swift-objc mixing.
@@ -109,8 +109,8 @@ class BazelCommandLine:
             '--swiftcopt=-j1',
 
             # Strip unsused code.
-            '--features=dead_strip',
-            '--objc_enable_binary_stripping',
+            #'--features=dead_strip',
+            #'--objc_enable_binary_stripping',
 
             # Always embed bitcode into Watch binaries. This is required by the App Store.
             '--apple_bitcode=watchos=embedded',

@@ -104,16 +104,18 @@ static MTPKCS * _Nullable parseSignature(const char* buffer, size_t size) {
     {
         uint32_t offset = OSSwapBigToHostInt32(sb->index[i].offset);
         
-        const CS_Blob* blob = (const CS_Blob*)(buffer + offset);
+        const CS_Blob* blobMem = (const CS_Blob*)(buffer + offset);
+        CS_Blob blob;
+        memcpy(&blob, blobMem, sizeof(CS_Blob));
         
-        if (OSSwapBigToHostInt32(blob->magic) == 0xfade0b01) // signature
+        if (OSSwapBigToHostInt32(blob.magic) == 0xfade0b01) // signature
         {
-            printf("Embedded signature, length: %d\n", OSSwapBigToHostInt32(blob->length));
+            printf("Embedded signature, length: %d\n", OSSwapBigToHostInt32(blob.length));
             
-            if (OSSwapBigToHostInt32(blob->length) != 8)
+            if (OSSwapBigToHostInt32(blob.length) != 8)
             {
                 const unsigned char* message = (const unsigned char*)buffer + offset + 8;
-                MTPKCS *result = [MTPKCS parse:message size:(OSSwapBigToHostInt32(blob->length) - 8)];
+                MTPKCS *result = [MTPKCS parse:message size:(OSSwapBigToHostInt32(blob.length) - 8)];
                 return result;
             }
         }
