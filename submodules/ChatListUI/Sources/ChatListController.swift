@@ -781,6 +781,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.storyProgressDisposable?.dispose()
         self.storiesPostingAvailabilityDisposable?.dispose()
         self.sharedOpenStoryProgressDisposable.dispose()
+        for (_, disposable) in self.preloadStoryResourceDisposables {
+            disposable.dispose()
+        }
     }
     
     private func updateNavigationMetadata() {
