@@ -76,7 +76,7 @@ public final class AvatarVideoNode: ASDisplayNode {
         }
         
         if self.useAnimationNode {
-            self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(animationFile), resource: chatMessageStickerResource(file: animationFile, small: false)).start())
+            self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(animationFile), resource: chatMessageStickerResource(file: animationFile, small: false)).startStrict())
             
             let animationNode = DefaultAnimatedStickerNodeImpl()
             animationNode.autoplay = false
@@ -175,7 +175,7 @@ public final class AvatarVideoNode: ASDisplayNode {
         switch markup.content {
         case let .emoji(fileId):
             self.fileDisposable = (self.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
-            |> deliverOnMainQueue).start(next: { [weak self] files in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] files in
                 if let strongSelf = self, let file = files.values.first {
                     strongSelf.animationFile = file
                     strongSelf.setupAnimation()
@@ -189,7 +189,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                 }
                 return nil
             }
-            |> deliverOnMainQueue).start(next: { [weak self] file in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] file in
                 if let strongSelf = self, let file {
                     strongSelf.animationFile = file
                     strongSelf.setupAnimation()
@@ -265,7 +265,7 @@ public final class AvatarVideoNode: ASDisplayNode {
                         return playing
                     }
                     |> take(1)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
+                    |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         if let strongSelf = self {
                             Queue.mainQueue().after(0.15) {
                                 strongSelf.videoNode?.isHidden = false

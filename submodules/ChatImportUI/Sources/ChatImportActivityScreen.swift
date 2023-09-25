@@ -148,7 +148,7 @@ private final class ImportManager {
                 return .limitExceeded
             }
         }
-        |> deliverOnMainQueue).start(next: { [weak self] session in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] session in
             guard let strongSelf = self else {
                 return
             }
@@ -200,7 +200,7 @@ private final class ImportManager {
             return
         }
         self.disposable.set((TelegramEngine(account: self.account).historyImport.startImport(session: session)
-        |> deliverOnMainQueue).start(error: { [weak self] _ in
+        |> deliverOnMainQueue).startStrict(error: { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
@@ -848,14 +848,14 @@ public final class ChatImportActivityScreen: ViewController {
         }
         
         self.disposable.set((resolvedPeerId
-        |> deliverOnMainQueue).start(next: { [weak self] peerId in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] peerId in
             guard let strongSelf = self else {
                 return
             }
             let importManager = ImportManager(account: strongSelf.context.account, peerId: peerId, mainFile: strongSelf.mainEntry, archivePath: strongSelf.archivePath, entries: strongSelf.otherEntries)
             strongSelf.importManager = importManager
             strongSelf.progressDisposable.set((importManager.state
-            |> deliverOnMainQueue).start(next: { state in
+            |> deliverOnMainQueue).startStrict(next: { state in
                 guard let strongSelf = self else {
                     return
                 }

@@ -444,7 +444,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         if let account = account {
             self.tokenEventsDisposable.set((account.updateLoginTokenEvents
-            |> deliverOnMainQueue).start(next: { [weak self] _ in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
                 self?.refreshQrToken()
             }))
         }
@@ -672,19 +672,19 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         
         self.exportTokenDisposable.set((tokenSignal
-        |> deliverOnMainQueue).start(next: { [weak self] result in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] result in
             guard let strongSelf = self else {
                 return
             }
             switch result {
             case let .displayToken(token):
                 var tokenString = token.value.base64EncodedString()
-                print("export token \(tokenString)")
+                //print("export token \(tokenString)")
                 tokenString = tokenString.replacingOccurrences(of: "+", with: "-")
                 tokenString = tokenString.replacingOccurrences(of: "/", with: "_")
                 let urlString = "tg://login?token=\(tokenString)"
                 let _ = (qrCode(string: urlString, color: .black, backgroundColor: .white, icon: .none)
-                |> deliverOnMainQueue).start(next: { _, generate in
+                |> deliverOnMainQueue).startStrict(next: { _, generate in
                     guard let strongSelf = self else {
                         return
                     }
@@ -698,7 +698,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 let timestamp = Int32(Date().timeIntervalSince1970)
                 let timeout = max(5, token.validUntil - timestamp)
                 strongSelf.exportTokenDisposable.set((Signal<Never, NoError>.complete()
-                |> delay(Double(timeout), queue: .mainQueue())).start(completed: {
+                |> delay(Double(timeout), queue: .mainQueue())).startStrict(completed: {
                     guard let strongSelf = self else {
                         return
                     }
@@ -709,7 +709,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 strongSelf.account = account
                 strongSelf.accountUpdated?(account)
                 strongSelf.tokenEventsDisposable.set((account.updateLoginTokenEvents
-                |> deliverOnMainQueue).start(next: { _ in
+                |> deliverOnMainQueue).startStrict(next: { _ in
                     self?.refreshQrToken()
                 }))
                 strongSelf.refreshQrToken()
