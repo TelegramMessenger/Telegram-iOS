@@ -5868,16 +5868,16 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getWebPage(url: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.WebPage>) {
+                static func getWebPage(url: String, hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.WebPage>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(852135825)
+                    buffer.appendInt32(-1919511901)
                     serializeString(url, buffer: buffer, boxed: false)
                     serializeInt32(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getWebPage", parameters: [("url", String(describing: url)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.WebPage? in
+                    return (FunctionDescription(name: "messages.getWebPage", parameters: [("url", String(describing: url)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.WebPage? in
                         let reader = BufferReader(buffer)
-                        var result: Api.WebPage?
+                        var result: Api.messages.WebPage?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.WebPage
+                            result = Api.parse(reader, signature: signature) as? Api.messages.WebPage
                         }
                         return result
                     })

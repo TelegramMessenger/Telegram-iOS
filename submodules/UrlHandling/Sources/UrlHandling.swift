@@ -212,6 +212,13 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                             }
                         }
                         return .share(url: url, text: text, to: to)
+                    } else if peerName == "boost" {
+                        for queryItem in queryItems {
+                            if queryItem.name == "c", let value = queryItem.value, let channelId = Int64(value) {
+                                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                                return .peer(.id(peerId), .boost)
+                            }
+                        }
                     } else {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -444,6 +451,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .theme(pathComponents[1])
                 } else if pathComponents[0] == "addlist" || pathComponents[0] == "folder" || pathComponents[0] == "list" {
                     return .chatFolder(slug: pathComponents[1])
+                } else if pathComponents[0] == "boost", pathComponents.count == 2 {
+                    return .peer(.name(pathComponents[1]), .boost)
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?

@@ -665,15 +665,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             
             entries.append(.boostLinkTitle(presentationData.theme, presentationData.strings.Stats_Boosts_LinkHeader))
             
-            if let peer {
-                let link: String
-                if let addressName = peer.addressName, !addressName.isEmpty {
-                    link = "t.me/\(addressName)?boost"
-                } else {
-                    link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
-                }
-                entries.append(.boostLink(presentationData.theme, link))
-            }
+            entries.append(.boostLink(presentationData.theme, boostData.url))
             
             entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
         }
@@ -735,13 +727,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }, contextAction: { messageId, node, gesture in
         contextActionImpl?(messageId, node, gesture)
     }, copyBoostLink: { link in
-        UIPasteboard.general.string = "https://\(link)"
+        UIPasteboard.general.string = link
                 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
-    }, shareBoostLink: { link in
-        let link = "https://\(link)"
-        
+    }, shareBoostLink: { link in        
         let shareController = ShareController(context: context, subject: .url(link), updatedPresentationData: updatedPresentationData)
         shareController.completed = {  peerIds in
             let _ = (context.engine.data.get(

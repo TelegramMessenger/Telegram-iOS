@@ -8339,19 +8339,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         return
                     }
                     
-                    let link: String
-                    if let addressName = peer.addressName, !addressName.isEmpty {
-                        link = "t.me/\(peer.addressName ?? "")?boost"
-                    } else {
-                        link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
-                    }
-                    
+                    let link = status.url
                     if let navigationController = self.controller?.navigationController as? NavigationController {
                         if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                             previousController.dismiss()
                         }
                         let controller = PremiumLimitScreen(context: self.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), action: { [weak self] in
-                            UIPasteboard.general.string = "https://\(link)"
+                            UIPasteboard.general.string = link
                             
                             if let self {
                                 self.controller?.present(UndoOverlayController(presentationData: self.presentationData, content: .linkCopied(text: self.presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
