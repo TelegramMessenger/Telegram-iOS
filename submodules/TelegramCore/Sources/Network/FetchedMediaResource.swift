@@ -492,9 +492,9 @@ final class MediaReferenceRevalidationContext {
         }
     }
     
-    func webPage(postbox: Postbox, network: Network, background: Bool, webPage: WebpageReference) -> Signal<TelegramMediaWebpage, RevalidateMediaReferenceError> {
+    func webPage(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, background: Bool, webPage: WebpageReference) -> Signal<TelegramMediaWebpage, RevalidateMediaReferenceError> {
         return self.genericItem(key: .webPage(webPage: webPage), background: background, request: { next, error in
-            return (updatedRemoteWebpage(postbox: postbox, network: network, webPage: webPage)
+            return (updatedRemoteWebpage(postbox: postbox, network: network, accountPeerId: accountPeerId, webPage: webPage)
             |> mapError { _ -> RevalidateMediaReferenceError in
             }).start(next: { value in
                 if let value = value {
@@ -792,7 +792,7 @@ func revalidateMediaResourceReference(accountPeerId: PeerId, postbox: Postbox, n
                         return .fail(.generic)
                     }
                 case let .webPage(webPage, previousMedia):
-                    return revalidationContext.webPage(postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, webPage: webPage)
+                    return revalidationContext.webPage(accountPeerId: accountPeerId, postbox: postbox, network: network, background: info.preferBackgroundReferenceRevalidation, webPage: webPage)
                     |> mapToSignal { result -> Signal<RevalidatedMediaResource, RevalidateMediaReferenceError> in
                         if let updatedResource = findUpdatedMediaResource(media: result, previousMedia: previousMedia, resource: resource) {
                             return .single(RevalidatedMediaResource(updatedResource: updatedResource, updatedReference: nil))

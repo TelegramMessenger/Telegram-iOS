@@ -1106,20 +1106,14 @@ final class ShareWithPeersScreenComponent: Component {
                                                             return
                                                         }
                                                         
-                                                        let link: String
-                                                        if let addressName = peer.addressName, !addressName.isEmpty {
-                                                            link = "t.me/\(peer.addressName ?? "")?boost"
-                                                        } else {
-                                                            link = "t.me/c/\(peer.id.id._internalGetInt64Value())?boost"
-                                                        }
-                                                        
+                                                        let link = status.url
                                                         if let navigationController = self.environment?.controller()?.navigationController as? NavigationController {
                                                             if let previousController = navigationController.viewControllers.last as? ShareWithPeersScreen {
                                                                 previousController.dismiss()
                                                             }
                                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                                                             let controller = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak navigationController] in
-                                                                UIPasteboard.general.string = "https://\(link)"
+                                                                UIPasteboard.general.string = link
                                                                 
                                                                 if let previousController = navigationController?.viewControllers.reversed().first(where: { $0 is ShareWithPeersScreen}) as? ShareWithPeersScreen {
                                                                     previousController.dismiss(completion: { [weak navigationController] in

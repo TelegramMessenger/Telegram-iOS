@@ -1427,7 +1427,7 @@ private final class LimitSheetContent: CombinedComponent {
                     if let link {
                         let linkButton = linkButton.update(
                             component: SolidRoundedButtonComponent(
-                                title: link,
+                                title: link.replacingOccurrences(of: "https://", with: ""),
                                 theme: SolidRoundedButtonComponent.Theme(
                                     backgroundColor: theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3),
                                     backgroundColors: [],
@@ -1627,7 +1627,7 @@ private final class LimitSheetComponent: CombinedComponent {
                         isDisplaying: environment.value.isVisible,
                         isCentered: environment.metrics.widthClass == .regular,
                         hasInputHeight: !environment.inputHeight.isZero,
-                        regularMetricsSize: nil,
+                        regularMetricsSize: CGSize(width: 430.0, height: 900.0),
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

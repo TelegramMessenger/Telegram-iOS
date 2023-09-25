@@ -1,3 +1,41 @@
+public extension Api.stats {
+    enum MessageStats: TypeConstructorDescription {
+        case messageStats(viewsGraph: Api.StatsGraph)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .messageStats(let viewsGraph):
+                    if boxed {
+                        buffer.appendInt32(-1986399595)
+                    }
+                    viewsGraph.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .messageStats(let viewsGraph):
+                return ("messageStats", [("viewsGraph", viewsGraph as Any)])
+    }
+    }
+    
+        public static func parse_messageStats(_ reader: BufferReader) -> MessageStats? {
+            var _1: Api.StatsGraph?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.StatsGraph
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.stats.MessageStats.messageStats(viewsGraph: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.stickers {
     enum SuggestedShortName: TypeConstructorDescription {
         case suggestedShortName(shortName: String)
@@ -346,13 +384,13 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum BoostsStatus: TypeConstructorDescription {
-        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?)
+        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?, boostUrl: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience):
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl):
                     if boxed {
-                        buffer.appendInt32(1726619631)
+                        buffer.appendInt32(-440292772)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(level, buffer: buffer, boxed: false)
@@ -360,14 +398,15 @@ public extension Api.stories {
                     serializeInt32(boosts, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {premiumAudience!.serialize(buffer, true)}
+                    serializeString(boostUrl, buffer: buffer, boxed: false)
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience):
-                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any)])
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl):
+                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any), ("boostUrl", boostUrl as Any)])
     }
     }
     
@@ -386,14 +425,17 @@ public extension Api.stories {
             if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.StatsPercentValue
             } }
+            var _7: String?
+            _7 = parseString(reader)
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, nextLevelBoosts: _5, premiumAudience: _6)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, nextLevelBoosts: _5, premiumAudience: _6, boostUrl: _7!)
             }
             else {
                 return nil
@@ -1182,94 +1224,6 @@ public extension Api.upload {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.upload.CdnFile.cdnFileReuploadNeeded(requestToken: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.upload {
-    enum File: TypeConstructorDescription {
-        case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
-        case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .file(let type, let mtime, let bytes):
-                    if boxed {
-                        buffer.appendInt32(157948117)
-                    }
-                    type.serialize(buffer, true)
-                    serializeInt32(mtime, buffer: buffer, boxed: false)
-                    serializeBytes(bytes, buffer: buffer, boxed: false)
-                    break
-                case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let fileHashes):
-                    if boxed {
-                        buffer.appendInt32(-242427324)
-                    }
-                    serializeInt32(dcId, buffer: buffer, boxed: false)
-                    serializeBytes(fileToken, buffer: buffer, boxed: false)
-                    serializeBytes(encryptionKey, buffer: buffer, boxed: false)
-                    serializeBytes(encryptionIv, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(fileHashes.count))
-                    for item in fileHashes {
-                        item.serialize(buffer, true)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .file(let type, let mtime, let bytes):
-                return ("file", [("type", type as Any), ("mtime", mtime as Any), ("bytes", bytes as Any)])
-                case .fileCdnRedirect(let dcId, let fileToken, let encryptionKey, let encryptionIv, let fileHashes):
-                return ("fileCdnRedirect", [("dcId", dcId as Any), ("fileToken", fileToken as Any), ("encryptionKey", encryptionKey as Any), ("encryptionIv", encryptionIv as Any), ("fileHashes", fileHashes as Any)])
-    }
-    }
-    
-        public static func parse_file(_ reader: BufferReader) -> File? {
-            var _1: Api.storage.FileType?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.storage.FileType
-            }
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.upload.File.file(type: _1!, mtime: _2!, bytes: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_fileCdnRedirect(_ reader: BufferReader) -> File? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Buffer?
-            _2 = parseBytes(reader)
-            var _3: Buffer?
-            _3 = parseBytes(reader)
-            var _4: Buffer?
-            _4 = parseBytes(reader)
-            var _5: [Api.FileHash]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.FileHash.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.upload.File.fileCdnRedirect(dcId: _1!, fileToken: _2!, encryptionKey: _3!, encryptionIv: _4!, fileHashes: _5!)
             }
             else {
                 return nil

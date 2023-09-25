@@ -106,7 +106,7 @@ public final class InstantPageController: ViewController {
         
         self.statusBar.statusBarStyle = .White
         
-        self.webpageDisposable = (actualizedWebpage(postbox: self.context.account.postbox, network: self.context.account.network, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.webpageDisposable = (actualizedWebpage(account: context.account, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 strongSelf.webPage = result
                 if strongSelf.isNodeLoaded {
