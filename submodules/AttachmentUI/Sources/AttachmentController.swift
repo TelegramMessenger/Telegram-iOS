@@ -231,19 +231,19 @@ public class AttachmentController: ViewController {
             didSet {
                 if let mediaPickerContext = self.mediaPickerContext {
                     self.captionDisposable.set((mediaPickerContext.caption
-                    |> deliverOnMainQueue).start(next: { [weak self] caption in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] caption in
                         if let strongSelf = self {
                             strongSelf.panel.updateCaption(caption ?? NSAttributedString())
                         }
                     }))
                     self.mediaSelectionCountDisposable.set((mediaPickerContext.selectionCount
-                    |> deliverOnMainQueue).start(next: { [weak self] count in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] count in
                         if let strongSelf = self {
                             strongSelf.updateSelectionCount(count)
                         }
                     }))
                     self.loadingProgressDisposable.set((mediaPickerContext.loadingProgress
-                    |> deliverOnMainQueue).start(next: { [weak self] progress in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] progress in
                         if let strongSelf = self {
                             strongSelf.panel.updateLoadingProgress(progress)
                             if let layout = strongSelf.validLayout {
@@ -252,13 +252,13 @@ public class AttachmentController: ViewController {
                         }
                     }))
                     self.mainButtonStateDisposable.set((mediaPickerContext.mainButtonState
-                    |> deliverOnMainQueue).start(next: { [weak self] mainButtonState in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] mainButtonState in
                         if let strongSelf = self {
                             let _ = (strongSelf.panel.animatingTransitionPromise.get()
                             |> filter { value in
                                 return !value
                             }
-                            |> take(1)).start(next: { [weak self] _ in
+                            |> take(1)).startStandalone(next: { [weak self] _ in
                                 if let strongSelf = self {
                                     strongSelf.panel.updateMainButtonState(mainButtonState)
                                     if let layout = strongSelf.validLayout {
@@ -591,7 +591,7 @@ public class AttachmentController: ViewController {
                 $0
             }
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self, weak snapshotView] _ in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self, weak snapshotView] _ in
                 guard let strongSelf = self, let layout = strongSelf.validLayout else {
                     return
                 }
@@ -1039,7 +1039,7 @@ public class AttachmentController: ViewController {
         let disposableSet = DisposableSet()
         let _ = (context.engine.messages.attachMenuBots()
         |> take(1)
-        |> deliverOnMainQueue).start(next: { bots in
+        |> deliverOnMainQueue).startStandalone(next: { bots in
             for bot in bots {
                 for (name, file) in bot.icons {
                     if [.iOSAnimated, .placeholder].contains(name), let peer = PeerReference(bot.peer._asPeer()) {

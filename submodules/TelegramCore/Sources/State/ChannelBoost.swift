@@ -9,13 +9,15 @@ public final class ChannelBoostStatus: Equatable {
     public let currentLevelBoosts: Int
     public let nextLevelBoosts: Int?
     public let premiumAudience: StatsPercentValue?
+    public let url: String
     
-    public init(level: Int, boosts: Int, currentLevelBoosts: Int, nextLevelBoosts: Int?, premiumAudience: StatsPercentValue?) {
+    public init(level: Int, boosts: Int, currentLevelBoosts: Int, nextLevelBoosts: Int?, premiumAudience: StatsPercentValue?, url: String) {
         self.level = level
         self.boosts = boosts
         self.currentLevelBoosts = currentLevelBoosts
         self.nextLevelBoosts = nextLevelBoosts
         self.premiumAudience = premiumAudience
+        self.url = url
     }
     
     public static func ==(lhs: ChannelBoostStatus, rhs: ChannelBoostStatus) -> Bool {
@@ -32,6 +34,9 @@ public final class ChannelBoostStatus: Equatable {
             return false
         }
         if lhs.premiumAudience != rhs.premiumAudience {
+            return false
+        }
+        if lhs.url != rhs.url {
             return false
         }
         return true
@@ -57,8 +62,8 @@ func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal
             }
             
             switch result {
-            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience):
-                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }))
+            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience, url):
+                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }), url: url)
             }
         }
     }

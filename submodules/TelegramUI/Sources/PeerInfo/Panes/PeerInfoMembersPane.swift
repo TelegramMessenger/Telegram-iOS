@@ -201,7 +201,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
             self.presentationDataPromise.get(),
             context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         )
-        |> deliverOnMainQueue).start(next: { [weak self] state, presentationData, enclosingPeer in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] state, presentationData, enclosingPeer in
             guard let strongSelf = self, let enclosingPeer = enclosingPeer else {
                 return
             }
@@ -222,6 +222,7 @@ final class PeerInfoMembersPaneNode: ASDisplayNode, PeerInfoPaneNode {
     }
     
     deinit {
+        self.disposable?.dispose()
     }
     
     func ensureMessageIsVisible(id: MessageId) {   

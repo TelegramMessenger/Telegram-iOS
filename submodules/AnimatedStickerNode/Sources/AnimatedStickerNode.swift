@@ -368,12 +368,12 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
             }
             self.disposable.set((source.directDataPath(attemptSynchronously: false)
             |> filter { $0 != nil }
-            |> deliverOnMainQueue).start(next: { path in
+            |> deliverOnMainQueue).startStrict(next: { path in
                 f(path!)
             }))
         case .cached:
             self.disposable.set((source.cachedDataPath(width: width, height: height)
-            |> deliverOnMainQueue).start(next: { [weak self] path, complete in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] path, complete in
                 guard let strongSelf = self else {
                     return
                 }

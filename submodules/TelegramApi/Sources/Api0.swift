@@ -1142,6 +1142,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[870003448] = { return Api.messages.TranslatedText.parse_translateResult($0) }
     dict[1218005070] = { return Api.messages.VotesList.parse_votesList($0) }
+    dict[-44166467] = { return Api.messages.WebPage.parse_webPage($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
     dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
@@ -1177,7 +1178,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
     dict[-203604707] = { return Api.stories.BoostersList.parse_boostersList($0) }
-    dict[1726619631] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
+    dict[-440292772] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
     dict[-1021889145] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostOk($0) }
     dict[1898726997] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
@@ -2016,6 +2017,8 @@ public extension Api {
             case let _1 as Api.messages.TranslatedText:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.VotesList:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.WebPage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.BankCardData:
                 _1.serialize(buffer, boxed)

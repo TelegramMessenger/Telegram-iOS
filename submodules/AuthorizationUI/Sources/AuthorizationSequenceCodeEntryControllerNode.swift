@@ -324,7 +324,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             let timeout = min(timeout, 5)
             #endif
             self.currentTimeoutTime = timeout
-            let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).start(next: { [weak self] _ in
+            let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).startStrict(next: { [weak self] _ in
                 if let strongSelf = self {
                     if let currentTimeoutTime = strongSelf.currentTimeoutTime, currentTimeoutTime > 0 {
                         strongSelf.currentTimeoutTime = currentTimeoutTime - 1
@@ -348,7 +348,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             })
             self.countdownDisposable.set(disposable)
         } else if case let .email(_, _, _, pendingDate, _, _) = codeType, let pendingDate {
-            let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).start(next: { [weak self] _ in
+            let disposable = ((Signal<Int, NoError>.single(1) |> delay(1.0, queue: Queue.mainQueue())) |> restart).startStrict(next: { [weak self] _ in
                 if let strongSelf = self {
                     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                     let interval = pendingDate - currentTime

@@ -421,7 +421,7 @@ private final class PeerInfoPendingPane {
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
         self.disposable = (paneNode.isReady
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] _ in
             self?.isReady = true
             hasBecomeReady(key)
         })

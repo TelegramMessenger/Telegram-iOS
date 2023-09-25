@@ -85,7 +85,7 @@ private final class IconComponent: Component {
                     
                     self.disposable = (svgIconImageFile(account: component.account, fileReference: fileReference)
                     |> runOn(Queue.concurrentDefaultQueue())
-                    |> deliverOnMainQueue).start(next: { [weak self] transform in
+                    |> deliverOnMainQueue).startStrict(next: { [weak self] transform in
                         let arguments = TransformImageArguments(corners: ImageCorners(), imageSize: availableSize, boundingSize: availableSize, intrinsicInsets: UIEdgeInsets())
                         let drawingContext = transform(arguments)
                         let image = drawingContext?.generateImage()?.withRenderingMode(.alwaysTemplate)
@@ -965,7 +965,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
             let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
             |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] peerView in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
                 guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
                     return
                 }
@@ -1029,7 +1029,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, statuses: nil)
         
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
                 
@@ -1165,7 +1165,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                                     self.iconDisposables[file.fileId] = accountFullSizeData.start()
                                 }
                             } else {
-                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .attachBot(peer: peer, media: file)).start()
+                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .attachBot(peer: peer, media: file)).startStrict()
                             }
                         }
                     }

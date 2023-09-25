@@ -19,7 +19,7 @@ enum PeerInfoScreenMemberItemAction {
 
 final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
     let id: AnyHashable
-    let context: AccountContext
+    let context: ItemListPeerItem.Context
     let enclosingPeer: Peer?
     let member: PeerInfoMember
     let badge: String?
@@ -30,7 +30,7 @@ final class PeerInfoScreenMemberItem: PeerInfoScreenItem {
     
     init(
         id: AnyHashable,
-        context: AccountContext,
+        context: ItemListPeerItem.Context,
         enclosingPeer: Peer?,
         member: PeerInfoMember,
         badge: String? = nil,
@@ -149,7 +149,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             }
         }
         
-        let actions = availableActionsForMemberOfPeer(accountPeerId: item.context.account.peerId, peer: item.enclosingPeer, member: item.member)
+        let actions = availableActionsForMemberOfPeer(accountPeerId: item.context.accountPeerId, peer: item.enclosingPeer, member: item.member)
         
         var options: [ItemListPeerItemRevealOption] = []
         if actions.contains(.promote) && item.enclosingPeer is TelegramChannel {
@@ -272,7 +272,7 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
         }
         var highlight = point != nil
         if case .account = item.member {
-        } else if item.context.account.peerId == item.member.id {
+        } else if item.context.accountPeerId == item.member.id {
             highlight = false
         }
         if let point, let itemNode = self.itemNode, let value = itemNode.view.hitTest(self.view.convert(point, to: itemNode.view), with: nil), value is UIControl {
