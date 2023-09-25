@@ -118,7 +118,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         self.addSubnode(self.listNode)
         
         self.disposable = (groupsInCommonContext.state
-        |> deliverOnMainQueue).start(next: { [weak self] state in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] state in
             guard let strongSelf = self else {
                 return
             }

@@ -127,7 +127,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     return .single(nil)
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] playlistStateAndType in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] playlistStateAndType in
                 guard let strongSelf = self else {
                     return
                 }
@@ -275,7 +275,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                         })
                         return rate
                     }
-                    |> deliverOnMainQueue).start(next: { baseRate in
+                    |> deliverOnMainQueue).startStandalone(next: { baseRate in
                         guard let strongSelf = self, let (_, _, _, _, type, _) = strongSelf.playlistStateAndType else {
                             return
                         }
@@ -392,7 +392,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                     progressDisposable.dispose()
                                 }
                             }
-                            |> deliverOnMainQueue).start(next: { index in
+                            |> deliverOnMainQueue).startStandalone(next: { index in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -409,7 +409,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                 } else if index.1 {
                                     if !progressStarted {
                                         progressStarted = true
-                                        progressDisposable.set(progressSignal.start())
+                                        progressDisposable.set(progressSignal.startStandalone())
                                     }
                                 }
                             }, completed: {

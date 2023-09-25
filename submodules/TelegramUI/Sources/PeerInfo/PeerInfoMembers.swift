@@ -188,7 +188,7 @@ private final class PeerInfoMembersContextImpl {
             self.channelMembersControl = control
             
             self.peerDisposable.set((context.account.postbox.peerView(id: peerId)
-            |> deliverOn(self.queue)).start(next: { [weak self] view in
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] view in
                 guard let strongSelf = self else {
                     return
                 }
@@ -223,7 +223,7 @@ private final class PeerInfoMembersContextImpl {
             }))
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
             self.disposable.set((context.account.postbox.peerView(id: peerId)
-            |> deliverOn(self.queue)).start(next: { [weak self] view in
+            |> deliverOn(self.queue)).startStrict(next: { [weak self] view in
                 guard let strongSelf = self, let cachedData = view.cachedData as? CachedGroupData, let participantsData = cachedData.participants else {
                     return
                 }
@@ -316,7 +316,7 @@ private final class PeerInfoMembersContextImpl {
             self.pushState()
             
             disposable.set((signal
-            |> deliverOn(self.queue)).start(completed: {
+            |> deliverOn(self.queue)).startStrict(completed: {
                 completed()
             }))
         }
