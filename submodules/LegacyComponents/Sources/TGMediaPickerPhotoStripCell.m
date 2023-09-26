@@ -180,6 +180,9 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
         {
             SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:video];
             
+            if (_adjustmentsDisposable == nil)
+                _adjustmentsDisposable = [[SMetaDisposable alloc] init];
+            
             __weak TGMediaPickerPhotoStripCell *weakSelf = self;
             [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
             {
@@ -219,6 +222,9 @@ NSString *const TGMediaPickerPhotoStripCellKind = @"PhotoStripCell";
             if (self.editingContext != nil)
             {
                 SSignal *adjustmentsSignal = [self.editingContext adjustmentsSignalForItem:asset];
+                
+                if (_adjustmentsDisposable == nil)
+                    _adjustmentsDisposable = [[SMetaDisposable alloc] init];
                 
                 __weak TGMediaPickerPhotoStripCell *weakSelf = self;
                 [_adjustmentsDisposable setDisposable:[adjustmentsSignal startStrictWithNext:^(TGVideoEditAdjustments *next)
