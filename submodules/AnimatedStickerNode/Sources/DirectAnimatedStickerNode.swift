@@ -106,7 +106,7 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
         self.sourceDisposable = (source.directDataPath(attemptSynchronously: false)
         |> filter { $0 != nil }
         |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] path in
+        |> deliverOnMainQueue).startStrict(next: { [weak self] path in
             guard let strongSelf = self, let path = path else {
                 return
             }

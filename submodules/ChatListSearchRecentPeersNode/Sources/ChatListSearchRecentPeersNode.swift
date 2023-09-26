@@ -311,7 +311,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let previous: Atomic<[ChatListSearchRecentPeersEntry]> = Atomic(value: [])
         let firstTime:Atomic<Bool> = Atomic(value: true)
-        peersDisposable.add((combineLatest(queue: .mainQueue(), recent, self.itemCustomWidthValuePromise.get(), self.themeAndStringsPromise.get()) |> deliverOnMainQueue).start(next: { [weak self] peers, itemCustomWidth, themeAndStrings in
+        peersDisposable.add((combineLatest(queue: .mainQueue(), recent, self.itemCustomWidthValuePromise.get(), self.themeAndStringsPromise.get()) |> deliverOnMainQueue).startStrict(next: { [weak self] peers, itemCustomWidth, themeAndStrings in
             if let strongSelf = self {
                 var entries: [ChatListSearchRecentPeersEntry] = []
                 for peer in peers.0 {
@@ -348,7 +348,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
             }
         }))
         if case .actionSheet = mode {
-            peersDisposable.add(_internal_managedUpdatedRecentPeers(accountPeerId: accountPeerId, postbox: postbox, network: network).start())
+            peersDisposable.add(_internal_managedUpdatedRecentPeers(accountPeerId: accountPeerId, postbox: postbox, network: network).startStrict())
         }
         self.disposable.set(peersDisposable)
     }

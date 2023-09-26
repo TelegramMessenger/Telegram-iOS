@@ -442,7 +442,7 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
                     return .complete()
                 }
             }
-            |> deliverOnMainQueue).start(next: { [weak self] maxCaptionLength in
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] maxCaptionLength in
                 self?.maxCaptionLength = maxCaptionLength
             })
         }

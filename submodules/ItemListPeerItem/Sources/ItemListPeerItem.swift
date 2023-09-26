@@ -17,6 +17,8 @@ import AccountContext
 import ComponentFlow
 import EmojiStatusComponent
 import CheckNode
+import AnimationCache
+import MultiAnimationRenderer
 
 private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -319,10 +321,126 @@ public struct ItemListPeerItemShimmering {
 }
 
 public final class ItemListPeerItem: ListViewItem, ItemListItem {
+    public enum Context {
+        public final class Custom {
+            public let accountPeerId: EnginePeer.Id
+            public let postbox: Postbox
+            public let network: Network
+            public let animationCache: AnimationCache
+            public let animationRenderer: MultiAnimationRenderer
+            public let isPremiumDisabled: Bool
+            public let resolveInlineStickers: ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
+            
+            public init(
+                accountPeerId: EnginePeer.Id,
+                postbox: Postbox,
+                network: Network,
+                animationCache: AnimationCache,
+                animationRenderer: MultiAnimationRenderer,
+                isPremiumDisabled: Bool,
+                resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>
+            ) {
+                self.accountPeerId = accountPeerId
+                self.postbox = postbox
+                self.network = network
+                self.animationCache = animationCache
+                self.animationRenderer = animationRenderer
+                self.isPremiumDisabled = isPremiumDisabled
+                self.resolveInlineStickers = resolveInlineStickers
+            }
+        }
+        
+        case account(AccountContext)
+        case custom(Custom)
+        
+        public var accountPeerId: EnginePeer.Id {
+            switch self {
+            case let .account(context):
+                return context.account.peerId
+            case let .custom(custom):
+                return custom.accountPeerId
+            }
+        }
+        
+        public var postbox: Postbox {
+            switch self {
+            case let .account(context):
+                return context.account.postbox
+            case let .custom(custom):
+                return custom.postbox
+            }
+        }
+        
+        public var network: Network {
+            switch self {
+            case let .account(context):
+                return context.account.network
+            case let .custom(custom):
+                return custom.network
+            }
+        }
+        
+        public var animationCache: AnimationCache {
+            switch self {
+            case let .account(context):
+                return context.animationCache
+            case let .custom(custom):
+                return custom.animationCache
+            }
+        }
+        
+        public var animationRenderer: MultiAnimationRenderer {
+            switch self {
+            case let .account(context):
+                return context.animationRenderer
+            case let .custom(custom):
+                return custom.animationRenderer
+            }
+        }
+        
+        public var isPremiumDisabled: Bool {
+            switch self {
+            case let .account(context):
+                return PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 })).isPremiumDisabled
+            case let .custom(custom):
+                return custom.isPremiumDisabled
+            }
+        }
+        
+        public var resolveInlineStickers: ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError> {
+            switch self {
+            case let .account(context):
+                return { fileIds in
+                    return context.engine.stickers.resolveInlineStickers(fileIds: fileIds)
+                }
+            case let .custom(custom):
+                return custom.resolveInlineStickers
+            }
+        }
+        
+        public var energyUsageSettings: EnergyUsageSettings {
+            switch self {
+            case let .account(context):
+                return context.sharedContext.energyUsageSettings
+            case .custom:
+                return .default
+            }
+        }
+        
+        public var contentSettings: ContentSettings {
+            switch self {
+            case let .account(context):
+                return context.currentContentSettings.with { $0 }
+            case .custom:
+                return .default
+            }
+        }
+    }
+    
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
-    let context: AccountContext
+    let context: Context
     let peer: EnginePeer
     let threadInfo: EngineMessageHistoryThread.Info?
     let height: ItemListPeerItemHeight
@@ -358,7 +476,126 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let storyStats: PeerStoryStats?
     let openStories: ((UIView) -> Void)?
     
-    public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, context: AccountContext, peer: EnginePeer, threadInfo: EngineMessageHistoryThread.Info? = nil, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: EnginePeer.Presence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, highlighted: Bool = false, selectable: Bool, highlightable: Bool = true, animateFirstAvatarTransition: Bool = true, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removePeer: @escaping (EnginePeer.Id) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, noCorners: Bool = false, tag: ItemListItemTag? = nil, header: ListViewItemHeader? = nil, shimmering: ItemListPeerItemShimmering? = nil, displayDecorations: Bool = true, disableInteractiveTransitionIfNecessary: Bool = false, storyStats: PeerStoryStats? = nil, openStories: ((UIView) -> Void)? = nil) {
+    public init(
+        presentationData: ItemListPresentationData,
+        dateTimeFormat: PresentationDateTimeFormat,
+        nameDisplayOrder: PresentationPersonNameOrder,
+        context: AccountContext,
+        peer: EnginePeer,
+        threadInfo: EngineMessageHistoryThread.Info? = nil,
+        height: ItemListPeerItemHeight = .peerList,
+        aliasHandling: ItemListPeerItemAliasHandling = .standard,
+        nameColor: ItemListPeerItemNameColor = .primary,
+        nameStyle: ItemListPeerItemNameStyle = .distinctBold,
+        presence: EnginePeer.Presence?,
+        text: ItemListPeerItemText,
+        label: ItemListPeerItemLabel,
+        editing: ItemListPeerItemEditing,
+        revealOptions: ItemListPeerItemRevealOptions? = nil,
+        switchValue: ItemListPeerItemSwitch?,
+        enabled: Bool,
+        highlighted: Bool = false,
+        selectable: Bool,
+        highlightable: Bool = true,
+        animateFirstAvatarTransition: Bool = true,
+        sectionId: ItemListSectionId,
+        action: (() -> Void)?,
+        setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void,
+        removePeer: @escaping (EnginePeer.Id) -> Void,
+        toggleUpdated: ((Bool) -> Void)? = nil,
+        contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+        hasTopStripe: Bool = true,
+        hasTopGroupInset: Bool = true,
+        noInsets: Bool = false,
+        noCorners: Bool = false,
+        tag: ItemListItemTag? = nil,
+        header: ListViewItemHeader? = nil,
+        shimmering: ItemListPeerItemShimmering? = nil,
+        displayDecorations: Bool = true,
+        disableInteractiveTransitionIfNecessary: Bool = false,
+        storyStats: PeerStoryStats? = nil,
+        openStories: ((UIView) -> Void)? = nil
+    ) {
+        self.presentationData = presentationData
+        self.dateTimeFormat = dateTimeFormat
+        self.nameDisplayOrder = nameDisplayOrder
+        self.context = .account(context)
+        self.peer = peer
+        self.threadInfo = threadInfo
+        self.height = height
+        self.aliasHandling = aliasHandling
+        self.nameColor = nameColor
+        self.nameStyle = nameStyle
+        self.presence = presence
+        self.text = text
+        self.label = label
+        self.editing = editing
+        self.revealOptions = revealOptions
+        self.switchValue = switchValue
+        self.enabled = enabled
+        self.highlighted = highlighted
+        self.selectable = selectable
+        self.highlightable = highlightable
+        self.animateFirstAvatarTransition = animateFirstAvatarTransition
+        self.sectionId = sectionId
+        self.action = action
+        self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
+        self.removePeer = removePeer
+        self.toggleUpdated = toggleUpdated
+        self.contextAction = contextAction
+        self.hasTopStripe = hasTopStripe
+        self.hasTopGroupInset = hasTopGroupInset
+        self.noInsets = noInsets
+        self.noCorners = noCorners
+        self.tag = tag
+        self.header = header
+        self.shimmering = shimmering
+        self.displayDecorations = displayDecorations
+        self.disableInteractiveTransitionIfNecessary = disableInteractiveTransitionIfNecessary
+        self.storyStats = storyStats
+        self.openStories = openStories
+    }
+        
+    public init(
+        presentationData: ItemListPresentationData,
+        dateTimeFormat: PresentationDateTimeFormat,
+        nameDisplayOrder: PresentationPersonNameOrder,
+        context: Context,
+        peer: EnginePeer,
+        threadInfo: EngineMessageHistoryThread.Info? = nil,
+        height: ItemListPeerItemHeight = .peerList,
+        aliasHandling: ItemListPeerItemAliasHandling = .standard,
+        nameColor: ItemListPeerItemNameColor = .primary,
+        nameStyle: ItemListPeerItemNameStyle = .distinctBold,
+        presence: EnginePeer.Presence?,
+        text: ItemListPeerItemText,
+        label: ItemListPeerItemLabel,
+        editing: ItemListPeerItemEditing,
+        revealOptions: ItemListPeerItemRevealOptions? = nil,
+        switchValue: ItemListPeerItemSwitch?,
+        enabled: Bool,
+        highlighted: Bool = false,
+        selectable: Bool,
+        highlightable: Bool = true,
+        animateFirstAvatarTransition: Bool = true,
+        sectionId: ItemListSectionId,
+        action: (() -> Void)?,
+        setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void,
+        removePeer: @escaping (EnginePeer.Id) -> Void,
+        toggleUpdated: ((Bool) -> Void)? = nil,
+        contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil,
+        hasTopStripe: Bool = true,
+        hasTopGroupInset: Bool = true,
+        noInsets: Bool = false,
+        noCorners: Bool = false,
+        tag: ItemListItemTag? = nil,
+        header: ListViewItemHeader? = nil,
+        shimmering: ItemListPeerItemShimmering? = nil,
+        displayDecorations: Bool = true,
+        disableInteractiveTransitionIfNecessary: Bool = false,
+        storyStats: PeerStoryStats? = nil,
+        openStories: ((UIView) -> Void)? = nil
+    ) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
@@ -666,9 +903,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             var updatedLabelBadgeImage: UIImage?
             var credibilityIcon: EmojiStatusComponent.Content?
             
-            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
-            
-            if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.account.peerId {
+            if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.accountPeerId {
             } else {
                 if item.peer.isScam {
                     credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
@@ -678,7 +913,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                 } else if item.peer.isVerified {
                     credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
-                } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
+                } else if item.peer.isPremium && !item.context.isPremiumDisabled {
                     credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                 }
             }
@@ -799,7 +1034,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             
             if let threadInfo = item.threadInfo {
                 titleAttributedString = NSAttributedString(string: threadInfo.title, font: currentBoldFont, textColor: titleColor)
-            } else if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
+            } else if item.peer.id == item.context.accountPeerId, case .threatSelfAsSaved = item.aliasHandling {
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_SavedMessages, font: currentBoldFont, textColor: titleColor)
             } else if item.peer.id.isReplies {
                 titleAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Replies, font: currentBoldFont, textColor: titleColor)
@@ -945,8 +1180,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 16.0 - editingOffset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 12.0 - editingOffset - rightInset - labelLayout.size.width - labelInset - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - labelLayout.size.width - labelInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let constrainedTitleSize = CGSize(width: params.width - leftInset - 12.0 - editingOffset - rightInset - labelLayout.size.width - labelInset - titleIconsWidth, height: CGFloat.greatestFiniteMagnitude)
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedTitleSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let constrainedStatusSize = CGSize(width: params.width - leftInset - 8.0 - editingOffset - rightInset - labelLayout.size.width - labelInset, height: CGFloat.greatestFiniteMagnitude)
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: constrainedStatusSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var insets = itemListNeighborsGroupedInsets(neighbors, params)
             if !item.hasTopGroupInset {
@@ -1157,7 +1395,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         }
                         
                         let credibilityIconComponent = EmojiStatusComponent(
-                            context: item.context,
+                            postbox: item.context.postbox,
+                            energyUsageSettings: item.context.energyUsageSettings,
+                            resolveInlineStickers: item.context.resolveInlineStickers,
                             animationCache: animationCache,
                             animationRenderer: animationRenderer,
                             content: credibilityIcon,
@@ -1315,7 +1555,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                         }
                         
                         let avatarIconComponent = EmojiStatusComponent(
-                            context: item.context,
+                            postbox: item.context.postbox,
+                            energyUsageSettings: item.context.energyUsageSettings,
+                            resolveInlineStickers: item.context.resolveInlineStickers,
                             animationCache: item.context.animationCache,
                             animationRenderer: item.context.animationRenderer,
                             content: avatarIconContent,
@@ -1338,10 +1580,30 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             transition.updateFrame(view: avatarIconComponentView, frame: threadIconFrame)
                         }
                     } else {
-                        if item.peer.id == item.context.account.peerId, case .threatSelfAsSaved = item.aliasHandling {
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .savedMessagesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                        if item.peer.id == item.context.accountPeerId, case .threatSelfAsSaved = item.aliasHandling {
+                            strongSelf.avatarNode.setPeer(
+                                accountPeerId: item.context.accountPeerId,
+                                postbox: item.context.postbox,
+                                network: item.context.network,
+                                contentSettings: item.context.contentSettings,
+                                theme: item.presentationData.theme,
+                                peer: item.peer,
+                                overrideImage: .savedMessagesIcon,
+                                emptyColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                                synchronousLoad: synchronousLoad
+                            )
                         } else if item.peer.id.isReplies {
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: .repliesIcon, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoad)
+                            strongSelf.avatarNode.setPeer(
+                                accountPeerId: item.context.accountPeerId,
+                                postbox: item.context.postbox,
+                                network: item.context.network,
+                                contentSettings: item.context.contentSettings,
+                                theme: item.presentationData.theme,
+                                peer: item.peer,
+                                overrideImage: .repliesIcon,
+                                emptyColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                                synchronousLoad: synchronousLoad
+                            )
                         } else {
                             var overrideImage: AvatarNodeImageOverride?
                             if item.peer.isDeleted {
@@ -1353,7 +1615,20 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             if case let .channel(channel) = item.peer, channel.isForum {
                                 clipStyle = .roundedRect
                             }
-                            strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: item.peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoad)
+                            
+                            strongSelf.avatarNode.setPeer(
+                                accountPeerId: item.context.accountPeerId,
+                                postbox: item.context.postbox,
+                                network: item.context.network,
+                                contentSettings: item.context.contentSettings,
+                                theme: item.presentationData.theme,
+                                peer: item.peer,
+                                overrideImage: overrideImage,
+                                emptyColor: item.presentationData.theme.list.mediaPlaceholderColor,
+                                clipStyle: clipStyle,
+                                synchronousLoad: synchronousLoad
+                            )
+                            
                             strongSelf.avatarNode.setStoryStats(storyStats: item.storyStats.flatMap { storyStats in
                                 return AvatarNode.StoryStats(
                                     totalCount: storyStats.totalCount,
