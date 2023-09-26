@@ -13,8 +13,13 @@
 - (instancetype)initWithGenerator:(id<MTDisposable> (^)(MTSubscriber *))generator;
 
 - (id<MTDisposable>)startWithNext:(void (^)(id next))next error:(void (^)(id error))error completed:(void (^)())completed;
+- (id<MTDisposable>)startWithNextStrict:(void (^)(id next))next error:(void (^)(id error))error completed:(void (^)())completed file:(const char *)file line:(int)line;
+
 - (id<MTDisposable>)startWithNext:(void (^)(id next))next;
+- (id<MTDisposable>)startWithNextStrict:(void (^)(id next))next file:(const char *)file line:(int)line;
+
 - (id<MTDisposable>)startWithNext:(void (^)(id next))next completed:(void (^)())completed;
+- (id<MTDisposable>)startWithNextStrict:(void (^)(id next))next completed:(void (^)())completed file:(const char *)file line:(int)line;
 
 + (MTSignal *)single:(id)next;
 + (MTSignal *)fail:(id)error;

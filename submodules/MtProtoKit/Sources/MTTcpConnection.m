@@ -947,7 +947,7 @@ struct ctr_state {
             }
             
             __weak MTTcpConnection *weakSelf = self;
-            [_resolveDisposable setDisposable:[resolveSignal startWithNext:^(MTTcpConnectionData *connectionData) {
+            [_resolveDisposable setDisposable:[resolveSignal startWithNextStrict:^(MTTcpConnectionData *connectionData) {
                 [[MTTcpConnection tcpQueue] dispatchOnQueue:^{
                     __strong MTTcpConnection *strongSelf = weakSelf;
                     if (strongSelf == nil || connectionData == nil) {
@@ -1111,7 +1111,7 @@ struct ctr_state {
                         [strongSelf->_socket readDataToLength:sizeof(struct socks5_ident_resp) withTimeout:-1 tag:MTTcpSocksLogin];
                     }
                 }];
-            }]];
+            } file:__FILE_NAME__ line:__LINE__]];
         }
     }];
 }

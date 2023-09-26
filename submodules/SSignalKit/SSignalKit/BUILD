@@ -16,7 +16,6 @@ objc_library(
       "Source",
     ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit"
     ],
     sdk_frameworks = [
       "Foundation",
