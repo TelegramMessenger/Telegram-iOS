@@ -1273,7 +1273,7 @@ typedef enum
 {
 }
 
-- (void)capturePipeline:(TGVideoCameraPipeline *)__unused capturePipeline previewPixelBufferReadyForDisplay:(CVPixelBufferRef)previewPixelBuffer
+- (void)capturePipeline:(TGVideoCameraPipeline *)__unused capturePipeline previewPixelBufferReadyForDisplay:(TGVideoCameraRendererBuffer *)previewPixelBuffer
 {
     if (!_gpuAvailable)
         return;

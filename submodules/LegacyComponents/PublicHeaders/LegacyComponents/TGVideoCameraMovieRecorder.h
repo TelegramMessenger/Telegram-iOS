@@ -2,6 +2,7 @@
 #import <CoreMedia/CoreMedia.h>
 
 @protocol TGVideoCameraMovieRecorderDelegate;
+@class TGVideoCameraRendererBuffer;
 
 @interface TGVideoCameraMovieRecorder : NSObject
 
@@ -15,7 +16,7 @@
 
 - (void)prepareToRecord;
 
-- (void)appendVideoPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime;
+- (void)appendVideoPixelBuffer:(TGVideoCameraRendererBuffer *)pixelBuffer withPresentationTime:(CMTime)presentationTime;
 - (void)appendVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 - (void)appendAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 

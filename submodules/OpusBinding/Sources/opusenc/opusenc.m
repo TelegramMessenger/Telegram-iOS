@@ -132,6 +132,10 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
     return self;
 }
 
+- (void)dealloc {
+    [self cleanup];
+}
+
 - (void)cleanup
 {
     if (_encoder != NULL)

@@ -213,62 +213,8 @@ typedef enum
         _trimView.startHandleMoved = ^(CGPoint translation)
         {
             __strong TGMediaPickerGalleryVideoScrubber *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return;
-            
-            if (strongSelf->_animatingZoomIn)
-                return;
-            
-            UIView *trimView = strongSelf->_trimView;
-            
-            CGRect availableTrimRect = [strongSelf _scrubbingRect];
-            CGRect normalScrubbingRect = [strongSelf _scrubbingRectZoomedIn:false];
-            CGFloat originX = MAX(0, trimView.frame.origin.x + translation.x);
-            CGFloat delta = originX - trimView.frame.origin.x;
-            CGFloat maxWidth = availableTrimRect.size.width + normalScrubbingRect.origin.x * 2 - originX;
-            
-            CGRect trimViewRect = CGRectMake(originX, trimView.frame.origin.y, MIN(maxWidth, trimView.frame.size.width - delta), trimView.frame.size.height);
-            
-            NSTimeInterval trimStartPosition = 0.0;
-            NSTimeInterval trimEndPosition = 0.0;
-            [strongSelf _trimStartPosition:&trimStartPosition trimEndPosition:&trimEndPosition forTrimFrame:trimViewRect duration:strongSelf.duration];
-            
-            NSTimeInterval duration = trimEndPosition - trimStartPosition;
-            
-            if (trimEndPosition - trimStartPosition < self.minimumLength)
-                return;
-            
-            if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)
-            {
-                trimViewRect = CGRectMake(trimView.frame.origin.x + delta, trimView.frame.origin.y, trimView.frame.size.width, trimView.frame.size.height);
-                
-                [strongSelf _trimStartPosition:&trimStartPosition trimEndPosition:&trimEndPosition forTrimFrame:trimViewRect duration:strongSelf.duration];
-            }
-            
-            trimView.frame = trimViewRect;
-            
-            [strongSelf _layoutTrimCurtainViews];
-            
-            strongSelf->_trimStartValue = trimStartPosition;
-            strongSelf->_trimEndValue = trimEndPosition;
-            
-            [strongSelf setValue:trimStartPosition];
-            
-            UIView *handle = strongSelf->_scrubberHandle;
-            handle.center = CGPointMake(trimView.frame.origin.x + 12 + handle.frame.size.width / 2, handle.center.y);
-            
-            UIView *dotHandle = strongSelf->_dotHandle;
-            dotHandle.center = CGPointMake(trimView.frame.origin.x + 12 + dotHandle.frame.size.width / 2, dotHandle.center.y);
-            
-            id<TGMediaPickerGalleryVideoScrubberDelegate> delegate = strongSelf.delegate;
-            if ([delegate respondsToSelector:@selector(videoScrubber:editingStartValueDidChange:)])
-                [delegate videoScrubber:strongSelf editingStartValueDidChange:trimStartPosition];
-            
-            [strongSelf cancelZoomIn];
-            if ([strongSelf zoomAvailable])
-            {
-                strongSelf->_pivotSource = TGMediaPickerGalleryVideoScrubberPivotSourceTrimStart;
-                [strongSelf performSelector:@selector(zoomIn) withObject:nil afterDelay:TGVideoScrubberZoomActivationInterval];
+            if (strongSelf) {
+                [strongSelf startHandleMoved:translation];
             }
         };
         _trimView.endHandleMoved = ^(CGPoint translation)
@@ -416,6 +362,65 @@ typedef enum
         [_trimView addGestureRecognizer:_tapGestureRecognizer];
     }
     return self;
+}
+
+- (void)startHandleMoved:(CGPoint)translation {
+    TGMediaPickerGalleryVideoScrubber *strongSelf = self;
+    
+    if (strongSelf->_animatingZoomIn)
+        return;
+    
+    UIView *trimView = strongSelf->_trimView;
+    
+    CGRect availableTrimRect = [strongSelf _scrubbingRect];
+    CGRect normalScrubbingRect = [strongSelf _scrubbingRectZoomedIn:false];
+    CGFloat originX = MAX(0, trimView.frame.origin.x + translation.x);
+    CGFloat delta = originX - trimView.frame.origin.x;
+    CGFloat maxWidth = availableTrimRect.size.width + normalScrubbingRect.origin.x * 2 - originX;
+    
+    CGRect trimViewRect = CGRectMake(originX, trimView.frame.origin.y, MIN(maxWidth, trimView.frame.size.width - delta), trimView.frame.size.height);
+    
+    NSTimeInterval trimStartPosition = 0.0;
+    NSTimeInterval trimEndPosition = 0.0;
+    [strongSelf _trimStartPosition:&trimStartPosition trimEndPosition:&trimEndPosition forTrimFrame:trimViewRect duration:strongSelf.duration];
+    
+    NSTimeInterval duration = trimEndPosition - trimStartPosition;
+    
+    if (trimEndPosition - trimStartPosition < self.minimumLength)
+        return;
+    
+    if (strongSelf.maximumLength > DBL_EPSILON && duration > strongSelf.maximumLength)
+    {
+        trimViewRect = CGRectMake(trimView.frame.origin.x + delta, trimView.frame.origin.y, trimView.frame.size.width, trimView.frame.size.height);
+        
+        [strongSelf _trimStartPosition:&trimStartPosition trimEndPosition:&trimEndPosition forTrimFrame:trimViewRect duration:strongSelf.duration];
+    }
+    
+    trimView.frame = trimViewRect;
+    
+    [strongSelf _layoutTrimCurtainViews];
+    
+    strongSelf->_trimStartValue = trimStartPosition;
+    strongSelf->_trimEndValue = trimEndPosition;
+    
+    [strongSelf setValue:trimStartPosition];
+    
+    UIView *handle = strongSelf->_scrubberHandle;
+    handle.center = CGPointMake(trimView.frame.origin.x + 12 + handle.frame.size.width / 2, handle.center.y);
+    
+    UIView *dotHandle = strongSelf->_dotHandle;
+    dotHandle.center = CGPointMake(trimView.frame.origin.x + 12 + dotHandle.frame.size.width / 2, dotHandle.center.y);
+    
+    id<TGMediaPickerGalleryVideoScrubberDelegate> delegate = strongSelf.delegate;
+    if ([delegate respondsToSelector:@selector(videoScrubber:editingStartValueDidChange:)])
+        [delegate videoScrubber:strongSelf editingStartValueDidChange:trimStartPosition];
+    
+    [strongSelf cancelZoomIn];
+    if ([strongSelf zoomAvailable])
+    {
+        strongSelf->_pivotSource = TGMediaPickerGalleryVideoScrubberPivotSourceTrimStart;
+        [strongSelf performSelector:@selector(zoomIn) withObject:nil afterDelay:TGVideoScrubberZoomActivationInterval];
+    }
 }
 
 - (void)setHasDotPicker:(bool)hasDotPicker {

@@ -1387,6 +1387,14 @@ UIImage *TGSecretBlurredAttachmentImage(UIImage *source, CGSize size, uint32_t *
     return TGSecretBlurredAttachmentWithCornerRadiusImage(source, size, averageColor, attachmentBorder, 13, position);
 }
 
+#if DEBUG
+@interface DebugTGSecretBlurredAttachmentWithCornerRadiusImage : UIImage
+@end
+
+@implementation DebugTGSecretBlurredAttachmentWithCornerRadiusImage
+@end
+#endif
+
 UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize size, uint32_t *averageColor, bool attachmentBorder, CGFloat cornerRadius, int position)
 {
     CGFloat scale = TGScreenScaling(); //TGIsRetina() ? 2.0f : 1.0f;
@@ -1496,7 +1504,11 @@ UIImage *TGSecretBlurredAttachmentWithCornerRadiusImage(UIImage *source, CGSize 
     }
     
     CGImageRef bitmapImage = CGBitmapContextCreateImage(targetContext);
+#if DEBUG
+    UIImage *image = [[DebugTGSecretBlurredAttachmentWithCornerRadiusImage alloc] initWithCGImage:bitmapImage];
+#else
     UIImage *image = [[UIImage alloc] initWithCGImage:bitmapImage];
+#endif
     CGImageRelease(bitmapImage);
     
     CGContextRelease(targetContext);

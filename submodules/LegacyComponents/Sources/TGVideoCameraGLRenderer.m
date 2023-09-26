@@ -3,6 +3,56 @@
 #import <OpenGLES/ES2/glext.h>
 
 #import <LegacyComponents/TGPaintShader.h>
+#import "TGVideoCameraPipeline.h"
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
+#ifndef GLES_SILENCE_DEPRECATION
+#define GLES_SILENCE_DEPRECATION
+#endif
+
+@interface TGVideoCameraGLRendererBufferPool : NSObject
+
+@property (nonatomic, assign) CVPixelBufferPoolRef pool;
+
+@end
+
+@implementation TGVideoCameraGLRendererBufferPool
+
+- (instancetype)initWithRetainedPool:(CVPixelBufferPoolRef)pool {
+    self = [super init];
+    if (self != nil) {
+        _pool = pool;
+    }
+    return self;
+}
+
+- (void)dealloc {
+    if (_pool) {
+        CVPixelBufferPoolRelease(_pool);
+    }
+}
+
+@end
+
+@implementation TGVideoCameraRendererBuffer
+
+- (instancetype)initWithRetainedBuffer:(CVPixelBufferRef)buffer {
+    self = [super init];
+    if (self != nil) {
+        _buffer = buffer;
+    }
+    return self;
+}
+
+- (void)dealloc {
+    if (_buffer) {
+        CVPixelBufferRelease(_buffer);
+    }
+}
+
+@end
 
 @interface TGVideoCameraGLRenderer ()
 {
@@ -10,11 +60,11 @@
 	CVOpenGLESTextureCacheRef _textureCache;
     CVOpenGLESTextureCacheRef _prevTextureCache;
 	CVOpenGLESTextureCacheRef _renderTextureCache;
-	CVPixelBufferPoolRef _bufferPool;
+    TGVideoCameraGLRendererBufferPool *_bufferPool;
 	CFDictionaryRef _bufferPoolAuxAttributes;
 	CMFormatDescriptionRef _outputFormatDescription;
     
-    CVPixelBufferRef _previousPixelBuffer;
+    TGVideoCameraRendererBuffer *_previousPixelBuffer;
     
     TGPaintShader *_shader;
 	GLint _frameUniform;
@@ -194,20 +244,12 @@
     return _previousPixelBuffer != NULL;
 }
 
-- (void)setPreviousPixelBuffer:(CVPixelBufferRef)previousPixelBuffer
+- (void)setPreviousPixelBuffer:(TGVideoCameraRendererBuffer *)previousPixelBuffer
 {
-    if (_previousPixelBuffer != NULL)
-    {
-        CFRelease(_previousPixelBuffer);
-        _previousPixelBuffer = NULL;
-    }
-    
     _previousPixelBuffer = previousPixelBuffer;
-    if (_previousPixelBuffer != NULL)
-        CFRetain(_previousPixelBuffer);
 }
 
-- (CVPixelBufferRef)copyRenderedPixelBuffer:(CVPixelBufferRef)pixelBuffer
+- (TGVideoCameraRendererBuffer *)copyRenderedPixelBuffer:(TGVideoCameraRendererBuffer *)pixelBuffer
 {
 	static const GLfloat squareVertices[] =
     {
@@ -217,13 +259,15 @@
 		1.0f,  1.0f,
 	};
 	
-	if (_offscreenBufferHandle == 0)
-		return NULL;
+    if (_offscreenBufferHandle == 0) {
+        return NULL;
+    }
 	
-	if (pixelBuffer == NULL)
-		return NULL;
+    if (pixelBuffer == NULL) {
+        return nil;
+    }
 	
-	const CMVideoDimensions srcDimensions = { (int32_t)CVPixelBufferGetWidth(pixelBuffer), (int32_t)CVPixelBufferGetHeight(pixelBuffer) };
+	const CMVideoDimensions srcDimensions = { (int32_t)CVPixelBufferGetWidth(pixelBuffer.buffer), (int32_t)CVPixelBufferGetHeight(pixelBuffer.buffer) };
 	const CMVideoDimensions dstDimensions = CMVideoFormatDescriptionGetDimensions(_outputFormatDescription);
 		
 	EAGLContext *oldContext = [EAGLContext currentContext];
@@ -237,35 +281,72 @@
 	CVOpenGLESTextureRef srcTexture = NULL;
     CVOpenGLESTextureRef prevTexture = NULL;
 	CVOpenGLESTextureRef dstTexture = NULL;
-	CVPixelBufferRef dstPixelBuffer = NULL;
+	CVPixelBufferRef dstPixelBufferValue = NULL;
 	
-	err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _textureCache, pixelBuffer, NULL, GL_TEXTURE_2D, GL_RGBA, srcDimensions.width, srcDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &srcTexture);
+	err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _textureCache, pixelBuffer.buffer, NULL, GL_TEXTURE_2D, GL_RGBA, srcDimensions.width, srcDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &srcTexture);
     
-	if (!srcTexture || err)
-		goto bail;
+    if (!srcTexture || err) {
+        if (oldContext != _context) {
+            [EAGLContext setCurrentContext:oldContext];
+        }
+        
+        if (srcTexture) {
+            CFRelease(srcTexture);
+        }
+        
+        if (prevTexture) {
+            CFRelease(prevTexture);
+        }
+        
+        if (dstTexture) {
+            CFRelease(dstTexture);
+        }
+        
+        return nil;
+    }
     
     bool hasPreviousTexture = false;
     if (_previousPixelBuffer != NULL)
     {
-        err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _prevTextureCache, _previousPixelBuffer, NULL, GL_TEXTURE_2D, GL_RGBA, srcDimensions.width, srcDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &prevTexture);
+        err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _prevTextureCache, _previousPixelBuffer.buffer, NULL, GL_TEXTURE_2D, GL_RGBA, srcDimensions.width, srcDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &prevTexture);
         
-        if (!prevTexture || err)
-            goto bail;
+        if (!prevTexture || err) {
+            if (oldContext != _context) {
+                [EAGLContext setCurrentContext:oldContext];
+            }
+            
+            if (srcTexture) {
+                CFRelease(srcTexture);
+            }
+            
+            if (prevTexture) {
+                CFRelease(prevTexture);
+            }
+            
+            if (dstTexture) {
+                CFRelease(dstTexture);
+            }
+            
+            return nil;
+        }
         
         hasPreviousTexture = true;
     }
     
-	err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool, _bufferPoolAuxAttributes, &dstPixelBuffer);
-	if (err == kCVReturnWouldExceedAllocationThreshold)
-    {
+	err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool.pool, _bufferPoolAuxAttributes, &dstPixelBufferValue);
+	if (err == kCVReturnWouldExceedAllocationThreshold) {
 		CVOpenGLESTextureCacheFlush(_renderTextureCache, 0);
-		err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool, _bufferPoolAuxAttributes, &dstPixelBuffer);
+		err = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool.pool, _bufferPoolAuxAttributes, &dstPixelBufferValue);
 	}
+    TGVideoCameraRendererBuffer *dstPixelBuffer = nil;
+    if (dstPixelBufferValue) {
+        dstPixelBuffer = [[TGVideoCameraRendererBuffer alloc] initWithRetainedBuffer:dstPixelBufferValue];
+    }
     
 	if (err)
 		goto bail;
 
-	err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _renderTextureCache, dstPixelBuffer, NULL, GL_TEXTURE_2D, GL_RGBA, dstDimensions.width, dstDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &dstTexture);
+	err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, _renderTextureCache, dstPixelBuffer.buffer, NULL, GL_TEXTURE_2D, GL_RGBA, dstDimensions.width, dstDimensions.height, GL_BGRA, GL_UNSIGNED_BYTE, 0, &dstTexture);
 	
 	if (!dstTexture || err)
 		goto bail;
@@ -388,7 +469,10 @@ bail:
     _noMirrorUniform = [_shader uniformForKey:@"noMirror"];
     
 	size_t maxRetainedBufferCount = clientRetainedBufferCountHint + 1;
-    _bufferPool = [TGVideoCameraGLRenderer createPixelBufferPoolWithWidth:(int32_t)outputSize.width height:(int32_t)outputSize.height pixelFormat:kCVPixelFormatType_32BGRA maxBufferCount:(int32_t)maxRetainedBufferCount];
+    CVPixelBufferPoolRef bufferPoolValue = [TGVideoCameraGLRenderer createPixelBufferPoolWithWidth:(int32_t)outputSize.width height:(int32_t)outputSize.height pixelFormat:kCVPixelFormatType_32BGRA maxBufferCount:(int32_t)maxRetainedBufferCount];
+    if (bufferPoolValue) {
+        _bufferPool = [[TGVideoCameraGLRendererBufferPool alloc] initWithRetainedPool:bufferPoolValue];
+    }
     
 	if (!_bufferPool)
     {
@@ -397,11 +481,11 @@ bail:
 	}
 	
     _bufferPoolAuxAttributes = [TGVideoCameraGLRenderer createPixelBufferPoolAuxAttribute:(int32_t)maxRetainedBufferCount];
-    [TGVideoCameraGLRenderer preallocatePixelBuffersInPool:_bufferPool auxAttributes:_bufferPoolAuxAttributes];
+    [TGVideoCameraGLRenderer preallocatePixelBuffersInPool:_bufferPool.pool auxAttributes:_bufferPoolAuxAttributes];
 	
 	CMFormatDescriptionRef outputFormatDescription = NULL;
 	CVPixelBufferRef testPixelBuffer = NULL;
-	CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool, _bufferPoolAuxAttributes, &testPixelBuffer);
+	CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, _bufferPool.pool, _bufferPoolAuxAttributes, &testPixelBuffer);
 	if (!testPixelBuffer)
     {
 		success = false;
@@ -460,11 +544,7 @@ bail:
 		_renderTextureCache = 0;
 	}
     
-	if (_bufferPool)
-    {
-		CFRelease(_bufferPool);
-		_bufferPool = NULL;
-	}
+    _bufferPool = nil;
     
 	if (_bufferPoolAuxAttributes)
     {
@@ -525,3 +605,5 @@ bail:
 }
 
 @end
+
+#pragma clang diagnostic pop

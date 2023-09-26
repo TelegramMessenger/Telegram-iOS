@@ -2,6 +2,8 @@
 #import <CoreVideo/CoreVideo.h>
 #import <AVFoundation/AVFoundation.h>
 
+@class TGVideoCameraRendererBuffer;
+
 @interface TGVideoCameraGLRenderer : NSObject
 
 @property (nonatomic, readonly) __attribute__((NSObject)) CMFormatDescriptionRef outputFormatDescription;
@@ -13,7 +15,7 @@
 - (void)prepareForInputWithFormatDescription:(CMFormatDescriptionRef)inputFormatDescription outputRetainedBufferCountHint:(size_t)outputRetainedBufferCountHint;
 - (void)reset;
 
-- (CVPixelBufferRef)copyRenderedPixelBuffer:(CVPixelBufferRef)pixelBuffer;
-- (void)setPreviousPixelBuffer:(CVPixelBufferRef)previousPixelBuffer;
+- (TGVideoCameraRendererBuffer *)copyRenderedPixelBuffer:(TGVideoCameraRendererBuffer *)pixelBuffer;
+- (void)setPreviousPixelBuffer:(TGVideoCameraRendererBuffer *)previousPixelBuffer;
 
 @end

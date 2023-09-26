@@ -4,6 +4,13 @@
 
 @protocol TGVideoCameraPipelineDelegate;
 
+@interface TGVideoCameraRendererBuffer : NSObject
+
+@property (nonatomic, assign) CVPixelBufferRef buffer;
+
+- (instancetype)initWithRetainedBuffer:(CVPixelBufferRef)buffer;
+
+@end
 
 @interface TGVideoCameraPipeline : NSObject
 
@@ -40,7 +47,7 @@
 
 - (void)capturePipeline:(TGVideoCameraPipeline *)capturePipeline didStopRunningWithError:(NSError *)error;
 
-- (void)capturePipeline:(TGVideoCameraPipeline *)capturePipeline previewPixelBufferReadyForDisplay:(CVPixelBufferRef)previewPixelBuffer;
+- (void)capturePipeline:(TGVideoCameraPipeline *)capturePipeline previewPixelBufferReadyForDisplay:(TGVideoCameraRendererBuffer *)previewPixelBuffer;
 - (void)capturePipelineDidRunOutOfPreviewBuffers:(TGVideoCameraPipeline *)capturePipeline;
 
 - (void)capturePipelineRecordingDidStart:(TGVideoCameraPipeline *)capturePipeline;

@@ -1,6 +1,8 @@
 #import "TGVideoCameraMovieRecorder.h"
 #import <AVFoundation/AVFoundation.h>
 
+#import "TGVideoCameraPipeline.h"
+
 typedef enum {
 	TGMovieRecorderStatusIdle = 0,
 	TGMovieRecorderStatusPreparingToRecord,
@@ -146,7 +148,7 @@ typedef enum {
 	} );
 }
 
-- (void)appendVideoPixelBuffer:(CVPixelBufferRef)pixelBuffer withPresentationTime:(CMTime)presentationTime
+- (void)appendVideoPixelBuffer:(TGVideoCameraRendererBuffer *)pixelBuffer withPresentationTime:(CMTime)presentationTime
 {
 	CMSampleBufferRef sampleBuffer = NULL;
 	
@@ -155,7 +157,7 @@ typedef enum {
 	timingInfo.decodeTimeStamp = kCMTimeInvalid;
 	timingInfo.presentationTimeStamp = presentationTime;
 	
-    CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer, true, NULL, NULL, _videoTrackSourceFormatDescription, &timingInfo, &sampleBuffer);
+    CMSampleBufferCreateForImageBuffer(kCFAllocatorDefault, pixelBuffer.buffer, true, NULL, NULL, _videoTrackSourceFormatDescription, &timingInfo, &sampleBuffer);
         
 	if (sampleBuffer)
     {

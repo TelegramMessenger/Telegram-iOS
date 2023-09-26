@@ -84,6 +84,9 @@ final class ViewTracker {
     }
     
     func removeMessageHistoryView(index: Bag<(MutableMessageHistoryView, ValuePipe<(MessageHistoryView, ViewUpdateType)>)>.Index) {
+        #if DEBUG
+        assert(self.messageHistoryViews.get(index) != nil)
+        #endif
         self.messageHistoryViews.remove(index)
         
         self.updateTrackedHoles()

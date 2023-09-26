@@ -57,7 +57,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     
     NSTimeInterval _resultDuration;
     
-    CVPixelBufferRef _previousPixelBuffer;
+    TGVideoCameraRendererBuffer *_previousPixelBuffer;
     int32_t _repeatingCount;
     
     int16_t _micLevelPeak;
@@ -72,7 +72,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     os_unfair_lock _recordLock;
     bool _startRecordAfterAudioBuffer;
     
-    CVPixelBufferRef _currentPreviewPixelBuffer;
+    TGVideoCameraRendererBuffer *_currentPreviewPixelBuffer;
     NSMutableDictionary *_thumbnails;
     
     NSTimeInterval _firstThumbnailTime;
@@ -332,13 +332,10 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 			return;
 		
 		self.outputVideoFormatDescription = NULL;
+        
 		[_renderer reset];
         
-        if (_currentPreviewPixelBuffer != NULL)
-        {
-            CFRelease(_currentPreviewPixelBuffer);
-            _currentPreviewPixelBuffer = NULL;
-        }
+        _currentPreviewPixelBuffer = nil;
 	});
 }
 
@@ -440,23 +437,23 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
     }
 }
 
-- (UIImage *)imageFromImageBuffer:(CVPixelBufferRef)imageBuffer
+- (UIImage *)imageFromImageBuffer:(TGVideoCameraRendererBuffer *)imageBuffer
 {
-    CVPixelBufferLockBaseAddress(imageBuffer, 0);
+    CVPixelBufferLockBaseAddress(imageBuffer.buffer, 0);
     
-    void *baseAddress = CVPixelBufferGetBaseAddress(imageBuffer);
+    void *baseAddress = CVPixelBufferGetBaseAddress(imageBuffer.buffer);
     
-    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer.buffer);
     
-    size_t width = CVPixelBufferGetWidth(imageBuffer);
-    size_t height = CVPixelBufferGetHeight(imageBuffer);
+    size_t width = CVPixelBufferGetWidth(imageBuffer.buffer);
+    size_t height = CVPixelBufferGetHeight(imageBuffer.buffer);
     
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
     
     CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8, bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
     
     CGImageRef cgImage = CGBitmapContextCreateImage(context);
-    CVPixelBufferUnlockBaseAddress(imageBuffer,0);
+    CVPixelBufferUnlockBaseAddress(imageBuffer.buffer, 0);
     
     CGContextRelease(context);
     CGColorSpaceRelease(colorSpace);
@@ -470,7 +467,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 
 - (void)renderVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer
 {
-	CVPixelBufferRef renderedPixelBuffer = NULL;
+	TGVideoCameraRendererBuffer *renderedPixelBuffer = nil;
 	CMTime timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
     
 	@synchronized (_renderer)
@@ -486,8 +483,7 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
                     _repeatingCount = 11;
                     
                     [_renderer setPreviousPixelBuffer:_previousPixelBuffer];
-                    CFRelease(_previousPixelBuffer);
-                    _previousPixelBuffer = NULL;
+                    _previousPixelBuffer = nil;
                 }
                 
                 if (_repeatingCount > 0)
@@ -506,7 +502,11 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
                     [_renderer setPreviousPixelBuffer:NULL];
             }
             
-			CVPixelBufferRef sourcePixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+			CVPixelBufferRef sourcePixelBufferValue = CMSampleBufferGetImageBuffer(sampleBuffer);
+            TGVideoCameraRendererBuffer *sourcePixelBuffer = nil;
+            if (sourcePixelBufferValue) {
+                sourcePixelBuffer = [[TGVideoCameraRendererBuffer alloc] initWithRetainedBuffer:CVPixelBufferRetain(sourcePixelBufferValue)];
+            }
 			renderedPixelBuffer = [_renderer copyRenderedPixelBuffer:sourcePixelBuffer];
             
             @synchronized (self)
@@ -542,14 +542,11 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
                 
                 if (!repeatingFrames)
                 {
-                    if (_previousPixelBuffer != NULL)
-                    {
-                        CFRelease(_previousPixelBuffer);
+                    if (_previousPixelBuffer != NULL) {
                         _previousPixelBuffer = NULL;
                     }
                     
                     _previousPixelBuffer = sourcePixelBuffer;
-                    CFRetain(sourcePixelBuffer);
                 }
             }
 		}
@@ -568,8 +565,6 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 			if (_recordingStatus == TGVideoCameraRecordingStatusRecording)
 				[_recorder appendVideoPixelBuffer:renderedPixelBuffer withPresentationTime:timestamp];
 		}
-		
-		CFRelease(renderedPixelBuffer);
 	}
 	else
 	{
@@ -577,33 +572,27 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 	}
 }
 
-- (void)outputPreviewPixelBuffer:(CVPixelBufferRef)previewPixelBuffer
+- (void)outputPreviewPixelBuffer:(TGVideoCameraRendererBuffer *)previewPixelBuffer
 {
     if (_currentPreviewPixelBuffer != NULL)
     {
-        CFRelease(_currentPreviewPixelBuffer);
         _currentPreviewPixelBuffer = NULL;
     }
     
     if (_previousPixelBuffer != NULL)
     {
         _currentPreviewPixelBuffer = previewPixelBuffer;
-        CFRetain(_currentPreviewPixelBuffer);
     }
     
     [self invokeDelegateCallbackAsync:^
     {
-		CVPixelBufferRef currentPreviewPixelBuffer = NULL;
+        TGVideoCameraRendererBuffer *currentPreviewPixelBuffer = nil;
 		@synchronized (self)
 		{
 			currentPreviewPixelBuffer = _currentPreviewPixelBuffer;
-			if (currentPreviewPixelBuffer != NULL)
-            {
-				CFRetain(currentPreviewPixelBuffer);
-                if (_currentPreviewPixelBuffer != NULL)
-                {
-                    CFRelease(_currentPreviewPixelBuffer);
-                    _currentPreviewPixelBuffer = NULL;
+			if (currentPreviewPixelBuffer != NULL) {
+                if (_currentPreviewPixelBuffer != NULL) {
+                    _currentPreviewPixelBuffer = nil;
                 }
 			}
 		}
@@ -611,7 +600,6 @@ const NSInteger TGVideoCameraRetainedBufferCount = 16;
 		if (currentPreviewPixelBuffer != NULL)
         {
 			[_delegate capturePipeline:self previewPixelBufferReadyForDisplay:currentPreviewPixelBuffer];
-			CFRelease(currentPreviewPixelBuffer);
 		}
 	}];
 }

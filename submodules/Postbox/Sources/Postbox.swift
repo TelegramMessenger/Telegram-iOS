@@ -3241,7 +3241,20 @@ final class PostboxImpl {
         let disposable = signal.start(next: { next in
             subscriber.putNext((next.0, next.1, nil))
         })
-        return ActionDisposable { [weak self] in
+        
+        final class MarkedActionDisposable: Disposable {
+            let disposable: ActionDisposable
+            
+            init(_ f: @escaping () -> Void) {
+                self.disposable = ActionDisposable(action: f)
+            }
+            
+            func dispose() {
+                self.disposable.dispose()
+            }
+        }
+        
+        return MarkedActionDisposable { [weak self] in
             disposable.dispose()
             if let strongSelf = self {
                 strongSelf.queue.justDispatch {
@@ -4268,7 +4281,7 @@ public class Postbox {
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
-            return disposable
+            return disposable.strict()
         }
     }
 
@@ -4306,7 +4319,7 @@ public class Postbox {
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
-            return disposable
+            return disposable.strict()
         }
     }
 
@@ -4346,7 +4359,7 @@ public class Postbox {
                 ).start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
-            return disposable
+            return disposable.strict()
         }
     }
 
