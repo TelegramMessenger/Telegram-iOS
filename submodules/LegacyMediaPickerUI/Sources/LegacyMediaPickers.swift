@@ -749,9 +749,13 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                 }
                             }
                             
+                            let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+                            
                             var preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetCompressedMedium
                             if let selectedPreset = adjustments?.preset {
                                 preset = selectedPreset
+                            } else if preset == TGMediaVideoConversionPresetCompressedDefault && defaultPreset != TGMediaVideoConversionPresetCompressedDefault {
+                                preset = defaultPreset
                             }
                             if asAnimation {
                                 preset = TGMediaVideoConversionPresetAnimation

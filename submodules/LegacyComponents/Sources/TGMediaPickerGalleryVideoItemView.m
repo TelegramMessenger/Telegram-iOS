@@ -138,6 +138,8 @@
         _playerItemDisposable = [[SMetaDisposable alloc] init];
         _facesDisposable = [[SMetaDisposable alloc] init];
         
+        _thumbnailsDisposable = [[SMetaDisposable alloc] init];
+        
         _videoDurationVar = [[SVariable alloc] init];
         _videoDurationDisposable = [[SMetaDisposable alloc] init];
         
