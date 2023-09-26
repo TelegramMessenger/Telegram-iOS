@@ -1,5 +1,5 @@
 /*
- * Copyright (C)2011-2018 D. R. Commander.  All Rights Reserved.
+ * Copyright (C)2011-2018, 2023 D. R. Commander.  All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -48,10 +48,10 @@ final class TJUnitTest {
   static void usage() {
     System.out.println("\nUSAGE: java " + CLASS_NAME + " [options]\n");
     System.out.println("Options:");
-    System.out.println("-yuv = test YUV encoding/decoding support");
-    System.out.println("-noyuvpad = do not pad each line of each Y, U, and V plane to the nearest");
-    System.out.println("            4-byte boundary");
-    System.out.println("-bi = test BufferedImage support\n");
+    System.out.println("-yuv = test YUV encoding/compression/decompression/decoding");
+    System.out.println("-noyuvpad = do not pad each row in each Y, U, and V plane to the nearest");
+    System.out.println("            multiple of 4 bytes");
+    System.out.println("-bi = test BufferedImage I/O\n");
     System.exit(1);
   }
 
@@ -92,7 +92,7 @@ final class TJUnitTest {
   };
 
   private static boolean doYUV = false;
-  private static int pad = 4;
+  private static int yuvAlign = 4;
   private static boolean bi = false;
 
   private static int exitStatus = 0;
@@ -532,7 +532,7 @@ final class TJUnitTest {
     int hsf = TJ.getMCUWidth(subsamp) / 8, vsf = TJ.getMCUHeight(subsamp) / 8;
     int pw = pad(w, hsf), ph = pad(h, vsf);
     int cw = pw / hsf, ch = ph / vsf;
-    int ypitch = pad(pw, pad), uvpitch = pad(cw, pad);
+    int ypitch = pad(pw, yuvAlign), uvpitch = pad(cw, yuvAlign);
     int retval = 1;
     int correctsize = ypitch * ph +
                       (subsamp == TJ.SAMP_GRAY ? 0 : uvpitch * ch * 2);
@@ -668,7 +668,7 @@ final class TJUnitTest {
     if (doYUV) {
       System.out.format("%s %s -> YUV %s ... ", pfStrLong, buStrLong,
                         SUBNAME_LONG[subsamp]);
-      YUVImage yuvImage = tjc.encodeYUV(pad, flags);
+      YUVImage yuvImage = tjc.encodeYUV(yuvAlign, flags);
       if (checkBufYUV(yuvImage.getBuf(), yuvImage.getSize(), w, h, subsamp,
                       new TJScalingFactor(1, 1)) == 1)
         System.out.print("Passed.\n");
@@ -733,8 +733,8 @@ final class TJUnitTest {
       if (!sf.isOne())
         System.out.format("%d/%d ... ", sf.getNum(), sf.getDenom());
       else System.out.print("... ");
-      YUVImage yuvImage = tjd.decompressToYUV(scaledWidth, pad, scaledHeight,
-                                              flags);
+      YUVImage yuvImage = tjd.decompressToYUV(scaledWidth, yuvAlign,
+                                              scaledHeight, flags);
       if (checkBufYUV(yuvImage.getBuf(), yuvImage.getSize(), scaledWidth,
                       scaledHeight, subsamp, sf) == 1)
         System.out.print("Passed.\n");
@@ -837,6 +837,55 @@ final class TJUnitTest {
     if (tjd != null) tjd.close();
   }
 
+  static void overflowTest() throws Exception {
+    /* Ensure that the various buffer size methods don't overflow */
+    int size = 0;
+    boolean exception = false;
+
+    try {
+      exception = false;
+      size = TJ.bufSize(18919, 18919, TJ.SAMP_444);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.bufSize() overflow");
+    try {
+      exception = false;
+      size = TJ.bufSizeYUV(26755, 1, 26755, TJ.SAMP_444);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.bufSizeYUV() overflow");
+    try {
+      exception = false;
+      size = TJ.bufSizeYUV(26754, 3, 26754, TJ.SAMP_444);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.bufSizeYUV() overflow");
+    try {
+      exception = false;
+      size = TJ.bufSizeYUV(26754, -1, 26754, TJ.SAMP_444);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.bufSizeYUV() overflow");
+    try {
+      exception = false;
+      size = TJ.planeSizeYUV(0, 46341, 0, 46341, TJ.SAMP_444);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.planeSizeYUV() overflow");
+    try {
+      exception = false;
+      size = TJ.planeWidth(0, Integer.MAX_VALUE, TJ.SAMP_420);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.planeWidth() overflow");
+    try {
+      exception = false;
+      size = TJ.planeHeight(0, Integer.MAX_VALUE, TJ.SAMP_420);
+    } catch (Exception e) { exception = true; }
+    if (!exception || size != 0)
+      throw new Exception("TJ.planeHeight() overflow");
+  }
+
   static void bufSizeTest() throws Exception {
     int w, h, i, subsamp;
     byte[] srcBuf, dstBuf = null;
@@ -855,7 +904,7 @@ final class TJUnitTest {
               System.out.format("%04d x %04d\b\b\b\b\b\b\b\b\b\b\b", w, h);
             srcBuf = new byte[w * h * 4];
             if (doYUV)
-              dstImage = new YUVImage(w, pad, h, subsamp);
+              dstImage = new YUVImage(w, yuvAlign, h, subsamp);
             else
               dstBuf = new byte[TJ.bufSize(w, h, subsamp)];
             for (i = 0; i < w * h * 4; i++) {
@@ -871,7 +920,7 @@ final class TJUnitTest {
 
             srcBuf = new byte[h * w * 4];
             if (doYUV)
-              dstImage = new YUVImage(h, pad, w, subsamp);
+              dstImage = new YUVImage(h, yuvAlign, w, subsamp);
             else
               dstBuf = new byte[TJ.bufSize(h, w, subsamp)];
             for (i = 0; i < h * w * 4; i++) {
@@ -903,7 +952,7 @@ final class TJUnitTest {
         if (argv[i].equalsIgnoreCase("-yuv"))
           doYUV = true;
         else if (argv[i].equalsIgnoreCase("-noyuvpad"))
-          pad = 1;
+          yuvAlign = 1;
         else if (argv[i].equalsIgnoreCase("-bi")) {
           bi = true;
           testName = "javabitest";
@@ -912,6 +961,7 @@ final class TJUnitTest {
       }
       if (doYUV)
         FORMATS_4BYTE[4] = -1;
+      overflowTest();
       doTest(35, 39, bi ? FORMATS_3BYTEBI : FORMATS_3BYTE, TJ.SAMP_444,
              testName);
       doTest(39, 41, bi ? FORMATS_4BYTEBI : FORMATS_4BYTE, TJ.SAMP_444,

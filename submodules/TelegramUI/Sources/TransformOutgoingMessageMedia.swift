@@ -147,7 +147,11 @@ public func transformOutgoingMessageMedia(postbox: Postbox, network: Network, me
                     if data.complete {
                         if let smallest = smallestImageRepresentation(image.representations), smallest.dimensions.width > 100 || smallest.dimensions.height > 100 {
                             let smallestSize = smallest.dimensions.cgSize.fitted(CGSize(width: 320.0, height: 320.0))
-                            if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7) {
+                            let tempFile = TempBox.shared.tempFile(fileName: "file")
+                            defer {
+                                TempBox.shared.dispose(tempFile)
+                            }
+                            if let fullImage = UIImage(contentsOfFile: data.path), let smallestImage = generateScaledImage(image: fullImage, size: smallestSize, scale: 1.0), let smallestData = compressImageToJPEG(smallestImage, quality: 0.7, tempFilePath: tempFile.path) {
                                 var representations = image.representations
                                 
                                 let thumbnailResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))

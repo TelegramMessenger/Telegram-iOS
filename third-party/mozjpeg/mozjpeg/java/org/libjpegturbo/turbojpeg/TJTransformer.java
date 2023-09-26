@@ -1,5 +1,5 @@
 /*
- * Copyright (C)2011, 2013-2015 D. R. Commander.  All Rights Reserved.
+ * Copyright (C)2011, 2013-2015, 2023 D. R. Commander.  All Rights Reserved.
  * Copyright (C)2015 Viktor Szathmáry.  All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +43,12 @@ public class TJTransformer extends TJDecompressor {
 
   /**
    * Create a TurboJPEG lossless transformer instance and associate the JPEG
-   * image stored in <code>jpegImage</code> with the newly created instance.
+   * source image stored in <code>jpegImage</code> with the newly created
+   * instance.
    *
-   * @param jpegImage JPEG image buffer (size of the JPEG image is assumed to
-   * be the length of the array.)  This buffer is not modified.
+   * @param jpegImage buffer containing the JPEG source image to transform.
+   * (The size of the JPEG image is assumed to be the length of the array.)
+   * This buffer is not modified.
    */
   public TJTransformer(byte[] jpegImage) throws TJException {
     init();
@@ -55,12 +57,13 @@ public class TJTransformer extends TJDecompressor {
 
   /**
    * Create a TurboJPEG lossless transformer instance and associate the JPEG
-   * image of length <code>imageSize</code> bytes stored in
+   * source image of length <code>imageSize</code> bytes stored in
    * <code>jpegImage</code> with the newly created instance.
    *
-   * @param jpegImage JPEG image buffer.  This buffer is not modified.
+   * @param jpegImage buffer containing the JPEG source image to transform.
+   * This buffer is not modified.
    *
-   * @param imageSize size of the JPEG image (in bytes)
+   * @param imageSize size of the JPEG source image (in bytes)
    */
   public TJTransformer(byte[] jpegImage, int imageSize) throws TJException {
     init();
@@ -68,28 +71,29 @@ public class TJTransformer extends TJDecompressor {
   }
 
   /**
-   * Losslessly transform the JPEG image associated with this transformer
-   * instance into one or more JPEG images stored in the given destination
-   * buffers.  Lossless transforms work by moving the raw coefficients from one
-   * JPEG image structure to another without altering the values of the
-   * coefficients.  While this is typically faster than decompressing the
-   * image, transforming it, and re-compressing it, lossless transforms are not
-   * free.  Each lossless transform requires reading and performing Huffman
-   * decoding on all of the coefficients in the source image, regardless of the
-   * size of the destination image.  Thus, this method provides a means of
-   * generating multiple transformed images from the same source or of applying
-   * multiple transformations simultaneously, in order to eliminate the need to
-   * read the source coefficients multiple times.
+   * Losslessly transform the JPEG source image associated with this
+   * transformer instance into one or more JPEG images stored in the given
+   * destination buffers.  Lossless transforms work by moving the raw
+   * coefficients from one JPEG image structure to another without altering the
+   * values of the coefficients.  While this is typically faster than
+   * decompressing the image, transforming it, and re-compressing it, lossless
+   * transforms are not free.  Each lossless transform requires reading and
+   * performing Huffman decoding on all of the coefficients in the source
+   * image, regardless of the size of the destination image.  Thus, this method
+   * provides a means of generating multiple transformed images from the same
+   * source or of applying multiple transformations simultaneously, in order to
+   * eliminate the need to read the source coefficients multiple times.
    *
-   * @param dstBufs an array of image buffers.  <code>dstbufs[i]</code> will
-   * receive a JPEG image that has been transformed using the parameters in
-   * <code>transforms[i]</code>.  Use {@link TJ#bufSize} to determine the
-   * maximum size for each buffer based on the transformed or cropped width and
-   * height and the level of subsampling used in the source image.
+   * @param dstBufs an array of JPEG destination buffers.
+   * <code>dstbufs[i]</code> will receive a JPEG image that has been
+   * transformed using the parameters in <code>transforms[i]</code>.  Use
+   * {@link TJ#bufSize} to determine the maximum size for each buffer based on
+   * the transformed or cropped width and height and the level of subsampling
+   * used in the source image.
    *
    * @param transforms an array of {@link TJTransform} instances, each of
    * which specifies the transform parameters and/or cropping region for the
-   * corresponding transformed output image
+   * corresponding transformed JPEG image
    *
    * @param flags the bitwise OR of one or more of
    * {@link TJ#FLAG_BOTTOMUP TJ.FLAG_*}
@@ -103,13 +107,13 @@ public class TJTransformer extends TJDecompressor {
   }
 
   /**
-   * Losslessly transform the JPEG image associated with this transformer
-   * instance and return an array of {@link TJDecompressor} instances, each of
-   * which has a transformed JPEG image associated with it.
+   * Losslessly transform the JPEG source image associated with this
+   * transformer instance and return an array of {@link TJDecompressor}
+   * instances, each of which has a transformed JPEG image associated with it.
    *
    * @param transforms an array of {@link TJTransform} instances, each of
    * which specifies the transform parameters and/or cropping region for the
-   * corresponding transformed output image
+   * corresponding transformed JPEG image
    *
    * @param flags the bitwise OR of one or more of
    * {@link TJ#FLAG_BOTTOMUP TJ.FLAG_*}
@@ -139,10 +143,10 @@ public class TJTransformer extends TJDecompressor {
 
   /**
    * Returns an array containing the sizes of the transformed JPEG images
-   * generated by the most recent transform operation.
+   * (in bytes) generated by the most recent transform operation.
    *
    * @return an array containing the sizes of the transformed JPEG images
-   * generated by the most recent transform operation.
+   * (in bytes) generated by the most recent transform operation.
    */
   public int[] getTransformedSizes() {
     if (transformedSizes == null)

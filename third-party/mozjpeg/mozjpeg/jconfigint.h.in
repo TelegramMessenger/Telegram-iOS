@@ -7,6 +7,9 @@
 /* How to obtain function inlining. */
 #define INLINE  @INLINE@
 
+/* How to obtain thread-local storage */
+#define THREAD_LOCAL  @THREAD_LOCAL@
+
 /* Define to the full name of this package. */
 #define PACKAGE_NAME  "@CMAKE_PROJECT_NAME@"
 
@@ -28,4 +31,14 @@
 #elif (SIZEOF_SIZE_T == 4)
 #define HAVE_BITSCANFORWARD
 #endif
+#endif
+
+#if defined(__has_attribute)
+#if __has_attribute(fallthrough)
+#define FALLTHROUGH  __attribute__((fallthrough));
+#else
+#define FALLTHROUGH
+#endif
+#else
+#define FALLTHROUGH
 #endif

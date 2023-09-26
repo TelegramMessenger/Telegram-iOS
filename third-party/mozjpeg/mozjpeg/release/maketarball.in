@@ -32,7 +32,7 @@ rm -f $PKGNAME-$VERSION-$OS-$ARCH.tar.bz2
 TMPDIR=`mktemp -d /tmp/$PKGNAME-build.XXXXXX`
 mkdir -p $TMPDIR/install
 
-make install DESTDIR=$TMPDIR/install
+DESTDIR=$TMPDIR/install @CMAKE_MAKE_PROGRAM@ install
 echo tartest >$TMPDIR/tartest
 GNUTAR=0
 BSDTAR=0

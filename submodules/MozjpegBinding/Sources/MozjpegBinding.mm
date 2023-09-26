@@ -412,7 +412,12 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     return result;
 }
 #else
-NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
+NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage, NSString * _Nonnull tempFilePath) {
+    FILE *outfile = fopen([tempFilePath UTF8String], "w");
+    if (!outfile) {
+        return nil;
+    }
+    
     int width = (int)(sourceImage.size.width * sourceImage.scale);
     int height = (int)(sourceImage.size.height * sourceImage.scale);
     
@@ -458,9 +463,7 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     cinfo.err = jpeg_std_error(&jerr);
     jpeg_create_compress(&cinfo);
     
-    uint8_t *outBuffer = NULL;
-    unsigned long outSize = 0;
-    jpeg_mem_dest(&cinfo, &outBuffer, &outSize);
+    jpeg_stdio_dest(&cinfo, outfile);
     
     cinfo.image_width = (uint32_t)width;
     cinfo.image_height = (uint32_t)height;
@@ -482,12 +485,15 @@ NSData * _Nullable compressJPEGData(UIImage * _Nonnull sourceImage) {
     }
     
     jpeg_finish_compress(&cinfo);
-    
-    NSData *result = [[NSData alloc] initWithBytes:outBuffer length:outSize];
-    
     jpeg_destroy_compress(&cinfo);
     
+    fclose(outfile);
+    
+    NSData *result = [[NSData alloc] initWithContentsOfFile:tempFilePath];
+    
     free(buffer);
+    
+    [[NSFileManager defaultManager] removeItemAtPath:tempFilePath error:nil];
     
     return result;
 }

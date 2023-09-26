@@ -1,5 +1,6 @@
 /*
- * Copyright (C)2011-2013, 2017-2018 D. R. Commander.  All Rights Reserved.
+ * Copyright (C)2011-2013, 2017-2018, 2020-2021, 2023 D. R. Commander.
+ *                                                    All Rights Reserved.
  * Copyright (C)2015 Viktor Szathmáry.  All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -84,7 +85,7 @@ public final class TJ {
    * subsampling.
    *
    * @param subsamp the level of chrominance subsampling (one of
-   * <code>SAMP_*</code>)
+   * {@link #SAMP_444 SAMP_*})
    *
    * @return the MCU block width for the given level of chrominance
    * subsampling.
@@ -104,7 +105,7 @@ public final class TJ {
    * subsampling.
    *
    * @param subsamp the level of chrominance subsampling (one of
-   * <code>SAMP_*</code>)
+   * {@link #SAMP_444 SAMP_*})
    *
    * @return the MCU block height for the given level of chrominance
    * subsampling.
@@ -204,8 +205,8 @@ public final class TJ {
    * vice versa, but the mapping is typically not 1:1 or reversible, nor can it
    * be defined with a simple formula.  Thus, such a conversion is out of scope
    * for a codec library.  However, the TurboJPEG API allows for compressing
-   * CMYK pixels into a YCCK JPEG image (see {@link #CS_YCCK}) and
-   * decompressing YCCK JPEG images into CMYK pixels.
+   * packed-pixel CMYK images into YCCK JPEG images (see {@link #CS_YCCK}) and
+   * decompressing YCCK JPEG images into packed-pixel CMYK images.
    */
   public static final int PF_CMYK = 11;
 
@@ -213,7 +214,7 @@ public final class TJ {
   /**
    * Returns the pixel size (in bytes) for the given pixel format.
    *
-   * @param pixelFormat the pixel format (one of <code>PF_*</code>)
+   * @param pixelFormat the pixel format (one of {@link #PF_RGB PF_*})
    *
    * @return the pixel size (in bytes) for the given pixel format.
    */
@@ -234,7 +235,7 @@ public final class TJ {
    * then the red component will be
    * <code>pixel[TJ.getRedOffset(TJ.PF_BGRX)]</code>.
    *
-   * @param pixelFormat the pixel format (one of <code>PF_*</code>)
+   * @param pixelFormat the pixel format (one of {@link #PF_RGB PF_*})
    *
    * @return the red offset for the given pixel format, or -1 if the pixel
    * format does not have a red component.
@@ -256,7 +257,7 @@ public final class TJ {
    * then the green component will be
    * <code>pixel[TJ.getGreenOffset(TJ.PF_BGRX)]</code>.
    *
-   * @param pixelFormat the pixel format (one of <code>PF_*</code>)
+   * @param pixelFormat the pixel format (one of {@link #PF_RGB PF_*})
    *
    * @return the green offset for the given pixel format, or -1 if the pixel
    * format does not have a green component.
@@ -278,7 +279,7 @@ public final class TJ {
    * then the blue component will be
    * <code>pixel[TJ.getBlueOffset(TJ.PF_BGRX)]</code>.
    *
-   * @param pixelFormat the pixel format (one of <code>PF_*</code>)
+   * @param pixelFormat the pixel format (one of {@link #PF_RGB PF_*})
    *
    * @return the blue offset for the given pixel format, or -1 if the pixel
    * format does not have a blue component.
@@ -300,7 +301,7 @@ public final class TJ {
    * then the alpha component will be
    * <code>pixel[TJ.getAlphaOffset(TJ.PF_BGRA)]</code>.
    *
-   * @param pixelFormat the pixel format (one of <code>PF_*</code>)
+   * @param pixelFormat the pixel format (one of {@link #PF_RGB PF_*})
    *
    * @return the alpha offset for the given pixel format, or -1 if the pixel
    * format does not have a alpha component.
@@ -323,8 +324,9 @@ public final class TJ {
    * RGB colorspace.  When compressing the JPEG image, the R, G, and B
    * components in the source image are reordered into image planes, but no
    * colorspace conversion or subsampling is performed.  RGB JPEG images can be
-   * decompressed to any of the extended RGB pixel formats or grayscale, but
-   * they cannot be decompressed to YUV images.
+   * decompressed to packed-pixel images with any of the extended RGB or
+   * grayscale pixel formats, but they cannot be decompressed to planar YUV
+   * images.
    */
   public static final int CS_RGB = 0;
   /**
@@ -332,31 +334,34 @@ public final class TJ {
    * mathematical transformation of RGB designed solely for storage and
    * transmission.  YCbCr images must be converted to RGB before they can
    * actually be displayed.  In the YCbCr colorspace, the Y (luminance)
-   * component represents the black & white portion of the original image, and
-   * the Cb and Cr (chrominance) components represent the color portion of the
-   * original image.  Originally, the analog equivalent of this transformation
-   * allowed the same signal to drive both black & white and color televisions,
-   * but JPEG images use YCbCr primarily because it allows the color data to be
-   * optionally subsampled for the purposes of reducing bandwidth or disk
-   * space.  YCbCr is the most common JPEG colorspace, and YCbCr JPEG images
-   * can be compressed from and decompressed to any of the extended RGB pixel
-   * formats or grayscale, or they can be decompressed to YUV planar images.
+   * component represents the black &amp; white portion of the original image,
+   * and the Cb and Cr (chrominance) components represent the color portion of
+   * the original image.  Originally, the analog equivalent of this
+   * transformation allowed the same signal to drive both black &amp; white and
+   * color televisions, but JPEG images use YCbCr primarily because it allows
+   * the color data to be optionally subsampled for the purposes of reducing
+   * network or disk usage.  YCbCr is the most common JPEG colorspace, and
+   * YCbCr JPEG images can be compressed from and decompressed to packed-pixel
+   * images with any of the extended RGB or grayscale pixel formats.  YCbCr
+   * JPEG images can also be compressed from and decompressed to planar YUV
+   * images.
    */
   @SuppressWarnings("checkstyle:ConstantName")
   public static final int CS_YCbCr = 1;
   /**
    * Grayscale colorspace.  The JPEG image retains only the luminance data (Y
    * component), and any color data from the source image is discarded.
-   * Grayscale JPEG images can be compressed from and decompressed to any of
-   * the extended RGB pixel formats or grayscale, or they can be decompressed
-   * to YUV planar images.
+   * Grayscale JPEG images can be compressed from and decompressed to
+   * packed-pixel images with any of the extended RGB or grayscale pixel
+   * formats, or they can be compressed from and decompressed to planar YUV
+   * images.
    */
   public static final int CS_GRAY = 2;
   /**
    * CMYK colorspace.  When compressing the JPEG image, the C, M, Y, and K
    * components in the source image are reordered into image planes, but no
    * colorspace conversion or subsampling is performed.  CMYK JPEG images can
-   * only be decompressed to CMYK pixels.
+   * only be decompressed to packed-pixel images with the CMYK pixel format.
    */
   public static final int CS_CMYK = 3;
   /**
@@ -366,14 +371,14 @@ public final class TJ {
    * reversibly transformed into YCCK, and as with YCbCr, the chrominance
    * components in the YCCK pixels can be subsampled without incurring major
    * perceptual loss.  YCCK JPEG images can only be compressed from and
-   * decompressed to CMYK pixels.
+   * decompressed to packed-pixel images with the CMYK pixel format.
    */
   public static final int CS_YCCK = 4;
 
 
   /**
-   * The uncompressed source/destination image is stored in bottom-up (Windows,
-   * OpenGL) order, not top-down (X11) order.
+   * Rows in the packed-pixel source/destination image are stored in bottom-up
+   * (Windows, OpenGL) order rather than in top-down (X11) order.
    */
   public static final int FLAG_BOTTOMUP      = 2;
 
@@ -392,41 +397,39 @@ public final class TJ {
 
   /**
    * When decompressing an image that was compressed using chrominance
-   * subsampling, use the fastest chrominance upsampling algorithm available in
-   * the underlying codec.  The default is to use smooth upsampling, which
-   * creates a smooth transition between neighboring chrominance components in
-   * order to reduce upsampling artifacts in the decompressed image.
+   * subsampling, use the fastest chrominance upsampling algorithm available.
+   * The default is to use smooth upsampling, which creates a smooth transition
+   * between neighboring chrominance components in order to reduce upsampling
+   * artifacts in the decompressed image.
    */
   public static final int FLAG_FASTUPSAMPLE  = 256;
   /**
-   * Use the fastest DCT/IDCT algorithm available in the underlying codec.  The
-   * default if this flag is not specified is implementation-specific.  For
-   * example, the implementation of TurboJPEG for libjpeg[-turbo] uses the fast
+   * Use the fastest DCT/IDCT algorithm available.  The default if this flag is
+   * not specified is implementation-specific.  For example, the implementation
+   * of the TurboJPEG API in libjpeg-turbo uses the fast algorithm by default
+   * when compressing, because this has been shown to have only a very slight
+   * effect on accuracy, but it uses the accurate algorithm when decompressing,
+   * because this has been shown to have a larger effect.
+   */
+  public static final int FLAG_FASTDCT       = 2048;
+  /**
+   * Use the most accurate DCT/IDCT algorithm available.  The default if this
+   * flag is not specified is implementation-specific.  For example, the
+   * implementation of the TurboJPEG API in libjpeg-turbo uses the fast
    * algorithm by default when compressing, because this has been shown to have
    * only a very slight effect on accuracy, but it uses the accurate algorithm
    * when decompressing, because this has been shown to have a larger effect.
    */
-  public static final int FLAG_FASTDCT       = 2048;
-  /**
-   * Use the most accurate DCT/IDCT algorithm available in the underlying
-   * codec.  The default if this flag is not specified is
-   * implementation-specific.  For example, the implementation of TurboJPEG for
-   * libjpeg[-turbo] uses the fast algorithm by default when compressing,
-   * because this has been shown to have only a very slight effect on accuracy,
-   * but it uses the accurate algorithm when decompressing, because this has
-   * been shown to have a larger effect.
-   */
   public static final int FLAG_ACCURATEDCT   = 4096;
   /**
    * Immediately discontinue the current compression/decompression/transform
-   * operation if the underlying codec throws a warning (non-fatal error).  The
-   * default behavior is to allow the operation to complete unless a fatal
-   * error is encountered.
+   * operation if a warning (non-fatal error) occurs.  The default behavior is
+   * to allow the operation to complete unless a fatal error is encountered.
    * <p>
    * NOTE: due to the design of the TurboJPEG Java API, only certain methods
    * (specifically, {@link TJDecompressor TJDecompressor.decompress*()} methods
-   * with a void return type) will complete and leave the output image in a
-   * fully recoverable state after a non-fatal error occurs.
+   * with a void return type) will complete and leave the destination image in
+   * a fully recoverable state after a non-fatal error occurs.
    */
   public static final int FLAG_STOPONWARNING = 8192;
   /**
@@ -436,6 +439,16 @@ public final class TJ {
    * reduce compression and decompression performance considerably.
    */
   public static final int FLAG_PROGRESSIVE   = 16384;
+  /**
+   * Limit the number of progressive JPEG scans that the decompression and
+   * transform operations will process.  If a progressive JPEG image contains
+   * an unreasonably large number of scans, then this flag will cause the
+   * decompression and transform operations to throw an error.  The primary
+   * purpose of this is to allow security-critical applications to guard
+   * against an exploit of the progressive JPEG format described in
+   * <a href="https://libjpeg-turbo.org/pmwiki/uploads/About/TwoIssueswiththeJPEGStandard.pdf" target="_blank">this report</a>.
+   */
+  public static final int FLAG_LIMITSCANS    = 32768;
 
 
   /**
@@ -443,13 +456,13 @@ public final class TJ {
    */
   public static final int NUMERR = 2;
   /**
-   * The error was non-fatal and recoverable, but the image may still be
-   * corrupt.
+   * The error was non-fatal and recoverable, but the destination image may
+   * still be corrupt.
    * <p>
    * NOTE: due to the design of the TurboJPEG Java API, only certain methods
    * (specifically, {@link TJDecompressor TJDecompressor.decompress*()} methods
-   * with a void return type) will complete and leave the output image in a
-   * fully recoverable state after a non-fatal error occurs.
+   * with a void return type) will complete and leave the destination image in
+   * a fully recoverable state after a non-fatal error occurs.
    */
   public static final int ERR_WARNING = 0;
   /**
@@ -467,7 +480,7 @@ public final class TJ {
    * @param height the height (in pixels) of the JPEG image
    *
    * @param jpegSubsamp the level of chrominance subsampling to be used when
-   * generating the JPEG image (one of {@link TJ TJ.SAMP_*})
+   * generating the JPEG image (one of {@link #SAMP_444 TJ.SAMP_*})
    *
    * @return the maximum size of the buffer (in bytes) required to hold a JPEG
    * image with the given width, height, and level of chrominance subsampling.
@@ -475,23 +488,27 @@ public final class TJ {
   public static native int bufSize(int width, int height, int jpegSubsamp);
 
   /**
-   * Returns the size of the buffer (in bytes) required to hold a YUV planar
-   * image with the given width, height, and level of chrominance subsampling.
+   * Returns the size of the buffer (in bytes) required to hold a unified
+   * planar YUV image with the given width, height, and level of chrominance
+   * subsampling.
    *
    * @param width the width (in pixels) of the YUV image
    *
-   * @param pad the width of each line in each plane of the image is padded to
-   * the nearest multiple of this number of bytes (must be a power of 2.)
+   * @param align row alignment (in bytes) of the YUV image (must be a power of
+   * 2.)  Setting this parameter to n specifies that each row in each plane of
+   * the YUV image will be padded to the nearest multiple of n bytes
+   * (1 = unpadded.)
    *
    * @param height the height (in pixels) of the YUV image
    *
    * @param subsamp the level of chrominance subsampling used in the YUV
-   * image (one of {@link TJ TJ.SAMP_*})
+   * image (one of {@link #SAMP_444 TJ.SAMP_*})
    *
-   * @return the size of the buffer (in bytes) required to hold a YUV planar
-   * image with the given width, height, and level of chrominance subsampling.
+   * @return the size of the buffer (in bytes) required to hold a unified
+   * planar YUV image with the given width, height, and level of chrominance
+   * subsampling.
    */
-  public static native int bufSizeYUV(int width, int pad, int height,
+  public static native int bufSizeYUV(int width, int align, int height,
                                       int subsamp);
 
   /**
@@ -511,16 +528,16 @@ public final class TJ {
    * @param width width (in pixels) of the YUV image.  NOTE: this is the width
    * of the whole image, not the plane width.
    *
-   * @param stride bytes per line in the image plane.
+   * @param stride bytes per row in the image plane.
    *
    * @param height height (in pixels) of the YUV image.  NOTE: this is the
    * height of the whole image, not the plane height.
    *
    * @param subsamp the level of chrominance subsampling used in the YUV
-   * image (one of {@link TJ TJ.SAMP_*})
+   * image (one of {@link #SAMP_444 TJ.SAMP_*})
    *
-   * @return the size of the buffer (in bytes) required to hold a YUV planar
-   * image with the given parameters.
+   * @return the size of the buffer (in bytes) required to hold a YUV image
+   * plane with the given parameters.
    */
   public static native int planeSizeYUV(int componentID, int width, int stride,
                                         int height, int subsamp);
@@ -535,7 +552,7 @@ public final class TJ {
    * @param width width (in pixels) of the YUV image
    *
    * @param subsamp the level of chrominance subsampling used in the YUV image
-   * (one of {@link TJ TJ.SAMP_*})
+   * (one of {@link #SAMP_444 TJ.SAMP_*})
    *
    * @return the plane width of a YUV image plane with the given parameters.
    */
@@ -551,7 +568,7 @@ public final class TJ {
    * @param height height (in pixels) of the YUV image
    *
    * @param subsamp the level of chrominance subsampling used in the YUV image
-   * (one of {@link TJ TJ.SAMP_*})
+   * (one of {@link #SAMP_444 TJ.SAMP_*})
    *
    * @return the plane height of a YUV image plane with the given parameters.
    */
@@ -559,11 +576,11 @@ public final class TJ {
                                        int subsamp);
 
   /**
-   * Returns a list of fractional scaling factors that the JPEG decompressor in
-   * this implementation of TurboJPEG supports.
+   * Returns a list of fractional scaling factors that the JPEG decompressor
+   * supports.
    *
-   * @return a list of fractional scaling factors that the JPEG decompressor in
-   * this implementation of TurboJPEG supports.
+   * @return a list of fractional scaling factors that the JPEG decompressor
+   * supports.
    */
   public static native TJScalingFactor[] getScalingFactors();
 

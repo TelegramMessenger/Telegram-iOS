@@ -25,7 +25,7 @@ GENERAL USAGE
 We provide two programs, cjpeg to compress an image file into JPEG format,
 and djpeg to decompress a JPEG file back into a conventional image format.
 
-On Unix-like systems, you say:
+On most systems, you say:
         cjpeg [switches] [imagefile] >jpegfile
 or
         djpeg [switches] [jpegfile]  >imagefile
@@ -34,27 +34,25 @@ named.  They always write to standard output (with trace/error messages to
 standard error).  These conventions are handy for piping images between
 programs.
 
-On most non-Unix systems, you say:
+If you defined TWO_FILE_COMMANDLINE when compiling the programs, you can
+instead say:
         cjpeg [switches] imagefile jpegfile
 or
         djpeg [switches] jpegfile  imagefile
 i.e., both the input and output files are named on the command line.  This
 style is a little more foolproof, and it loses no functionality if you don't
-have pipes.  (You can get this style on Unix too, if you prefer, by defining
-TWO_FILE_COMMANDLINE when you compile the programs; see install.txt.)
+have pipes.
 
 You can also say:
         cjpeg [switches] -outfile jpegfile  imagefile
 or
-        djpeg [switches] -outfile imagefile  jpegfile
+        djpeg [switches] -outfile imagefile jpegfile
 This syntax works on all systems, so it is useful for scripts.
 
 The currently supported image file formats are: PPM (PBMPLUS color format),
-PGM (PBMPLUS grayscale format), BMP, Targa, and RLE (Utah Raster Toolkit
-format).  (RLE is supported only if the URT library is available, which it
-isn't on most non-Unix systems.)  cjpeg recognizes the input image format
-automatically, with the exception of some Targa files.  You have to tell djpeg
-which format to generate.
+PGM (PBMPLUS grayscale format), BMP, GIF, and Targa.  cjpeg recognizes the
+input image format automatically, with the exception of some Targa files.  You
+have to tell djpeg which format to generate.
 
 JPEG files are in the defacto standard JFIF file format.  There are other,
 less widely used JPEG-based file formats, but we don't support them.
@@ -74,10 +72,7 @@ The basic command line switches for cjpeg are:
                           Quality is 0 (worst) to 100 (best); default is 75.
                           (See below for more info.)
 
-        -grayscale      Create monochrome JPEG file from color input.
-                        Be sure to use this switch when compressing a grayscale
-                        BMP file, because cjpeg isn't bright enough to notice
-                        whether a BMP file uses only shades of gray.  By
+        -grayscale      Create monochrome JPEG file from color input.  By
                         saying -grayscale, you'll get a smaller JPEG file that
                         takes less time to process.
 
@@ -148,8 +143,8 @@ customized) quantization tables can be set with the -qtables option and
 assigned to components with the -qslots option (see the "wizard" switches
 below.)
 
-JPEG  files  generated  with separate luminance and chrominance quality are
-fully compliant with standard JPEG decoders.
+JPEG files generated with separate luminance and chrominance quality are fully
+compliant with standard JPEG decoders.
 
 CAUTION: For this setting to be useful, be sure to pass an argument of
 -sample 1x1 to cjpeg to disable chrominance subsampling.  Otherwise, the
@@ -170,35 +165,43 @@ Switches for advanced users:
                         be unable to view an arithmetic coded JPEG file at
                         all.
 
-        -dct int        Use integer DCT method (default).
-        -dct fast       Use fast integer DCT (less accurate).
-                        In libjpeg-turbo, the fast method is generally about
-                        5-15% faster than the int method when using the
-                        x86/x86-64 SIMD extensions (results may vary with other
-                        SIMD implementations, or when using libjpeg-turbo
-                        without SIMD extensions.)  For quality levels of 90 and
-                        below, there should be little or no perceptible
-                        difference between the two algorithms.  For quality
-                        levels above 90, however, the difference between
-                        the fast and the int methods becomes more pronounced.
-                        With quality=97, for instance, the fast method incurs
-                        generally about a 1-3 dB loss (in PSNR) relative to
-                        the int method, but this can be larger for some images.
-                        Do not use the fast method with quality levels above
-                        97.  The algorithm often degenerates at quality=98 and
-                        above and can actually produce a more lossy image than
-                        if lower quality levels had been used.  Also, in
-                        libjpeg-turbo, the fast method is not fully accerated
-                        for quality levels above 97, so it will be slower than
-                        the int method.
-        -dct float      Use floating-point DCT method.
-                        The float method is mainly a legacy feature.  It does
-                        not produce significantly more accurate results than
-                        the int method, and it is much slower.  The float
-                        method may also give different results on different
-                        machines due to varying roundoff behavior, whereas the
-                        integer methods should give the same results on all
-                        machines.
+        -dct int        Use accurate integer DCT method (default).
+        -dct fast       Use less accurate integer DCT method [legacy feature].
+                        When the Independent JPEG Group's software was first
+                        released in 1991, the compression time for a
+                        1-megapixel JPEG image on a mainstream PC was measured
+                        in minutes.  Thus, the fast integer DCT algorithm
+                        provided noticeable performance benefits.  On modern
+                        CPUs running libjpeg-turbo, however, the compression
+                        time for a 1-megapixel JPEG image is measured in
+                        milliseconds, and thus the performance benefits of the
+                        fast algorithm are much less noticeable.  On modern
+                        x86/x86-64 CPUs that support AVX2 instructions, the
+                        fast and int methods have similar performance.  On
+                        other types of CPUs, the fast method is generally about
+                        5-15% faster than the int method.
+
+                        For quality levels of 90 and below, there should be
+                        little or no perceptible quality difference between the
+                        two algorithms.  For quality levels above 90, however,
+                        the difference between the fast and int methods becomes
+                        more pronounced.  With quality=97, for instance, the
+                        fast method incurs generally about a 1-3 dB loss in
+                        PSNR relative to the int method, but this can be larger
+                        for some images.  Do not use the fast method with
+                        quality levels above 97.  The algorithm often
+                        degenerates at quality=98 and above and can actually
+                        produce a more lossy image than if lower quality levels
+                        had been used.  Also, in libjpeg-turbo, the fast method
+                        is not fully accelerated for quality levels above 97,
+                        so it will be slower than the int method.
+        -dct float      Use floating-point DCT method [legacy feature].
+                        The float method does not produce significantly more
+                        accurate results than the int method, and it is much
+                        slower.  The float method may also give different
+                        results on different machines due to varying roundoff
+                        behavior, whereas the integer methods should give the
+                        same results on all machines.
 
         -restart N      Emit a JPEG restart marker every N MCU rows, or every
                         N MCU blocks if "B" is attached to the number.
@@ -215,7 +218,7 @@ Switches for advanced users:
                         space is needed, an error will occur.
 
         -verbose        Enable debug printout.  More -v's give more printout.
-        or  -debug      Also, version information is printed at startup.
+        or -debug       Also, version information is printed at startup.
 
 The -restart option inserts extra markers that allow a JPEG decoder to
 resynchronize after a transmission error.  Without restart markers, any damage
@@ -285,10 +288,17 @@ The basic command line switches for djpeg are:
                         is specified, or if the JPEG file is grayscale;
                         otherwise, 24-bit full-color format is emitted.
 
-        -gif            Select GIF output format.  Since GIF does not support
-                        more than 256 colors, -colors 256 is assumed (unless
-                        you specify a smaller number of colors).  If you
-                        specify -fast, the default number of colors is 216.
+        -gif            Select GIF output format (LZW-compressed).  Since GIF
+                        does not support more than 256 colors, -colors 256 is
+                        assumed (unless you specify a smaller number of
+                        colors).  If you specify -fast, the default number of
+                        colors is 216.
+
+        -gif0           Select GIF output format (uncompressed).  Since GIF
+                        does not support more than 256 colors, -colors 256 is
+                        assumed (unless you specify a smaller number of
+                        colors).  If you specify -fast, the default number of
+                        colors is 216.
 
         -os2            Select BMP output format (OS/2 1.x flavor).  8-bit
                         colormapped format is emitted if -colors or -grayscale
@@ -300,8 +310,6 @@ The basic command line switches for djpeg are:
                         grayscale or if -grayscale is specified; otherwise
                         PPM is emitted.
 
-        -rle            Select RLE output format.  (Requires URT library.)
-
         -targa          Select Targa output format.  Grayscale format is
                         emitted if the JPEG file is grayscale or if
                         -grayscale is specified; otherwise, colormapped format
@@ -310,36 +318,45 @@ The basic command line switches for djpeg are:
 
 Switches for advanced users:
 
-        -dct int        Use integer DCT method (default).
-        -dct fast       Use fast integer DCT (less accurate).
-                        In libjpeg-turbo, the fast method is generally about
-                        5-15% faster than the int method when using the
-                        x86/x86-64 SIMD extensions (results may vary with other
-                        SIMD implementations, or when using libjpeg-turbo
-                        without SIMD extensions.)  If the JPEG image was
-                        compressed using a quality level of 85 or below, then
-                        there should be little or no perceptible difference
-                        between the two algorithms.  When decompressing images
-                        that were compressed using quality levels above 85,
-                        however, the difference between the fast and int
-                        methods becomes more pronounced.  With images
-                        compressed using quality=97, for instance, the fast
-                        method incurs generally about a 4-6 dB loss (in PSNR)
-                        relative to the int method, but this can be larger for
-                        some images.  If you can avoid it, do not use the fast
-                        method when decompressing images that were compressed
-                        using quality levels above 97.  The algorithm often
-                        degenerates for such images and can actually produce
-                        a more lossy output image than if the JPEG image had
-                        been compressed using lower quality levels.
-        -dct float      Use floating-point DCT method.
-                        The float method is mainly a legacy feature.  It does
-                        not produce significantly more accurate results than
-                        the int method, and it is much slower.  The float
-                        method may also give different results on different
-                        machines due to varying roundoff behavior, whereas the
-                        integer methods should give the same results on all
-                        machines.
+        -dct int        Use accurate integer DCT method (default).
+        -dct fast       Use less accurate integer DCT method [legacy feature].
+                        When the Independent JPEG Group's software was first
+                        released in 1991, the decompression time for a
+                        1-megapixel JPEG image on a mainstream PC was measured
+                        in minutes.  Thus, the fast integer DCT algorithm
+                        provided noticeable performance benefits.  On modern
+                        CPUs running libjpeg-turbo, however, the decompression
+                        time for a 1-megapixel JPEG image is measured in
+                        milliseconds, and thus the performance benefits of the
+                        fast algorithm are much less noticeable.  On modern
+                        x86/x86-64 CPUs that support AVX2 instructions, the
+                        fast and int methods have similar performance.  On
+                        other types of CPUs, the fast method is generally about
+                        5-15% faster than the int method.
+
+                        If the JPEG image was compressed using a quality level
+                        of 85 or below, then there should be little or no
+                        perceptible quality difference between the two
+                        algorithms.  When decompressing images that were
+                        compressed using quality levels above 85, however, the
+                        difference between the fast and int methods becomes
+                        more pronounced.  With images compressed using
+                        quality=97, for instance, the fast method incurs
+                        generally about a 4-6 dB loss in PSNR relative to the
+                        int method, but this can be larger for some images.  If
+                        you can avoid it, do not use the fast method when
+                        decompressing images that were compressed using quality
+                        levels above 97.  The algorithm often degenerates for
+                        such images and can actually produce a more lossy
+                        output image than if the JPEG image had been compressed
+                        using lower quality levels.
+        -dct float      Use floating-point DCT method [legacy feature].
+                        The float method does not produce significantly more
+                        accurate results than the int method, and it is much
+                        slower.  The float method may also give different
+                        results on different machines due to varying roundoff
+                        behavior, whereas the integer methods should give the
+                        same results on all machines.
 
         -dither fs      Use Floyd-Steinberg dithering in color quantization.
         -dither ordered Use ordered dithering in color quantization.
@@ -399,11 +416,6 @@ quality settings to make very small JPEG files; the percentage improvement
 is often a lot more than it is on larger files.  (At present, -optimize
 mode is always selected when generating progressive JPEG files.)
 
-Support for GIF input files was removed in cjpeg v6b due to concerns over
-the Unisys LZW patent.  Although this patent expired in 2006, cjpeg still
-lacks GIF support, for these historical reasons.  (Conversion of GIF files to
-JPEG is usually a bad idea anyway.)
-
 
 HINTS FOR DJPEG
 
@@ -417,10 +429,6 @@ Several options are available that trade off image quality to gain speed.
 When producing a color-quantized image, "-onepass -dither ordered" is fast but
 much lower quality than the default behavior.  "-dither none" may give
 acceptable results in two-pass mode, but is seldom tolerable in one-pass mode.
-
-To avoid the Unisys LZW patent (now expired), djpeg produces uncompressed GIF
-files.  These are larger than they should be, but are readable by standard GIF
-decoders.
 
 
 HINTS FOR BOTH PROGRAMS
@@ -454,9 +462,10 @@ quality.  However, while the image data is losslessly transformed, metadata
 can be removed.  See the -copy option for specifics.
 
 jpegtran uses a command line syntax similar to cjpeg or djpeg.
-On Unix-like systems, you say:
+On most systems, you say:
         jpegtran [switches] [inputfile] >outputfile
-On most non-Unix systems, you say:
+If you defined TWO_FILE_COMMANDLINE when compiling the program, you can instead
+say:
         jpegtran [switches] inputfile outputfile
 where both the input and output files are JPEG files.
 
@@ -528,6 +537,43 @@ The image can be losslessly cropped by giving the switch:
         -crop WxH+X+Y   Crop to a rectangular region of width W and height H,
                         starting at point X,Y.
 
+If W or H is larger than the width/height of the input image, then the output
+image is expanded in size, and the expanded region is filled in with zeros
+(neutral gray).  Attaching an 'f' character ("flatten") to the width number
+will cause each block in the expanded region to be filled in with the DC
+coefficient of the nearest block in the input image rather than grayed out.
+Attaching an 'r' character ("reflect") to the width number will cause the
+expanded region to be filled in with repeated reflections of the input image
+rather than grayed out.
+
+A complementary lossless wipe option is provided to discard (gray out) data
+inside a given image region while losslessly preserving what is outside:
+        -wipe WxH+X+Y   Wipe (gray out) a rectangular region of width W and
+                        height H from the input image, starting at point X,Y.
+
+Attaching an 'f' character ("flatten") to the width number will cause the
+region to be filled with the average of adjacent blocks rather than grayed out.
+If the wipe region and the region outside the wipe region, when adjusted to the
+nearest iMCU boundary, form two horizontally adjacent rectangles, then
+attaching an 'r' character ("reflect") to the width number will cause the wipe
+region to be filled with repeated reflections of the outside region rather than
+grayed out.
+
+A lossless drop option is also provided, which allows another JPEG image to be
+inserted ("dropped") into the input image data at a given position, replacing
+the existing image data at that position:
+        -drop +X+Y filename     Drop (insert) another image at point X,Y
+
+Both the input image and the drop image must have the same subsampling level.
+It is best if they also have the same quantization (quality.)  Otherwise, the
+quantization of the output image will be adapted to accommodate the higher of
+the input image quality and the drop image quality.  The trim option can be
+used with the drop option to requantize the drop image to match the input
+image.  Note that a grayscale image can be dropped into a full-color image or
+vice versa, as long as the full-color image has no vertical subsampling.  If
+the input image is grayscale and the drop image is full-color, then the
+chrominance channels from the drop image will be discarded.
+
 Other not-strictly-lossless transformation switches are:
 
         -grayscale      Force grayscale output.
@@ -547,6 +593,9 @@ markers, such as comment blocks:
                         source file.
         -copy comments  Copy only comment markers.  This setting copies
                         comments from the source file but discards any other
+                        metadata.
+        -copy icc       Copy only ICC profile markers.  This setting copies the
+                        ICC profile from the source file but discards any other
                         metadata.
         -copy all       Copy all extra markers.  This setting preserves
                         miscellaneous markers found in the source file, such
@@ -596,13 +645,13 @@ file; it does not modify the input file.  DO NOT try to overwrite the input
 file by directing wrjpgcom's output back into it; on most systems this will
 just destroy your file.
 
-The command line syntax for wrjpgcom is similar to cjpeg's.  On Unix-like
-systems, it is
+The command line syntax for wrjpgcom is similar to cjpeg's.  On most systems,
+it is
         wrjpgcom [switches] [inputfilename]
 The output file is written to standard output.  The input file comes from
 the named file, or from standard input if no input file is named.
 
-On most non-Unix systems, the syntax is
+If you defined TWO_FILE_COMMANDLINE when compiling the program, the syntax is:
         wrjpgcom [switches] inputfilename outputfilename
 where both input and output file names must be given explicitly.
 

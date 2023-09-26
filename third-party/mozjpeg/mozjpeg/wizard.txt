@@ -149,7 +149,15 @@ the script represents a progressive or sequential file, by observing whether
 Ss and Se values other than 0 and 63 appear.  (The -progressive switch is
 not needed to specify this; in fact, it is ignored when -scans appears.)
 The scan script must meet the JPEG restrictions on progression sequences.
-(cjpeg checks that the spec's requirements are obeyed.)
+(cjpeg checks that the spec's requirements are obeyed.)  More specifically:
+
+    * An AC scan cannot include coefficients from more than one component.
+
+    * An AC scan for a particular component must be preceded by a DC scan
+      that includes the same component.
+
+    * Only the first AC scan that includes a particular coefficient for a
+      particular component can include more than one bit from that coefficient.
 
 Scan script files are free format, in that arbitrary whitespace can appear
 between numbers and around punctuation.  Also, comments can be included: a

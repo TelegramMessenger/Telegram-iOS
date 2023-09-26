@@ -118,6 +118,7 @@
 #   absolute paths where necessary, using the same logic.
 
 #=============================================================================
+# Copyright 2018 Matthias Räncker
 # Copyright 2016, 2019 D. R. Commander
 # Copyright 2016 Dmitry Marakasov
 # Copyright 2016 Roger Leigh
@@ -259,6 +260,8 @@ if(NOT DEFINED CMAKE_INSTALL_DEFAULT_LIBDIR)
       else()
         if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
           set(CMAKE_INSTALL_DEFAULT_LIBDIR "lib64")
+        elseif(CMAKE_C_COMPILER_ABI MATCHES "ELF X32")
+          set(CMAKE_INSTALL_DEFAULT_LIBDIR "libx32")
         endif()
       endif()
     endif()

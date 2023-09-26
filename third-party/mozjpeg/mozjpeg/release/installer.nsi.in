@@ -71,6 +71,11 @@ Section "@CMAKE_PROJECT_NAME@ SDK for @INST_PLATFORM@ (required)"
 	SetOutPath $INSTDIR\lib\pkgconfig
 	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\libjpeg.pc"
 	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\libturbojpeg.pc"
+	SetOutPath $INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@
+	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\@CMAKE_PROJECT_NAME@Config.cmake"
+	File "@CMAKE_CURRENT_BINARY_DIR@\pkgscripts\@CMAKE_PROJECT_NAME@ConfigVersion.cmake"
+	File "@CMAKE_CURRENT_BINARY_DIR@\win\@CMAKE_PROJECT_NAME@Targets.cmake"
+	File "@CMAKE_CURRENT_BINARY_DIR@\win\@CMAKE_PROJECT_NAME@Targets-release.cmake"
 !ifdef JAVA
 	SetOutPath $INSTDIR\classes
 	File "@CMAKE_CURRENT_BINARY_DIR@\java\turbojpeg.jar"
@@ -141,6 +146,10 @@ Section "Uninstall"
 !endif
 	Delete $INSTDIR\lib\pkgconfig\libjpeg.pc
 	Delete $INSTDIR\lib\pkgconfig\libturbojpeg.pc
+	Delete $INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@\@CMAKE_PROJECT_NAME@Config.cmake
+	Delete $INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@\@CMAKE_PROJECT_NAME@ConfigVersion.cmake
+	Delete $INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@\@CMAKE_PROJECT_NAME@Targets.cmake
+	Delete $INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@\@CMAKE_PROJECT_NAME@Targets-release.cmake
 !ifdef JAVA
 	Delete $INSTDIR\classes\turbojpeg.jar
 !endif
@@ -176,6 +185,8 @@ Section "Uninstall"
 
 	RMDir "$INSTDIR\include"
 	RMDir "$INSTDIR\lib\pkgconfig"
+	RMDir "$INSTDIR\lib\cmake\@CMAKE_PROJECT_NAME@"
+	RMDir "$INSTDIR\lib\cmake"
 	RMDir "$INSTDIR\lib"
 	RMDir "$INSTDIR\doc"
 !ifdef GCC

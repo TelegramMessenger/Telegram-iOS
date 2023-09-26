@@ -2407,13 +2407,23 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     self.view.hidden = true;
     
+    __weak TGCameraController *weakSelf = self;
+    __weak TGOverlayController *weakResultController = resultController;
+    
     [resultController.view.layer animatePositionFrom:resultController.view.layer.position to:CGPointMake(resultController.view.layer.position.x, resultController.view.layer.position.y + resultController.view.bounds.size.height) duration:0.3 timingFunction:kCAMediaTimingFunctionSpring removeOnCompletion:false completion:^(__unused bool finished) {
-        if (resultController.customDismissSelf) {
-            resultController.customDismissSelf();
-        } else {
-            [resultController dismiss];
+        TGCameraController *strongSelf = weakSelf;
+        TGOverlayController *strongResultController = weakResultController;
+        
+        if (strongResultController) {
+            if (strongResultController.customDismissSelf) {
+                strongResultController.customDismissSelf();
+            } else {
+                [strongResultController dismiss];
+            }
         }
-        [self dismiss];
+        if (strongSelf) {
+            [strongSelf dismiss];
+        }
     }];
 }
 

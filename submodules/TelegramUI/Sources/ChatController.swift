@@ -12335,8 +12335,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if updatedChatPresentationInterfaceState.interfaceState.selectionState != controllerInteraction.selectionState {
                 controllerInteraction.selectionState = updatedChatPresentationInterfaceState.interfaceState.selectionState
                 let isBlackout = controllerInteraction.selectionState != nil
+                let previousCompletion = completion
                 completion = { [weak self] transition in
-                    completion(transition)
+                    previousCompletion(transition)
                     (self?.navigationController as? NavigationController)?.updateMasterDetailsBlackout(isBlackout ? .master : nil, transition: transition)
                 }
                 self.updateItemNodesSelectionStates(animated: transition.isAnimated)

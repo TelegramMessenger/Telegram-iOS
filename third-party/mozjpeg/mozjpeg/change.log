@@ -6,11 +6,37 @@ reference.  Please see ChangeLog.md for information specific to libjpeg-turbo.
 CHANGE LOG for Independent JPEG Group's JPEG software
 
 
+Version 9d  12-Jan-2020
+-----------------------
+
+Restore GIF read and write support from libjpeg version 6a.
+Thank to Wolfgang Werner (W.W.) Heinz for suggestion.
+
+Add jpegtran -drop option; add options to the crop extension and wipe
+to fill the extra area with content from the source image region,
+instead of gray out.
+
+
+Version 9c  14-Jan-2018
+-----------------------
+
+jpegtran: add an option to the -wipe switch to fill the region
+with the average of adjacent blocks, instead of gray out.
+Thank to Caitlyn Feddock and Maddie Ziegler for inspiration.
+
+
 Version 9b  17-Jan-2016
 -----------------------
 
 Document 'f' specifier for jpegtran -crop specification.
 Thank to Michele Martone for suggestion.
+
+
+Version 9a  19-Jan-2014
+-----------------------
+
+Add jpegtran -wipe option and extension for -crop.
+Thank to Andrew Senior, David Clunie, and Josef Schmid for suggestion.
 
 
 Version 9  13-Jan-2013
@@ -137,11 +163,6 @@ if decoding a progressive JPEG.  The appearance no longer depends on the
 Huffman tables being used.
 
 Huffman tables are checked for validity much more carefully than before.
-
-To avoid the Unisys LZW patent, djpeg's GIF output capability has been
-changed to produce "uncompressed GIFs", and cjpeg's GIF input capability
-has been removed altogether.  We're not happy about it either, but there
-seems to be no good alternative.
 
 The configure script now supports building libjpeg as a shared library
 on many flavors of Unix (all the ones that GNU libtool knows how to

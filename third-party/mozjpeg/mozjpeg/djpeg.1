@@ -1,4 +1,4 @@
-.TH DJPEG 1 "13 November 2017"
+.TH DJPEG 1 "4 November 2020"
 .SH NAME
 djpeg \- decompress a JPEG file to an image file
 .SH SYNOPSIS
@@ -15,8 +15,7 @@ djpeg \- decompress a JPEG file to an image file
 .B djpeg
 decompresses the named JPEG file, or the standard input if no file is named,
 and produces an image file on the standard output.  PBMPLUS (PPM/PGM), BMP,
-GIF, Targa, or RLE (Utah Raster Toolkit) output format can be selected.
-(RLE is supported only if the URT library is available.)
+GIF, or Targa output format can be selected.
 .SH OPTIONS
 All switch names may be abbreviated; for example,
 .B \-grayscale
@@ -81,9 +80,20 @@ is specified, or if the JPEG file is grayscale; otherwise, 24-bit full-color
 format is emitted.
 .TP
 .B \-gif
-Select GIF output format.  Since GIF does not support more than 256 colors,
+Select GIF output format (LZW-compressed).  Since GIF does not support more
+than 256 colors,
 .B \-colors 256
-is assumed (unless you specify a smaller number of colors).
+is assumed (unless you specify a smaller number of colors).  If you specify
+.BR \-fast,
+the default number of colors is 216.
+.TP
+.B \-gif0
+Select GIF output format (uncompressed).  Since GIF does not support more than
+256 colors,
+.B \-colors 256
+is assumed (unless you specify a smaller number of colors).  If you specify
+.BR \-fast,
+the default number of colors is 216.
 .TP
 .B \-os2
 Select BMP output format (OS/2 1.x flavor).  8-bit colormapped format is
@@ -100,9 +110,6 @@ PGM is emitted if the JPEG file is grayscale or if
 .B \-grayscale
 is specified; otherwise PPM is emitted.
 .TP
-.B \-rle
-Select RLE output format.  (Requires URT library.)
-.TP
 .B \-targa
 Select Targa output format.  Grayscale format is emitted if the JPEG file is
 grayscale or if
@@ -114,32 +121,40 @@ is specified; otherwise, 24-bit full-color format is emitted.
 Switches for advanced users:
 .TP
 .B \-dct int
-Use integer DCT method (default).
+Use accurate integer DCT method (default).
 .TP
 .B \-dct fast
-Use fast integer DCT (less accurate).
-In libjpeg-turbo, the fast method is generally about 5-15% faster than the int
-method when using the x86/x86-64 SIMD extensions (results may vary with other
-SIMD implementations, or when using libjpeg-turbo without SIMD extensions.)  If
-the JPEG image was compressed using a quality level of 85 or below, then there
-should be little or no perceptible difference between the two algorithms.  When
-decompressing images that were compressed using quality levels above 85,
-however, the difference between the fast and int methods becomes more
-pronounced.  With images compressed using quality=97, for instance, the fast
-method incurs generally about a 4-6 dB loss (in PSNR) relative to the int
-method, but this can be larger for some images.  If you can avoid it, do not
-use the fast method when decompressing images that were compressed using
-quality levels above 97.  The algorithm often degenerates for such images and
-can actually produce a more lossy output image than if the JPEG image had been
-compressed using lower quality levels.
+Use less accurate integer DCT method [legacy feature].
+When the Independent JPEG Group's software was first released in 1991, the
+decompression time for a 1-megapixel JPEG image on a mainstream PC was measured
+in minutes.  Thus, the \fBfast\fR integer DCT algorithm provided noticeable
+performance benefits.  On modern CPUs running libjpeg-turbo, however, the
+decompression time for a 1-megapixel JPEG image is measured in milliseconds,
+and thus the performance benefits of the \fBfast\fR algorithm are much less
+noticeable.  On modern x86/x86-64 CPUs that support AVX2 instructions, the
+\fBfast\fR and \fBint\fR methods have similar performance.  On other types of
+CPUs, the \fBfast\fR method is generally about 5-15% faster than the \fBint\fR
+method.
+
+If the JPEG image was compressed using a quality level of 85 or below, then
+there should be little or no perceptible quality difference between the two
+algorithms.  When decompressing images that were compressed using quality
+levels above 85, however, the difference between the \fBfast\fR and \fBint\fR
+methods becomes more pronounced.  With images compressed using quality=97, for
+instance, the \fBfast\fR method incurs generally about a 4-6 dB loss in PSNR
+relative to the \fBint\fR method, but this can be larger for some images.  If
+you can avoid it, do not use the \fBfast\fR method when decompressing images
+that were compressed using quality levels above 97.  The algorithm often
+degenerates for such images and can actually produce a more lossy output image
+than if the JPEG image had been compressed using lower quality levels.
 .TP
 .B \-dct float
-Use floating-point DCT method.
-The float method is mainly a legacy feature.  It does not produce significantly
-more accurate results than the int method, and it is much slower.  The float
-method may also give different results on different machines due to varying
-roundoff behavior, whereas the integer methods should give the same results on
-all machines.
+Use floating-point DCT method [legacy feature].
+The \fBfloat\fR method does not produce significantly more accurate results
+than the \fBint\fR method, and it is much slower.  The \fBfloat\fR method may
+also give different results on different machines due to varying roundoff
+behavior, whereas the integer methods should give the same results on all
+machines.
 .TP
 .B \-dither fs
 Use Floyd-Steinberg dithering in color quantization.
@@ -190,12 +205,28 @@ number.  For example,
 .B \-max 4m
 selects 4000000 bytes.  If more space is needed, an error will occur.
 .TP
+.BI \-maxscans " N"
+Abort if the JPEG image contains more than
+.I N
+scans.  This feature demonstrates a method by which applications can guard
+against denial-of-service attacks instigated by specially-crafted malformed
+JPEG images containing numerous scans with missing image data or image data
+consisting only of "EOB runs" (a feature of progressive JPEG images that allows
+potentially hundreds of thousands of adjoining zero-value pixels to be
+represented using only a few bytes.)  Attempting to decompress such malformed
+JPEG images can cause excessive CPU activity, since the decompressor must fully
+process each scan (even if the scan is corrupt) before it can proceed to the
+next scan.
+.TP
 .BI \-outfile " name"
 Send output image to the named file, not to standard output.
 .TP
 .BI \-memsrc
 Load input file into memory before decompressing.  This feature was implemented
 mainly as a way of testing the in-memory source manager (jpeg_mem_src().)
+.TP
+.BI \-report
+Report decompression progress.
 .TP
 .BI \-skip " Y0,Y1"
 Decompress all rows of the JPEG image except those between Y0 and Y1
@@ -209,6 +240,12 @@ iMCU boundary, and the width will be increased accordingly.  Note that if
 decompression scaling is being used, then X, Y, W, and H are relative to the
 scaled image dimensions.  Currently this option only works with the
 PBMPLUS (PPM/PGM), GIF, and Targa output formats.
+.TP
+.BI \-strict
+Treat all warnings as fatal.  This feature also demonstrates a method by which
+applications can guard against attacks instigated by specially-crafted
+malformed JPEG images.  Enabling this option will cause the decompressor to
+abort if the JPEG image contains incomplete or corrupt image data.
 .TP
 .B \-verbose
 Enable debug printout.  More
@@ -253,12 +290,6 @@ is fast but much lower quality than the default behavior.
 .B \-dither none
 may give acceptable results in two-pass mode, but is seldom tolerable in
 one-pass mode.
-.PP
-If you are fortunate enough to have very fast floating point hardware,
-\fB\-dct float\fR may be even faster than \fB\-dct fast\fR.  But on most
-machines \fB\-dct float\fR is slower than \fB\-dct int\fR; in this case it is
-not worth using, because its theoretical accuracy advantage is too small to be
-significant in practice.
 .SH ENVIRONMENT
 .TP
 .B JPEGMEM
@@ -287,10 +318,3 @@ Independent JPEG Group
 This file was modified by The libjpeg-turbo Project to include only information
 relevant to libjpeg-turbo, to wordsmith certain sections, and to describe
 features not present in libjpeg.
-.SH ISSUES
-Support for compressed GIF output files was removed in djpeg v6b due to
-concerns over the Unisys LZW patent.  Although this patent expired in 2006,
-djpeg still lacks compressed GIF support, for these historical reasons.
-(Conversion of JPEG files to GIF is usually a bad idea anyway, since GIF is a
-256-color format.)  The uncompressed GIF files that djpeg generates are larger
-than they should be, but they are readable by standard GIF decoders.

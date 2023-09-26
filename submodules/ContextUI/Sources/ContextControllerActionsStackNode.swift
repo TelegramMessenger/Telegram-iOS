@@ -598,6 +598,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         }
         
         private let requestUpdate: (ContainedViewLayoutTransition) -> Void
+        private let getController: () -> ContextControllerProtocol?
+        private let requestDismiss: (ContextMenuActionResult) -> Void
         private var items: [ContextMenuItem]
         private var itemNodes: [Item]
         
@@ -615,6 +617,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             items: [ContextMenuItem]
         ) {
             self.requestUpdate = requestUpdate
+            self.getController = getController
+            self.requestDismiss = requestDismiss
             self.items = items
             
             var requestUpdateAction: ((AnyHashable, ContextMenuActionItem) -> Void)?
@@ -661,41 +665,48 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             }
             
             requestUpdateAction = { [weak self] id, action in
-                guard let strongSelf = self else {
+                guard let self else {
                     return
                 }
-                loop: for i in 0 ..< strongSelf.items.count {
-                    switch strongSelf.items[i] {
-                    case let .action(currentAction):
-                        if currentAction.id == id {
-                            let previousNode = strongSelf.itemNodes[i]
-                            previousNode.node.removeFromSupernode()
-                            previousNode.separatorNode?.removeFromSupernode()
-                            
-                            let addedNode = Item(
-                                node: ContextControllerActionsListActionItemNode(
-                                    getController: getController,
-                                    requestDismiss: requestDismiss,
-                                    requestUpdateAction: { id, action in
-                                        requestUpdateAction?(id, action)
-                                    },
-                                    item: action
-                                ),
-                                separatorNode: ASDisplayNode()
-                            )
-                            strongSelf.itemNodes[i] = addedNode
-                            if let separatorNode = addedNode.separatorNode {
-                                strongSelf.insertSubnode(separatorNode, at: 0)
-                            }
-                            strongSelf.addSubnode(addedNode.node)
-                            
-                            strongSelf.requestUpdate(.immediate)
-                            
-                            break loop
+                self.requestUpdateAction(id: id, action: action)
+            }
+        }
+        
+        private func requestUpdateAction(id: AnyHashable, action: ContextMenuActionItem) {
+            loop: for i in 0 ..< self.items.count {
+                switch self.items[i] {
+                case let .action(currentAction):
+                    if currentAction.id == id {
+                        let previousNode = self.itemNodes[i]
+                        previousNode.node.removeFromSupernode()
+                        previousNode.separatorNode?.removeFromSupernode()
+                        
+                        let addedNode = Item(
+                            node: ContextControllerActionsListActionItemNode(
+                                getController: self.getController,
+                                requestDismiss: self.requestDismiss,
+                                requestUpdateAction: { [weak self] id, action in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.requestUpdateAction(id: id, action: action)
+                                },
+                                item: action
+                            ),
+                            separatorNode: ASDisplayNode()
+                        )
+                        self.itemNodes[i] = addedNode
+                        if let separatorNode = addedNode.separatorNode {
+                            self.insertSubnode(separatorNode, at: 0)
                         }
-                    default:
-                        break
+                        self.addSubnode(addedNode.node)
+                        
+                        self.requestUpdate(.immediate)
+                        
+                        break loop
                     }
+                default:
+                    break
                 }
             }
         }

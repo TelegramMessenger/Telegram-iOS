@@ -222,7 +222,11 @@ public func legacyInstantVideoController(theme: PresentationTheme, forStory: Boo
                 }
                 
                 if let previewImage = previewImage {
-                    if let data = compressImageToJPEG(previewImage, quality: 0.7) {
+                    let tempFile = TempBox.shared.tempFile(fileName: "file")
+                    defer {
+                        TempBox.shared.dispose(tempFile)
+                    }
+                    if let data = compressImageToJPEG(previewImage, quality: 0.7, tempFilePath: tempFile.path) {
                     context.account.postbox.mediaBox.storeCachedResourceRepresentation(resource, representation: CachedVideoFirstFrameRepresentation(), data: data)
                     }
                 }

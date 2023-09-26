@@ -3,7 +3,7 @@ USING THE IJG JPEG LIBRARY
 This file was part of the Independent JPEG Group's software:
 Copyright (C) 1994-2013, Thomas G. Lane, Guido Vollbeding.
 libjpeg-turbo Modifications:
-Copyright (C) 2010, 2014-2018, D. R. Commander.
+Copyright (C) 2010, 2014-2018, 2020, 2022, D. R. Commander.
 Copyright (C) 2015, Google, Inc.
 For conditions of distribution and use, see the accompanying README.ijg file.
 
@@ -750,7 +750,9 @@ multiple rows in the JPEG image.
 
 Suspending data sources are not supported by this function.  Calling
 jpeg_skip_scanlines() with a suspending data source will result in undefined
-behavior.
+behavior.  Two-pass color quantization is also not supported by this function.
+Calling jpeg_skip_scanlines() with two-pass color quantization enabled will
+result in an error.
 
 jpeg_skip_scanlines() will not allow skipping past the bottom of the image.  If
 the value of num_lines is large enough to skip past the bottom of the image,
@@ -838,18 +840,7 @@ is to prepare a library file ("libjpeg.a", or a corresponding name on non-Unix
 machines) and reference it at your link step.  If you use only half of the
 library (only compression or only decompression), only that much code will be
 included from the library, unless your linker is hopelessly brain-damaged.
-The supplied makefiles build libjpeg.a automatically (see install.txt).
-
-While you can build the JPEG library as a shared library if the whim strikes
-you, we don't really recommend it.  The trouble with shared libraries is that
-at some point you'll probably try to substitute a new version of the library
-without recompiling the calling applications.  That generally doesn't work
-because the parameter struct declarations usually change with each new
-version.  In other words, the library's API is *not* guaranteed binary
-compatible across versions; we only try to ensure source-code compatibility.
-(In hindsight, it might have been smarter to hide the parameter structs from
-applications and introduce a ton of access functions instead.  Too late now,
-however.)
+The supplied build system builds libjpeg.a automatically.
 
 It may be worth pointing out that the core JPEG library does not actually
 require the stdio library: only the default source/destination managers and
@@ -967,30 +958,38 @@ boolean arith_code
 
 J_DCT_METHOD dct_method
         Selects the algorithm used for the DCT step.  Choices are:
-                JDCT_ISLOW: slow but accurate integer algorithm
-                JDCT_IFAST: faster, less accurate integer method
-                JDCT_FLOAT: floating-point method
+                JDCT_ISLOW: accurate integer method
+                JDCT_IFAST: less accurate integer method [legacy feature]
+                JDCT_FLOAT: floating-point method [legacy feature]
                 JDCT_DEFAULT: default method (normally JDCT_ISLOW)
                 JDCT_FASTEST: fastest method (normally JDCT_IFAST)
-        In libjpeg-turbo, JDCT_IFAST is generally about 5-15% faster than
-        JDCT_ISLOW when using the x86/x86-64 SIMD extensions (results may vary
-        with other SIMD implementations, or when using libjpeg-turbo without
-        SIMD extensions.)  For quality levels of 90 and below, there should be
-        little or no perceptible difference between the two algorithms.  For
-        quality levels above 90, however, the difference between JDCT_IFAST and
+        When the Independent JPEG Group's software was first released in 1991,
+        the compression time for a 1-megapixel JPEG image on a mainstream PC
+        was measured in minutes.  Thus, JDCT_IFAST provided noticeable
+        performance benefits.  On modern CPUs running libjpeg-turbo, however,
+        the compression time for a 1-megapixel JPEG image is measured in
+        milliseconds, and thus the performance benefits of JDCT_IFAST are much
+        less noticeable.  On modern x86/x86-64 CPUs that support AVX2
+        instructions, JDCT_IFAST and JDCT_ISLOW have similar performance.  On
+        other types of CPUs, JDCT_IFAST is generally about 5-15% faster than
+        JDCT_ISLOW.
+
+        For quality levels of 90 and below, there should be little or no
+        perceptible quality difference between the two algorithms.  For quality
+        levels above 90, however, the difference between JDCT_IFAST and
         JDCT_ISLOW becomes more pronounced.  With quality=97, for instance,
-        JDCT_IFAST incurs generally about a 1-3 dB loss (in PSNR) relative to
+        JDCT_IFAST incurs generally about a 1-3 dB loss in PSNR relative to
         JDCT_ISLOW, but this can be larger for some images.  Do not use
         JDCT_IFAST with quality levels above 97.  The algorithm often
         degenerates at quality=98 and above and can actually produce a more
         lossy image than if lower quality levels had been used.  Also, in
         libjpeg-turbo, JDCT_IFAST is not fully accelerated for quality levels
-        above 97, so it will be slower than JDCT_ISLOW.  JDCT_FLOAT is mainly a
-        legacy feature.  It does not produce significantly more accurate
-        results than the ISLOW method, and it is much slower.  The FLOAT method
-        may also give different results on different machines due to varying
-        roundoff behavior, whereas the integer methods should give the same
-        results on all machines.
+        above 97, so it will be slower than JDCT_ISLOW.
+
+        JDCT_FLOAT does not produce significantly more accurate results than
+        JDCT_ISLOW, and it is much slower.  JDCT_FLOAT may also give different
+        results on different machines due to varying roundoff behavior, whereas
+        the integer methods should give the same results on all machines.
 
 J_COLOR_SPACE jpeg_color_space
 int num_components
@@ -1268,31 +1267,39 @@ Additional decompression parameters that the application may set include:
 
 J_DCT_METHOD dct_method
         Selects the algorithm used for the DCT step.  Choices are:
-                JDCT_ISLOW: slow but accurate integer algorithm
-                JDCT_IFAST: faster, less accurate integer method
-                JDCT_FLOAT: floating-point method
+                JDCT_ISLOW: accurate integer method
+                JDCT_IFAST: less accurate integer method [legacy feature]
+                JDCT_FLOAT: floating-point method [legacy feature]
                 JDCT_DEFAULT: default method (normally JDCT_ISLOW)
                 JDCT_FASTEST: fastest method (normally JDCT_IFAST)
-        In libjpeg-turbo, JDCT_IFAST is generally about 5-15% faster than
-        JDCT_ISLOW when using the x86/x86-64 SIMD extensions (results may vary
-        with other SIMD implementations, or when using libjpeg-turbo without
-        SIMD extensions.)  If the JPEG image was compressed using a quality
-        level of 85 or below, then there should be little or no perceptible
-        difference between the two algorithms.  When decompressing images that
-        were compressed using quality levels above 85, however, the difference
+        When the Independent JPEG Group's software was first released in 1991,
+        the decompression time for a 1-megapixel JPEG image on a mainstream PC
+        was measured in minutes.  Thus, JDCT_IFAST provided noticeable
+        performance benefits.  On modern CPUs running libjpeg-turbo, however,
+        the decompression time for a 1-megapixel JPEG image is measured in
+        milliseconds, and thus the performance benefits of JDCT_IFAST are much
+        less noticeable.  On modern x86/x86-64 CPUs that support AVX2
+        instructions, JDCT_IFAST and JDCT_ISLOW have similar performance.  On
+        other types of CPUs, JDCT_IFAST is generally about 5-15% faster than
+        JDCT_ISLOW.
+
+        If the JPEG image was compressed using a quality level of 85 or below,
+        then there should be little or no perceptible quality difference
+        between the two algorithms.  When decompressing images that were
+        compressed using quality levels above 85, however, the difference
         between JDCT_IFAST and JDCT_ISLOW becomes more pronounced.  With images
         compressed using quality=97, for instance, JDCT_IFAST incurs generally
-        about a 4-6 dB loss (in PSNR) relative to JDCT_ISLOW, but this can be
+        about a 4-6 dB loss in PSNR relative to JDCT_ISLOW, but this can be
         larger for some images.  If you can avoid it, do not use JDCT_IFAST
         when decompressing images that were compressed using quality levels
         above 97.  The algorithm often degenerates for such images and can
         actually produce a more lossy output image than if the JPEG image had
-        been compressed using lower quality levels.  JDCT_FLOAT is mainly a
-        legacy feature.  It does not produce significantly more accurate
-        results than the ISLOW method, and it is much slower.  The FLOAT method
-        may also give different results on different machines due to varying
-        roundoff behavior, whereas the integer methods should give the same
-        results on all machines.
+        been compressed using lower quality levels.
+
+        JDCT_FLOAT does not produce significantly more accurate results than
+        JDCT_ISLOW, and it is much slower.  JDCT_FLOAT may also give different
+        results on different machines due to varying roundoff behavior, whereas
+        the integer methods should give the same results on all machines.
 
 boolean do_fancy_upsampling
         If TRUE, do careful upsampling of chroma components.  If FALSE,
@@ -3057,9 +3064,8 @@ BITS_IN_JSAMPLE as 12 rather than 8.  Note that this causes JSAMPLE to be
 larger than a char, so it affects the surrounding application's image data.
 The sample applications cjpeg and djpeg can support 12-bit mode only for PPM
 and GIF file formats; you must disable the other file formats to compile a
-12-bit cjpeg or djpeg.  (install.txt has more information about that.)
-At present, a 12-bit library can handle *only* 12-bit images, not both
-precisions.
+12-bit cjpeg or djpeg.  At present, a 12-bit library can handle *only* 12-bit
+images, not both precisions.
 
 Note that a 12-bit library always compresses in Huffman optimization mode,
 in order to generate valid Huffman tables.  This is necessary because our

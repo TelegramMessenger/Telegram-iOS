@@ -43,23 +43,18 @@ safedirmove ()
 
 usage()
 {
-	echo "$0 [universal] [-lipo [path to lipo]]"
+	echo "$0 [-lipo [path to lipo]]"
 	exit 1
 }
-
-UNIVERSAL=0
 
 PKGNAME=@PKGNAME@
 VERSION=@VERSION@
 BUILD=@BUILD@
 SRCDIR=@CMAKE_CURRENT_SOURCE_DIR@
-BUILDDIR32=@OSX_32BIT_BUILD@
-BUILDDIRARMV7=@IOS_ARMV7_BUILD@
-BUILDDIRARMV7S=@IOS_ARMV7S_BUILD@
-BUILDDIRARMV8=@IOS_ARMV8_BUILD@
+BUILDDIRARMV8=@ARMV8_BUILD@
 WITH_JAVA=@WITH_JAVA@
-OSX_APP_CERT_NAME="@OSX_APP_CERT_NAME@"
-OSX_INST_CERT_NAME="@OSX_INST_CERT_NAME@"
+MACOS_APP_CERT_NAME="@MACOS_APP_CERT_NAME@"
+MACOS_INST_CERT_NAME="@MACOS_INST_CERT_NAME@"
 LIPO=lipo
 
 PREFIX=@CMAKE_INSTALL_PREFIX@
@@ -82,9 +77,6 @@ while [ $# -gt 0 ]; do
 			fi
 		fi
 		;;
-	universal)
-		UNIVERSAL=1
-		;;
 	esac
 	shift
 done
@@ -98,7 +90,7 @@ TMPDIR=`mktemp -d /tmp/$PKGNAME-build.XXXXXX`
 PKGROOT=$TMPDIR/pkg/Package_Root
 mkdir -p $PKGROOT
 
-make install DESTDIR=$PKGROOT
+DESTDIR=$PKGROOT @CMAKE_MAKE_PROGRAM@ install
 
 if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$DOCDIR" = "@CMAKE_INSTALL_DEFAULT_PREFIX@/doc" ]; then
 	mkdir -p $PKGROOT/Library/Documentation
@@ -106,62 +98,7 @@ if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$DOCDIR" = "@CMAKE_INSTALL
 	ln -fs /Library/Documentation/$PKGNAME $PKGROOT$DOCDIR
 fi
 
-if [ $UNIVERSAL = 1 -a "$BUILDDIR32" != "" ]; then
-	if [ ! -d $BUILDDIR32 ]; then
-		echo ERROR: 32-bit build directory $BUILDDIR32 does not exist
-		exit 1
-	fi
-	if [ ! -f $BUILDDIR32/Makefile ]; then
-		echo ERROR: 32-bit build directory $BUILDDIR32 is not configured
-		exit 1
-	fi
-	mkdir -p $TMPDIR/dist.x86
-	pushd $BUILDDIR32
-	make install DESTDIR=$TMPDIR/dist.x86
-	popd
-		$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$LIBDIR/$LIBJPEG_DSO_NAME \
-		-arch x86_64 $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME \
-		-output $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
-		$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$LIBDIR/libjpeg.a \
-		-arch x86_64 $PKGROOT/$LIBDIR/libjpeg.a \
-		-output $PKGROOT/$LIBDIR/libjpeg.a
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$LIBDIR/$TURBOJPEG_DSO_NAME \
-		-arch x86_64 $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME \
-		-output $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$LIBDIR/libturbojpeg.a \
-		-arch x86_64 $PKGROOT/$LIBDIR/libturbojpeg.a \
-		-output $PKGROOT/$LIBDIR/libturbojpeg.a
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/cjpeg \
-		-arch x86_64 $PKGROOT/$BINDIR/cjpeg \
-		-output $PKGROOT/$BINDIR/cjpeg
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/djpeg \
-		-arch x86_64 $PKGROOT/$BINDIR/djpeg \
-		-output $PKGROOT/$BINDIR/djpeg
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/jpegtran \
-		-arch x86_64 $PKGROOT/$BINDIR/jpegtran \
-		-output $PKGROOT/$BINDIR/jpegtran
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/tjbench \
-		-arch x86_64 $PKGROOT/$BINDIR/tjbench \
-		-output $PKGROOT/$BINDIR/tjbench
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/rdjpgcom \
-		-arch x86_64 $PKGROOT/$BINDIR/rdjpgcom \
-		-output $PKGROOT/$BINDIR/rdjpgcom
-	$LIPO -create \
-		-arch i386 $TMPDIR/dist.x86/$BINDIR/wrjpgcom \
-		-arch x86_64 $PKGROOT/$BINDIR/wrjpgcom \
-		-output $PKGROOT/$BINDIR/wrjpgcom
-fi
-
-install_ios()
+install_subbuild()
 {
 	BUILDDIR=$1
 	ARCHNAME=$2
@@ -172,19 +109,19 @@ install_ios()
 		echo ERROR: $ARCHNAME build directory $BUILDDIR does not exist
 		exit 1
 	fi
-	if [ ! -f $BUILDDIR/Makefile ]; then
+	if [ ! -f $BUILDDIR/Makefile -a ! -f $BUILDDIR/build.ninja ]; then
 		echo ERROR: $ARCHNAME build directory $BUILDDIR is not configured
 		exit 1
 	fi
 	mkdir -p $TMPDIR/dist.$DIRNAME
 	pushd $BUILDDIR
-	make install DESTDIR=$TMPDIR/dist.$DIRNAME
+	DESTDIR=$TMPDIR/dist.$DIRNAME @CMAKE_MAKE_PROGRAM@ install
 	popd
-		$LIPO -create \
+	$LIPO -create \
 		$PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME \
 		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/$LIBJPEG_DSO_NAME \
 		-output $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
-		$LIPO -create \
+	$LIPO -create \
 		$PKGROOT/$LIBDIR/libjpeg.a \
 		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/libjpeg.a \
 		-output $PKGROOT/$LIBDIR/libjpeg.a
@@ -222,28 +159,14 @@ install_ios()
 		-output $PKGROOT/$BINDIR/wrjpgcom
 }
 
-if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV7" != "" ]; then
-	install_ios $BUILDDIRARMV7 ARMv7 armv7 arm
-	fi
-
-if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV7S" != "" ]; then
-	install_ios $BUILDDIRARMV7S ARMv7s armv7s arm
-fi
-
-if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV8" != "" ]; then
-	install_ios $BUILDDIRARMV8 ARMv8 armv8 arm64
+if [ "$BUILDDIRARMV8" != "" ]; then
+	install_subbuild $BUILDDIRARMV8 Armv8 armv8 arm64
 	fi
 
 install_name_tool -id $LIBDIR/$LIBJPEG_DSO_NAME $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
 install_name_tool -id $LIBDIR/$TURBOJPEG_DSO_NAME $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME
 
-if [ $WITH_JAVA = 1 ]; then
-	ln -fs $TURBOJPEG_DSO_NAME $PKGROOT/$LIBDIR/libturbojpeg.jnilib
-fi
 if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$LIBDIR" = "@CMAKE_INSTALL_DEFAULT_PREFIX@/lib" ]; then
-	if [ ! -h $PKGROOT/$PREFIX/lib32 ]; then
-		ln -fs lib $PKGROOT/$PREFIX/lib32
-	fi
 	if [ ! -h $PKGROOT/$PREFIX/lib64 ]; then
 		ln -fs lib $PKGROOT/$PREFIX/lib64
 	fi
@@ -255,28 +178,28 @@ install -m 755 pkgscripts/uninstall $PKGROOT/$BINDIR/
 
 find $PKGROOT -type f | while read file; do xattr -c $file; done
 
-cp $SRCDIR/release/License.rtf $SRCDIR/release/Welcome.rtf $SRCDIR/release/ReadMe.txt $TMPDIR/pkg/
+cp $SRCDIR/release/License.rtf pkgscripts/Welcome.rtf $SRCDIR/release/ReadMe.txt $TMPDIR/pkg/
 
 mkdir $TMPDIR/dmg
 pkgbuild --root $PKGROOT --version $VERSION.$BUILD --identifier @PKGID@ \
 	$TMPDIR/pkg/$PKGNAME.pkg
 SUFFIX=
-if [ "$OSX_INST_CERT_NAME" != "" ]; then
+if [ "$MACOS_INST_CERT_NAME" != "" ]; then
 	SUFFIX=-unsigned
 fi
 productbuild --distribution pkgscripts/Distribution.xml \
 	--package-path $TMPDIR/pkg/ --resources $TMPDIR/pkg/ \
 	$TMPDIR/dmg/$PKGNAME$SUFFIX.pkg
-if [ "$OSX_INST_CERT_NAME" != "" ]; then
-	productsign --sign "$OSX_INST_CERT_NAME" --timestamp \
+if [ "$MACOS_INST_CERT_NAME" != "" ]; then
+	productsign --sign "$MACOS_INST_CERT_NAME" --timestamp \
 		$TMPDIR/dmg/$PKGNAME$SUFFIX.pkg $TMPDIR/dmg/$PKGNAME.pkg
 	rm -r $TMPDIR/dmg/$PKGNAME$SUFFIX.pkg
 	pkgutil --check-signature $TMPDIR/dmg/$PKGNAME.pkg
 fi
 hdiutil create -fs HFS+ -volname $PKGNAME-$VERSION \
 	-srcfolder "$TMPDIR/dmg" $TMPDIR/$PKGNAME-$VERSION.dmg
-if [ "$OSX_APP_CERT_NAME" != "" ]; then
-	codesign -s "$OSX_APP_CERT_NAME" --timestamp $TMPDIR/$PKGNAME-$VERSION.dmg
+if [ "$MACOS_APP_CERT_NAME" != "" ]; then
+	codesign -s "$MACOS_APP_CERT_NAME" --timestamp $TMPDIR/$PKGNAME-$VERSION.dmg
 	codesign -vv $TMPDIR/$PKGNAME-$VERSION.dmg
 fi
 cp $TMPDIR/$PKGNAME-$VERSION.dmg .

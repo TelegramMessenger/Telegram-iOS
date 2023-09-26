@@ -160,7 +160,11 @@ private func processedLegacySecureIdAttachmentItems(postbox: Postbox, signal: SS
         let randomId = Int64.random(in: Int64.min ... Int64.max)
         let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
         let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
-        if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {
+        let tempFile = TempBox.shared.tempFile(fileName: "file")
+        defer {
+            TempBox.shared.dispose(tempFile)
+        }
+        if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84, tempFilePath: tempFile.path) {
             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
             return [resource]

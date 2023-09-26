@@ -1,6 +1,6 @@
 /*
- * Copyright (C)2011-2012, 2014-2015, 2017-2018 D. R. Commander.
- *                                              All Rights Reserved.
+ * Copyright (C)2011-2012, 2014-2015, 2017-2018, 2023 D. R. Commander.
+ *                                                    All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -136,14 +136,11 @@ class TJExample implements TJCustomFilter {
     System.out.println("-display = Display output image (Output filename need not be specified in this");
     System.out.println("     case.)\n");
 
-    System.out.println("-fastupsample = Use the fastest chrominance upsampling algorithm available in");
-    System.out.println("     the underlying codec.\n");
+    System.out.println("-fastupsample = Use the fastest chrominance upsampling algorithm available\n");
 
-    System.out.println("-fastdct = Use the fastest DCT/IDCT algorithms available in the underlying");
-    System.out.println("     codec.\n");
+    System.out.println("-fastdct = Use the fastest DCT/IDCT algorithm available\n");
 
-    System.out.println("-accuratedct = Use the most accurate DCT/IDCT algorithms available in the");
-    System.out.println("     underlying codec.\n");
+    System.out.println("-accuratedct = Use the most accurate DCT/IDCT algorithm available\n");
 
     System.exit(1);
   }

@@ -548,13 +548,9 @@ Arrays of pixel sample values use the following data structure:
     typedef JSAMPROW *JSAMPARRAY;       ptr to a list of rows
     typedef JSAMPARRAY *JSAMPIMAGE;     ptr to a list of color-component arrays
 
-The basic element type JSAMPLE will typically be one of unsigned char,
-(signed) char, or short.  Short will be used if samples wider than 8 bits are
-to be supported (this is a compile-time option).  Otherwise, unsigned char is
-used if possible.  If the compiler only supports signed chars, then it is
-necessary to mask off the value when reading.  Thus, all reads of JSAMPLE
-values must be coded as "GETJSAMPLE(value)", where the macro will be defined
-as "((value) & 0xFF)" on signed-char machines and "((int) (value))" elsewhere.
+The basic element type JSAMPLE will be one of unsigned char or short.  Short
+will be used if samples wider than 8 bits are to be supported (this is a
+compile-time option).  Otherwise, unsigned char is used.
 
 With these conventions, JSAMPLE values can be assumed to be >= 0.  This helps
 simplify correct rounding during downsampling, etc.  The JPEG standard's
@@ -587,7 +583,7 @@ we can read or write each component to a temporary file independently, which
 is helpful when dealing with noninterleaved JPEG files.
 
 In general, a specific sample value is accessed by code such as
-        GETJSAMPLE(image[colorcomponent][row][col])
+        image[colorcomponent][row][col]
 where col is measured from the image left edge, but row is measured from the
 first sample row currently in memory.  Either of the first two indexings can
 be precomputed by copying the relevant pointer.

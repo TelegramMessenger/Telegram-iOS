@@ -437,7 +437,11 @@ public func legacyAssetPickerEnqueueMessages(context: AccountContext, account: A
                                     let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
                                     let scaledSize = image.size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
-                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6) {
+                                        let tempFile = TempBox.shared.tempFile(fileName: "file")
+                                        defer {
+                                            TempBox.shared.dispose(tempFile)
+                                        }
+                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6, tempFilePath: tempFile.path) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
 
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)

@@ -457,7 +457,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                             if let _ = self.chatListController as? ChatListControllerImpl {
                                 switch mediaResult {
                                 case let .image(image, dimensions):
-                                    if let imageData = compressImageToJPEG(image, quality: 0.7) {
+                                    let tempFile = TempBox.shared.tempFile(fileName: "file")
+                                    defer {
+                                        TempBox.shared.dispose(tempFile)
+                                    }
+                                    if let imageData = compressImageToJPEG(image, quality: 0.7, tempFilePath: tempFile.path) {
                                         let entities = generateChatInputTextEntities(caption)
                                         Logger.shared.log("MediaEditor", "Calling uploadStory for image, randomId \(randomId)")
                                         let _ = (context.engine.messages.uploadStory(target: target, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: caption.string, entities: entities, pin: options.pin, privacy: options.privacy, isForwardingDisabled: options.isForwardingDisabled, period: options.timeout, randomId: randomId)
@@ -483,7 +487,11 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
                                         case let .asset(localIdentifier):
                                             resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                         }
-                                        let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
+                                        let tempFile = TempBox.shared.tempFile(fileName: "file")
+                                        defer {
+                                            TempBox.shared.dispose(tempFile)
+                                        }
+                                        let imageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6, tempFilePath: tempFile.path) }
                                         let firstFrameFile = imageData.flatMap { data -> TempBoxFile? in
                                             let file = TempBox.shared.tempFile(fileName: "image.jpg")
                                             if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {

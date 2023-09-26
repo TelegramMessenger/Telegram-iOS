@@ -1,4 +1,4 @@
-.TH JPEGTRAN 1 "18 March 2017"
+.TH JPEGTRAN 1 "13 July 2021"
 .SH NAME
 jpegtran \- lossless transformation of JPEG files
 .SH SYNOPSIS
@@ -161,13 +161,13 @@ to do a perfect rotation, if available, or an approximated one if not.
 .PP
 This version of \fBjpegtran\fR also offers a lossless crop option, which
 discards data outside of a given image region but losslessly preserves what is
-inside. Like the rotate and flip transforms, lossless crop is restricted by the
-current JPEG format; the upper left corner of the selected region must fall on
-an iMCU boundary.  If it doesn't, then it is silently moved up and/or left to
-the nearest iMCU boundary (the lower right corner is unchanged.)  Thus, the
+inside.  Like the rotate and flip transforms, lossless crop is restricted by
+the current JPEG format; the upper left corner of the selected region must fall
+on an iMCU boundary.  If it doesn't, then it is silently moved up and/or left
+to the nearest iMCU boundary (the lower right corner is unchanged.)  Thus, the
 output image covers at least the requested region, but it may cover more.  The
-adjustment of the region dimensions may be optionally disabled by attaching
-an 'f' character ("force") to the width or height number.
+adjustment of the region dimensions may be optionally disabled by attaching an
+'f' character ("force") to the width or height number.
 
 The image can be losslessly cropped by giving the switch:
 .TP
@@ -179,6 +179,47 @@ transforms, lossless crop is restricted by the current JPEG format; the upper
 left corner of the selected region must fall on an iMCU boundary.  If it
 doesn't, then it is silently moved up and/or left to the nearest iMCU boundary
 (the lower right corner is unchanged.)
+.PP
+If W or H is larger than the width/height of the input image, then the output
+image is expanded in size, and the expanded region is filled in with zeros
+(neutral gray).  Attaching an 'f' character ("flatten") to the width number
+will cause each block in the expanded region to be filled in with the DC
+coefficient of the nearest block in the input image rather than grayed out.
+Attaching an 'r' character ("reflect") to the width number will cause the
+expanded region to be filled in with repeated reflections of the input image
+rather than grayed out.
+.PP
+A complementary lossless wipe option is provided to discard (gray out) data
+inside a given image region while losslessly preserving what is outside:
+.TP
+.B \-wipe WxH+X+Y
+Wipe (gray out) a rectangular region of width W and height H from the input
+image, starting at point X,Y.
+.PP
+Attaching an 'f' character ("flatten") to the width number will cause the
+region to be filled with the average of adjacent blocks rather than grayed out.
+If the wipe region and the region outside the wipe region, when adjusted to the
+nearest iMCU boundary, form two horizontally adjacent rectangles, then
+attaching an 'r' character ("reflect") to the width number will cause the wipe
+region to be filled with repeated reflections of the outside region rather than
+grayed out.
+.PP
+A lossless drop option is also provided, which allows another JPEG image to be
+inserted ("dropped") into the input image data at a given position, replacing
+the existing image data at that position:
+.TP
+.B \-drop +X+Y filename
+Drop (insert) another image at point X,Y
+.PP
+Both the input image and the drop image must have the same subsampling level.
+It is best if they also have the same quantization (quality.)  Otherwise, the
+quantization of the output image will be adapted to accommodate the higher of
+the input image quality and the drop image quality.  The trim option can be
+used with the drop option to requantize the drop image to match the input
+image.  Note that a grayscale image can be dropped into a full-color image or
+vice versa, as long as the full-color image has no vertical subsampling.  If
+the input image is grayscale and the drop image is full-color, then the
+chrominance channels from the drop image will be discarded.
 .PP
 Other not-strictly-lossless transformation switches are:
 .TP
@@ -206,6 +247,10 @@ comments and other metadata in the source file.
 Copy only comment markers.  This setting copies comments from the source file
 but discards any other metadata.
 .TP
+.B \-copy icc
+Copy only ICC profile markers.  This setting copies the ICC profile from the
+source file but discards any other metadata.
+.TP
 .B \-copy all
 Copy all extra markers.  This setting preserves miscellaneous markers
 found in the source file, such as JFIF thumbnails, Exif data, and Photoshop
@@ -220,7 +265,7 @@ Additional switches recognized by jpegtran are:
 .BI \-icc " file"
 Embed ICC color management profile contained in the specified file.  Note that
 this will cause \fBjpegtran\fR to ignore any APP2 markers in the input file,
-even if \fB-copy all\fR is specified.
+even if \fB-copy all\fR or \fB-copy icc\fR is specified.
 .TP
 .BI \-maxmemory " N"
 Set limit for amount of memory to use in processing large images.  Value is
@@ -229,8 +274,30 @@ number.  For example,
 .B \-max 4m
 selects 4000000 bytes.  If more space is needed, an error will occur.
 .TP
+.BI \-maxscans " N"
+Abort if the input image contains more than
+.I N
+scans.  This feature demonstrates a method by which applications can guard
+against denial-of-service attacks instigated by specially-crafted malformed
+JPEG images containing numerous scans with missing image data or image data
+consisting only of "EOB runs" (a feature of progressive JPEG images that allows
+potentially hundreds of thousands of adjoining zero-value pixels to be
+represented using only a few bytes.)  Attempting to transform such malformed
+JPEG images can cause excessive CPU activity, since the decompressor must fully
+process each scan (even if the scan is corrupt) before it can proceed to the
+next scan.
+.TP
 .BI \-outfile " name"
 Send output image to the named file, not to standard output.
+.TP
+.BI \-report
+Report transformation progress.
+.TP
+.BI \-strict
+Treat all warnings as fatal.  This feature also demonstrates a method by which
+applications can guard against attacks instigated by specially-crafted
+malformed JPEG images.  Enabling this option will cause the decompressor to
+abort if the input image contains incomplete or corrupt image data.
 .TP
 .B \-verbose
 Enable debug printout.  More

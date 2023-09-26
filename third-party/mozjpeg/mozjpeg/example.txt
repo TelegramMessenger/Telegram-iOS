@@ -311,7 +311,7 @@ read_JPEG_file(char *filename)
  * We call the libjpeg API from within a separate function, because modifying
  * the local non-volatile jpeg_decompress_struct instance below the setjmp()
  * return point and then accessing the instance after setjmp() returns would
- * return in undefined behavior that may potentially overwrite all or part of
+ * result in undefined behavior that may potentially overwrite all or part of
  * the structure.
  */
 

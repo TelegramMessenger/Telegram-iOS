@@ -134,7 +134,11 @@ public func fetchPhotoLibraryResource(localIdentifier: String, width: Int32?, he
                                 
                                 switch format {
                                 case .none, .jpeg:
-                                    if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6) {
+                                    let tempFile = TempBox.shared.tempFile(fileName: "file")
+                                    defer {
+                                        TempBox.shared.dispose(tempFile)
+                                    }
+                                    if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6, tempFilePath: tempFile.path) {
     #if DEBUG
                                         print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
     #endif

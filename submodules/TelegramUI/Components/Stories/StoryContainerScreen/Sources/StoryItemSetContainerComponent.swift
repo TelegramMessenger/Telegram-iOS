@@ -5101,7 +5101,11 @@ public final class StoryItemSetContainerComponent: Component {
                         case let .image(image, dimensions):
                             updateProgressImpl?(0.0)
                             
-                            if let imageData = compressImageToJPEG(image, quality: 0.7) {
+                            let tempFile = TempBox.shared.tempFile(fileName: "file")
+                            defer {
+                                TempBox.shared.dispose(tempFile)
+                            }
+                            if let imageData = compressImageToJPEG(image, quality: 0.7, tempFilePath: tempFile.path) {
                                 updateDisposable.set((context.engine.messages.editStory(peerId: peerId, id: id, media: .image(dimensions: dimensions, data: imageData, stickers: stickers), mediaAreas: mediaAreas, text: updatedText, entities: updatedEntities, privacy: nil)
                                 |> deliverOnMainQueue).startStrict(next: { [weak self] result in
                                     guard let self else {
@@ -5142,7 +5146,11 @@ public final class StoryItemSetContainerComponent: Component {
                                     resource = VideoLibraryMediaResource(localIdentifier: localIdentifier, conversion: .compress(adjustments))
                                 }
                                 
-                                let firstFrameImageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6) }
+                                let tempFile = TempBox.shared.tempFile(fileName: "file")
+                                defer {
+                                    TempBox.shared.dispose(tempFile)
+                                }
+                                let firstFrameImageData = firstFrameImage.flatMap { compressImageToJPEG($0, quality: 0.6, tempFilePath: tempFile.path) }
                                 let firstFrameFile = firstFrameImageData.flatMap { data -> TempBoxFile? in
                                     let file = TempBox.shared.tempFile(fileName: "image.jpg")
                                     if let _ = try? data.write(to: URL(fileURLWithPath: file.path)) {

@@ -433,6 +433,8 @@ public class AttachmentController: ViewController {
         deinit {
             self.captionDisposable.dispose()
             self.mediaSelectionCountDisposable.dispose()
+            self.loadingProgressDisposable.dispose()
+            self.mainButtonStateDisposable.dispose()
         }
         
         private var inputContainerHeight: CGFloat?

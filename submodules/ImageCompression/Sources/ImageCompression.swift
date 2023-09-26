@@ -18,8 +18,8 @@ public func extractImageExtraScans(_ data: Data) -> [Int] {
     }
 }
 
-public func compressImageToJPEG(_ image: UIImage, quality: Float) -> Data? {
-    if let result = compressJPEGData(image) {
+public func compressImageToJPEG(_ image: UIImage, quality: Float, tempFilePath: String) -> Data? {
+    if let result = compressJPEGData(image, tempFilePath) {
         return result
     }
     

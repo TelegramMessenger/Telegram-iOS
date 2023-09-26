@@ -1,36 +1,42 @@
 %global _docdir %{_defaultdocdir}/%{name}-%{version}
-%define _prefix @CMAKE_INSTALL_PREFIX@
-%define _bindir @CMAKE_INSTALL_FULL_BINDIR@
-%define _datarootdir @CMAKE_INSTALL_FULL_DATAROOTDIR@
-%define _includedir @CMAKE_INSTALL_FULL_INCLUDEDIR@
-%define _javadir @CMAKE_INSTALL_FULL_JAVADIR@
-%define _mandir @CMAKE_INSTALL_FULL_MANDIR@
-%define _enable_static @ENABLE_STATIC@
-%define _enable_shared @ENABLE_SHARED@
-%define _with_turbojpeg @WITH_TURBOJPEG@
-%define _with_java @WITH_JAVA@
+%define _prefix  @CMAKE_INSTALL_PREFIX@
+%define _bindir  @CMAKE_INSTALL_FULL_BINDIR@
+%define _datarootdir  @CMAKE_INSTALL_FULL_DATAROOTDIR@
+%define _includedir  @CMAKE_INSTALL_FULL_INCLUDEDIR@
+%define _javadir  @CMAKE_INSTALL_FULL_JAVADIR@
+%define _mandir  @CMAKE_INSTALL_FULL_MANDIR@
+%define _enable_static  @ENABLE_STATIC@
+%define _enable_shared  @ENABLE_SHARED@
+%define _with_turbojpeg  @WITH_TURBOJPEG@
+%define _with_java  @WITH_JAVA@
 
 %if "%{?__isa_bits:1}" == "1"
-%define _bits %{__isa_bits}
+%define _bits  %{__isa_bits}
 %else
 # RPM < 4.6
 %if "%{_lib}" == "lib64"
-%define _bits 64
+%define _bits  64
 %else
-%define _bits 32
+%define _bits  32
 %endif
+%endif
+
+%if "%{_bits}" == "64"
+%define _syslibdir /usr/lib64
+%else
+%define _syslibdir /usr/lib
 %endif
 
 #-->%if 1
 %if "%{_bits}" == "64"
-%define _libdir %{_exec_prefix}/lib64
+%define _libdir  %{_exec_prefix}/lib64
 %else
 %if "%{_prefix}" == "/opt/libjpeg-turbo"
-%define _libdir %{_exec_prefix}/lib32
+%define _libdir  %{_exec_prefix}/lib32
 %endif
 %endif
 #-->%else
-%define _libdir @CMAKE_INSTALL_FULL_LIBDIR@
+%define _libdir  @CMAKE_INSTALL_FULL_LIBDIR@
 #-->%endif
 
 Summary: A SIMD-accelerated JPEG codec that provides both the libjpeg and TurboJPEG APIs
@@ -52,8 +58,8 @@ Provides: %{name} = %{version}-%{release}, @CMAKE_PROJECT_NAME@ = %{version}-%{r
 
 %description
 libjpeg-turbo is a JPEG image codec that uses SIMD instructions to accelerate
-baseline JPEG compression and decompression on x86, x86-64, ARM, PowerPC, and
-MIPS systems, as well as progressive JPEG compression on x86 and x86-64
+baseline JPEG compression and decompression on x86, x86-64, Arm, PowerPC, and
+MIPS systems, as well as progressive JPEG compression on x86, x86-64, and Arm
 systems.  On such systems, libjpeg-turbo is generally 2-6x as fast as libjpeg,
 all else being equal.  On other types of systems, libjpeg-turbo can still
 outperform libjpeg by a significant amount, by virtue of its highly-optimized
@@ -71,7 +77,8 @@ derivative of libjpeg v6b developed by Miyasaka Masaru.  The TigerVNC and
 VirtualGL projects made numerous enhancements to the codec in 2009, and in
 early 2010, libjpeg-turbo spun off into an independent project, with the goal
 of making high-speed JPEG compression/decompression technology available to a
-broader range of users and developers.
+broader range of users and developers.  libjpeg-turbo is an ISO/IEC and ITU-T
+reference implementation of the JPEG standard.
 
 #-->%prep
 #-->%setup -q -n @CMAKE_PROJECT_NAME@-%{version}
@@ -101,9 +108,8 @@ broader range of users and developers.
 #-->make DESTDIR=$RPM_BUILD_ROOT
 
 %install
-
 rm -rf $RPM_BUILD_ROOT
-make install DESTDIR=$RPM_BUILD_ROOT
+DESTDIR=$RPM_BUILD_ROOT @CMAKE_MAKE_PROGRAM@ install
 /sbin/ldconfig -n $RPM_BUILD_ROOT%{_libdir}
 
 #-->%if 0
@@ -163,38 +169,43 @@ rm -rf $RPM_BUILD_ROOT
 %doc %{_docdir}/*
 %dir %{_prefix}
 %if "%{_prefix}" == "@CMAKE_INSTALL_DEFAULT_PREFIX@" && "%{_docdir}" != "%{_prefix}/doc"
- %{_prefix}/doc
+	%{_prefix}/doc
 %endif
 %dir %{_bindir}
 %{_bindir}/cjpeg
 %{_bindir}/djpeg
 %{_bindir}/jpegtran
 %if "%{_with_turbojpeg}" == "1"
- %{_bindir}/tjbench
+	%{_bindir}/tjbench
 %endif
 %{_bindir}/rdjpgcom
 %{_bindir}/wrjpgcom
+%if "%{_libdir}" != "%{_syslibdir}"
 %dir %{_libdir}
+%endif
 %if "%{_enable_shared}" == "1"
- %{_libdir}/libjpeg.so.@SO_MAJOR_VERSION@.@SO_AGE@.@SO_MINOR_VERSION@
- %{_libdir}/libjpeg.so.@SO_MAJOR_VERSION@
- %{_libdir}/libjpeg.so
+	%{_libdir}/libjpeg.so.@SO_MAJOR_VERSION@.@SO_AGE@.@SO_MINOR_VERSION@
+	%{_libdir}/libjpeg.so.@SO_MAJOR_VERSION@
+	%{_libdir}/libjpeg.so
 %endif
 %if "%{_enable_static}" == "1"
- %{_libdir}/libjpeg.a
+	%{_libdir}/libjpeg.a
 %endif
 %dir %{_libdir}/pkgconfig
 %{_libdir}/pkgconfig/libjpeg.pc
+%dir %{_libdir}/cmake
+%dir %{_libdir}/cmake/@CMAKE_PROJECT_NAME@
+%{_libdir}/cmake/@CMAKE_PROJECT_NAME@
 %if "%{_with_turbojpeg}" == "1"
- %if "%{_enable_shared}" == "1" || "%{_with_java}" == "1"
-  %{_libdir}/libturbojpeg.so.@TURBOJPEG_SO_VERSION@
-  %{_libdir}/libturbojpeg.so.@TURBOJPEG_SO_MAJOR_VERSION@
-  %{_libdir}/libturbojpeg.so
- %endif
- %if "%{_enable_static}" == "1"
-  %{_libdir}/libturbojpeg.a
- %endif
- %{_libdir}/pkgconfig/libturbojpeg.pc
+	%if "%{_enable_shared}" == "1" || "%{_with_java}" == "1"
+		%{_libdir}/libturbojpeg.so.@TURBOJPEG_SO_VERSION@
+		%{_libdir}/libturbojpeg.so.@TURBOJPEG_SO_MAJOR_VERSION@
+		%{_libdir}/libturbojpeg.so
+	%endif
+	%if "%{_enable_static}" == "1"
+		%{_libdir}/libturbojpeg.a
+	%endif
+	%{_libdir}/pkgconfig/libturbojpeg.pc
 %endif
 %dir %{_includedir}
 %{_includedir}/jconfig.h
@@ -202,7 +213,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_includedir}/jmorecfg.h
 %{_includedir}/jpeglib.h
 %if "%{_with_turbojpeg}" == "1"
- %{_includedir}/turbojpeg.h
+	%{_includedir}/turbojpeg.h
 %endif
 %dir %{_mandir}
 %dir %{_mandir}/man1
@@ -212,10 +223,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_mandir}/man1/rdjpgcom.1*
 %{_mandir}/man1/wrjpgcom.1*
 %if "%{_prefix}" != "%{_datarootdir}"
- %dir %{_datarootdir}
+	%dir %{_datarootdir}
 %endif
 %if "%{_with_java}" == "1"
- %dir %{_javadir}
- %{_javadir}/turbojpeg.jar
+	%dir %{_javadir}
+	%{_javadir}/turbojpeg.jar
 %endif
+
 %changelog

@@ -1,5 +1,6 @@
 /*
- * Copyright (C)2011-2015, 2018 D. R. Commander.  All Rights Reserved.
+ * Copyright (C)2011-2015, 2018, 2020, 2023 D. R. Commander.
+ *                                          All Rights Reserved.
  * Copyright (C)2015 Viktor Szathmáry.  All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +50,7 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Create a TurboJPEG compressor instance and associate the uncompressed
+   * Create a TurboJPEG compressor instance and associate the packed-pixel
    * source image stored in <code>srcImage</code> with the newly created
    * instance.
    *
@@ -85,7 +86,7 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Create a TurboJPEG compressor instance and associate the uncompressed
+   * Create a TurboJPEG compressor instance and associate the packed-pixel
    * source image stored in <code>srcImage</code> with the newly created
    * instance.
    *
@@ -110,11 +111,11 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Associate an uncompressed RGB, grayscale, or CMYK source image with this
+   * Associate a packed-pixel RGB, grayscale, or CMYK source image with this
    * compressor instance.
    *
-   * @param srcImage image buffer containing RGB, grayscale, or CMYK pixels to
-   * be compressed or encoded.  This buffer is not modified.
+   * @param srcImage buffer containing a packed-pixel RGB, grayscale, or CMYK
+   * source image to be compressed or encoded.  This buffer is not modified.
    *
    * @param x x offset (in pixels) of the region in the source image from which
    * the JPEG or YUV image should be compressed/encoded
@@ -125,14 +126,16 @@ public class TJCompressor implements Closeable {
    * @param width width (in pixels) of the region in the source image from
    * which the JPEG or YUV image should be compressed/encoded
    *
-   * @param pitch bytes per line of the source image.  Normally, this should be
-   * <code>width * TJ.pixelSize(pixelFormat)</code> if the source image is
-   * unpadded, but you can use this parameter to, for instance, specify that
-   * the scanlines in the source image are padded to a 4-byte boundary or to
-   * compress/encode a JPEG or YUV image from a region of a larger source
-   * image.  You can also be clever and use this parameter to skip lines, etc.
-   * Setting this parameter to 0 is the equivalent of setting it to
-   * <code>width * TJ.pixelSize(pixelFormat)</code>.
+   * @param pitch bytes per row in the source image.  Normally this should be
+   * <code>width *
+   * </code>{@link TJ#getPixelSize TJ.getPixelSize}<code>(pixelFormat)</code>,
+   * if the source image is unpadded.  However, you can use this parameter to,
+   * for instance, specify that the rows in the source image are padded to the
+   * nearest multiple of 4 bytes or to compress/encode a JPEG or YUV image from
+   * a region of a larger source image.  You can also be clever and use this
+   * parameter to skip rows, etc.  Setting this parameter to 0 is the
+   * equivalent of setting it to <code>width *
+   * </code>{@link TJ#getPixelSize TJ.getPixelSize}<code>(pixelFormat)</code>.
    *
    * @param height height (in pixels) of the region in the source image from
    * which the JPEG or YUV image should be compressed/encoded
@@ -174,11 +177,12 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Associate an uncompressed RGB or grayscale source image with this
+   * Associate a packed-pixel RGB or grayscale source image with this
    * compressor instance.
    *
-   * @param srcImage a <code>BufferedImage</code> instance containing RGB or
-   * grayscale pixels to be compressed or encoded.  This image is not modified.
+   * @param srcImage a <code>BufferedImage</code> instance containing a
+   * packed-pixel RGB or grayscale source image to be compressed or encoded.
+   * This image is not modified.
    *
    * @param x x offset (in pixels) of the region in the source image from which
    * the JPEG or YUV image should be compressed/encoded
@@ -260,11 +264,10 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Associate an uncompressed YUV planar source image with this compressor
-   * instance.
+   * Associate a planar YUV source image with this compressor instance.
    *
-   * @param srcImage YUV planar image to be compressed.  This image is not
-   * modified.
+   * @param srcImage planar YUV source image to be compressed.  This image is
+   * not modified.
    */
   public void setSourceImage(YUVImage srcImage) throws TJException {
     if (handle == 0) init();
@@ -281,16 +284,16 @@ public class TJCompressor implements Closeable {
    * {@link TJ#CS_YCbCr}) or from CMYK to YCCK (see {@link TJ#CS_YCCK}) as part
    * of the JPEG compression process, some of the Cb and Cr (chrominance)
    * components can be discarded or averaged together to produce a smaller
-   * image with little perceptible loss of image clarity (the human eye is more
-   * sensitive to small changes in brightness than to small changes in color.)
-   * This is called "chrominance subsampling".
+   * image with little perceptible loss of image clarity.  (The human eye is
+   * more sensitive to small changes in brightness than to small changes in
+   * color.)  This is called "chrominance subsampling".
    * <p>
-   * NOTE: This method has no effect when compressing a JPEG image from a YUV
-   * planar source.  In that case, the level of chrominance subsampling in
-   * the JPEG image is determined by the source.  Furthermore, this method has
-   * no effect when encoding to a pre-allocated {@link YUVImage} instance.  In
-   * that case, the level of chrominance subsampling is determined by the
-   * destination.
+   * NOTE: This method has no effect when compressing a JPEG image from a
+   * planar YUV source image.  In that case, the level of chrominance
+   * subsampling in the JPEG image is determined by the source image.
+   * Furthermore, this method has no effect when encoding to a pre-allocated
+   * {@link YUVImage} instance.  In that case, the level of chrominance
+   * subsampling is determined by the destination image.
    *
    * @param newSubsamp the level of chrominance subsampling to use in
    * subsequent compress/encode oeprations (one of
@@ -315,8 +318,9 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Compress the uncompressed source image associated with this compressor
-   * instance and output a JPEG image to the given destination buffer.
+   * Compress the packed-pixel or planar YUV source image associated with this
+   * compressor instance and output a JPEG image to the given destination
+   * buffer.
    *
    * @param dstBuf buffer that will receive the JPEG image.  Use
    * {@link TJ#bufSize} to determine the maximum size for this buffer based on
@@ -366,8 +370,8 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Compress the uncompressed source image associated with this compressor
-   * instance and return a buffer containing a JPEG image.
+   * Compress the packed-pixel or planar YUV source image associated with this
+   * compressor instance and return a buffer containing a JPEG image.
    *
    * @param flags the bitwise OR of one or more of
    * {@link TJ#FLAG_BOTTOMUP TJ.FLAG_*}
@@ -377,8 +381,15 @@ public class TJCompressor implements Closeable {
    * #getCompressedSize} to obtain the size of the JPEG image.
    */
   public byte[] compress(int flags) throws TJException {
-    checkSourceImage();
-    byte[] buf = new byte[TJ.bufSize(srcWidth, srcHeight, subsamp)];
+    byte[] buf;
+    if (srcYUVImage != null) {
+      buf = new byte[TJ.bufSize(srcYUVImage.getWidth(),
+                                srcYUVImage.getHeight(),
+                                srcYUVImage.getSubsamp())];
+    } else {
+      checkSourceImage();
+      buf = new byte[TJ.bufSize(srcWidth, srcHeight, subsamp)];
+    }
     compress(buf, flags);
     return buf;
   }
@@ -410,14 +421,14 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Encode the uncompressed source image associated with this compressor
-   * instance into a YUV planar image and store it in the given
-   * <code>YUVImage</code> instance.   This method uses the accelerated color
-   * conversion routines in TurboJPEG's underlying codec but does not execute
-   * any of the other steps in the JPEG compression process.  Encoding
-   * CMYK source images to YUV is not supported.
+   * Encode the packed-pixel source image associated with this compressor
+   * instance into a planar YUV image and store it in the given
+   * {@link YUVImage} instance.  This method performs color conversion (which
+   * is accelerated in the libjpeg-turbo implementation) but does not execute
+   * any of the other steps in the JPEG compression process.  Encoding CMYK
+   * source images into YUV images is not supported.
    *
-   * @param dstImage {@link YUVImage} instance that will receive the YUV planar
+   * @param dstImage {@link YUVImage} instance that will receive the planar YUV
    * image
    *
    * @param flags the bitwise OR of one or more of
@@ -462,52 +473,54 @@ public class TJCompressor implements Closeable {
   }
 
   /**
-   * Encode the uncompressed source image associated with this compressor
-   * instance into a unified YUV planar image buffer and return a
-   * <code>YUVImage</code> instance containing the encoded image.  This method
-   * uses the accelerated color conversion routines in TurboJPEG's underlying
-   * codec but does not execute any of the other steps in the JPEG compression
-   * process.  Encoding CMYK source images to YUV is not supported.
+   * Encode the packed-pixel source image associated with this compressor
+   * instance into a unified planar YUV image and return a {@link YUVImage}
+   * instance containing the encoded image.  This method performs color
+   * conversion (which is accelerated in the libjpeg-turbo implementation) but
+   * does not execute any of the other steps in the JPEG compression process.
+   * Encoding CMYK source images into YUV images is not supported.
    *
-   * @param pad the width of each line in each plane of the YUV image will be
-   * padded to the nearest multiple of this number of bytes (must be a power of
-   * 2.)
+   * @param align row alignment (in bytes) of the YUV image (must be a power of
+   * 2.)  Setting this parameter to n will cause each row in each plane of the
+   * YUV image to be padded to the nearest multiple of n bytes (1 = unpadded.)
    *
    * @param flags the bitwise OR of one or more of
    * {@link TJ#FLAG_BOTTOMUP TJ.FLAG_*}
    *
-   * @return a YUV planar image.
+   * @return a {@link YUVImage} instance containing the unified planar YUV
+   * encoded image
    */
-  public YUVImage encodeYUV(int pad, int flags) throws TJException {
+  public YUVImage encodeYUV(int align, int flags) throws TJException {
     checkSourceImage();
     checkSubsampling();
-    if (pad < 1 || ((pad & (pad - 1)) != 0))
+    if (align < 1 || ((align & (align - 1)) != 0))
       throw new IllegalStateException("Invalid argument in encodeYUV()");
-    YUVImage dstYUVImage = new YUVImage(srcWidth, pad, srcHeight, subsamp);
+    YUVImage dstYUVImage = new YUVImage(srcWidth, align, srcHeight, subsamp);
     encodeYUV(dstYUVImage, flags);
     return dstYUVImage;
   }
 
   /**
-   * Encode the uncompressed source image associated with this compressor
+   * Encode the packed-pixel source image associated with this compressor
    * instance into separate Y, U (Cb), and V (Cr) image planes and return a
-   * <code>YUVImage</code> instance containing the encoded image planes.  This
-   * method uses the accelerated color conversion routines in TurboJPEG's
-   * underlying codec but does not execute any of the other steps in the JPEG
-   * compression process.  Encoding CMYK source images to YUV is not supported.
+   * {@link YUVImage} instance containing the encoded image planes.  This
+   * method performs color conversion (which is accelerated in the
+   * libjpeg-turbo implementation) but does not execute any of the other steps
+   * in the JPEG compression process.  Encoding CMYK source images into YUV
+   * images is not supported.
    *
    * @param strides an array of integers, each specifying the number of bytes
-   * per line in the corresponding plane of the output image.  Setting the
-   * stride for any plane to 0 is the same as setting it to the component width
-   * of the plane.  If <code>strides</code> is null, then the strides for all
-   * planes will be set to their respective component widths.  You can adjust
-   * the strides in order to add an arbitrary amount of line padding to each
-   * plane.
+   * per row in the corresponding plane of the YUV source image.  Setting the
+   * stride for any plane to 0 is the same as setting it to the plane width
+   * (see {@link YUVImage}.)  If <code>strides</code> is null, then the strides
+   * for all planes will be set to their respective plane widths.  You can
+   * adjust the strides in order to add an arbitrary amount of row padding to
+   * each plane.
    *
    * @param flags the bitwise OR of one or more of
    * {@link TJ#FLAG_BOTTOMUP TJ.FLAG_*}
    *
-   * @return a YUV planar image.
+   * @return a {@link YUVImage} instance containing the encoded image planes
    */
   public YUVImage encodeYUV(int[] strides, int flags) throws TJException {
     checkSourceImage();
@@ -672,6 +685,5 @@ public class TJCompressor implements Closeable {
   private int subsamp = -1;
   private int jpegQuality = -1;
   private int compressedSize = 0;
-  private int yuvPad = 4;
   private ByteOrder byteOrder = null;
 }
