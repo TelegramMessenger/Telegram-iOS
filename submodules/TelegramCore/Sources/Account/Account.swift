@@ -1196,7 +1196,7 @@ public class Account {
             self.accountPresenceManager.isPerformingUpdate() |> map { presenceUpdate in
                 if presenceUpdate {
                     print("accountPresenceManager isPerformingUpdate: true")
-                    return []
+                    //return []
                 }
                 return presenceUpdate ? AccountRunningImportantTasks.other : []
             },
