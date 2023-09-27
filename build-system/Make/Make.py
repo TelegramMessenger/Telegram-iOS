@@ -546,6 +546,7 @@ def generate_project(bazel, arguments):
 
     disable_extensions = False
     disable_provisioning_profiles = False
+    project_include_release = False
     generate_dsym = False
     target_name = "Telegram"
 
@@ -553,6 +554,8 @@ def generate_project(bazel, arguments):
         disable_extensions = arguments.disableExtensions
     if arguments.disableProvisioningProfiles is not None:
         disable_provisioning_profiles = arguments.disableProvisioningProfiles
+    if arguments.projectIncludeRelease is not None:
+        project_include_release = arguments.projectIncludeRelease
     if arguments.xcodeManagedCodesigning is not None and arguments.xcodeManagedCodesigning == True:
         disable_extensions = True
     if arguments.generateDsym is not None:
@@ -566,6 +569,7 @@ def generate_project(bazel, arguments):
         build_environment=bazel_command_line.build_environment,
         disable_extensions=disable_extensions,
         disable_provisioning_profiles=disable_provisioning_profiles,
+        include_release=project_include_release,
         generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
@@ -836,6 +840,15 @@ if __name__ == '__main__':
         help='''
             This allows to build the project for simulator without having any codesigning identities installed.
             Building for an actual device will fail.
+            '''
+    )
+
+    generateProjectParser.add_argument(
+        '--projectIncludeRelease',
+        action='store_true',
+        default=False,
+        help='''
+            Generate the Xcode project with Debug and Release configurations.
             '''
     )
 
