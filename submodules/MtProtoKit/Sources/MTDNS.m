@@ -125,7 +125,7 @@
     
     if (disposable != nil) {
         __weak MTDNSContext *weakSelf = self;
-        [disposable setDisposable:[[[self performLookup:host port:port] deliverOn:[MTDNSContext sharedQueue]] startWithNext:^(NSString *result) {
+        [disposable setDisposable:[[[self performLookup:host port:port] deliverOn:[MTDNSContext sharedQueue]] startWithNextStrict:^(NSString *result) {
             __strong MTDNSContext *strongSelf = weakSelf;
             if (strongSelf == nil) {
                 return;
@@ -134,7 +134,7 @@
                 [strongSelf->_contexts[key] complete:result];
                 [strongSelf->_contexts removeObjectForKey:key];
             }
-        }]];
+        } file:__FILE_NAME__ line:__LINE__]];
     }
     
     __weak MTDNSContext *weakSelf = self;

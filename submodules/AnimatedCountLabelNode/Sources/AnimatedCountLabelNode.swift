@@ -375,7 +375,7 @@ public class AnimatedCountLabelView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(size: CGSize, segments initialSegments: [Segment], transition: ContainedViewLayoutTransition) -> Layout {
+    public func update(size: CGSize, segments initialSegments: [Segment], reducedLetterSpacing: Bool = false, transition: ContainedViewLayoutTransition) -> Layout {
         var segmentLayouts: [ResolvedSegment.Key: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)] = [:]
         let wasEmpty = self.resolvedSegments.isEmpty
         for (segmentKey, segmentAndTextNode) in self.resolvedSegments {
@@ -393,7 +393,15 @@ public class AnimatedCountLabelView: UIView {
                 }
                 let attributes = string.attributes(at: 0, longestEffectiveRange: nil, in: NSRange(location: 0, length: 1))
                 
-                var remainingValue = value
+                for character in string.string {
+                    if let _ = Int(String(character)) {
+                        segments.append(.number(id: 1000 + segments.count, value: value, string: NSAttributedString(string: String(character), attributes: attributes)))
+                    } else {
+                        segments.append(.text(id: 1000 + segments.count, string: NSAttributedString(string: String(character), attributes: attributes)))
+                    }
+                }
+                
+                /*var remainingValue = value
                 
                 let insertPosition = segments.count
                 
@@ -405,7 +413,7 @@ public class AnimatedCountLabelView: UIView {
                     if remainingValue == 0 {
                         break
                     }
-                }
+                }*/
             case let .text(id, string):
                 segments.append(.text(id: id, string: string))
             }
@@ -489,7 +497,11 @@ public class AnimatedCountLabelView: UIView {
             } else if textNode.frame != textFrame {
                 transition.updateFrameAdditive(node: textNode, frame: textFrame)
             }
-            currentOffset.x += effectiveSegmentWidth
+            if reducedLetterSpacing {
+                currentOffset.x += effectiveSegmentWidth * 0.9
+            } else {
+                currentOffset.x += effectiveSegmentWidth
+            }
             if let (_, currentTextNode) = self.resolvedSegments[segment.key] {
                 if currentTextNode !== textNode {
                     currentTextNode.removeFromSupernode()

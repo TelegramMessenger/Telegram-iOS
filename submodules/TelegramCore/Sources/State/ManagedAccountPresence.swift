@@ -16,6 +16,8 @@ private final class AccountPresenceManagerImpl {
     private let currentRequestDisposable = MetaDisposable()
     private var onlineTimer: SignalKitTimer?
     
+    private var wasOnline: Bool = false
+    
     init(queue: Queue, shouldKeepOnlinePresence: Signal<Bool, NoError>, network: Network) {
         self.queue = queue
         self.network = network
@@ -23,7 +25,13 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
         |> deliverOn(self.queue)).start(next: { [weak self] value in
-            self?.updatePresence(value)
+            guard let self else {
+                return
+            }
+            if self.wasOnline != value {
+                self.wasOnline = value
+                self.updatePresence(value)
+            }
         })
     }
     

@@ -731,6 +731,8 @@ private final class NotificationServiceHandler {
         })
         semaphore.wait()
         
+        Logger.shared.log("NotificationService \(episode)", "Logging settings: (logToFile: \(loggingSettings.logToFile))")
+        
         Logger.shared.logToFile = loggingSettings.logToFile
         Logger.shared.logToConsole = loggingSettings.logToConsole
         Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData

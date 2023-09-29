@@ -537,7 +537,7 @@ public final class StoryFooterPanelComponent: Component {
             
             var regularSegments: [AnimatedCountLabelView.Segment] = []
             if viewCount != 0 {
-                regularSegments.append(.number(viewCount, NSAttributedString(string: "\(viewCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white)))
+                regularSegments.append(.number(viewCount, NSAttributedString(string: countString(Int64(viewCount)), font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white)))
             }
             
             let viewPart: String
@@ -555,7 +555,7 @@ public final class StoryFooterPanelComponent: Component {
                 viewPart = string
             }
             
-            let viewStatsTextLayout = self.viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
+            let viewStatsTextLayout = self.viewStatsCountText.update(size: CGSize(width: availableSize.width, height: size.height), segments: regularSegments, reducedLetterSpacing: true, transition: isFirstTime ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut))
             if self.viewStatsCountText.superview == nil {
                 self.viewStatsCountText.isUserInteractionEnabled = false
                 self.externalContainerView.addSubview(self.viewStatsCountText)
@@ -602,6 +602,7 @@ public final class StoryFooterPanelComponent: Component {
                     segments: [
                         .number(reactionCount, NSAttributedString(string: "\(reactionCount)", font: Font.with(size: 15.0, traits: .monospacedNumbers), textColor: .white))
                     ],
+                    reducedLetterSpacing: true,
                     transition: (isFirstTime || reactionsTransition.animation.isImmediate) ? .immediate : ContainedViewLayoutTransition.animated(duration: 0.25, curve: .easeInOut)
                 )
                 reactionsTextSize = reactionStatsLayout.size
