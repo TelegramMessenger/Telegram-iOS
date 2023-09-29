@@ -60,7 +60,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let bottomSeparatorNode: ASDisplayNode
     private let activateArea: AccessibilityAreaNode
     
-    private var iconDisposable: Disposable?
+    private var iconDisposable = MetaDisposable()
     
     private var item: PeerInfoScreenDisclosureItem?
     
@@ -115,7 +115,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     }
     
     deinit {
-        self.iconDisposable?.dispose()
+        self.iconDisposable.dispose()
     }
     
     override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -169,12 +169,12 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             } else if let iconSignal = item.iconSignal {
                 if previousItem?.text != item.text {
                     self.iconNode.image = nil
-                    self.iconDisposable = (iconSignal
+                    self.iconDisposable.set((iconSignal
                     |> deliverOnMainQueue).startStrict(next: { [weak self] icon in
                         if let self {
                             self.iconNode.image = icon
                         }
-                    })
+                    }))
                 }
                 iconSize = CGSize(width: 29.0, height: 29.0)
             } else {
