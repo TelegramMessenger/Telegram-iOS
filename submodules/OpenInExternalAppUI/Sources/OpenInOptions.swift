@@ -323,6 +323,10 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                     return .openUrl(url: url)
                 }
             }))
+            
+            options.append(OpenInOption(identifier: "yango", application: .other(title: "Yango", identifier: 1437157286, scheme: "yangoride", store: nil), action: {
+                    return .openUrl(url: "yangoride://route?end-lat=\(lat)&end-lon=\(lon)")
+            }))
     }
     return options
 }
