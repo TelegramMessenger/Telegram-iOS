@@ -98,13 +98,13 @@ static void MTNetworkAvailabilityContextRelease(const void *info)
     MTTimer *timer = _timer;
     _timer = nil;
     
-    [[MTNetworkAvailability networkAvailabilityQueue] dispatchOnQueue:^
-     {
-         [timer invalidate];
-         
-         SCNetworkReachabilitySetCallback(reachability, NULL, NULL);
-         SCNetworkReachabilitySetDispatchQueue(reachability, NULL);
-     }];
+    [[MTNetworkAvailability networkAvailabilityQueue] dispatchOnQueue:^{
+        [timer invalidate];
+        
+        SCNetworkReachabilitySetCallback(reachability, NULL, NULL);
+        SCNetworkReachabilitySetDispatchQueue(reachability, NULL);
+        CFRelease(reachability);
+    }];
 }
 
 + (MTQueue *)networkAvailabilityQueue

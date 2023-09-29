@@ -270,7 +270,7 @@ public final class MediaStreamComponent: CombinedComponent {
         let moreButtonTag = local.moreButtonTag
         let moreAnimationTag = local.moreAnimationTag
         
-        func makeBody() -> CGSize {
+        let makeBody: () -> CGSize = { [weak local] in
             let canEnforceOrientation = UIDevice.current.model != "iPad"
             var forceFullScreenInLandscape: Bool { canEnforceOrientation && true }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -289,13 +289,20 @@ public final class MediaStreamComponent: CombinedComponent {
             let state = context.state
             let controller = environment.controller
             
-            context.state.deactivatePictureInPictureIfVisible.connect {
+            context.state.deactivatePictureInPictureIfVisible.connect { [weak state] in
                 guard let controller = controller(), controller.view.window != nil else {
                     return
                 }
                 
+                guard let state else {
+                    return
+                }
                 state.updated(transition: .easeInOut(duration: 3))
-                deactivatePictureInPicture.invoke(Void())
+                
+                guard let local else {
+                    return
+                }
+                local.deactivatePictureInPicture.invoke(Void())
             }
             let isFullscreen: Bool
             let isLandscape = context.availableSize.width > context.availableSize.height
@@ -347,8 +354,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width, height: dismissTapAreaHeight),
                 transition: context.transition
             )
-            //            (controller() as? MediaStreamComponentController)?.prefersOnScreenNavigationHidden = isFullscreen
-            //            (controller() as? MediaStreamComponentController)?.window?.invalidatePrefersOnScreenNavigationHidden()
+            
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -832,6 +838,8 @@ public final class MediaStreamComponent: CombinedComponent {
                             UIColor(red: 0.314, green: 0.161, blue: 0.197, alpha: 1).cgColor
                         ],
                         image: generateImage(CGSize(width: 44.0 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            
                             context.translateBy(x: size.width / 2, y: size.height / 2)
                             context.scaleBy(x: 0.4, y: 0.4)
                             context.translateBy(x: -size.width / 2, y: -size.height / 2)
