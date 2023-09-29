@@ -34,18 +34,18 @@
 
 @end
 
-static int readPacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
+/*static int readPacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
     FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
     context->_offset += length;
     printf("read %lld bytes (offset is now %lld)\n", (int64_t)length, context->_offset);
-    return read(context->_fd, buffer, length);
+    return (int)read(context->_fd, buffer, length);
 }
 
 static int writePacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
     FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
     context->_offset += length;
     printf("write %lld bytes (offset is now %lld)\n", (int64_t)length, context->_offset);
-    return write(context->_fd, buffer, length);
+    return (int)write(context->_fd, buffer, length);
 }
 
 static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
@@ -57,7 +57,7 @@ static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
         context->_offset = offset;
         return lseek(context->_fd, offset, SEEK_SET);
     }
-}
+}*/
 
 @implementation FFMpegRemuxer
 

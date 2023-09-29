@@ -35,7 +35,7 @@
 }
 
 - (int32_t)channels {
-    return (int32_t)_impl->channels;
+    return (int32_t)_impl->ch_layout.nb_channels;
 }
 
 - (int32_t)sampleRate {

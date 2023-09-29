@@ -10,6 +10,9 @@ objc_library(
     hdrs = glob([
         "Public/**/*.h",
     ]),
+    copts = [
+        "-Werror",
+    ],
     includes = [
         "Public",
     ],

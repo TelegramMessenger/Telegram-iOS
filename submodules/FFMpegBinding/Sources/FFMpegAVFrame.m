@@ -45,7 +45,7 @@
 }
 
 - (int64_t)duration {
-    return _impl->pkt_duration;
+    return _impl->duration;
 }
 
 - (FFMpegAVFrameColorRange)colorRange {
