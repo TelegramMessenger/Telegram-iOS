@@ -284,7 +284,6 @@ public final class TelegramRootController: NavigationController, TelegramRootCon
         var showDraftTooltipImpl: (() -> Void)?
         let cameraController = CameraScreen(
             context: context,
-            mode: .story,
             transitionIn: transitionIn.flatMap {
                 if let sourceView = $0.sourceView {
                     return CameraScreen.TransitionIn(

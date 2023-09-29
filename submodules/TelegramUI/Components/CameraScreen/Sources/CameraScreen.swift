@@ -361,10 +361,15 @@ private final class CameraScreenComponent: CombinedComponent {
         }
         
         func updateCameraMode(_ mode: CameraMode) {
-            guard let controller = self.getController(), let _ = controller.camera else {
+            guard let controller = self.getController(), let camera = controller.camera else {
                 return
             }
+            
             controller.updateCameraState({ $0.updatedMode(mode) }, transition: .spring(duration: 0.3))
+            
+            if case .video = mode, case .auto = controller.cameraState.flashMode {
+                camera.setFlashMode(.on)
+            }
         }
         
         func toggleFlashMode() {
@@ -375,7 +380,11 @@ private final class CameraScreenComponent: CombinedComponent {
             case .off:
                 camera.setFlashMode(.on)
             case .on:
-                camera.setFlashMode(.auto)
+                if controller.cameraState.mode == .video {
+                    camera.setFlashMode(.off)
+                } else {
+                    camera.setFlashMode(.auto)
+                }
             default:
                 camera.setFlashMode(.off)
             }
@@ -464,6 +473,39 @@ private final class CameraScreenComponent: CombinedComponent {
             }
         }
         
+        private var initialBrightness: CGFloat?
+        private var brightnessArguments: (Double, Double, CGFloat, CGFloat)?
+        private var brightnessAnimator: ConstantDisplayLinkAnimator?
+        
+        private func updateBrightness() {
+            if self.brightnessAnimator == nil {
+                self.brightnessAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    self?.updateBrightness()
+                })
+                self.brightnessAnimator?.isPaused = true
+            }
+            
+            if let (startTime, duration, initial, target) = self.brightnessArguments {
+                self.brightnessAnimator?.isPaused = false
+                
+                let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
+                let value = initial + (target - initial) * t
+                
+                UIScreen.main.brightness = value
+                
+                if t >= 1.0 {
+                    self.brightnessArguments = nil
+                    self.brightnessAnimator?.isPaused = true
+                    self.brightnessAnimator?.invalidate()
+                    self.brightnessAnimator = nil
+                }
+            } else {
+                self.brightnessAnimator?.isPaused = true
+                self.brightnessAnimator?.invalidate()
+                self.brightnessAnimator = nil
+            }
+        }
+        
         func startVideoRecording(pressing: Bool) {
             guard let controller = self.getController(), let camera = controller.camera else {
                 return
@@ -474,17 +516,30 @@ private final class CameraScreenComponent: CombinedComponent {
             
             controller.node.dismissAllTooltips()
             
-            self.resultDisposable.set((camera.startRecording()
-            |> deliverOnMainQueue).start(next: { [weak self] duration in
-                if let self, let controller = self.getController() {
-                    controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
-                    if duration > 59.0 {
-                        self.stopVideoRecording()
+            let startRecording = {
+                self.resultDisposable.set((camera.startRecording()
+                |> deliverOnMainQueue).start(next: { [weak self] duration in
+                    if let self, let controller = self.getController() {
+                        controller.updateCameraState({ $0.updatedDuration(duration) }, transition: .easeInOut(duration: 0.1))
+                        if duration > 59.0 {
+                            self.stopVideoRecording()
+                        }
                     }
-                }
-            }))
+                }))
+            }
             
             controller.updateCameraState({ $0.updatedRecording(pressing ? .holding : .handsFree).updatedDuration(0.0) }, transition: .spring(duration: 0.4))
+            
+            if case .front = controller.cameraState.position {
+                self.initialBrightness = UIScreen.main.brightness
+                UIScreen.main.brightness = 1.0
+                
+                Queue.mainQueue().after(0.2, {
+                    startRecording()
+                })
+            } else {
+                startRecording()
+            }
         }
         
         func stopVideoRecording() {
@@ -505,6 +560,12 @@ private final class CameraScreenComponent: CombinedComponent {
             })
             
             controller.updateCameraState({ $0.updatedRecording(.none).updatedDuration(0.0) }, transition: .spring(duration: 0.4))
+            
+            if case .front = controller.cameraState.position, let initialBrightness = self.initialBrightness {
+                self.initialBrightness = nil
+                self.brightnessArguments = (CACurrentMediaTime(), 0.2, UIScreen.main.brightness, initialBrightness)
+                self.updateBrightness()
+            }
         }
         
         func lockVideoRecording() {
@@ -528,6 +589,7 @@ private final class CameraScreenComponent: CombinedComponent {
     
     static var body: Body {
         let placeholder = Child(PlaceholderComponent.self)
+        let frontFlash = Child(Rectangle.self)
         let cancelButton = Child(CameraButton.self)
         let captureControls = Child(CaptureControlsComponent.self)
         let zoomControl = Child(ZoomComponent.self)
@@ -625,6 +687,21 @@ private final class CameraScreenComponent: CombinedComponent {
 //                    .appear(.default(alpha: true))
 //                    .disappear(.default(alpha: true))
 //                )
+            }
+            
+            if case .none = component.cameraState.recording {
+                
+            } else if case .front = component.cameraState.position {
+                let frontFlash = frontFlash.update(
+                    component: Rectangle(color: UIColor(white: 1.0, alpha: 0.6)),
+                    availableSize: CGSize(width: availableSize.width, height: previewHeight),
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(frontFlash
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight / 2.0))
+                    .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
             }
             
             let shutterState: ShutterButtonState
@@ -1042,12 +1119,6 @@ private class BlurView: UIVisualEffectView {
 }
 
 public class CameraScreen: ViewController {
-    public enum Mode {
-        case generic
-        case story
-        case instantVideo
-    }
-    
     public enum PIPPosition: Int32 {
         case topLeft
         case topRight
@@ -2338,7 +2409,6 @@ public class CameraScreen: ViewController {
     }
 
     private let context: AccountContext
-    fileprivate let mode: Mode
     fileprivate let holder: CameraHolder?
     fileprivate let transitionIn: TransitionIn?
     fileprivate let transitionOut: (Bool) -> TransitionOut?
@@ -2388,14 +2458,12 @@ public class CameraScreen: ViewController {
     
     public init(
         context: AccountContext,
-        mode: Mode,
         holder: CameraHolder? = nil,
         transitionIn: TransitionIn?,
         transitionOut: @escaping (Bool) -> TransitionOut?,
         completion: @escaping (Signal<CameraScreen.Result, NoError>, ResultTransition?, @escaping () -> Void) -> Void
     ) {
         self.context = context
-        self.mode = mode
         self.holder = holder
         self.transitionIn = transitionIn
         self.transitionOut = transitionOut
