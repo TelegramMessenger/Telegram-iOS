@@ -1,6 +1,8 @@
 #!/bin/sh
 
-set -x
+#set -x
+
+RV=1
 
 RAW_ARCHS="$2"
 ARCHS=""
@@ -19,7 +21,7 @@ done
 BUILD_DIR=$3
 SOURCE_DIR=$4
 
-FF_VERSION="4.1"
+FF_VERSION="6.0"
 SOURCE="$SOURCE_DIR/ffmpeg-$FF_VERSION"
 
 GAS_PREPROCESSOR_PATH="$SOURCE_DIR/gas-preprocessor.pl"
@@ -47,12 +49,14 @@ CONFIGURE_FLAGS="--enable-cross-compile --disable-programs \
                  --enable-libopus \
 				 --enable-libvpx \
                  --enable-audiotoolbox \
+                 --enable-videotoolbox \
                  --enable-bsf=aac_adtstoasc \
-                 --enable-decoder=h264,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
+                 --enable-decoder=h264,h264_videotoolbox,libvpx_vp9,hevc,libopus,mp3,aac,flac,alac_at,pcm_s16le,pcm_s24le,gsm_ms_at \
                  --enable-demuxer=aac,mov,m4v,mp3,ogg,libopus,flac,wav,aiff,matroska \
                  --enable-parser=aac,h264,mp3,libopus \
                  --enable-protocol=file \
                  --enable-muxer=mp4 \
+                 --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox \
                  "
 
 

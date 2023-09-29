@@ -85,7 +85,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
         if totalCount > maximumFetchSize {
             context.readingError = true
-            return 0
+            return FFMPEG_CONSTANT_AVERROR_EOF
         }
     }
     
@@ -118,7 +118,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 disposable.dispose()
                 if !completedRequest {
                     context.readingError = true
-                    return 0
+                    return FFMPEG_CONSTANT_AVERROR_EOF
                 }
             }
         }
@@ -176,7 +176,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             disposable.dispose()
             if !completedRequest {
                 context.readingError = true
-                return 0
+                return FFMPEG_CONSTANT_AVERROR_EOF
             }
         }
     }
@@ -192,7 +192,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     if context.closed {
         context.readingError = true
-        return 0
+        return FFMPEG_CONSTANT_AVERROR_EOF
     }
     return fetchedCount
 }

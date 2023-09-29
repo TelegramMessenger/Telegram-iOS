@@ -71,7 +71,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         context.readingOffset += Int64(fetchedCount)
         return fetchedCount
     } else {
-        return 0
+        return FFMPEG_CONSTANT_AVERROR_EOF
     }
 }
 

@@ -2,6 +2,7 @@
 
 #import <FFMpegBinding/FFMpegAVCodecContext.h>
 
+#import "libavcodec/avcodec.h"
 #import "libavformat/avformat.h"
 
 @interface FFMpegPacket () {

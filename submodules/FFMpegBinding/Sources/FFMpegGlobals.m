@@ -10,7 +10,6 @@
 #else
     av_log_set_level(AV_LOG_QUIET);
 #endif
-    av_register_all();
 }
 
 @end
