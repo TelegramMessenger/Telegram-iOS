@@ -234,7 +234,6 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
-            
             case let .actionSucceeded(title, text, cancel, destructive):
                 self.avatarNode = nil
                 self.iconNode = nil

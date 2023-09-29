@@ -522,6 +522,10 @@ public extension TelegramEngine {
         public func invokeBotCustomMethod(botId: PeerId, method: String, params: String) -> Signal<String, InvokeBotCustomMethodError> {
             return _internal_invokeBotCustomMethod(postbox: self.account.postbox, network: self.account.network, botId: botId, method: method, params: params)
         }
+        
+        public func refreshAttachMenuBots() {
+            let _ = managedSynchronizeAttachMenuBots(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, force: true).startStandalone()
+        }
                 
         public func addBotToAttachMenu(botId: PeerId, allowWrite: Bool) -> Signal<Bool, AddBotToAttachMenuError> {
             return _internal_addBotToAttachMenu(accountPeerId: self.account.peerId, postbox: self.account.postbox, network: self.account.network, botId: botId, allowWrite: allowWrite)

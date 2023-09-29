@@ -826,7 +826,7 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
                 } else {
                     iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
                 }
-                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), text: bot.peer.compactDisplayTitle, icon: nil, iconSignal: iconSignal, action: {
+                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), text: bot.shortName, icon: nil, iconSignal: iconSignal, action: {
                     interaction.openBotApp(bot)
                 }))
                 appIndex += 1
