@@ -725,7 +725,7 @@ private func videoFrameFromPacket(_ packet: FFMpegPacket, videoStream: StreamCon
     if frameDuration != 0 {
         duration = CMTimeMake(value: frameDuration * videoStream.timebase.value, timescale: videoStream.timebase.timescale)
     } else {
-        duration = videoStream.fps
+        duration = CMTimeMake(value: Int64(videoStream.fps.timescale), timescale: Int32(videoStream.fps.value))
     }
     
     return MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)

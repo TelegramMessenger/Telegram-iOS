@@ -3,14 +3,14 @@
 #import "libavcodec/avcodec.h"
 
 @interface FFMpegAVCodec () {
-    AVCodec *_impl;
+    AVCodec const *_impl;
 }
 
 @end
 
 @implementation FFMpegAVCodec
 
-- (instancetype)initWithImpl:(AVCodec *)impl {
+- (instancetype)initWithImpl:(AVCodec const *)impl {
     self = [super init];
     if (self != nil) {
         _impl = impl;
@@ -19,7 +19,7 @@
 }
 
 + (FFMpegAVCodec * _Nullable)findForId:(int)codecId {
-    AVCodec *codec = avcodec_find_decoder(codecId);
+    AVCodec const *codec = avcodec_find_decoder(codecId);
     if (codec) {
         return [[FFMpegAVCodec alloc] initWithImpl:codec];
     } else {
@@ -28,7 +28,7 @@
 }
 
 - (void *)impl {
-    return _impl;
+    return (void *)_impl;
 }
 
 @end

@@ -52,7 +52,9 @@
         swr_free(&_context);
         _context = NULL;
     }
-
+    
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     _context = swr_alloc_set_opts(NULL,
                                   av_get_default_channel_layout((int)_destinationChannelCount),
                                   (enum AVSampleFormat)_destinationSampleFormat,
@@ -62,6 +64,7 @@
                                   (int)_sourceSampleRate,
                                   0,
                                   NULL);
+#pragma clang diagnostic pop
     _currentSourceChannelCount = channelCount;
     _ratio = MAX(1, _destinationSampleRate / MAX(_sourceSampleRate, 1)) * MAX(1, _destinationChannelCount / channelCount) * 2;
     if (_context) {
@@ -72,7 +75,7 @@
 - (NSData * _Nullable)resample:(FFMpegAVFrame *)frame {
     AVFrame *frameImpl = (AVFrame *)[frame impl];
 
-    int numChannels = frameImpl->channels;
+    int numChannels = frameImpl->ch_layout.nb_channels;
     if (numChannels != _currentSourceChannelCount) {
         [self resetContextForChannelCount:numChannels];
     }
