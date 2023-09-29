@@ -1757,7 +1757,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
         |> mapToSignal { finalState in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
-                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: finalState)
+                return resolveAssociatedStories(postbox: postbox, network: network, accountPeerId: accountPeerId, state: resultingState)
                 |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                     return resolveMissingPeerChatInfos(network: network, state: resultingState)
                     |> map { resultingState, resolveError -> AccountFinalState in
