@@ -11,8 +11,82 @@ import AccountContext
 import AppBundle
 import AvatarNode
 import Markdown
+import CheckNode
 
-private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
+private func generateBoostIcon(theme: PresentationTheme) -> UIImage? {
+    if let image = UIImage(bundleImageName: "Premium/AvatarBoost") {
+        let size = CGSize(width: image.size.width + 4.0, height: image.size.height + 4.0)
+        return generateImage(size, contextGenerator: { size, context in
+            let bounds = CGRect(origin: .zero, size: size)
+            context.clear(bounds)
+            if let cgImage = image.cgImage {
+                context.draw(cgImage, in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: image.size))
+            }
+            
+            let lineWidth = 2.0 - UIScreenPixel
+            context.setLineWidth(lineWidth)
+            context.setStrokeColor(theme.actionSheet.opaqueItemBackgroundColor.cgColor)
+            context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0 + UIScreenPixel, dy: lineWidth / 2.0 + UIScreenPixel))
+        }, opaque: false)
+    }
+    return nil
+}
+
+private final class PreviousBoostNode: ASDisplayNode {
+    let checkNode: InteractiveCheckNode
+    let avatarNode: AvatarNode
+    let labelNode: ImmediateTextNode
+    
+    var pressed: (PreviousBoostNode) -> Void = { _ in }
+    
+    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, peer: EnginePeer, badge: String?) {
+        self.checkNode = InteractiveCheckNode(theme: CheckNodeTheme(backgroundColor: theme.accentColor, strokeColor: theme.contrastColor, borderColor: theme.controlBorderColor, overlayBorder: false, hasInset: false, hasShadow: false))
+        self.checkNode.setSelected(false, animated: false)
+       
+        self.labelNode = ImmediateTextNode()
+        self.labelNode.maximumNumberOfLines = 4
+        self.labelNode.isUserInteractionEnabled = true
+        self.labelNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.semibold(13.0), textColor: theme.primaryColor)
+        
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 13.0))
+        
+        super.init()
+        
+        self.addSubnode(self.checkNode)
+        self.addSubnode(self.avatarNode)
+        self.addSubnode(self.labelNode)
+        
+        self.avatarNode.setPeer(context: context, theme: ptheme, peer: peer)
+        
+        self.checkNode.valueChanged = { [weak self] value in
+            if let self {
+                if value {
+                    self.pressed(self)
+                }
+            }
+        }
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
+        let checkSize = CGSize(width: 22.0, height: 22.0)
+        let condensedSize = CGSize(width: size.width - 76.0, height: size.height)
+        let avatarSize = CGSize(width: 30.0, height: 30.0)
+        
+        let labelSize = self.labelNode.updateLayout(condensedSize)
+        transition.updateFrame(node: self.checkNode, frame: CGRect(origin: CGPoint(x: 12.0, y: -2.0), size: checkSize))
+        transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: 46.0, y: -8.0), size: avatarSize))
+        
+        transition.updateFrame(node: self.labelNode, frame: CGRect(origin: CGPoint(x: 84.0, y: 0.0), size: labelSize))
+        
+        return CGSize(width: size.width, height: checkSize.height)
+    }
+    
+    func setChecked(_ checked: Bool) {
+        self.checkNode.setSelected(checked, animated: false)
+    }
+}
+
+private final class ReplaceBoostConfirmationAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
     private let text: String
     
@@ -26,13 +100,15 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
     private let actionNodes: [TextAlertContentActionNode]
     private let actionVerticalSeparators: [ASDisplayNode]
     
+    private var boostNodes: [PreviousBoostNode] = []
+    
     private var validLayout: CGSize?
     
     override var dismissOnOutsideTap: Bool {
         return self.isUserInteractionEnabled
     }
     
-    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, fromPeer: EnginePeer, toPeer: EnginePeer, text: String, actions: [TextAlertAction]) {
+    init(context: AccountContext, theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, fromPeers: [EnginePeer], toPeer: EnginePeer, text: String, actions: [TextAlertAction]) {
         self.strings = strings
         self.text = text
         
@@ -49,7 +125,7 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = UIImage(bundleImageName: "Premium/AvatarBoost")
+        self.iconNode.image = generateBoostIcon(theme: ptheme)
         
         self.actionNodesSeparator = ASDisplayNode()
         self.actionNodesSeparator.isLayerBacked = true
@@ -67,6 +143,18 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
             }
         }
         self.actionVerticalSeparators = actionVerticalSeparators
+        
+        var boostNodes: [PreviousBoostNode] = []
+        if fromPeers.count > 1 {
+            for peer in fromPeers {
+                let boostNode = PreviousBoostNode(context: context, theme: theme, ptheme: ptheme, peer: peer, badge: nil)
+                if boostNodes.isEmpty {
+                    boostNode.setChecked(true)
+                }
+                boostNodes.append(boostNode)
+            }
+        }
+        self.boostNodes = boostNodes
         
         super.init()
         
@@ -86,9 +174,20 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
             self.addSubnode(separatorNode)
         }
         
+        for boostNode in self.boostNodes {
+            boostNode.pressed = { [weak self] sender in
+                if let self {
+                    for node in self.boostNodes {
+                        node.setChecked(node === sender)
+                    }
+                }
+            }
+            self.addSubnode(boostNode)
+        }
+        
         self.updateTheme(theme)
         
-        self.avatarNode.setPeer(context: context, theme: ptheme, peer: fromPeer)
+        self.avatarNode.setPeer(context: context, theme: ptheme, peer: fromPeers.first!)
         self.secondAvatarNode.setPeer(context: context, theme: ptheme, peer: toPeer)
     }
     
@@ -145,8 +244,10 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
         
         origin.y += avatarSize.height + 10.0
         
+        var entriesHeight: CGFloat = 0.0
         let textSize = self.textNode.measure(CGSize(width: size.width - 32.0, height: size.height))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - textSize.width) / 2.0), y: origin.y), size: textSize))
+        origin.y += textSize.height + 10.0
         
         let actionButtonHeight: CGFloat = 44.0
         var minActionsWidth: CGFloat = 0.0
@@ -171,6 +272,17 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
         
         let contentWidth = max(size.width, minActionsWidth)
         
+        if !self.boostNodes.isEmpty {
+            origin.y += 17.0
+            for boostNode in self.boostNodes {
+                let boostSize = boostNode.updateLayout(size: size, transition: transition)
+                transition.updateFrame(node: boostNode, frame: CGRect(origin: CGPoint(x: 36.0, y: origin.y), size: boostSize))
+                
+                entriesHeight += boostSize.height + 20.0
+                origin.y += boostSize.height + 20.0
+            }
+        }
+        
         var actionsHeight: CGFloat = 0.0
         switch effectiveActionLayout {
             case .horizontal:
@@ -179,8 +291,7 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
                 actionsHeight = actionButtonHeight * CGFloat(self.actionNodes.count)
         }
         
-        let resultSize = CGSize(width: contentWidth, height: avatarSize.height + textSize.height + actionsHeight + 16.0 + insets.top + insets.bottom)
-        
+        let resultSize = CGSize(width: contentWidth, height: avatarSize.height + textSize.height + entriesHeight + actionsHeight + 16.0 + insets.top + insets.bottom)
         transition.updateFrame(node: self.actionNodesSeparator, frame: CGRect(origin: CGPoint(x: 0.0, y: resultSize.height - actionsHeight - UIScreenPixel), size: CGSize(width: resultSize.width, height: UIScreenPixel)))
         
         var actionOffset: CGFloat = 0.0
@@ -230,21 +341,31 @@ private final class PhotoUpdateConfirmationAlertContentNode: AlertContentNode {
     }
 }
 
-func replaceBoostConfirmationController(context: AccountContext, fromPeer: EnginePeer, toPeer: EnginePeer, text: String, commit: @escaping () -> Void) -> AlertController {
+func replaceBoostConfirmationController(context: AccountContext, fromPeers: [EnginePeer], toPeer: EnginePeer, commit: @escaping () -> Void) -> AlertController {
+    let fromPeers = [fromPeers.first!, fromPeers.first!]
+    
     let theme = defaultDarkColorPresentationTheme
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
     
+    let text: String
+    if fromPeers.count > 1 {
+        text = "To boost **\(toPeer.compactDisplayTitle)**, reassign a previous boost from:"
+        //strings.ChannelBoost_ReplaceBoost(previousPeer.compactDisplayTitle, toPeer.compactDisplayTitle).string
+    } else {
+        text = strings.ChannelBoost_ReplaceBoost(fromPeers.first!.compactDisplayTitle, toPeer.compactDisplayTitle).string
+    }
+    
     var dismissImpl: ((Bool) -> Void)?
-    var contentNode: PhotoUpdateConfirmationAlertContentNode?
+    var contentNode: ReplaceBoostConfirmationAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: presentationData.strings.ChannelBoost_Replace, action: {
+    }), TextAlertAction(type: .defaultAction, title: "Reassign", action: {
         dismissImpl?(true)
         commit()
     })]
     
-    contentNode = PhotoUpdateConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, fromPeer: fromPeer, toPeer: toPeer, text: text, actions: actions)
+    contentNode = ReplaceBoostConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, fromPeers: fromPeers, toPeer: toPeer, text: text, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

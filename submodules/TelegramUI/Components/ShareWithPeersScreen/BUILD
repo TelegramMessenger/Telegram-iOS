@@ -40,6 +40,7 @@ swift_library(
         "//submodules/TooltipUI",
         "//submodules/OverlayStatusController",
         "//submodules/UndoUI",
+        "//submodules/TemporaryCachedPeerDataManager",
     ],
     visibility = [
         "//visibility:public",

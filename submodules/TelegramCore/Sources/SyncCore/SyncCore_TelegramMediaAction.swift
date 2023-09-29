@@ -109,6 +109,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case requestedPeer(buttonId: Int32, peerId: PeerId)
     case setChatWallpaper(wallpaper: TelegramWallpaper)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
+    case giftCode(slug: String, fromGiveaway: Bool, boostPeerId: PeerId?, months: Int32)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -203,6 +204,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             }
         case 35:
             self = .botAppAccessGranted(appName: decoder.decodeOptionalStringForKey("app"), type: decoder.decodeOptionalInt32ForKey("atp").flatMap { BotSendMessageAccessGrantedType(rawValue: $0) })
+        case 36:
+            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0))
         default:
             self = .unknown
         }
@@ -382,6 +385,16 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "atp")
             }
+        case let .giftCode(slug, fromGiveaway, boostPeerId, months):
+            encoder.encodeInt32(36, forKey: "_rawValue")
+            encoder.encodeString(slug, forKey: "slug")
+            encoder.encodeBool(fromGiveaway, forKey: "give")
+            if let boostPeerId = boostPeerId {
+                encoder.encodeInt64(boostPeerId.toInt64(), forKey: "pi")
+            } else {
+                encoder.encodeNil(forKey: "pi")
+            }
+            encoder.encodeInt32(months, forKey: "months")
         }
     }
     
@@ -403,6 +416,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return peerIds
         case let .requestedPeer(_, peerId):
             return [peerId]
+        case let .giftCode(_, _, boostPeerId, _):
+            return boostPeerId.flatMap { [$0] } ?? []
         default:
             return []
         }

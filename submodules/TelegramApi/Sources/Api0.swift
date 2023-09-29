@@ -405,6 +405,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[70813275] = { return Api.InputStickeredMedia.parse_inputStickeredMediaDocument($0) }
     dict[1251549527] = { return Api.InputStickeredMedia.parse_inputStickeredMediaPhoto($0) }
     dict[1634697192] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentGiftPremium($0) }
+    dict[-1551868097] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiftCode($0) }
+    dict[-566640558] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumGiveaway($0) }
     dict[-1502273946] = { return Api.InputStorePaymentPurpose.parse_inputStorePaymentPremiumSubscription($0) }
     dict[1012306921] = { return Api.InputTheme.parse_inputTheme($0) }
     dict[-175567375] = { return Api.InputTheme.parse_inputThemeSlug($0) }
@@ -477,6 +479,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1230047312] = { return Api.MessageAction.parse_messageActionEmpty($0) }
     dict[-1834538890] = { return Api.MessageAction.parse_messageActionGameScore($0) }
     dict[-1730095465] = { return Api.MessageAction.parse_messageActionGeoProximityReached($0) }
+    dict[-758129906] = { return Api.MessageAction.parse_messageActionGiftCode($0) }
     dict[-935499028] = { return Api.MessageAction.parse_messageActionGiftPremium($0) }
     dict[2047704898] = { return Api.MessageAction.parse_messageActionGroupCall($0) }
     dict[-1281329567] = { return Api.MessageAction.parse_messageActionGroupCallScheduled($0) }
@@ -531,6 +534,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-38694904] = { return Api.MessageMedia.parse_messageMediaGame($0) }
     dict[1457575028] = { return Api.MessageMedia.parse_messageMediaGeo($0) }
     dict[-1186937242] = { return Api.MessageMedia.parse_messageMediaGeoLive($0) }
+    dict[1202724576] = { return Api.MessageMedia.parse_messageMediaGiveaway($0) }
     dict[-156940077] = { return Api.MessageMedia.parse_messageMediaInvoice($0) }
     dict[1766936791] = { return Api.MessageMedia.parse_messageMediaPhoto($0) }
     dict[1272375192] = { return Api.MessageMedia.parse_messageMediaPoll($0) }
@@ -655,6 +659,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2061444128] = { return Api.PollResults.parse_pollResults($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
+    dict[-713473172] = { return Api.PremiumGiftCodeOption.parse_premiumGiftCodeOption($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
     dict[1596792306] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
     dict[-1534675103] = { return Api.PrivacyKey.parse_privacyKeyAbout($0) }
@@ -1144,6 +1149,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1218005070] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[-44166467] = { return Api.messages.WebPage.parse_webPage($0) }
     dict[1042605427] = { return Api.payments.BankCardData.parse_bankCardData($0) }
+    dict[-9426548] = { return Api.payments.CheckedGiftCode.parse_checkedGiftCode($0) }
     dict[-1362048039] = { return Api.payments.ExportedInvoice.parse_exportedInvoice($0) }
     dict[-1610250415] = { return Api.payments.PaymentForm.parse_paymentForm($0) }
     dict[1891958275] = { return Api.payments.PaymentReceipt.parse_paymentReceipt($0) }
@@ -1658,6 +1664,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PostAddress:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.PremiumGiftCodeOption:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumGiftOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumSubscriptionOption:
@@ -2021,6 +2029,8 @@ public extension Api {
             case let _1 as Api.messages.WebPage:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.BankCardData:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.payments.CheckedGiftCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.payments.ExportedInvoice:
                 _1.serialize(buffer, boxed)

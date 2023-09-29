@@ -244,6 +244,10 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
                     }
                 case let .messageActionRequestedPeer(_, peer):
                     result.append(peer.peerId)
+                case let .messageActionGiftCode(_, boostPeer, _, _):
+                    if let boostPeer = boostPeer {
+                        result.append(boostPeer.peerId)
+                    }
             }
         
             return result
@@ -383,6 +387,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
             return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil)
+        case let .messageMediaGiveaway(channels, quantity, months, untilDate):
+            return (TelegramMediaGiveaway(channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil)
         }
     }
     

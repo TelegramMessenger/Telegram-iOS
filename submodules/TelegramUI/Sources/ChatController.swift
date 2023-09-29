@@ -930,6 +930,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
                             strongSelf.push(controller)
                             return true
+                        case let .giftCode(slug, _, _, _):
+                            strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id)
+                            return true
                         case let .suggestedProfilePhoto(image):
                             strongSelf.chatDisplayNode.dismissInput()
                             if let image = image {

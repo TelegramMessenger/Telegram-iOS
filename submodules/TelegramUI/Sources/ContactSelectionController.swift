@@ -148,6 +148,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     deinit {
         self.createActionDisposable.dispose()
         self.presentationDataDisposable?.dispose()
+        self.confirmationDisposable.dispose()
     }
     
     @objc private func beginSearch() {

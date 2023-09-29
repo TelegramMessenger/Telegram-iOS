@@ -45,5 +45,17 @@ public extension TelegramEngine {
         public func canPurchasePremium(purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
             return _internal_canPurchasePremium(account: self.account, purpose: purpose)
         }
+        
+        public func checkPremiumGiftCode(slug: String) -> Signal<PremiumGiftCodeInfo?, NoError> {
+            return _internal_checkPremiumGiftCode(account: self.account, slug: slug)
+        }
+        
+        public func applyPremiumGiftCode(slug: String) -> Signal<Never, NoError> {
+            return _internal_applyPremiumGiftCode(account: self.account, slug: slug)
+        }
+        
+        public func premiumGiftCodeOptions(peerId: EnginePeer.Id) -> Signal<[PremiumGiftCodeOption], NoError> {
+            return _internal_premiumGiftCodeOptions(account: self.account, peerId: peerId)
+        }
     }
 }

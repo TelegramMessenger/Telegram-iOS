@@ -17,8 +17,9 @@ public final class DatePickerTheme: Equatable {
     public let selectionTextColor: UIColor
     public let separatorColor: UIColor
     public let segmentedControlTheme: SegmentedControlTheme
+    public let overallDarkAppearance: Bool
     
-    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, disabledColor: UIColor, selectionColor: UIColor, selectionTextColor: UIColor, separatorColor: UIColor, segmentedControlTheme: SegmentedControlTheme) {
+    public init(backgroundColor: UIColor, textColor: UIColor, secondaryTextColor: UIColor, accentColor: UIColor, disabledColor: UIColor, selectionColor: UIColor, selectionTextColor: UIColor, separatorColor: UIColor, segmentedControlTheme: SegmentedControlTheme, overallDarkAppearance: Bool) {
         self.backgroundColor = backgroundColor
         self.textColor = textColor
         self.secondaryTextColor = secondaryTextColor
@@ -28,6 +29,7 @@ public final class DatePickerTheme: Equatable {
         self.selectionTextColor = selectionTextColor
         self.separatorColor = separatorColor
         self.segmentedControlTheme = segmentedControlTheme
+        self.overallDarkAppearance = overallDarkAppearance
     }
     
     public static func ==(lhs: DatePickerTheme, rhs: DatePickerTheme) -> Bool {
@@ -52,13 +54,16 @@ public final class DatePickerTheme: Equatable {
         if lhs.separatorColor != rhs.separatorColor {
             return false
         }
+        if lhs.overallDarkAppearance != rhs.overallDarkAppearance {
+            return false
+        }
         return true
     }
 }
 
 public extension DatePickerTheme {
     convenience init(theme: PresentationTheme) {
-        self.init(backgroundColor: theme.list.itemBlocksBackgroundColor, textColor: theme.list.itemPrimaryTextColor, secondaryTextColor: theme.list.itemSecondaryTextColor, accentColor: theme.list.itemAccentColor, disabledColor: theme.list.itemDisabledTextColor, selectionColor: theme.list.itemCheckColors.fillColor, selectionTextColor: theme.list.itemCheckColors.foregroundColor, separatorColor: theme.list.itemBlocksSeparatorColor, segmentedControlTheme: SegmentedControlTheme(theme: theme))
+        self.init(backgroundColor: theme.list.itemBlocksBackgroundColor, textColor: theme.list.itemPrimaryTextColor, secondaryTextColor: theme.list.itemSecondaryTextColor, accentColor: theme.list.itemAccentColor, disabledColor: theme.list.itemDisabledTextColor, selectionColor: theme.list.itemCheckColors.fillColor, selectionTextColor: theme.list.itemCheckColors.foregroundColor, separatorColor: theme.list.itemBlocksSeparatorColor, segmentedControlTheme: SegmentedControlTheme(theme: theme), overallDarkAppearance: theme.overallDarkAppearance)
     }
 }
 
@@ -948,6 +953,7 @@ private class TimeInputView: UIView, UIKeyInput {
     }
     
     var keyboardType: UIKeyboardType = .numberPad
+    var keyboardAppearance: UIKeyboardAppearance = .default
     
     var text: String = ""
     var hasText: Bool {
@@ -1284,7 +1290,7 @@ private final class TimePickerNode: ASDisplayNode {
         
         self.update()
     }
-    
+        
     private func updateTime() {
         switch self.dateTimeFormat.timeFormat {
             case .military:
@@ -1338,6 +1344,8 @@ private final class TimePickerNode: ASDisplayNode {
         self.view.disablesInteractiveModalDismiss = true
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
+        
+        (self.inputNode.view as? TimeInputView)?.keyboardAppearance = self.theme.overallDarkAppearance ? .dark : .default
     }
     
     private func handleTextInput(_ input: String) {

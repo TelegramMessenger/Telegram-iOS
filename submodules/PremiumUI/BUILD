@@ -100,7 +100,11 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
         "//submodules/AttachmentUI:AttachmentUI",
-        "//submodules/Components/BalancedTextComponent"
+        "//submodules/Components/BalancedTextComponent",
+        "//submodules/ItemListPeerItem:ItemListPeerItem",
+        "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
+        "//submodules/TelegramUI/Components/ItemListDatePickerItem:ItemListDatePickerItem",
+        "//submodules/TelegramUI/Components/ShareWithPeersScreen",
     ],
     visibility = [
         "//visibility:public",

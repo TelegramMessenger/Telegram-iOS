@@ -36,7 +36,7 @@ func replaceSymbols() -> [String] {
 
 let package = Package(
     name: "rnoise",
-    platforms: [.macOS(.v10_12)],
+    platforms: [.macOS(.v10_13)],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(

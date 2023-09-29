@@ -1055,9 +1055,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             self.fullscreenButton.isHidden = true
         }
         
-        var textFrame = CGRect()
-        var visibleTextHeight: CGFloat = 0.0
         if !self.textNode.isHidden {
+            var textFrame = CGRect()
+            var visibleTextHeight: CGFloat = 0.0
+            
             let sideInset: CGFloat = 8.0 + leftInset
             let topInset: CGFloat = 8.0
             let textBottomInset: CGFloat = 8.0
@@ -1085,7 +1086,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     self.scrollNode.frame = scrollNodeFrame
                 }
                 
-                textOffset = min(400.0, self.scrollNode.view.contentOffset.y)
+                var maxTextOffset: CGFloat = size.height - bottomInset - 238.0 - UIScreenPixel
+                if let _ = self.scrubberView {
+                    maxTextOffset -= 44.0
+                }
+                textOffset = min(maxTextOffset, self.scrollNode.view.contentOffset.y)
                 panelHeight = max(0.0, panelHeight + visibleTextPanelHeight + textOffset)
                 
                 if self.scrollNode.view.isScrollEnabled {

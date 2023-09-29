@@ -670,11 +670,12 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            let _ = (self.context.engine.payments.canPurchasePremium(purpose: .gift(peerId: self.peerId, currency: currency, amount: amount))
+            let purpose: AppStoreTransactionPurpose = .gift(peerId: self.peerId, currency: currency, amount: amount)
+            let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, targetPeerId: strongSelf.peerId)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
                                 Queue.mainQueue().after(2.0) {

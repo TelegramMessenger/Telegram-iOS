@@ -301,6 +301,7 @@ public enum ResolvedUrl {
     case chatFolder(slug: String)
     case story(peerId: PeerId, id: Int32)
     case boost(peerId: PeerId, status: ChannelBoostStatus?, canApplyStatus: CanApplyBoostStatus)
+    case premiumGiftCode(slug: String)
 }
 
 public enum NavigateToChatKeepStack {

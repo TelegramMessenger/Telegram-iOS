@@ -59,48 +59,6 @@ public final class PeerSelectionControllerParams {
     public let selectForumThreads: Bool
     public let hasCreation: Bool
     
-    /*public convenience init(
-        context: AccountContext,
-        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
-        filter: ChatListNodePeersFilter = [.onlyWriteable],
-        requestPeerType: [ReplyMarkupButtonRequestPeerType]? = nil,
-        forumPeerId: EnginePeer.Id? = nil,
-        hasFilters: Bool = false,
-        hasChatListSelector: Bool = true,
-        hasContactSelector: Bool = true,
-        hasGlobalSearch: Bool = true,
-        title: String? = nil,
-        attemptSelection: ((EnginePeer, Int64?) -> Void)? = nil,
-        createNewGroup: (() -> Void)? = nil,
-        pretendPresentedInModal: Bool = false,
-        multipleSelection: Bool = false,
-        forwardedMessageIds: [EngineMessage.Id] = [],
-        hasTypeHeaders: Bool = false,
-        selectForumThreads: Bool = false,
-        hasCreation: Bool = false
-    ) {
-        self.init(
-            context: .account(context),
-            updatedPresentationData: updatedPresentationData,
-            filter: filter,
-            requestPeerType: requestPeerType,
-            forumPeerId: forumPeerId,
-            hasFilters: hasFilters,
-            hasChatListSelector: hasChatListSelector,
-            hasContactSelector: hasContactSelector,
-            hasGlobalSearch: hasGlobalSearch,
-            title: title,
-            attemptSelection: attemptSelection,
-            createNewGroup: createNewGroup,
-            pretendPresentedInModal: pretendPresentedInModal,
-            multipleSelection: multipleSelection,
-            forwardedMessageIds: forwardedMessageIds,
-            hasTypeHeaders: hasTypeHeaders,
-            selectForumThreads: selectForumThreads,
-            hasCreation: hasCreation
-        )
-    }*/
-    
     public init(
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,

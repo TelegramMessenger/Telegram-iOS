@@ -3,6 +3,7 @@ import CoreLocation
 import SwiftSignalKit
 import StoreKit
 import TelegramCore
+import Postbox
 import TelegramStringFormatting
 import TelegramUIPreferences
 import PersistentStringHash
@@ -13,12 +14,12 @@ private let productIdentifiers = [
     "org.telegram.telegramPremium.monthly",
     "org.telegram.telegramPremium.twelveMonths",
     "org.telegram.telegramPremium.sixMonths",
-    "org.telegram.telegramPremium.threeMonths"
-]
+    "org.telegram.telegramPremium.threeMonths",
 
-private func isSubscriptionProductId(_ id: String) -> Bool {
-    return id.hasSuffix(".monthly") || id.hasSuffix(".annual") || id.hasSuffix(".semiannual")
-}
+    "org.telegram.telegramPremium.threeMonths.code_x1",
+    "org.telegram.telegramPremium.sixMonths.code_x1",
+    "org.telegram.telegramPremium.twelveMonths.code_x1"
+]
 
 private extension NSDecimalNumber {
     func round(_ decimals: Int) -> NSDecimalNumber {
@@ -103,6 +104,25 @@ public final class InAppPurchaseManager: NSObject {
             return self.numberFormatter.string(from: prettierPrice) ?? ""
         }
         
+        public func multipliedPrice(count: Int) -> String {
+            let price = self.skProduct.price.multiplying(by: NSDecimalNumber(value: count)).round(2)
+            let prettierPrice = price
+                .multiplying(by: NSDecimalNumber(value: 2))
+                .rounding(accordingToBehavior:
+                    NSDecimalNumberHandler(
+                        roundingMode: .up,
+                        scale: Int16(0),
+                        raiseOnExactness: false,
+                        raiseOnOverflow: false,
+                        raiseOnUnderflow: false,
+                        raiseOnDivideByZero: false
+                    )
+                )
+                .dividing(by: NSDecimalNumber(value: 2))
+                .subtracting(NSDecimalNumber(value: 0.01))
+            return self.numberFormatter.string(from: prettierPrice) ?? ""
+        }
+        
         public var priceValue: NSDecimalNumber {
             return self.skProduct.price
         }
@@ -151,13 +171,11 @@ public final class InAppPurchaseManager: NSObject {
     
     private final class PaymentTransactionContext {
         var state: SKPaymentTransactionState?
-        var isUpgrade: Bool
-        var targetPeerId: EnginePeer.Id?
+        let purpose: PendingInAppPurchaseState.Purpose
         let subscriber: (TransactionState) -> Void
         
-        init(isUpgrade: Bool, targetPeerId: EnginePeer.Id?, subscriber: @escaping (TransactionState) -> Void) {
-            self.isUpgrade = isUpgrade
-            self.targetPeerId = targetPeerId
+        init(purpose: PendingInAppPurchaseState.Purpose, subscriber: @escaping (TransactionState) -> Void) {
+            self.purpose = purpose
             self.subscriber = subscriber
         }
     }
@@ -235,21 +253,20 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product, isUpgrade: Bool = false, targetPeerId: EnginePeer.Id? = nil) -> Signal<PurchaseState, PurchaseError> {
+    public func buyProduct(_ product: Product, purpose: AppStoreTransactionPurpose) -> Signal<PurchaseState, PurchaseError> {
         if !self.canMakePayments {
             return .fail(.cantMakePayments)
         }
-        
-        if !product.isSubscription && targetPeerId == nil {
-            return .fail(.cantMakePayments)
-        }
-        
+                
         let accountPeerId = "\(self.engine.account.peerId.toInt64())"
         
         Logger.shared.log("InAppPurchaseManager", "Buying: account \(accountPeerId), product \(product.skProduct.productIdentifier), price \(product.price)")
         
+        let purpose = PendingInAppPurchaseState.Purpose(appStorePurpose: purpose)
+        
         let payment = SKMutablePayment(product: product.skProduct)
         payment.applicationUsername = accountPeerId
+        payment.quantity = purpose.quantity
         SKPaymentQueue.default().add(payment)
         
         let productIdentifier = payment.productIdentifier
@@ -257,7 +274,7 @@ public final class InAppPurchaseManager: NSObject {
             let disposable = MetaDisposable()
             
             self.stateQueue.async {
-                let paymentContext = PaymentTransactionContext(isUpgrade: isUpgrade, targetPeerId: targetPeerId, subscriber: { state in
+                let paymentContext = PaymentTransactionContext(purpose: purpose, subscriber: { state in
                     switch state {
                         case let .purchased(transactionId), let .restored(transactionId):
                             if let transactionId = transactionId {
@@ -381,8 +398,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                                 productId: transaction.payment.productIdentifier,
                                 content: PendingInAppPurchaseState(
                                     productId: transaction.payment.productIdentifier,
-                                    isUpgrade: paymentContext.isUpgrade,
-                                    targetPeerId: paymentContext.targetPeerId
+                                    purpose: paymentContext.purpose
                                 )
                             ).start()
                         }
@@ -410,64 +426,61 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 
                 var completion: Signal<Never, NoError> = .never()
                 
-                let purpose: Signal<AppStoreTransactionPurpose, NoError>
-                if !isSubscriptionProductId(productIdentifier) {
-                    let peerId: Signal<EnginePeer.Id, NoError>
-                    if let targetPeerId = paymentContexts[productIdentifier]?.targetPeerId {
-                        peerId = .single(targetPeerId)
+                let products = self.availableProducts
+                |> filter { products in
+                    return !products.isEmpty
+                }
+                |> take(1)
+                
+
+                let product: Signal<InAppPurchaseManager.Product?, NoError> = products
+                |> map { products in
+                    if let product = products.first(where: { $0.id == productIdentifier }) {
+                        return product
                     } else {
-                        peerId = pendingInAppPurchaseState(engine: self.engine, productId: productIdentifier)
-                        |> mapToSignal { state -> Signal<EnginePeer.Id, NoError> in
-                            if let state = state, let peerId = state.targetPeerId {
-                                return .single(peerId)
-                            } else {
-                                return .complete()
-                            }
-                        }
-                    }
-                    completion = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil)
-                    
-                    let products = self.availableProducts
-                    |> filter { products in
-                        return !products.isEmpty
-                    }
-                    |> take(1)
-                    
-                    purpose = combineLatest(products, peerId)
-                    |> map { products, peerId -> AppStoreTransactionPurpose in
-                        if let product = products.first(where: { $0.id == productIdentifier }) {
-                            let (currency, amount) = product.priceCurrencyAndAmount
-                            return .gift(peerId: peerId, currency: currency, amount: amount)
-                        } else {
-                            return .gift(peerId: peerId, currency: "", amount: 0)
-                        }
-                    }
-                } else {
-                    let isUpgrade: Signal<Bool, NoError>
-                    if let isUpgradeValue = paymentContexts[productIdentifier]?.isUpgrade {
-                        isUpgrade = .single(isUpgradeValue)
-                    } else {
-                        isUpgrade = pendingInAppPurchaseState(engine: self.engine, productId: productIdentifier)
-                        |> mapToSignal { state -> Signal<Bool, NoError> in
-                            if let state = state {
-                                return .single(state.isUpgrade)
-                            } else {
-                                return .single(false)
-                            }
-                        }
-                    }
-                    purpose = isUpgrade
-                    |> map { isUpgrade in
-                        return isUpgrade ? .upgrade : .subscription
+                        return nil
                     }
                 }
-            
+                
+                let purpose: Signal<AppStoreTransactionPurpose, NoError>
+                if let paymentContext = paymentContexts[productIdentifier] {
+                    purpose = product
+                    |> map { product in
+                        return paymentContext.purpose.appStorePurpose(product: product)
+                    }
+                } else {
+                    purpose = combineLatest(
+                        product,
+                        pendingInAppPurchaseState(engine: self.engine, productId: productIdentifier)
+                    )
+                    |> mapToSignal { product, state -> Signal<AppStoreTransactionPurpose, NoError> in
+                        if let state {
+                            return .single(state.purpose.appStorePurpose(product: product))
+                        } else {
+                            return .complete()
+                        }
+                    }
+                }
+                completion = updatePendingInAppPurchaseState(engine: self.engine, productId: productIdentifier, content: nil)
+                
                 let receiptData = getReceiptData() ?? Data()
+                
+#if DEBUG
+                let id = Int64.random(in: Int64.min ... Int64.max)
+                let fileResource = LocalFileMediaResource(fileId: id, size: Int64(receiptData.count), isSecretRelated: false)
+                self.engine.account.postbox.mediaBox.storeResourceData(fileResource.id, data: receiptData)
+
+                let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: fileResource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: Int64(receiptData.count), attributes: [.FileName(fileName: "Receipt.dat")])
+                let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
+
+                let _ = enqueueMessages(account: self.engine.account, peerId: self.engine.account.peerId, messages: [message]).start()
+#endif
+                
                 self.disposableSet.set(
                     (purpose
                     |> castError(AssignAppStoreTransactionError.self)
                     |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
-                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose)
+                        return self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose)
                     }).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
                         for transaction in transactions {
@@ -535,32 +548,165 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
 }
 
 private final class PendingInAppPurchaseState: Codable {
-    public let productId: String
-    public let isUpgrade: Bool
-    public let targetPeerId: EnginePeer.Id?
+    enum CodingKeys: String, CodingKey {
+        case productId
+        case purpose
+        case storeProductId
+    }
+    
+    enum Purpose: Codable {
+        enum DecodingError: Error {
+            case generic
+        }
         
-    public init(productId: String, isUpgrade: Bool, targetPeerId: EnginePeer.Id?) {
+        enum CodingKeys: String, CodingKey {
+            case type
+            case peer
+            case peers
+            case boostPeer
+            case randomId
+            case untilDate
+        }
+        
+        enum PurposeType: Int32 {
+            case subscription
+            case upgrade
+            case restore
+            case gift
+            case giftCode
+            case giveaway
+        }
+        
+        case subscription
+        case upgrade
+        case restore
+        case gift(peerId: EnginePeer.Id)
+        case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?)
+        case giveaway(boostPeer: EnginePeer.Id, randomId: Int64, untilDate: Int32)
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+
+            let type = PurposeType(rawValue: try container.decode(Int32.self, forKey: .type))
+            switch type {
+            case .subscription:
+                self = .subscription
+            case .upgrade:
+                self = .upgrade
+            case .restore:
+                self = .restore
+            case .gift:
+                self = .gift(
+                    peerId: EnginePeer.Id(try container.decode(Int64.self, forKey: .peer))
+                )
+            case .giftCode:
+                self = .giftCode(
+                    peerIds: try container.decode([Int64].self, forKey: .peers).map { EnginePeer.Id($0) },
+                    boostPeer: try container.decodeIfPresent(Int64.self, forKey: .boostPeer).flatMap({ EnginePeer.Id($0) })
+                )
+            case .giveaway:
+                self = .giveaway(
+                    boostPeer: EnginePeer.Id(try container.decode(Int64.self, forKey: .boostPeer)),
+                    randomId: try container.decode(Int64.self, forKey: .randomId),
+                    untilDate: try container.decode(Int32.self, forKey: .untilDate)
+                )
+            default:
+                throw DecodingError.generic
+            }
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            switch self {
+            case .subscription:
+                try container.encode(PurposeType.subscription.rawValue, forKey: .type)
+            case .upgrade:
+                try container.encode(PurposeType.upgrade.rawValue, forKey: .type)
+            case .restore:
+                try container.encode(PurposeType.restore.rawValue, forKey: .type)
+            case let .gift(peerId):
+                try container.encode(PurposeType.gift.rawValue, forKey: .type)
+                try container.encode(peerId.toInt64(), forKey: .peer)
+            case let .giftCode(peerIds, boostPeer):
+                try container.encode(PurposeType.giftCode.rawValue, forKey: .type)
+                try container.encode(peerIds.map { $0.toInt64() }, forKey: .peers)
+                try container.encodeIfPresent(boostPeer?.toInt64(), forKey: .boostPeer)
+            case let .giveaway(boostPeer, randomId, untilDate):
+                try container.encode(PurposeType.giveaway.rawValue, forKey: .type)
+                try container.encode(boostPeer.toInt64(), forKey: .boostPeer)
+                try container.encode(randomId, forKey: .randomId)
+                try container.encode(untilDate, forKey: .untilDate)
+            }
+        }
+        
+        init(appStorePurpose: AppStoreTransactionPurpose) {
+            switch appStorePurpose {
+            case .subscription:
+                self = .subscription
+            case .upgrade:
+                self = .upgrade
+            case .restore:
+                self = .restore
+            case let .gift(peerId, _, _):
+                self = .gift(peerId: peerId)
+            case let .giftCode(peerIds, boostPeer, _, _):
+                self = .giftCode(peerIds: peerIds, boostPeer: boostPeer)
+            case let .giveaway(boostPeer, randomId, untilDate, _, _):
+                self = .giveaway(boostPeer: boostPeer, randomId: randomId, untilDate: untilDate)
+            }
+        }
+        
+        func appStorePurpose(product: InAppPurchaseManager.Product?) -> AppStoreTransactionPurpose {
+            let (currency, amount) = product?.priceCurrencyAndAmount ?? ("", 0)
+            switch self {
+            case .subscription:
+                return .subscription
+            case .upgrade:
+                return .upgrade
+            case .restore:
+                return .restore
+            case let .gift(peerId):
+                return .gift(peerId: peerId, currency: currency, amount: amount)
+            case let .giftCode(peerIds, boostPeer):
+                return .giftCode(peerIds: peerIds, boostPeer: boostPeer, currency: currency, amount: amount)
+            case let .giveaway(boostPeer, randomId, untilDate):
+                return .giveaway(boostPeer: boostPeer, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
+            }
+        }
+        
+        var quantity: Int {
+            switch self {
+            case .subscription, .upgrade, .restore, .gift:
+                return 1
+            case let .giftCode(peerIds, _):
+                return peerIds.count
+            case .giveaway:
+                return 1
+            }
+        }
+    }
+    
+    public let productId: String
+    public let purpose: Purpose
+        
+    public init(productId: String, purpose: Purpose) {
         self.productId = productId
-        self.isUpgrade = isUpgrade
-        self.targetPeerId = targetPeerId
+        self.purpose = purpose
     }
     
     public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        self.productId = try container.decode(String.self, forKey: "productId")
-        self.isUpgrade = try container.decodeIfPresent(Bool.self, forKey: "isUpgrade") ?? false
-        self.targetPeerId = (try container.decodeIfPresent(Int64.self, forKey: "targetPeerId")).flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }
+        self.productId = try container.decode(String.self, forKey: .productId)
+        self.purpose = try container.decode(Purpose.self, forKey: .purpose)
     }
     
     public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: StringCodingKey.self)
+        var container = encoder.container(keyedBy: CodingKeys.self)
 
-        try container.encode(self.productId, forKey: "productId")
-        try container.encode(self.isUpgrade, forKey: "isUpgrade")
-        if let targetPeerId = self.targetPeerId {
-            try container.encode(targetPeerId.id._internalGetInt64Value(), forKey: "targetPeerId")
-        }
+        try container.encode(self.productId, forKey: .productId)
+        try container.encode(self.purpose, forKey: .purpose)
     }
 }
 
