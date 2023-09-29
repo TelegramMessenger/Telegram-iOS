@@ -2293,11 +2293,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.updateInProgress(true)
             self.updated(transition: .immediate)
             
-            let _ = (self.context.engine.payments.canPurchasePremium(purpose: isUpgrade ? .upgrade : .subscription)
+            let purpose: AppStoreTransactionPurpose = isUpgrade ? .upgrade : .subscription
+            let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct.storeProduct, isUpgrade: isUpgrade)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct.storeProduct, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
                                 strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)

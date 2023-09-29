@@ -10020,6 +10020,9 @@ Sorry for the inconvenience.";
 "Stats.Boosts.BoostersNone" = "BOOSTERS";
 "Stats.Boosts.Boosters_1" = "%@ BOOSTER";
 "Stats.Boosts.Boosters_any" = "%@ BOOSTERS";
+"Stats.Boosts.BoostsNone" = "BOOSTS";
+"Stats.Boosts.Boosts_1" = "%@ BOOST";
+"Stats.Boosts.Boosts_any" = "%@ BOOSTS";
 "Stats.Boosts.NoBoostersYet" = "No users currently boost your channel";
 "Stats.Boosts.BoostersInfo" = "Your channel is currently boosted by these users.";
 "Stats.Boosts.ExpiresOn" = "Boost expires on %@";
@@ -10086,3 +10089,9 @@ Sorry for the inconvenience.";
 "ChannelBoost.BoostLinkForwardTooltip.TwoChats.One" = "Boost link forwarded to **%@** and **%@**";
 "ChannelBoost.BoostLinkForwardTooltip.ManyChats.One" = "Boost link forwarded to **%@** and %@ others";
 "ChannelBoost.BoostLinkForwardTooltip.SavedMessages.One" = "Boost link forwarded to **Saved Messages**";
+
+"ChannelBoost.YouBoostedChannelText" = "You boosted %1$@!";
+"ChannelBoost.YouBoostedOtherChannelText" = "You boosted this channel";
+
+"PremiumGift.LabelRecipients_1" = "1 recipient";
+"PremiumGift.LabelRecipients_any" = "%d recipients";

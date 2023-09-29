@@ -1068,6 +1068,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .boost:
                         break
+                    case .premiumGiftCode:
+                        break
                 }
             }
         }))

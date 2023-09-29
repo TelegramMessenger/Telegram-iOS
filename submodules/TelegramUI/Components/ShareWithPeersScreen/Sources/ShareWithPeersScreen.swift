@@ -26,6 +26,7 @@ import OverlayStatusController
 import Markdown
 import TelegramUIPreferences
 import UndoUI
+import TelegramStringFormatting
 
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -494,7 +495,7 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         @objc private func dismissPanGesture(_ recognizer: UIPanGestureRecognizer) {
-            guard let controller = self.environment?.controller() as? ShareWithPeersScreen else {
+            guard let controller = self.environment?.controller() as? ShareWithPeersScreen, let component = self.component else {
                 return
             }
             switch recognizer.state {
@@ -518,8 +519,12 @@ final class ShareWithPeersScreenComponent: Component {
                 
                     if translation.y > 100.0 || velocity.y > 10.0 {
                         controller.requestDismiss()
-                        Queue.mainQueue().justDispatch {
-                            controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .spring))
+                        if case .members = component.stateContext.subject {
+                            
+                        } else {
+                            Queue.mainQueue().justDispatch {
+                                controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .spring))
+                            }
                         }
                     } else {
                         let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
@@ -815,7 +820,11 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         private func updateModalOverlayTransition(transition: Transition) {
-            guard let _ = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
+            guard let component = self.component, let environment = self.environment, let itemLayout = self.itemLayout else {
+                return
+            }
+            
+            if case .members = component.stateContext.subject {
                 return
             }
             
@@ -830,7 +839,7 @@ final class ShareWithPeersScreenComponent: Component {
             topOffsetFraction = max(0.0, min(1.0, topOffsetFraction))
             
             let transitionFactor: CGFloat = 1.0 - topOffsetFraction
-            if let controller = environment.controller() {
+            if let controller = environment.controller() as? ShareWithPeersScreen {
                 Queue.mainQueue().justDispatch {
                     var transition = transition
                     if controller.modalStyleOverlayTransitionFactor.isZero && transitionFactor > 0.0, transition.animation.isImmediate {
@@ -951,7 +960,11 @@ final class ShareWithPeersScreenComponent: Component {
                         } else if section.id == 2 {
                             sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
                         } else if section.id == 1 {
-                            sectionTitle = environment.strings.Story_Privacy_ContactsHeader
+                            if case .members = component.stateContext.subject {
+                                sectionTitle = "SUBSCRIBERS"
+                            } else {
+                                sectionTitle = environment.strings.Story_Privacy_ContactsHeader
+                            }
                         } else {
                             sectionTitle = ""
                         }
@@ -1389,7 +1402,15 @@ final class ShareWithPeersScreenComponent: Component {
                                 subtitle = nil
                             }
                         } else {
-                            subtitle = nil
+                            if case .members = component.stateContext.subject {
+                                if let invitedAt = stateValue.invitedAt[peer.id] {
+                                    subtitle = "joined \(stringForMediumDate(timestamp: invitedAt, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat))"
+                                } else {
+                                    subtitle = nil
+                                }
+                            } else {
+                                subtitle = nil
+                            }
                         }
                           
                         let isSelected = self.selectedPeers.contains(peer.id) || self.selectedGroups.contains(peer.id)
@@ -1734,10 +1755,17 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            guard let component = self.component else {
+                return
+            }
             self.isDismissed = true
             
-            if let controller = self.environment?.controller() {
-                controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+            if let controller = self.environment?.controller() as? ShareWithPeersScreen {
+                if case .members = component.stateContext.subject {
+                    
+                } else {
+                    controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                }
             }
             
             var animateOffset: CGFloat = self.bounds.height - self.backgroundView.frame.minY
@@ -1798,6 +1826,8 @@ final class ShareWithPeersScreenComponent: Component {
                     contentTransition = .spring(duration: 0.4)
                 }
                 self.currentHasChannels = hasChannels
+            } else if case .members = component.stateContext.subject {
+                self.dismissPanGesture?.isEnabled = false
             }
             
             let environment = environment[ViewControllerComponentContainer.Environment.self].value
@@ -1943,6 +1973,8 @@ final class ShareWithPeersScreenComponent: Component {
                 
                 let placeholder: String
                 switch component.stateContext.subject {
+                case .members:
+                    placeholder = "Search Subscribers"
                 case .chats:
                     placeholder = environment.strings.Story_Privacy_SearchChats
                 default:
@@ -2009,6 +2041,11 @@ final class ShareWithPeersScreenComponent: Component {
             }
                 
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
+            if case .members = component.stateContext.subject {
+                self.dimView .isHidden = true
+            } else {
+                self.dimView .isHidden = false
+            }
             
             let categoryItemSize = self.categoryTemplateItem.update(
                 transition: .immediate,
@@ -2179,7 +2216,11 @@ final class ShareWithPeersScreenComponent: Component {
                 }
             }
             
-            let containerInset: CGFloat = environment.statusBarHeight + 10.0
+            var containerInset: CGFloat = environment.statusBarHeight
+            if case .members = component.stateContext.subject {
+            } else {
+                containerInset += 10.0
+            }
             
             var navigationHeight: CGFloat = 56.0
             let navigationSideInset: CGFloat = 16.0
@@ -2262,6 +2303,9 @@ final class ShareWithPeersScreenComponent: Component {
                 }
             case .search:
                 title = ""
+            case .members:
+                title = "Gift Premium"
+                actionButtonTitle = "Save Recipients"
             }
             let navigationTitleSize = self.navigationTitle.update(
                 transition: .immediate,
@@ -2298,7 +2342,9 @@ final class ShareWithPeersScreenComponent: Component {
                 topInset = 0.0
             } else {
                 var inset: CGFloat
-                if case let .stories(editing) = component.stateContext.subject {
+                if case .members = component.stateContext.subject {
+                    inset = 1000.0
+                } else if case let .stories(editing) = component.stateContext.subject {
                     if editing {
                         inset = 351.0
                         inset += 10.0 + environment.safeInsets.bottom + 50.0 + footersTotalHeight
@@ -2412,7 +2458,7 @@ final class ShareWithPeersScreenComponent: Component {
                                     }))
                                     
                                     let _ = (peers
-                                             |> deliverOnMainQueue).start(next: { [weak controller, weak component] peers in
+                                    |> deliverOnMainQueue).start(next: { [weak controller, weak component] peers in
                                         guard let controller, let component else {
                                             return
                                         }
@@ -2435,7 +2481,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 }
                                 if savePeers {
                                     let _ = (updatePeersListStoredState(engine: component.context.engine, base: base, peerIds: self.selectedPeers)
-                                             |> deliverOnMainQueue).start(completed: {
+                                    |> deliverOnMainQueue).start(completed: {
                                         complete()
                                     })
                                 } else {
@@ -2596,7 +2642,13 @@ final class ShareWithPeersScreenComponent: Component {
             transition.setPosition(view: self.backgroundView, position: CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
             transition.setBounds(view: self.backgroundView, bounds: CGRect(origin: CGPoint(x: containerSideInset, y: 0.0), size: CGSize(width: containerWidth, height: availableSize.height)))
             
-            let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset + 10.0), size: CGSize(width: availableSize.width, height: availableSize.height - 10.0))
+            var scrollClippingInset: CGFloat = 0.0
+            if case .members = component.stateContext.subject {
+            } else {
+                scrollClippingInset = 10.0
+            }
+            
+            let scrollClippingFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset + scrollClippingInset), size: CGSize(width: availableSize.width, height: availableSize.height - scrollClippingInset))
             transition.setPosition(view: self.scrollContentClippingView, position: scrollClippingFrame.center)
             transition.setBounds(view: self.scrollContentClippingView, bounds: CGRect(origin: CGPoint(x: scrollClippingFrame.minX, y: scrollClippingFrame.minY), size: scrollClippingFrame.size))
             
@@ -2647,534 +2699,10 @@ final class ShareWithPeersScreenComponent: Component {
     }
 }
 
-public class ShareWithPeersScreen: ViewControllerComponentContainer {
-    public final class State {
-        let sendAsPeers: [EnginePeer]
-        let peers: [EnginePeer]
-        let peersMap: [EnginePeer.Id: EnginePeer]
-        let savedSelectedPeers: [Stories.Item.Privacy.Base: [EnginePeer.Id]]
-        let presences: [EnginePeer.Id: EnginePeer.Presence]
-        let participants: [EnginePeer.Id: Int]
-        let closeFriendsPeers: [EnginePeer]
-        let grayListPeers: [EnginePeer]
-        
-        fileprivate init(
-            sendAsPeers: [EnginePeer],
-            peers: [EnginePeer],
-            peersMap: [EnginePeer.Id: EnginePeer],
-            savedSelectedPeers: [Stories.Item.Privacy.Base: [EnginePeer.Id]],
-            presences: [EnginePeer.Id: EnginePeer.Presence],
-            participants: [EnginePeer.Id: Int],
-            closeFriendsPeers: [EnginePeer],
-            grayListPeers: [EnginePeer]
-        ) {
-            self.sendAsPeers = sendAsPeers
-            self.peers = peers
-            self.peersMap = peersMap
-            self.savedSelectedPeers = savedSelectedPeers
-            self.presences = presences
-            self.participants = participants
-            self.closeFriendsPeers = closeFriendsPeers
-            self.grayListPeers = grayListPeers
-        }
-    }
-    
-    public final class StateContext {
-        public enum Subject: Equatable {
-            case peers(peers: [EnginePeer], peerId: EnginePeer.Id?)
-            case stories(editing: Bool)
-            case chats(blocked: Bool)
-            case contacts(base: EngineStoryPrivacy.Base)
-            case search(query: String, onlyContacts: Bool)
-        }
-        
-        fileprivate var stateValue: State?
-        
-        public let subject: Subject
-        public let editing: Bool
-        public private(set) var initialPeerIds: Set<EnginePeer.Id> = Set()
-        fileprivate let blockedPeersContext: BlockedPeersContext?
-        
-        private var stateDisposable: Disposable?
-        private let stateSubject = Promise<State>()
-        public var state: Signal<State, NoError> {
-            return self.stateSubject.get()
-        }
-        private let readySubject = ValuePromise<Bool>(false, ignoreRepeated: true)
-        public var ready: Signal<Bool, NoError> {
-            return self.readySubject.get()
-        }
-        
-        public init(
-            context: AccountContext,
-            subject: Subject = .chats(blocked: false),
-            editing: Bool,
-            initialSelectedPeers: [EngineStoryPrivacy.Base: [EnginePeer.Id]] = [:],
-            initialPeerIds: Set<EnginePeer.Id> = Set(),
-            closeFriends: Signal<[EnginePeer], NoError> = .single([]),
-            adminedChannels: Signal<[EnginePeer], NoError> = .single([]),
-            blockedPeersContext: BlockedPeersContext? = nil
-        ) {
-            self.subject = subject
-            self.editing = editing
-            self.initialPeerIds = initialPeerIds
-            self.blockedPeersContext = blockedPeersContext
-            
-            let grayListPeers: Signal<[EnginePeer], NoError>
-            if let blockedPeersContext {
-                grayListPeers = blockedPeersContext.state
-                |> map { state -> [EnginePeer] in
-                    return state.peers.compactMap { $0.peer.flatMap(EnginePeer.init) }
-                }
-            } else {
-                grayListPeers = .single([])
-            }
-             
-            switch subject {
-            case let .peers(peers, _):
-                self.stateDisposable = (.single(peers)
-                |> mapToSignal { peers -> Signal<([EnginePeer], [EnginePeer.Id: Optional<Int>]), NoError> in
-                    return context.engine.data.subscribe(
-                        EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
-                    )
-                    |> map { participantCountMap -> ([EnginePeer], [EnginePeer.Id: Optional<Int>]) in
-                        return (peers, participantCountMap)
-                    }
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] peers, participantCounts in
-                    guard let self else {
-                        return
-                    }
-                    var participants: [EnginePeer.Id: Int] = [:]
-                    for (key, value) in participantCounts {
-                        if let value {
-                            participants[key] = value
-                        }
-                    }
-                    
-                    let state = State(
-                        sendAsPeers: peers,
-                        peers: [],
-                        peersMap: [:],
-                        savedSelectedPeers: [:],
-                        presences: [:],
-                        participants: participants,
-                        closeFriendsPeers: [],
-                        grayListPeers: []
-                    )
-                    self.stateValue = state
-                    self.stateSubject.set(.single(state))
-
-                    self.readySubject.set(true)
-                })
-            case .stories:
-                let savedEveryoneExceptionPeers = peersListStoredState(engine: context.engine, base: .everyone)
-                let savedContactsExceptionPeers = peersListStoredState(engine: context.engine, base: .contacts)
-                let savedSelectedPeers = peersListStoredState(engine: context.engine, base: .nobody)
-                
-                let savedPeers = combineLatest(
-                    savedEveryoneExceptionPeers,
-                    savedContactsExceptionPeers,
-                    savedSelectedPeers
-                ) |> mapToSignal { everyone, contacts, selected -> Signal<([EnginePeer.Id: EnginePeer], [EnginePeer.Id], [EnginePeer.Id], [EnginePeer.Id]), NoError> in
-                    var everyone = everyone
-                    if let initialPeerIds = initialSelectedPeers[.everyone] {
-                        everyone = initialPeerIds
-                    }
-                    var everyonePeerSignals: [Signal<EnginePeer?, NoError>] = []
-                    if everyone.count < 3 {
-                        for peerId in everyone {
-                            everyonePeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
-                        }
-                    }
-                    
-                    var contacts = contacts
-                    if let initialPeerIds = initialSelectedPeers[.contacts] {
-                        contacts = initialPeerIds
-                    }
-                    var contactsPeerSignals: [Signal<EnginePeer?, NoError>] = []
-                    if contacts.count < 3 {
-                        for peerId in contacts {
-                            contactsPeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
-                        }
-                    }
-                    
-                    var selected = selected
-                    if let initialPeerIds = initialSelectedPeers[.nobody] {
-                        selected = initialPeerIds
-                    }
-                    var selectedPeerSignals: [Signal<EnginePeer?, NoError>] = []
-                    if selected.count < 3 {
-                        for peerId in selected {
-                            selectedPeerSignals.append(context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)))
-                        }
-                    }
-                    return combineLatest(
-                        combineLatest(everyonePeerSignals),
-                        combineLatest(contactsPeerSignals),
-                        combineLatest(selectedPeerSignals)
-                    ) |> map { everyonePeers, contactsPeers, selectedPeers -> ([EnginePeer.Id: EnginePeer], [EnginePeer.Id], [EnginePeer.Id], [EnginePeer.Id]) in
-                        var peersMap: [EnginePeer.Id: EnginePeer] = [:]
-                        for peer in everyonePeers {
-                            if let peer {
-                                peersMap[peer.id] = peer
-                            }
-                        }
-                        for peer in contactsPeers {
-                            if let peer {
-                                peersMap[peer.id] = peer
-                            }
-                        }
-                        for peer in selectedPeers {
-                            if let peer {
-                                peersMap[peer.id] = peer
-                            }
-                        }
-                        return (
-                            peersMap,
-                            everyone,
-                            contacts,
-                            selected
-                        )
-                    }
-                }
-                
-                let adminedChannelsWithParticipants = adminedChannels
-                |> mapToSignal { peers -> Signal<([EnginePeer], [EnginePeer.Id: Optional<Int>]), NoError> in
-                    return context.engine.data.subscribe(
-                        EngineDataMap(peers.map(\.id).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
-                    )
-                    |> map { participantCountMap -> ([EnginePeer], [EnginePeer.Id: Optional<Int>]) in
-                        return (peers, participantCountMap)
-                    }
-                }
-            
-                self.stateDisposable = combineLatest(
-                    queue: Queue.mainQueue(),
-                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
-                    adminedChannelsWithParticipants,
-                    savedPeers,
-                    closeFriends,
-                    grayListPeers
-                )
-                .start(next: { [weak self] accountPeer, adminedChannelsWithParticipants, savedPeers, closeFriends, grayListPeers in
-                    guard let self else {
-                        return
-                    }
-                    
-                    let (adminedChannels, participantCounts) = adminedChannelsWithParticipants
-                    var participants: [EnginePeer.Id: Int] = [:]
-                    for (key, value) in participantCounts {
-                        if let value {
-                            participants[key] = value
-                        }
-                    }
-                    
-                    var sendAsPeers: [EnginePeer] = []
-                    if let accountPeer {
-                        sendAsPeers.append(accountPeer)
-                    }
-                    for channel in adminedChannels {
-                        if case let .channel(channel) = channel, channel.hasPermission(.postStories) {
-                            if !sendAsPeers.contains(where: { $0.id == channel.id }) {
-                                sendAsPeers.append(contentsOf: adminedChannels)
-                            }
-                        }
-                    }
-
-                    let (peersMap, everyonePeers, contactsPeers, selectedPeers) = savedPeers
-                    var savedSelectedPeers: [Stories.Item.Privacy.Base: [EnginePeer.Id]] = [:]
-                    savedSelectedPeers[.everyone] = everyonePeers
-                    savedSelectedPeers[.contacts] = contactsPeers
-                    savedSelectedPeers[.nobody] = selectedPeers
-                    let state = State(
-                        sendAsPeers: sendAsPeers,
-                        peers: [],
-                        peersMap: peersMap,
-                        savedSelectedPeers: savedSelectedPeers,
-                        presences: [:],
-                        participants: participants,
-                        closeFriendsPeers: closeFriends,
-                        grayListPeers: grayListPeers
-                    )
-                    
-                    self.stateValue = state
-                    self.stateSubject.set(.single(state))
-                    
-                    self.readySubject.set(true)
-                })
-            case let .chats(isGrayList):
-                self.stateDisposable = (combineLatest(
-                    context.engine.messages.chatList(group: .root, count: 200) |> take(1),
-                    context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)),
-                    context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init))),
-                    grayListPeers
-                )
-                |> mapToSignal { chatList, contacts, initialPeers, grayListPeers -> Signal<(EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>], [EnginePeer]), NoError> in
-                    return context.engine.data.subscribe(
-                        EngineDataMap(chatList.items.map(\.renderedPeer.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
-                    )
-                    |> map { participantCountMap -> (EngineChatList, EngineContactList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>], [EnginePeer]) in
-                        return (chatList, contacts, initialPeers, participantCountMap, grayListPeers)
-                    }
-                }
-                |> deliverOnMainQueue).start(next: { [weak self] chatList, contacts, initialPeers, participantCounts, grayListPeers in
-                    guard let self else {
-                        return
-                    }
-                    
-                    var participants: [EnginePeer.Id: Int] = [:]
-                    for (key, value) in participantCounts {
-                        if let value {
-                            participants[key] = value
-                        }
-                    }
-                    
-                    var grayListPeersIds = Set<EnginePeer.Id>()
-                    for peer in grayListPeers {
-                        grayListPeersIds.insert(peer.id)
-                    }
-                    
-                    var existingIds = Set<EnginePeer.Id>()
-                    var selectedPeers: [EnginePeer] = []
-                    
-                    if isGrayList {
-                        self.initialPeerIds = Set(grayListPeers.map { $0.id })
-                    }
-                    
-                    for item in chatList.items.reversed() {
-                        if let peer = item.renderedPeer.peer {
-                            if self.initialPeerIds.contains(peer.id) || isGrayList && grayListPeersIds.contains(peer.id) {
-                                selectedPeers.append(peer)
-                                existingIds.insert(peer.id)
-                            }
-                        }
-                    }
-                    
-                    for peerId in self.initialPeerIds {
-                        if !existingIds.contains(peerId), let maybePeer = initialPeers[peerId], let peer = maybePeer {
-                            selectedPeers.append(peer)
-                            existingIds.insert(peerId)
-                        }
-                    }
-                    
-                    if isGrayList {
-                        for peer in grayListPeers {
-                            if !existingIds.contains(peer.id) {
-                                selectedPeers.append(peer)
-                                existingIds.insert(peer.id)
-                            }
-                        }
-                    }
-                    
-                    var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
-                    for item in chatList.items {
-                        presences[item.renderedPeer.peerId] = item.presence
-                    }
-                    
-                    var peers: [EnginePeer] = []
-                    peers = chatList.items.filter { peer in
-                        if let peer = peer.renderedPeer.peer {
-                            if self.initialPeerIds.contains(peer.id) {
-                                return false
-                            }
-                            if peer.id == context.account.peerId {
-                                return false
-                            }
-                            if peer.isService || peer.isDeleted {
-                                return false
-                            }
-                            if case let .user(user) = peer {
-                                if user.botInfo != nil {
-                                    return false
-                                }
-                            }
-                            if case let .channel(channel) = peer {
-                                if channel.isForum  {
-                                    return false
-                                }
-                                if case .broadcast = channel.info {
-                                    return false
-                                }
-                            }
-                            return true
-                        } else {
-                            return false
-                        }
-                    }.reversed().compactMap { $0.renderedPeer.peer }
-                    for peer in peers {
-                        existingIds.insert(peer.id)
-                    }
-                    peers.insert(contentsOf: selectedPeers, at: 0)
-                    
-                    let state = State(
-                        sendAsPeers: [],
-                        peers: peers,
-                        peersMap: [:],
-                        savedSelectedPeers: [:],
-                        presences: presences,
-                        participants: participants,
-                        closeFriendsPeers: [],
-                        grayListPeers: grayListPeers
-                    )
-                    self.stateValue = state
-                    self.stateSubject.set(.single(state))
-                    
-                    self.readySubject.set(true)
-                })
-            case let .contacts(base):
-                self.stateDisposable = (context.engine.data.subscribe(
-                    TelegramEngine.EngineData.Item.Contacts.List(includePresences: true)
-                )
-                |> deliverOnMainQueue).start(next: { [weak self] contactList in
-                    guard let self else {
-                        return
-                    }
-                    
-                    var selectedPeers: [EnginePeer] = []
-                    if case .closeFriends = base {
-                        for peer in contactList.peers {
-                            if case let .user(user) = peer, user.flags.contains(.isCloseFriend) {
-                                selectedPeers.append(peer)
-                            }
-                        }
-                        self.initialPeerIds = Set(selectedPeers.map { $0.id })
-                    } else {
-                        for peer in contactList.peers {
-                            if case let .user(user) = peer, initialPeerIds.contains(user.id), !user.isDeleted {
-                                selectedPeers.append(peer)
-                            }
-                        }
-                        self.initialPeerIds = initialPeerIds
-                    }
-                    selectedPeers = selectedPeers.sorted(by: { lhs, rhs in
-                        let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
-                        if result == .orderedSame {
-                            return lhs.id < rhs.id
-                        } else {
-                            return result == .orderedAscending
-                        }
-                    })
-                    
-                    var peers: [EnginePeer] = []
-                    peers = contactList.peers.filter { !self.initialPeerIds.contains($0.id) && $0.id != context.account.peerId && !$0.isDeleted }.sorted(by: { lhs, rhs in
-                        let result = lhs.indexName.isLessThan(other: rhs.indexName, ordering: .firstLast)
-                        if result == .orderedSame {
-                            return lhs.id < rhs.id
-                        } else {
-                            return result == .orderedAscending
-                        }
-                    })
-                    peers.insert(contentsOf: selectedPeers, at: 0)
-                    
-                    let state = State(
-                        sendAsPeers: [],
-                        peers: peers,
-                        peersMap: [:],
-                        savedSelectedPeers: [:],
-                        presences: contactList.presences,
-                        participants: [:],
-                        closeFriendsPeers: [],
-                        grayListPeers: []
-                    )
-                                        
-                    self.stateValue = state
-                    self.stateSubject.set(.single(state))
-                    
-                    self.readySubject.set(true)
-                })
-            case let .search(query, onlyContacts):
-                let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]), NoError>
-                if onlyContacts {
-                    signal = combineLatest(
-                        context.engine.contacts.searchLocalPeers(query: query),
-                        context.engine.contacts.searchContacts(query: query)
-                    )
-                    |> map { peers, contacts in
-                        let contactIds = Set(contacts.0.map { $0.id })
-                        return (peers.filter { contactIds.contains($0.peerId) }, [:], [:])
-                    }
-                } else {
-                    signal = context.engine.contacts.searchLocalPeers(query: query)
-                    |> mapToSignal { peers in
-                        return context.engine.data.subscribe(
-                            EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Presence.init)),
-                            EngineDataMap(peers.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
-                        )
-                        |> map { presenceMap, participantCountMap -> ([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]) in
-                            return (peers, presenceMap, participantCountMap)
-                        }
-                    }
-                }
-                self.stateDisposable = (signal
-                |> deliverOnMainQueue).start(next: { [weak self] peers, presenceMap, participantCounts in
-                    guard let self else {
-                        return
-                    }
-                    
-                    var presences: [EnginePeer.Id: EnginePeer.Presence] = [:]
-                    for (key, value) in presenceMap {
-                        if let value {
-                            presences[key] = value
-                        }
-                    }
-                    
-                    var participants: [EnginePeer.Id: Int] = [:]
-                    for (key, value) in participantCounts {
-                        if let value {
-                            participants[key] = value
-                        }
-                    }
-                                                            
-                    let state = State(
-                        sendAsPeers: [],
-                        peers: peers.compactMap { $0.peer }.filter { peer in
-                            if case let .user(user) = peer {
-                                if user.id == context.account.peerId {
-                                    return false
-                                } else if user.botInfo != nil {
-                                    return false
-                                } else if peer.isService {
-                                    return false
-                                } else if user.isDeleted {
-                                    return false
-                                } else {
-                                    return true
-                                }
-                            } else if case let .channel(channel) = peer {
-                                if channel.isForum {
-                                    return false
-                                }
-                                if case .broadcast = channel.info {
-                                    return false
-                                }
-                                return true
-                            } else {
-                                return true
-                            }
-                        },
-                        peersMap: [:],
-                        savedSelectedPeers: [:],
-                        presences: presences,
-                        participants: participants,
-                        closeFriendsPeers: [],
-                        grayListPeers: []
-                    )
-                    self.stateValue = state
-                    self.stateSubject.set(.single(state))
-                    
-                    self.readySubject.set(true)
-                })
-            }
-        }
-        
-        deinit {
-            self.stateDisposable?.dispose()
-        }
-    }
-    
+public class ShareWithPeersScreen: ViewControllerComponentContainer {    
     private let context: AccountContext
     
+    private var isCustomModal = true
     private var isDismissed: Bool = false
     
     public var dismissed: () -> Void = {}
@@ -3189,8 +2717,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         mentions: [String] = [],
         stateContext: StateContext,
         completion: @escaping (EnginePeer.Id?, EngineStoryPrivacy, Bool, Bool, [EnginePeer], Bool) -> Void,
-        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
-        editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void,
+        editCategory: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void = { _, _, _ in },
+        editBlockedPeers: @escaping (EngineStoryPrivacy, Bool, Bool) -> Void = { _, _, _ in },
         peerCompletion: @escaping (EnginePeer.Id) -> Void = { _ in }
     ) {
         self.context = context
@@ -3334,6 +2862,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             }
         }
         
+        var theme: ViewControllerComponentContainer.Theme = .dark
+        if case .members = stateContext.subject {
+            theme = .default
+        }
         super.init(context: context, component: ShareWithPeersScreenComponent(
             context: context,
             stateContext: stateContext,
@@ -3349,10 +2881,15 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             editCategory: editCategory,
             editBlockedPeers: editBlockedPeers,
             peerCompletion: peerCompletion
-        ), navigationBarAppearance: .none, theme: .dark)
+        ), navigationBarAppearance: .none, theme: theme)
         
         self.statusBar.statusBarStyle = .Ignore
-        self.navigationPresentation = .flatModal
+        if case .members = stateContext.subject {
+            self.navigationPresentation = .modal
+            self.isCustomModal = false
+        } else {
+            self.navigationPresentation = .flatModal
+        }
         self.blocksBackgroundWhenInOverlay = true
         self.automaticallyControlPresentationContextLayout = false
         self.lockOrientation = true
@@ -3372,10 +2909,12 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.view.disablesInteractiveModalDismiss = true
-        
-        if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
-            componentView.animateIn()
+        if self.isCustomModal {
+            self.view.disablesInteractiveModalDismiss = true
+            
+            if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
+                componentView.animateIn()
+            }
         }
     }
     
@@ -3404,57 +2943,19 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
             self.isDismissed = true
             
             self.view.endEditing(true)
-            
-            if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
-                componentView.animateOut(completion: { [weak self] in
-                    completion?()
-                    self?.dismiss(animated: false)
-                })
+           
+            if self.isCustomModal {
+                if let componentView = self.node.hostView.componentView as? ShareWithPeersScreenComponent.View {
+                    componentView.animateOut(completion: { [weak self] in
+                        completion?()
+                        self?.dismiss(animated: false)
+                    })
+                } else {
+                    self.dismiss(animated: false)
+                }
             } else {
-                self.dismiss(animated: false)
+                self.dismiss(animated: true)
             }
         }
     }
-}
-
-final class PeersListStoredState: Codable {
-    private enum CodingKeys: String, CodingKey {
-        case peerIds
-    }
-    
-    public let peerIds: [EnginePeer.Id]
-    
-    public init(peerIds: [EnginePeer.Id]) {
-        self.peerIds = peerIds
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-
-        self.peerIds = try container.decode([Int64].self, forKey: .peerIds).map { EnginePeer.Id($0) }
-    }
-    
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-
-        try container.encode(self.peerIds.map { $0.toInt64() }, forKey: .peerIds)
-    }
-}
-
-private func peersListStoredState(engine: TelegramEngine, base: Stories.Item.Privacy.Base) -> Signal<[EnginePeer.Id], NoError> {
-    let key = EngineDataBuffer(length: 4)
-    key.setInt32(0, value: base.rawValue)
-    
-    return engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: ApplicationSpecificItemCacheCollectionId.shareWithPeersState, id: key))
-    |> map { entry -> [EnginePeer.Id] in
-        return entry?.get(PeersListStoredState.self)?.peerIds ?? []
-    }
-}
-
-private func updatePeersListStoredState(engine: TelegramEngine, base: Stories.Item.Privacy.Base, peerIds: [EnginePeer.Id]) -> Signal<Never, NoError> {
-    let key = EngineDataBuffer(length: 4)
-    key.setInt32(0, value: base.rawValue)
-    
-    let state = PeersListStoredState(peerIds: peerIds)
-    return engine.itemCache.put(collectionId: ApplicationSpecificItemCacheCollectionId.shareWithPeersState, id: key, item: state)
 }

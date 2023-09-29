@@ -7441,6 +7441,21 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.payments {
+                static func applyGiftCode(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-152934316)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.applyGiftCode", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func assignAppStoreTransaction(receipt: Buffer, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-2131921795)
@@ -7482,6 +7497,21 @@ public extension Api.functions.payments {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func checkGiftCode(slug: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.CheckedGiftCode>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1907247935)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "payments.checkGiftCode", parameters: [("slug", String(describing: slug))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.payments.CheckedGiftCode? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.payments.CheckedGiftCode?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.payments.CheckedGiftCode
                         }
                         return result
                     })
@@ -7560,6 +7590,22 @@ public extension Api.functions.payments {
                         var result: Api.payments.PaymentReceipt?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.payments.PaymentReceipt
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
+                static func getPremiumGiftCodeOptions(flags: Int32, boostPeer: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<[Api.PremiumGiftCodeOption]>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(660060756)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {boostPeer!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "payments.getPremiumGiftCodeOptions", parameters: [("flags", String(describing: flags)), ("boostPeer", String(describing: boostPeer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> [Api.PremiumGiftCodeOption]? in
+                        let reader = BufferReader(buffer)
+                        var result: [Api.PremiumGiftCodeOption]?
+                        if let _ = reader.readInt32() {
+                            result = Api.parseVector(reader, elementSignature: 0, elementType: Api.PremiumGiftCodeOption.self)
                         }
                         return result
                     })

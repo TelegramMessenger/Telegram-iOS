@@ -192,6 +192,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageProfilePhotoSuggestionContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 } else if case .setChatWallpaper = action.action {
                     result.append((message, ChatMessageWallpaperBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                } else if case .giftCode = action.action {
+                    result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 }
@@ -222,6 +224,9 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 return (result, false, false)
             } else if let _ = media as? TelegramMediaPoll {
                 result.append((message, ChatMessagePollBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                needReactions = false
+            } else if let _ = media as? TelegramMediaGiveaway {
+                result.append((message, ChatMessageGiveawayBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
             } else if let _ = media as? TelegramMediaUnsupported {
                 isUnsupportedMedia = true
@@ -321,14 +326,16 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                result.last?.1 == ChatMessagePollBubbleContentNode.self ||
                result.last?.1 == ChatMessageContactBubbleContentNode.self ||
                result.last?.1 == ChatMessageGameBubbleContentNode.self ||
-               result.last?.1 == ChatMessageInvoiceBubbleContentNode.self {
+               result.last?.1 == ChatMessageInvoiceBubbleContentNode.self ||
+               result.last?.1 == ChatMessageGiveawayBubbleContentNode.self {
                 result.append((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
             } else if result.last?.1 == ChatMessageCommentFooterContentNode.self {
                 if result.count >= 2 {
                     if result[result.count - 2].1 == ChatMessageWebpageBubbleContentNode.self ||
                         result[result.count - 2].1 == ChatMessagePollBubbleContentNode.self ||
-                        result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self {
+                        result[result.count - 2].1 == ChatMessageContactBubbleContentNode.self ||
+                        result[result.count - 2].1 == ChatMessageGiveawayBubbleContentNode.self {
                         result.insert((firstMessage, ChatMessageReactionsFooterContentNode.self, ChatMessageEntryAttributes(), BubbleItemAttributes(isAttachment: true, neighborType: .freeform, neighborSpacing: .default)), at: result.count - 1)
                     }
                 }

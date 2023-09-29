@@ -3999,7 +3999,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             adminedChannels: self.adminedChannels.get(),
             blockedPeersContext: self.storiesBlockedPeers
         )
-        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
+        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
             guard let self else {
                 return
             }

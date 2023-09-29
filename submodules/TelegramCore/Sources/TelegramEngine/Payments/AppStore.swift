@@ -13,12 +13,13 @@ public enum AssignAppStoreTransactionError {
 public enum AppStoreTransactionPurpose {
     case subscription
     case upgrade
-    case gift(peerId: EnginePeer.Id, currency: String, amount: Int64)
     case restore
+    case gift(peerId: EnginePeer.Id, currency: String, amount: Int64)
+    case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, currency: String, amount: Int64)
+    case giveaway(boostPeer: EnginePeer.Id, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
 }
 
-func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
-    var purposeSignal: Signal<Api.InputStorePaymentPurpose, NoError>
+private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Api.InputStorePaymentPurpose, NoError> {
     switch purpose {
     case .subscription, .upgrade, .restore:
         var flags: Int32 = 0
@@ -30,19 +31,47 @@ func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: App
         default:
             break
         }
-        purposeSignal = .single(.inputStorePaymentPremiumSubscription(flags: flags))
+        return .single(.inputStorePaymentPremiumSubscription(flags: flags))
     case let .gift(peerId, currency, amount):
-        purposeSignal = account.postbox.loadedPeerWithId(peerId)
+        return  account.postbox.loadedPeerWithId(peerId)
         |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
-            if let inputUser = apiInputUser(peer) {
-                return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: currency, amount: amount))
-            } else {
+            guard let inputUser = apiInputUser(peer) else {
                 return .complete()
             }
+            return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: currency, amount: amount))
+        }
+    case let .giftCode(peerIds, boostPeerId, currency, amount):
+        return account.postbox.transaction { transaction -> Api.InputStorePaymentPurpose in
+            var flags: Int32 = 0
+            var apiBoostPeer: Api.InputPeer?
+            var apiInputUsers: [Api.InputUser] = []
+            
+            for peerId in peerIds {
+                if let user = transaction.getPeer(peerId), let apiUser = apiInputUser(user) {
+                    apiInputUsers.append(apiUser)
+                }
+            }
+            
+            if let boostPeerId = boostPeerId, let boostPeer = transaction.getPeer(boostPeerId), let apiPeer = apiInputPeer(boostPeer) {
+                apiBoostPeer = apiPeer
+                flags |= (1 << 0)
+            }
+   
+            return .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: currency, amount: amount)
+        }
+    case let .giveaway(boostPeerId, randomId, untilDate, currency, amount):
+        return account.postbox.loadedPeerWithId(boostPeerId)
+        |> mapToSignal { peer in
+            guard let apiBoostPeer = apiInputPeer(peer) else {
+                return .complete()
+            }
+            return .single(.inputStorePaymentPremiumGiveaway(flags: 0, boostPeer: apiBoostPeer, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
         }
     }
-    
-    return purposeSignal
+}
+
+func _internal_sendAppStoreReceipt(account: Account, receipt: Data, purpose: AppStoreTransactionPurpose) -> Signal<Never, AssignAppStoreTransactionError> {
+    return apiInputStorePaymentPurpose(account: account, purpose: purpose)
     |> castError(AssignAppStoreTransactionError.self)
     |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
         return account.network.request(Api.functions.payments.assignAppStoreTransaction(receipt: Buffer(data: receipt), purpose: purpose))
@@ -65,31 +94,7 @@ public enum RestoreAppStoreReceiptError {
 }
 
 func _internal_canPurchasePremium(account: Account, purpose: AppStoreTransactionPurpose) -> Signal<Bool, NoError> {
-    var purposeSignal: Signal<Api.InputStorePaymentPurpose, NoError>
-    switch purpose {
-    case .subscription, .restore, .upgrade:
-        var flags: Int32 = 0
-        switch purpose {
-        case .upgrade:
-            flags |= (1 << 1)
-        case .restore:
-            flags |= (1 << 0)
-        default:
-            break
-        }
-        purposeSignal = .single(.inputStorePaymentPremiumSubscription(flags: flags))
-    case let .gift(peerId, currency, amount):
-        purposeSignal = account.postbox.loadedPeerWithId(peerId)
-        |> mapToSignal { peer -> Signal<Api.InputStorePaymentPurpose, NoError> in
-            if let inputUser = apiInputUser(peer) {
-                return .single(.inputStorePaymentGiftPremium(userId: inputUser, currency: currency, amount: amount))
-            } else {
-                return .complete()
-            }
-        }
-    }
-    
-    return purposeSignal
+    return apiInputStorePaymentPurpose(account: account, purpose: purpose)
     |> mapToSignal { purpose -> Signal<Bool, NoError> in
         return account.network.request(Api.functions.payments.canPurchasePremium(purpose: purpose))
         |> map { result -> Bool in

@@ -898,6 +898,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let resultTitleString = strings.Notification_ChangedToSameWallpaper(compactAuthorName)
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
+            case .giftCode:
+                attributedString = NSAttributedString(string: "Gift code", font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

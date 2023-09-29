@@ -17,6 +17,7 @@ import Markdown
 import BalancedTextComponent
 import ConfettiEffect
 import AvatarNode
+import TextFormat
 
 func generateCloseButtonImage(backgroundColor: UIColor, foregroundColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -810,8 +811,9 @@ private final class LimitSheetContent: CombinedComponent {
     let dismiss: () -> Void
     let openPeer: (EnginePeer) -> Void
     let openStats: (() -> Void)?
+    let openGift: (() -> Void)?
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, dismiss: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, dismiss: @escaping () -> Void, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?, openGift: (() -> Void)?) {
         self.context = context
         self.subject = subject
         self.count = count
@@ -820,6 +822,7 @@ private final class LimitSheetContent: CombinedComponent {
         self.dismiss = dismiss
         self.openPeer = openPeer
         self.openStats = openStats
+        self.openGift = openGift
     }
     
     static func ==(lhs: LimitSheetContent, rhs: LimitSheetContent) -> Bool {
@@ -847,6 +850,7 @@ private final class LimitSheetContent: CombinedComponent {
         var boosted = false
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
+        var cachedChevronImage: (UIImage, PresentationTheme)?
         
         init(context: AccountContext, subject: PremiumLimitScreen.Subject) {
             self.context = context
@@ -890,6 +894,11 @@ private final class LimitSheetContent: CombinedComponent {
         let button = Child(SolidRoundedButtonComponent.self)
         let peerShortcut = Child(Button.self)
         let statsButton = Child(Button.self)
+        
+        let orLeftLine = Child(Rectangle.self)
+        let orRightLine = Child(Rectangle.self)
+        let orText = Child(MultilineTextComponent.self)
+        let giftText = Child(BalancedTextComponent.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -942,6 +951,7 @@ private final class LimitSheetContent: CombinedComponent {
             var titleText = strings.Premium_LimitReached
             var actionButtonText: String?
             var actionButtonHasGloss = true
+            var gradientedActionButton = true
             var buttonAnimationName: String? = "premium_x2"
             var buttonIconName: String?
             let iconName: String
@@ -1167,7 +1177,8 @@ private final class LimitSheetContent: CombinedComponent {
                                 PeerShortcutComponent(
                                     context: component.context,
                                     theme: environment.theme,
-                                    peer: peer
+                                    peer: peer,
+                                    badge: "X2"
                                 )
                             ),
                             action: {
@@ -1180,6 +1191,10 @@ private final class LimitSheetContent: CombinedComponent {
                         availableSize: CGSize(width: context.availableSize.width - 32.0, height: context.availableSize.height),
                         transition: .immediate
                     )
+                }
+                
+                if link != nil {
+                    gradientedActionButton = false
                 }
                 
                 if let _ = link, let openStats = component.openStats {
@@ -1267,11 +1282,15 @@ private final class LimitSheetContent: CombinedComponent {
                 premiumTitle = ""
                 
                 if boosted {
+                    let prefixString = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannelText
+                    
                     let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
-                    buttonIconName = nil
-                    actionButtonText = environment.strings.Common_OK
+                    
+//                    buttonIconName = nil
+//                    actionButtonText = environment.strings.Common_OK
+                    actionButtonText = "Boost Again"
+                    
                     if let remaining {
-                        titleText = isCurrent ? strings.ChannelBoost_YouBoostedChannel(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannel
                         let boostsString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
                             if remaining == 0 {
@@ -1288,9 +1307,10 @@ private final class LimitSheetContent: CombinedComponent {
                             }
                         }
                     } else {
-                        titleText = strings.ChannelBoost_MaxLevelReached
                         string = strings.ChannelBoost_BoostedChannelReachedLevel("\(level + 1)", storiesString).string
                     }
+                    
+                    string = "**\(prefixString)**\n\(string)"
                 }
                 
                 let progress: CGFloat
@@ -1323,17 +1343,17 @@ private final class LimitSheetContent: CombinedComponent {
                         horizontalAlignment: .center,
                         maximumNumberOfLines: 1
                     ),
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - 60.0, height: CGFloat.greatestFiniteMagnitude),
                     transition: .immediate
                 )
                 
                 let textFont = Font.regular(15.0)
                 let boldTextFont = Font.semibold(15.0)
                 let textColor = theme.actionSheet.primaryTextColor
-                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: textColor), linkAttribute: { _ in
-                    return nil
+                let linkColor = theme.actionSheet.controlAccentColor
+                let markdownAttributes = MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: textFont, textColor: linkColor), linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
                 })
-                
                 
                 var textChild: _UpdatedChildComponent?
                 var alternateTextChild: _UpdatedChildComponent?
@@ -1370,6 +1390,7 @@ private final class LimitSheetContent: CombinedComponent {
                 }
                 
                 let gradientColors: [UIColor]
+                var buttonGradientColors: [UIColor]
                 if isPremiumDisabled {
                     gradientColors = [
                         UIColor(rgb: 0x007afe),
@@ -1381,6 +1402,14 @@ private final class LimitSheetContent: CombinedComponent {
                         UIColor(rgb: 0x6b93ff),
                         UIColor(rgb: 0x8878ff),
                         UIColor(rgb: 0xe46ace)
+                    ]
+                }
+                if gradientedActionButton {
+                    buttonGradientColors = gradientColors
+                } else {
+                    buttonGradientColors = [
+                        UIColor(rgb: 0x007afe),
+                        UIColor(rgb: 0x5494ff)
                     ]
                 }
                 
@@ -1395,7 +1424,7 @@ private final class LimitSheetContent: CombinedComponent {
                         title: actionButtonText ?? (isIncreaseButton ? strings.Premium_IncreaseLimit : strings.Common_OK),
                         theme: SolidRoundedButtonComponent.Theme(
                             backgroundColor: .black,
-                            backgroundColors: gradientColors,
+                            backgroundColors: buttonGradientColors,
                             foregroundColor: .white
                         ),
                         font: .bold,
@@ -1528,8 +1557,76 @@ private final class LimitSheetContent: CombinedComponent {
                 context.add(button
                     .position(CGPoint(x: buttonFrame.midX, y: buttonFrame.midY))
                 )
+                
+                var additionalContentHeight: CGFloat = 0.0
+                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject, link != nil {
+                    let orText = orText.update(
+                        component: MultilineTextComponent(text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                    context.add(orText
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.maxY + 27.0))
+                    )
+                                        
+                    let orLeftLine = orLeftLine.update(
+                        component: Rectangle(color: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3)),
+                        availableSize: CGSize(width: 90.0, height: 1.0 - UIScreenPixel),
+                        transition: .immediate
+                    )
+                    context.add(orLeftLine
+                        .position(CGPoint(x: context.availableSize.width / 2.0 - orText.size.width / 2.0 - 11.0 - 45.0, y: buttonFrame.maxY + 27.0))
+                    )
+                    
+                    let orRightLine = orRightLine.update(
+                        component: Rectangle(color: environment.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3)),
+                        availableSize: CGSize(width: 90.0, height: 1.0 - UIScreenPixel),
+                        transition: .immediate
+                    )
+                    context.add(orRightLine
+                        .position(CGPoint(x: context.availableSize.width / 2.0 + orText.size.width / 2.0 + 11.0 + 45.0, y: buttonFrame.maxY + 27.0))
+                    )
+                    
+                    if state.cachedChevronImage == nil || state.cachedChevronImage?.1 !== environment.theme {
+                        state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, environment.theme)
+                    }
+                    
+                    let giftString = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()"
+                    let giftAttributedString = parseMarkdownIntoAttributedString(giftString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
+                    
+                    if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
+                        giftAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: giftAttributedString.string))
+                    }
+                    let openGift = component.openGift
+                    let giftText = giftText.update(
+                        component: BalancedTextComponent(
+                            text: .plain(giftAttributedString),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.1,
+                            highlightColor: linkColor.withAlphaComponent(0.2),
+                            highlightAction: { attributes in
+                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                                } else {
+                                    return nil
+                                }
+                            },
+                            tapAction: { _, _ in
+                                openGift?()
+                            }
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                    context.add(giftText
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.maxY + 50.0 + giftText.size.height / 2.0))
+                    )
+                    
+                    additionalContentHeight += giftText.size.height + 50.0
+                }
             
-                contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + 5.0 + environment.safeInsets.bottom)
+                contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + additionalContentHeight + 5.0 + environment.safeInsets.bottom)
             } else {
                 var height: CGFloat = 351.0
                 if isPremiumDisabled {
@@ -1539,6 +1636,8 @@ private final class LimitSheetContent: CombinedComponent {
                 if case let .storiesChannelBoost(_, isCurrent, _, _, _, link, _) = component.subject {
                     if link != nil {
                         height += 66.0
+                        
+                        height += 100.0
                     } else {
                         if isCurrent {
                             height -= 53.0
@@ -1566,8 +1665,9 @@ private final class LimitSheetComponent: CombinedComponent {
     let action: () -> Bool
     let openPeer: (EnginePeer) -> Void
     let openStats: (() -> Void)?
+    let openGift: (() -> Void)?
     
-    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?) {
+    init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, cancel: @escaping () -> Void, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void, openStats: (() -> Void)?, openGift: (() -> Void)?) {
         self.context = context
         self.subject = subject
         self.count = count
@@ -1575,6 +1675,7 @@ private final class LimitSheetComponent: CombinedComponent {
         self.action = action
         self.openPeer = openPeer
         self.openStats = openStats
+        self.openGift = openGift
     }
     
     static func ==(lhs: LimitSheetComponent, rhs: LimitSheetComponent) -> Bool {
@@ -1616,7 +1717,8 @@ private final class LimitSheetComponent: CombinedComponent {
                             })
                         },
                         openPeer: context.component.openPeer,
-                        openStats: context.component.openStats
+                        openStats: context.component.openStats,
+                        openGift: context.component.openGift
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: animateOut
@@ -1680,14 +1782,14 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     
     private let hapticFeedback = HapticFeedback()
     
-    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }, openStats: (() -> Void)? = nil) {
+    public init(context: AccountContext, subject: PremiumLimitScreen.Subject, count: Int32, forceDark: Bool = false, cancel: @escaping () -> Void = {}, action: @escaping () -> Bool, openPeer: @escaping (EnginePeer) -> Void = { _ in }, openStats: (() -> Void)? = nil, openGift: (() -> Void)? = nil) {
         self.context = context
         self.openPeer = openPeer
         
         var actionImpl: (() -> Bool)?
         super.init(context: context, component: LimitSheetComponent(context: context, subject: subject, count: count, cancel: {}, action: {
             return actionImpl?() ?? true
-        }, openPeer: openPeer, openStats: openStats), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
+        }, openPeer: openPeer, openStats: openStats, openGift: openGift), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
         
@@ -1721,7 +1823,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     public func updateSubject(_ subject: Subject, count: Int32) {
         let component = LimitSheetComponent(context: self.context, subject: subject, count: count, cancel: {}, action: {
             return true
-        }, openPeer: self.openPeer, openStats: nil)
+        }, openPeer: self.openPeer, openStats: nil, openGift: nil)
         self.updateComponent(component: AnyComponent(component), transition: .easeInOut(duration: 0.2))
                 
         self.hapticFeedback.impact()
@@ -1734,11 +1836,13 @@ private final class PeerShortcutComponent: Component {
     let context: AccountContext
     let theme: PresentationTheme
     let peer: EnginePeer
+    let badge: String?
 
-    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer) {
+    init(context: AccountContext, theme: PresentationTheme, peer: EnginePeer, badge: String?) {
         self.context = context
         self.theme = theme
         self.peer = peer
+        self.badge = badge
     }
 
     static func ==(lhs: PeerShortcutComponent, rhs: PeerShortcutComponent) -> Bool {
@@ -1751,12 +1855,19 @@ private final class PeerShortcutComponent: Component {
         if lhs.peer != rhs.peer {
             return false
         }
+        if lhs.badge != rhs.badge {
+            return false
+        }
         return true
     }
 
     final class View: UIView {
+        private let backgroundView = UIView()
         private let avatarNode: AvatarNode
         private let text = ComponentView<Empty>()
+        
+        private let badgeBackground = UIView()
+        private let badgeText = ComponentView<Empty>()
         
         private var component: PeerShortcutComponent?
         private weak var state: EmptyComponentState?
@@ -1766,10 +1877,15 @@ private final class PeerShortcutComponent: Component {
             
             super.init(frame: frame)
             
-            self.clipsToBounds = true
-            self.layer.cornerRadius = 16.0
+            self.backgroundView.clipsToBounds = true
+            self.backgroundView.layer.cornerRadius = 16.0
             
+            self.badgeBackground.clipsToBounds = true
+            self.badgeBackground.backgroundColor = UIColor(rgb: 0x9671ff)
+            
+            self.addSubview(self.backgroundView)
             self.addSubnode(self.avatarNode)
+            self.addSubview(self.badgeBackground)
         }
         
         required init?(coder: NSCoder) {
@@ -1780,7 +1896,7 @@ private final class PeerShortcutComponent: Component {
             self.component = component
             self.state = state
             
-            self.backgroundColor = component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3)
+            self.backgroundView.backgroundColor = component.theme.list.itemBlocksSeparatorColor.withAlphaComponent(0.3)
                         
             self.avatarNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: CGSize(width: 30.0, height: 30.0))
             self.avatarNode.setPeer(
@@ -1809,6 +1925,40 @@ private final class PeerShortcutComponent: Component {
                 let textFrame = CGRect(origin: CGPoint(x: 38.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0)), size: textSize)
                 view.frame = textFrame
             }
+            
+            if let badge = component.badge {
+                let badgeSize = self.badgeText.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        MultilineTextComponent(
+                            text: .plain(NSAttributedString(string: badge, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: .white, paragraphAlignment: .left))
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                if let view = self.badgeText.view {
+                    if view.superview == nil {
+                        self.addSubview(view)
+                    }
+                    
+                    let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width - badgeSize.width / 2.0), y: -2.0), size: badgeSize)
+                    view.frame = textFrame
+                    
+                    let backgroundFrame = textFrame.insetBy(dx: -5.0, dy: -3.0)
+                    self.badgeBackground.frame = backgroundFrame
+                    self.badgeBackground.layer.cornerRadius = backgroundFrame.height / 2.0
+                    
+                    self.badgeBackground.isHidden = false
+                }
+            } else {
+                if let view = self.badgeText.view {
+                    view.removeFromSuperview()
+                }
+                self.badgeBackground.isHidden = true
+            }
+            
+            self.backgroundView.frame = CGRect(origin: .zero, size: size)
             
             return size
         }

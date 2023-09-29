@@ -100,6 +100,7 @@ public enum ParsedInternalUrl {
     case startAttach(String, String?, String?)
     case contactToken(String)
     case chatFolder(slug: String)
+    case premiumGiftCode(slug: String)
 }
 
 private enum ParsedUrl {
@@ -453,6 +454,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .chatFolder(slug: pathComponents[1])
                 } else if pathComponents[0] == "boost", pathComponents.count == 2 {
                     return .peer(.name(pathComponents[1]), .boost)
+                } else if pathComponents[0] == "giftcode", pathComponents.count == 2 {
+                    return .premiumGiftCode(slug: pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         var threadId: Int32?
@@ -899,6 +902,8 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     return .single(.inaccessiblePeer)
                 }
             }
+        case let .premiumGiftCode(slug):
+            return .single(.premiumGiftCode(slug: slug))
     }
 }
 

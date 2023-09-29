@@ -751,6 +751,54 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PremiumGiftCodeOption: TypeConstructorDescription {
+        case premiumGiftCodeOption(flags: Int32, users: Int32, months: Int32, storeProduct: String?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .premiumGiftCodeOption(let flags, let users, let months, let storeProduct):
+                    if boxed {
+                        buffer.appendInt32(-713473172)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(users, buffer: buffer, boxed: false)
+                    serializeInt32(months, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(storeProduct!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .premiumGiftCodeOption(let flags, let users, let months, let storeProduct):
+                return ("premiumGiftCodeOption", [("flags", flags as Any), ("users", users as Any), ("months", months as Any), ("storeProduct", storeProduct as Any)])
+    }
+    }
+    
+        public static func parse_premiumGiftCodeOption(_ reader: BufferReader) -> PremiumGiftCodeOption? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = parseString(reader) }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PremiumGiftCodeOption.premiumGiftCodeOption(flags: _1!, users: _2!, months: _3!, storeProduct: _4)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PremiumGiftOption: TypeConstructorDescription {
         case premiumGiftOption(flags: Int32, months: Int32, currency: String, amount: Int64, botUrl: String, storeProduct: String?)
     

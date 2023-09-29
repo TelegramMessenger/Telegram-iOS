@@ -17,6 +17,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ChatControllerInteraction
 import ShimmerEffect
+import Markdown
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -173,42 +174,76 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
                         
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let giftSize = CGSize(width: 220.0, height: 240.0)
+                var giftSize = CGSize(width: 220.0, height: 240.0)
                 
                 let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: EngineMessage(item.message), accountPeerId: item.context.account.peerId)
             
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                 
-                var duration: String = ""
+                var months: Int32 = 3
                 var animationName: String = ""
+                var title = item.presentationData.strings.Notification_PremiumGift_Title
+                var text = ""
+                var buttonTitle = item.presentationData.strings.Notification_PremiumGift_View
+                var hasServiceMessage = true
+                var textSpacing: CGFloat = 0.0
                 for media in item.message.media {
                     if let action = media as? TelegramMediaAction {
                         switch action.action {
-                        case let .giftPremium(_, _, months, _, _):
-                            duration = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
-                            switch months {
-                            case 12:
-                                animationName = "Gift12"
-                            case 6:
-                                animationName = "Gift6"
-                            case 3:
-                                animationName = "Gift3"
-                            default:
-                                animationName = "Gift3"
+                        case let .giftPremium(_, _, monthsValue, _, _):
+                            months = monthsValue
+                            text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
+                        case let .giftCode(_, fromGiveaway, channelId, monthsValue):
+                            if fromGiveaway {
+                                giftSize.width += 34.0
+                                giftSize.height += 84.0
+                                textSpacing += 20.0
+                                
+                                title = "Congratulations!"
+                                var peerName = ""
+                                if let channelId, let channel = item.message.peers[channelId] {
+                                    peerName = EnginePeer(channel).compactDisplayTitle
+                                }
+                                text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
+                            } else {
+                                text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
                             }
+                            months = monthsValue
+                            buttonTitle = "Open Gift Link"
+                            hasServiceMessage = false
                         default:
                             break
                         }
                     }
                 }
                 
+                switch months {
+                case 12:
+                    animationName = "Gift12"
+                case 6:
+                    animationName = "Gift6"
+                case 3:
+                    animationName = "Gift3"
+                default:
+                    animationName = "Gift3"
+                }
+                
                 let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedString, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
-                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_Title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
-                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: duration, font: Font.regular(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(
+                    body: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                    bold: MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor),
+                    link: MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor),
+                    linkAttribute: { url in
+                        return ("URL", url)
+                    }
+                ), textAlignment: .center)
+                                
+                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
-                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_View, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
@@ -233,14 +268,23 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let backgroundMaskImage: (CGPoint, UIImage)?
                 var backgroundMaskUpdated = false
-                if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
-                    backgroundMaskImage = (currentOffset, currentImage)
+                if hasServiceMessage {
+                    if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
+                        backgroundMaskImage = (currentOffset, currentImage)
+                    } else {
+                        backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
+                        backgroundMaskUpdated = true
+                    }
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
-                    backgroundMaskUpdated = true
+                    backgroundMaskImage = nil
                 }
             
-                let backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + giftSize.height + 18.0)
+                var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: giftSize.height)
+                if hasServiceMessage {
+                    backgroundSize.height += labelLayout.size.height + 18.0
+                } else {
+                    backgroundSize.height += 4.0
+                }
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
@@ -253,9 +297,11 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
 
                             strongSelf.updateVisibility()
                             
+                            strongSelf.labelNode.isHidden = !hasServiceMessage
+                            
                             strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                             
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: labelLayout.size.height + 16.0), size: giftSize)
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 16.0 : 0.0), size: giftSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
@@ -278,7 +324,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 151.0), size: titleLayout.size)
                             strongSelf.titleNode.frame = titleFrame
                             
-                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY - 1.0), size: subtitleLayout.size)
+                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + textSpacing), size: subtitleLayout.size)
                             strongSelf.subtitleNode.frame = subtitleFrame
                             
                             let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: subtitleFrame.maxY + 18.0), size: buttonTitleLayout.size)

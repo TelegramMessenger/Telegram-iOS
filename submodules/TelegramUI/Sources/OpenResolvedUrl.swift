@@ -881,8 +881,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     case .ok:
                         updateImpl?()
                     case let .replace(previousPeer):
-                        let text = presentationData.strings.ChannelBoost_ReplaceBoost(previousPeer.compactDisplayTitle, peer.compactDisplayTitle).string
-                        let controller = replaceBoostConfirmationController(context: context, fromPeer: previousPeer, toPeer: peer, text: text, commit: {
+                        let controller = replaceBoostConfirmationController(context: context, fromPeers: [previousPeer], toPeer: peer, commit: {
                             updateImpl?()
                         })
                         present(controller, nil)
@@ -951,6 +950,28 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 dismissImpl = { [weak controller] in
                     controller?.dismiss()
+                }
+            })
+        case let .premiumGiftCode(slug):
+            var forceDark = false
+            if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
+                forceDark = true
+            }
+            let _ = (context.engine.payments.checkPremiumGiftCode(slug: slug)
+            |> deliverOnMainQueue).startStandalone(next: { giftCode in
+                if let giftCode {
+                    var dismissImpl: (() -> Void)?
+                    let controller = PremiumGiftCodeScreen(context: context, giftCode: giftCode, forceDark: forceDark, action: {
+                        dismissImpl?()
+                        
+                        let _ = context.engine.payments.applyPremiumGiftCode(slug: slug).startStandalone()
+                    })
+                    dismissImpl = { [weak controller] in
+                        controller?.dismiss()
+                    }
+                    navigationController?.pushViewController(controller)
+                } else {
+                    present(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
             })
     }

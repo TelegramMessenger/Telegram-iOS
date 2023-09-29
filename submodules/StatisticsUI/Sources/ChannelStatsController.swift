@@ -20,6 +20,7 @@ import InviteLinksUI
 import UndoUI
 import ShareController
 import ItemListPeerActionItem
+import PremiumUI
 
 private let maxUsersDisplayedLimit: Int32 = 50
 
@@ -32,8 +33,9 @@ private final class ChannelStatsControllerArguments {
     let shareBoostLink: (String) -> Void
     let openPeer: (EnginePeer) -> Void
     let expandBoosters: () -> Void
+    let openGifts: () -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
@@ -42,6 +44,7 @@ private final class ChannelStatsControllerArguments {
         self.shareBoostLink = shareBoostLink
         self.openPeer = openPeer
         self.expandBoosters = expandBoosters
+        self.openGifts = openGifts
     }
 }
 
@@ -61,6 +64,7 @@ private enum StatsSection: Int32 {
     case boostOverview
     case boosters
     case boostLink
+    case gifts
 }
 
 private enum StatsEntry: ItemListNodeEntry {
@@ -112,6 +116,9 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostLink(PresentationTheme, String)
     case boostLinkInfo(PresentationTheme, String)
     
+    case gifts(PresentationTheme, String)
+    case giftsInfo(PresentationTheme, String)
+    
     var section: ItemListSectionId {
         switch self {
             case .overviewTitle, .overview:
@@ -140,10 +147,12 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.boostLevel.rawValue
             case .boostOverviewTitle, .boostOverview:
                 return StatsSection.boostOverview.rawValue
-        case .boostersTitle, .boostersPlaceholder, .booster, .boostersExpand, .boostersInfo:
+            case .boostersTitle, .boostersPlaceholder, .booster, .boostersExpand, .boostersInfo:
                 return StatsSection.boosters.rawValue
             case .boostLinkTitle, .boostLink, .boostLinkInfo:
                 return StatsSection.boostLink.rawValue
+            case .gifts, .giftsInfo:
+                return StatsSection.gifts.rawValue
         }
     }
     
@@ -215,6 +224,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 10003
             case .boostLinkInfo:
                 return 10004
+            case .gifts:
+                return 10005
+            case .giftsInfo:
+                return 10006
         }
     }
     
@@ -418,6 +431,18 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .gifts(lhsTheme, lhsText):
+                if case let .gifts(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .giftsInfo(lhsTheme, lhsText):
+                if case let .giftsInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -445,7 +470,8 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .boostLinkTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .boostersInfo(_, text),
-                 let .boostLinkInfo(_, text):
+                 let .boostLinkInfo(_, text),
+                let .giftsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
@@ -496,6 +522,10 @@ private enum StatsEntry: ItemListNodeEntry {
                 }, contextAction: nil, viewAction: nil, tag: nil)
             case let .boostersPlaceholder(_, text):
                 return ItemListPlaceholderItem(theme: presentationData.theme, text: text, sectionId: self.section, style: .blocks)
+            case let .gifts(theme, title):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                    arguments.openGifts()
+                })
         }
     }
 }
@@ -624,11 +654,11 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             let boostersPlaceholder: String?
             let boostersFooter: String?
             if let boostersState, boostersState.count > 0 {
-                boostersTitle = presentationData.strings.Stats_Boosts_Boosters(boostersState.count)
+                boostersTitle = presentationData.strings.Stats_Boosts_Boosts(boostersState.count)
                 boostersPlaceholder = nil
                 boostersFooter = presentationData.strings.Stats_Boosts_BoostersInfo
             } else {
-                boostersTitle = presentationData.strings.Stats_Boosts_BoostersNone
+                boostersTitle = presentationData.strings.Stats_Boosts_BoostsNone
                 boostersPlaceholder = presentationData.strings.Stats_Boosts_NoBoostersYet
                 boostersFooter = nil
             }
@@ -664,10 +694,11 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             }
             
             entries.append(.boostLinkTitle(presentationData.theme, presentationData.strings.Stats_Boosts_LinkHeader))
-            
             entries.append(.boostLink(presentationData.theme, boostData.url))
-            
             entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
+            
+            entries.append(.gifts(presentationData.theme, "Get Boosts via Gifts"))
+            entries.append(.giftsInfo(presentationData.theme, "Get more boosts for your channel by gifting Premium to your subscribers."))
         }
     }
     
@@ -718,6 +749,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let boostersContext = ChannelBoostersContext(account: context.account, peerId: peerId)
     
     var presentImpl: ((ViewController) -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     var navigateToProfileImpl: ((EnginePeer) -> Void)?
     
     let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
@@ -778,6 +810,10 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     },
     expandBoosters: {
         updateState { $0.withUpdatedBoostersExpanded(true) }
+    },
+    openGifts: {
+        let controller = createGiveawayController(context: context, peerId: peerId)
+        pushImpl?(controller)
     })
     
     let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
@@ -892,6 +928,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     presentImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     navigateToProfileImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
