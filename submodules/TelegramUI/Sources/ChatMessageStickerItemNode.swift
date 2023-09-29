@@ -55,6 +55,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
+    private var replyRecognizer: ChatSwipeToReplyRecognizer?
     private var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
     private var appliedForwardInfo: (Peer?, String?)?
@@ -254,11 +255,21 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             return false
         }
+        if let item = self.item {
+            replyRecognizer.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        }
+        self.replyRecognizer = replyRecognizer
         self.view.addGestureRecognizer(replyRecognizer)
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     override func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         super.setupItem(item, synchronousLoad: synchronousLoad)
+        
+        self.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
@@ -1393,11 +1404,14 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var playedSwipeToReplyHaptic = false
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
+        var leftOffset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
         if let item = self.item, item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData) {
             offset = -24.0
+            leftOffset = -10.0
         } else {
             offset = 10.0
+            leftOffset = -10.0
             swipeOffset = 60.0
         }
         
@@ -1425,7 +1439,11 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if translation.x < 0.0 {
                     translation.x = max(-180.0, min(0.0, -rubberBandingOffset(offset: abs(translation.x), bandingStart: swipeOffset)))
                 } else {
-                    translation.x = 0.0
+                    if recognizer.allowBothDirections {
+                        translation.x = -max(-180.0, min(0.0, -rubberBandingOffset(offset: abs(translation.x), bandingStart: swipeOffset)))
+                    } else {
+                        translation.x = 0.0
+                    }
                 }
             
                 if let item = self.item, self.swipeToReplyNode == nil {
@@ -1443,7 +1461,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
-                    swipeToReplyNode.position = CGPoint(x: bounds.size.width + offset + 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    if translation.x < 0.0 {
+                        swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
+                        swipeToReplyNode.position = CGPoint(x: bounds.size.width + offset + 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    } else {
+                        swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
+                        swipeToReplyNode.position = CGPoint(x: leftOffset - 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    }
                     
                     if let (rect, containerSize) = self.absoluteRect {
                         let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
@@ -1462,7 +1486,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 self.swipeToReplyFeedback = nil
                 
                 let translation = recognizer.translation(in: self.view)
-                if case .ended = recognizer.state, translation.x < -swipeOffset {
+                let gestureRecognized: Bool
+                if recognizer.allowBothDirections {
+                    gestureRecognized = abs(translation.x) > swipeOffset
+                } else {
+                    gestureRecognized = translation.x < -swipeOffset
+                }
+                if case .ended = recognizer.state, gestureRecognized {
                     if let item = self.item {
                         if let currentSwipeAction = currentSwipeAction {
                             switch currentSwipeAction {

@@ -57,7 +57,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
-        
+    
+    private var replyRecognizer: ChatSwipeToReplyRecognizer?
     var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
     override var visibility: ListViewItemNodeVisibility {
@@ -220,7 +221,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
             return false
         }
+        if let item = self.item {
+            replyRecognizer.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        }
+        self.replyRecognizer = replyRecognizer
         self.view.addGestureRecognizer(replyRecognizer)
+        
+        self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
@@ -617,6 +625,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     strongSelf.appliedCurrentlyPlaying = isPlaying
                     strongSelf.appliedAutomaticDownload = automaticDownload
                     
+                    strongSelf.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+                    strongSelf.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+                    
                     strongSelf.updateAccessibilityData(accessibilityData)
                                         
                     let videoLayoutData: ChatMessageInstantVideoItemLayoutData
@@ -1006,11 +1017,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     private var playedSwipeToReplyHaptic = false
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
+        var leftOffset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
         if let item = self.item, item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData) {
             offset = -24.0
+            leftOffset = -10.0
         } else {
             offset = 10.0
+            leftOffset = -10.0
             swipeOffset = 60.0
         }
         
@@ -1024,8 +1038,26 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 }
                 self.item?.controllerInteraction.cancelInteractiveKeyboardGestures()
             case .changed:
+                func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
+                    let bandedOffset = offset - bandingStart
+                    if offset < bandingStart {
+                        return offset
+                    }
+                    let range: CGFloat = 100.0
+                    let coefficient: CGFloat = 0.4
+                    return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
+                }
+            
                 var translation = recognizer.translation(in: self.view)
-                translation.x = max(-80.0, min(0.0, translation.x))
+                if translation.x < 0.0 {
+                    translation.x = max(-80.0, min(0.0, -rubberBandingOffset(offset: abs(translation.x), bandingStart: swipeOffset)))
+                } else {
+                    if recognizer.allowBothDirections {
+                        translation.x = -max(-80.0, min(0.0, -rubberBandingOffset(offset: abs(translation.x), bandingStart: swipeOffset)))
+                    } else {
+                        translation.x = 0.0
+                    }
+                }
             
                 if let item = self.item, self.swipeToReplyNode == nil {
                     let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
@@ -1042,7 +1074,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
-                    swipeToReplyNode.position = CGPoint(x: bounds.size.width + offset + 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    if translation.x < 0.0 {
+                        swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
+                        swipeToReplyNode.position = CGPoint(x: bounds.size.width + offset + 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    } else {
+                        swipeToReplyNode.bounds = CGRect(origin: .zero, size: CGSize(width: 33.0, height: 33.0))
+                        swipeToReplyNode.position = CGPoint(x: leftOffset - 33.0 * 0.5, y: self.contentSize.height / 2.0)
+                    }
                     
                     if let (rect, containerSize) = self.absoluteRect {
                         let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
@@ -1061,7 +1099,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 self.swipeToReplyFeedback = nil
                 
                 let translation = recognizer.translation(in: self.view)
-                if case .ended = recognizer.state, translation.x < -swipeOffset {
+                let gestureRecognized: Bool
+                if recognizer.allowBothDirections {
+                    gestureRecognized = abs(translation.x) > swipeOffset
+                } else {
+                    gestureRecognized = translation.x < -swipeOffset
+                }
+                if case .ended = recognizer.state, gestureRecognized {
                     if let item = self.item {
                         if let currentSwipeAction = currentSwipeAction {
                             switch currentSwipeAction {

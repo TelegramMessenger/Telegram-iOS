@@ -70,6 +70,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case redactSensitiveData(PresentationTheme, Bool)
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
+    case unidirectionalSwipeToReply(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case crashOnMemoryPressure(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
@@ -118,7 +119,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -165,46 +166,48 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 14
         case .skipReadHistory:
             return 15
-        case .crashOnSlowQueries:
+        case .unidirectionalSwipeToReply:
             return 16
-        case .crashOnMemoryPressure:
+        case .crashOnSlowQueries:
             return 17
-        case .clearTips:
+        case .crashOnMemoryPressure:
             return 18
-        case .resetNotifications:
+        case .clearTips:
             return 19
-        case .crash:
+        case .resetNotifications:
             return 20
-        case .resetData:
+        case .crash:
             return 21
-        case .resetDatabase:
+        case .resetData:
             return 22
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 23
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 24
-        case .reindexUnread:
+        case .resetHoles:
             return 25
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 26
-        case .reindexCache:
+        case .resetCacheIndex:
             return 27
-        case .resetBiometricsData:
+        case .reindexCache:
             return 28
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 29
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 30
-        case .photoPreview:
+        case .optimizeDatabase:
             return 31
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 32
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 33
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 34
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 35
+        case .acceleratedStickers:
+            return 36
         case .inlineForums:
             return 37
         case .localTranscription:
@@ -928,6 +931,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
+        case let .unidirectionalSwipeToReply(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Legacy swipe to reply", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.unidirectionalSwipeToReply = value
+                    return settings
+                }).start()
+            })
         case let .crashOnSlowQueries(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1375,6 +1386,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
         #endif
+        entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.crashOnMemoryPressure(presentationData.theme, experimentalSettings.crashOnMemoryPressure))
