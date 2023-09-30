@@ -75,7 +75,11 @@
 - (NSData * _Nullable)resample:(FFMpegAVFrame *)frame {
     AVFrame *frameImpl = (AVFrame *)[frame impl];
 
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
     int numChannels = frameImpl->ch_layout.nb_channels;
+#else
+    int numChannels = frameImpl->channels;
+#endif
     if (numChannels != _currentSourceChannelCount) {
         [self resetContextForChannelCount:numChannels];
     }
