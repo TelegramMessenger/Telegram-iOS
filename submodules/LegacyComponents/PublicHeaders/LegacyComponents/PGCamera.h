@@ -48,7 +48,7 @@ typedef enum
 @class PGCameraDeviceAngleSampler;
 @class TGCameraPreviewView;
 
-@interface PGCamera : NSObject
+@interface PGCamera : NSObject <AVCapturePhotoCaptureDelegate>
 
 @property (readonly, nonatomic) PGCameraCaptureSession *captureSession;
 @property (readonly, nonatomic) PGCameraDeviceAngleSampler *deviceAngleSampler;

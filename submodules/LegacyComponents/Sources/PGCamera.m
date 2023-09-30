@@ -16,7 +16,7 @@ NSString *const PGCameraTorchActiveKey = @"torchActive";
 NSString *const PGCameraTorchAvailableKey = @"torchAvailable";
 NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 
-@interface PGCamera ()
+@interface PGCamera () 
 {
     dispatch_queue_t cameraProcessingQueue;
     dispatch_queue_t audioProcessingQueue;
@@ -34,11 +34,16 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     
     bool _capturing;
     bool _moment;
-    
+        
     TGCameraPreviewView *_previewView;
+    
+    UIInterfaceOrientation _currentPhotoOrientation;
     
     NSTimeInterval _captureStartTime;
 }
+
+@property (nonatomic, copy) void(^photoCaptureCompletionBlock)(UIImage *image, PGCameraShotMetadata *metadata);
+
 @end
 
 @implementation PGCamera
@@ -367,57 +372,57 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
 {
     bool videoMirrored = !self.disableResultMirroring ? _previewView.captureConnection.videoMirrored : false;
     
-    [[PGCameraCaptureSession cameraQueue] dispatch:^
+    void (^takePhoto)(void) = ^
     {
-        if (!self.captureSession.isRunning || self.captureSession.imageOutput.isCapturingStillImage || _invalidated)
-            return;
-        
-        void (^takePhoto)(void) = ^
+        self.photoCaptureCompletionBlock = completion;
+        [[PGCameraCaptureSession cameraQueue] dispatch:^
         {
+            if (!self.captureSession.isRunning || _invalidated)
+                return;
+            
             AVCaptureConnection *imageConnection = [self.captureSession.imageOutput connectionWithMediaType:AVMediaTypeVideo];
             [imageConnection setVideoMirrored:videoMirrored];
             
             UIInterfaceOrientation orientation = UIInterfaceOrientationPortrait;
             if (self.requestedCurrentInterfaceOrientation != nil)
                 orientation = self.requestedCurrentInterfaceOrientation(NULL);
-            
             [imageConnection setVideoOrientation:[PGCamera _videoOrientationForInterfaceOrientation:orientation mirrored:false]];
             
-            [self.captureSession.imageOutput captureStillImageAsynchronouslyFromConnection:self.captureSession.imageOutput.connections.firstObject completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error)
-            {
-                if (imageDataSampleBuffer != NULL && error == nil)
-                {
-                    NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
-                    UIImage *image = [[UIImage alloc] initWithData:imageData];
-                    
-                    if (self.cameraMode == PGCameraModeSquarePhoto || self.cameraMode == PGCameraModeSquareVideo || self.cameraMode == PGCameraModeSquareSwing)
-                    {
-                        CGFloat shorterSide = MIN(image.size.width, image.size.height);
-                        CGFloat longerSide = MAX(image.size.width, image.size.height);
-                        
-                        CGRect cropRect = CGRectMake(CGFloor((longerSide - shorterSide) / 2.0f), 0, shorterSide, shorterSide);
-                        CGImageRef croppedCGImage = CGImageCreateWithImageInRect(image.CGImage, cropRect);
-                        image = [UIImage imageWithCGImage:croppedCGImage scale:image.scale orientation:image.imageOrientation];
-                        CGImageRelease(croppedCGImage);
-                    }
-                    
-                    PGCameraShotMetadata *metadata = [[PGCameraShotMetadata alloc] init];
-                    metadata.deviceAngle = [PGCameraShotMetadata relativeDeviceAngleFromAngle:_deviceAngleSampler.currentDeviceAngle orientation:orientation];
-                    
-                    image = [self normalizeImageOrientation:image];
-                    
-                    if (completion != nil)
-                        completion(image, metadata);
-                }
-            }];
-        };
-        
-        NSTimeInterval delta = CFAbsoluteTimeGetCurrent() - _captureStartTime;
-        if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 0.4)
-            takePhoto();
-        else
-            TGDispatchAfter(0.4 - delta, [[PGCameraCaptureSession cameraQueue] _dispatch_queue], takePhoto);
-    }];
+            _currentPhotoOrientation = orientation;
+            
+            AVCapturePhotoSettings *photoSettings = [AVCapturePhotoSettings photoSettings];
+            [self.captureSession.imageOutput capturePhotoWithSettings:photoSettings delegate:self];
+        }];
+    };
+    
+    NSTimeInterval delta = CFAbsoluteTimeGetCurrent() - _captureStartTime;
+    if (CFAbsoluteTimeGetCurrent() - _captureStartTime > 0.4)
+        takePhoto();
+    else
+        TGDispatchAfter(0.4 - delta, [[PGCameraCaptureSession cameraQueue] _dispatch_queue], takePhoto);
+}
+
+- (void)captureOutput:(AVCapturePhotoOutput *)output didFinishProcessingPhoto:(AVCapturePhoto *)photo error:(NSError *)error {
+    if (error) {
+        NSLog(@"Error capturing photo: %@", error);
+        return;
+    }
+    
+    NSData *photoData = [photo fileDataRepresentation];
+    UIImage *capturedImage = [UIImage imageWithData:photoData];
+    
+    PGCameraShotMetadata *metadata = [[PGCameraShotMetadata alloc] init];
+    metadata.deviceAngle = [PGCameraShotMetadata relativeDeviceAngleFromAngle:_deviceAngleSampler.currentDeviceAngle orientation:_currentPhotoOrientation];
+    
+    UIImage *image = [self normalizeImageOrientation:capturedImage];
+    
+    TGDispatchOnMainThread(^
+    {
+        if (self.photoCaptureCompletionBlock != nil) {
+            self.photoCaptureCompletionBlock(image, metadata);
+            self.photoCaptureCompletionBlock = nil;
+        }
+    });
 }
 
 - (void)startVideoRecordingForMoment:(bool)moment completion:(void (^)(NSURL *, CGAffineTransform transform, CGSize dimensions, NSTimeInterval duration, bool success))completion

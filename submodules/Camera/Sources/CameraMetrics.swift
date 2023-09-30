@@ -7,6 +7,10 @@ public extension Camera {
         case iPhone14Plus
         case iPhone14Pro
         case iPhone14ProMax
+        case iPhone15
+        case iPhone15Plus
+        case iPhone15Pro
+        case iPhone15ProMax
         case unknown
         
         init(model: DeviceModel) {
@@ -21,6 +25,14 @@ public extension Camera {
                 self = .iPhone14Pro
             case .iPhone14ProMax:
                 self = .iPhone14ProMax
+            case .iPhone15:
+                self = .iPhone15
+            case .iPhone15Plus:
+                self = .iPhone15Plus
+            case .iPhone15Pro:
+                self = .iPhone15Pro
+            case .iPhone15ProMax:
+                self = .iPhone15ProMax
             case .unknown:
                 self = .unknown
             default:
@@ -32,13 +44,9 @@ public extension Camera {
             switch self {
             case .singleCamera:
                 return [1.0]
-            case .iPhone14:
+            case .iPhone14, .iPhone14Plus, .iPhone15, .iPhone15Plus:
                 return [0.5, 1.0, 2.0]
-            case .iPhone14Plus:
-                return [0.5, 1.0, 2.0]
-            case .iPhone14Pro:
-                return [0.5, 1.0, 2.0, 3.0]
-            case .iPhone14ProMax:
+            case .iPhone14Pro, .iPhone14ProMax, .iPhone15Pro, .iPhone15ProMax:
                 return [0.5, 1.0, 2.0, 3.0]
             case .unknown:
                 return [1.0, 2.0]
@@ -91,7 +99,11 @@ enum DeviceModel: CaseIterable, Equatable {
             .iPhone14,
             .iPhone14Plus,
             .iPhone14Pro,
-            .iPhone14ProMax
+            .iPhone14ProMax,
+            .iPhone15,
+            .iPhone15Plus,
+            .iPhone15Pro,
+            .iPhone15ProMax
         ]
     }
     
@@ -153,6 +165,11 @@ enum DeviceModel: CaseIterable, Equatable {
     case iPhone14Plus
     case iPhone14Pro
     case iPhone14ProMax
+    
+    case iPhone15
+    case iPhone15Plus
+    case iPhone15Pro
+    case iPhone15ProMax
     
     case unknown(String)
     
@@ -248,6 +265,14 @@ enum DeviceModel: CaseIterable, Equatable {
             return ["iPhone15,2"]
         case .iPhone14ProMax:
             return ["iPhone15,3"]
+        case .iPhone15:
+            return ["iPhone15,4"]
+        case .iPhone15Plus:
+            return ["iPhone15,5"]
+        case .iPhone15Pro:
+            return ["iPhone16,1"]
+        case .iPhone15ProMax:
+            return ["iPhone16,2"]            
         case let .unknown(modelId):
             return [modelId]
         }
@@ -345,6 +370,14 @@ enum DeviceModel: CaseIterable, Equatable {
             return "iPhone 14 Pro"
         case .iPhone14ProMax:
             return "iPhone 14 Pro Max"
+        case .iPhone15:
+            return "iPhone 15"
+        case .iPhone15Plus:
+            return "iPhone 15 Plus"
+        case .iPhone15Pro:
+            return "iPhone 15 Pro"
+        case .iPhone15ProMax:
+            return "iPhone 15 Pro Max"
         case let .unknown(modelId):
             if modelId.hasPrefix("iPhone") {
                 return "Unknown iPhone"
