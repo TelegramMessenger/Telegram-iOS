@@ -1,1 +1,0 @@
-OBJS += loongarch/cpu.o
