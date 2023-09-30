@@ -719,14 +719,19 @@ private final class NotificationServiceHandler {
         
         let semaphore = DispatchSemaphore(value: 0)
         var loggingSettings = LoggingSettings.defaultSettings
-        let _ = (self.accountManager.transaction { transaction -> LoggingSettings in
+        if buildConfig.isInternalBuild {
+            loggingSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+        }
+        let _ = (self.accountManager.transaction { transaction -> LoggingSettings? in
             if let value = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) {
                 return value
             } else {
-                return LoggingSettings.defaultSettings
+                return nil
             }
         }).start(next: { value in
-            loggingSettings = value
+            if let value {
+                loggingSettings = value
+            }
             semaphore.signal()
         })
         semaphore.wait()

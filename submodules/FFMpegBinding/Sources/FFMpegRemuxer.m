@@ -34,18 +34,18 @@
 
 @end
 
-static int readPacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
+/*static int readPacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
     FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
     context->_offset += length;
-    printf("read %lld bytes (offset is now %lld)\n", length, context->_offset);
-    return read(context->_fd, buffer, length);
+    printf("read %lld bytes (offset is now %lld)\n", (int64_t)length, context->_offset);
+    return (int)read(context->_fd, buffer, length);
 }
 
 static int writePacketImpl(void * _Nullable opaque, uint8_t * _Nullable buffer, int length) {
     FFMpegRemuxerContext *context = (__bridge FFMpegRemuxerContext *)opaque;
     context->_offset += length;
-    printf("write %lld bytes (offset is now %lld)\n", length, context->_offset);
-    return write(context->_fd, buffer, length);
+    printf("write %lld bytes (offset is now %lld)\n", (int64_t)length, context->_offset);
+    return (int)write(context->_fd, buffer, length);
 }
 
 static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
@@ -57,7 +57,7 @@ static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
         context->_offset = offset;
         return lseek(context->_fd, offset, SEEK_SET);
     }
-}
+}*/
 
 @implementation FFMpegRemuxer
 
@@ -99,7 +99,7 @@ static int64_t seekImpl(void * _Nullable opaque, int64_t offset, int whence) {
     }
     
     number_of_streams = input_format_context->nb_streams;
-    streams_list = av_mallocz_array(number_of_streams, sizeof(*streams_list));
+    streams_list = av_malloc_array(number_of_streams, sizeof(*streams_list));
     
     if (!streams_list) {
         ret = AVERROR(ENOMEM);

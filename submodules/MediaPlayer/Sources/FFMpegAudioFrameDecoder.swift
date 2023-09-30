@@ -65,7 +65,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
             while true {
                 let result = self.codecContext.receive(into: self.audioFrame)
                 if case .success = result {
-                    if let convertedFrame = convertAudioFrame(self.audioFrame, pts: frame.pts, duration: frame.duration) {
+                    if let convertedFrame = convertAudioFrame(self.audioFrame, pts: frame.pts) {
                         self.delayedFrames.append(convertedFrame)
                     }
                 } else {
@@ -121,7 +121,7 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
         }
     }
     
-    private func convertAudioFrame(_ frame: FFMpegAVFrame, pts: CMTime, duration: CMTime) -> MediaTrackFrame? {
+    private func convertAudioFrame(_ frame: FFMpegAVFrame, pts: CMTime) -> MediaTrackFrame? {
         guard let data = self.swrContext.resample(frame) else {
             return nil
         }
@@ -135,17 +135,11 @@ final class FFMpegAudioFrameDecoder: MediaTrackFrameDecoder {
             return nil
         }
         
-        //var timingInfo = CMSampleTimingInfo(duration: duration, presentationTimeStamp: pts, decodeTimeStamp: pts)
         var sampleBuffer: CMSampleBuffer?
-        //var sampleSize = data.count
         
         guard CMAudioSampleBufferCreateReadyWithPacketDescriptions(allocator: nil, dataBuffer: blockBuffer!, formatDescription: self.formatDescription, sampleCount: Int(data.count / 2), presentationTimeStamp: pts, packetDescriptions: nil, sampleBufferOut: &sampleBuffer) == noErr else {
             return nil
         }
-        
-        /*guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: self.formatDescription, sampleCount: Int(frame.duration), sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
-            return nil
-        }*/
         
         let resetDecoder = self.resetDecoderOnNextFrame
         self.resetDecoderOnNextFrame = false

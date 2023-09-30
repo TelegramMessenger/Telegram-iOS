@@ -311,11 +311,12 @@ public final class AccountStateManager {
                     |> distinctUntilChanged
                     |> mapToSignal { value -> Signal<Never, NoError> in
                         if isMaxMessageId {
-                            return network.request(Api.functions.messages.receivedMessages(maxId: value))
+                            return .complete()
+                            /*return network.request(Api.functions.messages.receivedMessages(maxId: value))
                             |> ignoreValues
                             |> `catch` { _ -> Signal<Never, NoError> in
                                 return .complete()
-                            }
+                            }*/
                         } else {
                             if value == 0 {
                                 return .complete()

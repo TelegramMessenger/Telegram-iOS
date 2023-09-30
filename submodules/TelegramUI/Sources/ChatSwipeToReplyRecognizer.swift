@@ -4,6 +4,7 @@ import UIKit
 class ChatSwipeToReplyRecognizer: UIPanGestureRecognizer {
     var validatedGesture = false
     var firstLocation: CGPoint = CGPoint()
+    var allowBothDirections: Bool = true
     
     var shouldBegin: (() -> Bool)?
     
@@ -37,17 +38,17 @@ class ChatSwipeToReplyRecognizer: UIPanGestureRecognizer {
         let absTranslationX: CGFloat = abs(translation.x)
         let absTranslationY: CGFloat = abs(translation.y)
         
-        if !validatedGesture {
-            if translation.x > 0.0 {
+        if !self.validatedGesture {
+            if !self.allowBothDirections && translation.x > 0.0 {
                 self.state = .failed
             } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                 self.state = .failed
             } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
-                validatedGesture = true
+                self.validatedGesture = true
             }
         }
         
-        if validatedGesture {
+        if self.validatedGesture {
             super.touchesMoved(touches, with: event)
         }
     }

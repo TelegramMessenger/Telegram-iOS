@@ -20,7 +20,7 @@
 
 - (void)dealloc {
     if (_impl) {
-        av_frame_unref(_impl);
+        av_frame_free(&_impl);
     }
 }
 
@@ -45,7 +45,11 @@
 }
 
 - (int64_t)duration {
+#if LIBAVFORMAT_VERSION_MAJOR >= 59
+    return _impl->duration;
+#else
     return _impl->pkt_duration;
+#endif
 }
 
 - (FFMpegAVFrameColorRange)colorRange {

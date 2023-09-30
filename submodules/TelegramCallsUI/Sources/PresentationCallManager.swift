@@ -753,12 +753,18 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
     
     public func joinGroupCall(context: AccountContext, peerId: PeerId, invite: String?, requestJoinAsPeerId: ((@escaping (PeerId?) -> Void) -> Void)?, initialCall: EngineGroupCallDescription, endCurrentIfAny: Bool) -> JoinGroupCallManagerResult {
         let begin: () -> Void = { [weak self] in
-            if let requestJoinAsPeerId = requestJoinAsPeerId {
+            if let requestJoinAsPeerId = requestJoinAsPeerId, (initialCall.isStream == nil || initialCall.isStream == false) {
                 requestJoinAsPeerId({ joinAsPeerId in
-                    let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: joinAsPeerId, initialCall: initialCall).start()
+                    guard let self else {
+                        return
+                    }
+                    self.startCallDisposable.set(self.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: joinAsPeerId, initialCall: initialCall).startStrict())
                 })
             } else {
-                let _ = self?.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: nil, initialCall: initialCall).start()
+                guard let self else {
+                    return
+                }
+                self.startCallDisposable.set(self.startGroupCall(accountContext: context, peerId: peerId, invite: invite, joinAsPeerId: nil, initialCall: initialCall).startStrict())
             }
         }
         
@@ -805,6 +811,8 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         let accessEnabledSignal: Signal<Bool, NoError> = Signal { subscriber in
             if let isStream = initialCall.isStream, isStream {
                 subscriber.putNext(true)
+                subscriber.putCompletion()
+                
                 return EmptyDisposable
             }
             

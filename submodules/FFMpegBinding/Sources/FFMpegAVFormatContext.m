@@ -4,6 +4,7 @@
 #import <FFMpegBinding/FFMpegPacket.h>
 #import <FFMpegBinding/FFMpegAVCodecContext.h>
 
+#import "libavcodec/avcodec.h"
 #import "libavformat/avformat.h"
 
 int FFMpegCodecIdH264 = AV_CODEC_ID_H264;
@@ -115,9 +116,9 @@ int FFMpegCodecIdVP9 = AV_CODEC_ID_VP9;
     
     if (stream->time_base.den != 0 && stream->time_base.num != 0) {
         timebase = CMTimeMake((int64_t)stream->time_base.num, stream->time_base.den);
-    } else if (stream->codec->time_base.den != 0 && stream->codec->time_base.num != 0) {
+    }/* else if (stream->codec->time_base.den != 0 && stream->codec->time_base.num != 0) {
         timebase = CMTimeMake((int64_t)stream->codec->time_base.num, stream->codec->time_base.den);
-    } else {
+    }*/ else {
         timebase = defaultTimeBase;
     }
     

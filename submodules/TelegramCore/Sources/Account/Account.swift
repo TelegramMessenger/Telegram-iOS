@@ -1165,37 +1165,37 @@ public class Account {
         let extractedExpr1: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { inputStates in
                 if inputStates {
-                    print("inputStates: true")
+                    //print("inputStates: true")
                 }
                 return inputStates ? AccountRunningImportantTasks.other : []
             },
             self.pendingMessageManager.hasPendingMessages |> map { hasPendingMessages in
                 if !hasPendingMessages.isEmpty {
-                    print("hasPendingMessages: true")
+                    //print("hasPendingMessages: true")
                 }
                 return !hasPendingMessages.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
             },
             (self.pendingStoryManager?.hasPending ?? .single(false)) |> map { hasPending in
                 if hasPending {
-                    print("hasPending: true")
+                    //print("hasPending: true")
                 }
                 return hasPending ? AccountRunningImportantTasks.pendingMessages : []
             },
             self.pendingUpdateMessageManager.updatingMessageMedia |> map { updatingMessageMedia in
                 if !updatingMessageMedia.isEmpty {
-                    print("updatingMessageMedia: true")
+                    //print("updatingMessageMedia: true")
                 }
                 return !updatingMessageMedia.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
             },
             self.pendingPeerMediaUploadManager.uploadingPeerMedia |> map { uploadingPeerMedia in
                 if !uploadingPeerMedia.isEmpty {
-                    print("uploadingPeerMedia: true")
+                    //print("uploadingPeerMedia: true")
                 }
                 return !uploadingPeerMedia.isEmpty ? AccountRunningImportantTasks.pendingMessages : []
             },
             self.accountPresenceManager.isPerformingUpdate() |> map { presenceUpdate in
                 if presenceUpdate {
-                    print("accountPresenceManager isPerformingUpdate: true")
+                    //print("accountPresenceManager isPerformingUpdate: true")
                     //return []
                 }
                 return presenceUpdate ? AccountRunningImportantTasks.other : []

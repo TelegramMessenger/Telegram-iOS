@@ -85,7 +85,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
         if totalCount > maximumFetchSize {
             context.readingError = true
-            return 0
+            return FFMPEG_CONSTANT_AVERROR_EOF
         }
     }
     
@@ -118,7 +118,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 disposable.dispose()
                 if !completedRequest {
                     context.readingError = true
-                    return 0
+                    return FFMPEG_CONSTANT_AVERROR_EOF
                 }
             }
         }
@@ -176,7 +176,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
             disposable.dispose()
             if !completedRequest {
                 context.readingError = true
-                return 0
+                return FFMPEG_CONSTANT_AVERROR_EOF
             }
         }
     }
@@ -192,7 +192,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     
     if context.closed {
         context.readingError = true
-        return 0
+        return FFMPEG_CONSTANT_AVERROR_EOF
     }
     return fetchedCount
 }
@@ -725,7 +725,7 @@ private func videoFrameFromPacket(_ packet: FFMpegPacket, videoStream: StreamCon
     if frameDuration != 0 {
         duration = CMTimeMake(value: frameDuration * videoStream.timebase.value, timescale: videoStream.timebase.timescale)
     } else {
-        duration = videoStream.fps
+        duration = CMTimeMake(value: Int64(videoStream.fps.timescale), timescale: Int32(videoStream.fps.value))
     }
     
     return MediaTrackDecodableFrame(type: .video, packet: packet, pts: pts, dts: dts, duration: duration)
