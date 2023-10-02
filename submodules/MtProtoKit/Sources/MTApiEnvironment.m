@@ -595,6 +595,14 @@ NSString *suffix = @"";
         return @"iPhone 14 Pro";
     if ([platform isEqualToString:@"iPhone15,3"])
         return @"iPhone 14 Pro Max";
+    if ([platform isEqualToString:@"iPhone15,4"])
+        return @"iPhone 15";
+    if ([platform isEqualToString:@"iPhone15,5"])
+        return @"iPhone 15 Plus";
+    if ([platform isEqualToString:@"iPhone16,1"])
+        return @"iPhone 15 Pro";
+    if ([platform isEqualToString:@"iPhone16,2"])
+        return @"iPhone 15 Pro Max";
     
     if ([platform hasPrefix:@"iPod1"])
         return @"iPod touch 1G";

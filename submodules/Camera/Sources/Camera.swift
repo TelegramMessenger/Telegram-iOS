@@ -95,7 +95,7 @@ final class CameraDeviceContext {
             return 30.0
         }
         switch DeviceModel.current {
-        case .iPhone14ProMax, .iPhone13ProMax:
+        case .iPhone15ProMax, .iPhone14ProMax, .iPhone13ProMax:
             return 60.0
         default:
             return 30.0
