@@ -20,6 +20,7 @@ import TelegramNotices
 import Markdown
 import TextFormat
 import ChatMessageForwardInfoNode
+import ChatMessageDateAndStatusNode
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize

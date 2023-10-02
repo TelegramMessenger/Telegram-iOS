@@ -14,6 +14,7 @@ import Markdown
 import ShimmerEffect
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ChatMessageDateAndStatusNode
 
 private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)

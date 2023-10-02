@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AvatarNode
 import AccountContext
 import PhoneNumberFormat
+import ChatMessageDateAndStatusNode
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 

@@ -102,6 +102,7 @@ import ChatContextQuery
 import PeerReportScreen
 import PeerSelectionController
 import SaveToCameraRoll
+import ChatMessageDateAndStatusNode
 
 #if DEBUG
 import os.signpost

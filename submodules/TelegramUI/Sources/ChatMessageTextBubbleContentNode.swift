@@ -20,6 +20,7 @@ import LottieAnimationCache
 import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextNodeWithEntities
+import ChatMessageDateAndStatusNode
 
 private final class CachedChatMessageText {
     let text: String

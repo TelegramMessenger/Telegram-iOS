@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import GridMessageSelectionNode
 import ChatControllerInteraction
+import ChatMessageDateAndStatusNode
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {

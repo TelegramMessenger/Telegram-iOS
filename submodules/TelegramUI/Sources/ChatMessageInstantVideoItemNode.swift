@@ -14,6 +14,7 @@ import ContextUI
 import Markdown
 import ChatControllerInteraction
 import ChatMessageForwardInfoNode
+import ChatMessageDateAndStatusNode
 
 private let nameFont = Font.medium(14.0)
 

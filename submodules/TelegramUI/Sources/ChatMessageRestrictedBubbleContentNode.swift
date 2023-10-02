@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import ChatMessageDateAndStatusNode
 
 class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
