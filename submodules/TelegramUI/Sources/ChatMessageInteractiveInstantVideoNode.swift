@@ -21,6 +21,8 @@ import Markdown
 import TextFormat
 import ChatMessageForwardInfoNode
 import ChatMessageDateAndStatusNode
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize

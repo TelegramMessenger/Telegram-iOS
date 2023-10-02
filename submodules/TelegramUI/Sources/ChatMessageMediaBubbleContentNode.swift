@@ -11,6 +11,8 @@ import AccountContext
 import GridMessageSelectionNode
 import ChatControllerInteraction
 import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {
@@ -406,15 +408,6 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             }
             if currentMedia.isSemanticallyEqual(to: media) {
                 return self.interactiveImageNode.transitionNode(adjustRect: adjustRect)
-            }
-        }
-        return nil
-    }
-    
-    override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
-        if let message = self.item?.message, let currentMedia = self.media, !message.containsSecretMedia {
-            if self.interactiveImageNode.frame.contains(point), self.interactiveImageNode.isReadyForInteractivePreview() {
-                return (message, .media(currentMedia))
             }
         }
         return nil

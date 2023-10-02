@@ -11,6 +11,7 @@ import ContactListUI
 import ChatListUI
 import AnimationCache
 import MultiAnimationRenderer
+import EditableTokenListNode
 
 private struct SearchResultEntry: Identifiable {
     let index: Int

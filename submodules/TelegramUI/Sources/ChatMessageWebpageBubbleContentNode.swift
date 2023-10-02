@@ -13,6 +13,8 @@ import InstantPageUI
 import UrlHandling
 import GalleryData
 import TelegramPresentationData
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 private let titleFont: UIFont = Font.semibold(15.0)
 

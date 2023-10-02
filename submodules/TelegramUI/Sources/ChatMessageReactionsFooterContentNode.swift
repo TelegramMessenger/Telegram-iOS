@@ -13,40 +13,8 @@ import ReactionButtonListComponent
 import AccountContext
 import WallpaperBackgroundNode
 import ChatControllerInteraction
-
-func canViewMessageReactionList(message: Message) -> Bool {
-    var found = false
-    var canViewList = false
-    for attribute in message.attributes {
-        if let attribute = attribute as? ReactionsMessageAttribute {
-            canViewList = attribute.canViewList
-            found = true
-            break
-        }
-    }
-    
-    if !found {
-        return false
-    }
-    
-    if let peer = message.peers[message.id.peerId] {
-        if let channel = peer as? TelegramChannel {
-            if case .broadcast = channel.info {
-                return false
-            } else {
-                return canViewList
-            }
-        } else if let _ = peer as? TelegramGroup {
-            return canViewList
-        } else if let _ = peer as? TelegramUser {
-            return true
-        } else {
-            return false
-        }
-    } else {
-        return false
-    }
-}
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 final class MessageReactionButtonsNode: ASDisplayNode {
     enum DisplayType {

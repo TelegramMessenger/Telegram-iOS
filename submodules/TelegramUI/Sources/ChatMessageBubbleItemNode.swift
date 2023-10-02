@@ -31,6 +31,10 @@ import EmojiStatusComponent
 import ChatControllerInteraction
 import ChatMessageForwardInfoNode
 import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatHistoryEntry
+import ChatMessageTextBubbleContentNode
+import ChatMessageItemCommon
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -4151,16 +4155,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         return (resultView, nil)
                     })
                 }
-                return result
-            }
-        }
-        return nil
-    }
-    
-    override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
-        for contentNode in self.contentNodes {
-            let frame = contentNode.frame
-            if let result = contentNode.peekPreviewContent(at: point.offsetBy(dx: -frame.minX, dy: -frame.minY)) {
                 return result
             }
         }

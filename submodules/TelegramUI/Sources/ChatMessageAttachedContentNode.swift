@@ -20,6 +20,9 @@ import MultiAnimationRenderer
 import ChatControllerInteraction
 import ShimmerEffect
 import ChatMessageDateAndStatusNode
+import ChatHistoryEntry
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
 
 private let buttonFont = Font.semibold(13.0)
 

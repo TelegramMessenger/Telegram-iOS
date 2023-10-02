@@ -10,6 +10,8 @@ import AvatarNode
 import AccountContext
 import PhoneNumberFormat
 import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 

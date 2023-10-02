@@ -13,6 +13,7 @@ import AlertUI
 import PresentationDataUtils
 import ContactListUI
 import CounterContollerTitleView
+import EditableTokenListNode
 
 private func peerTokenTitle(accountPeerId: PeerId, peer: Peer, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder) -> String {
     if peer.id == accountPeerId {

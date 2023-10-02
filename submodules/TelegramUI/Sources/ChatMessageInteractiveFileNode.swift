@@ -30,6 +30,8 @@ import UndoUI
 import TelegramNotices
 import ChatControllerInteraction
 import ChatMessageDateAndStatusNode
+import ChatHistoryEntry
+import ChatMessageItemCommon
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

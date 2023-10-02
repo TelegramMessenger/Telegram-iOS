@@ -42,6 +42,7 @@ import PeerInfoStoryGridScreen
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
 import LegacyMessageInputPanel
+import ChatHistoryEntry
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()

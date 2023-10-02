@@ -12,15 +12,15 @@ public enum ChatMessageEntryContentType {
 }
 
 public struct ChatMessageEntryAttributes: Equatable {
-    var rank: CachedChannelAdminRank?
-    var isContact: Bool
-    var contentTypeHint: ChatMessageEntryContentType
-    var updatingMedia: ChatUpdatingMessageMedia?
-    var isPlaying: Bool
-    var isCentered: Bool
-    var authorStoryStats: PeerStoryStats?
+    public var rank: CachedChannelAdminRank?
+    public var isContact: Bool
+    public var contentTypeHint: ChatMessageEntryContentType
+    public var updatingMedia: ChatUpdatingMessageMedia?
+    public var isPlaying: Bool
+    public var isCentered: Bool
+    public var authorStoryStats: PeerStoryStats?
     
-    init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: PeerStoryStats?) {
+    public init(rank: CachedChannelAdminRank?, isContact: Bool, contentTypeHint: ChatMessageEntryContentType, updatingMedia: ChatUpdatingMessageMedia?, isPlaying: Bool, isCentered: Bool, authorStoryStats: PeerStoryStats?) {
         self.rank = rank
         self.isContact = isContact
         self.contentTypeHint = contentTypeHint
@@ -41,7 +41,7 @@ public struct ChatMessageEntryAttributes: Equatable {
     }
 }
 
-enum ChatHistoryEntry: Identifiable, Comparable {
+public enum ChatHistoryEntry: Identifiable, Comparable {
     case MessageEntry(Message, ChatPresentationData, Bool, MessageHistoryEntryLocation?, ChatHistoryMessageSelection, ChatMessageEntryAttributes)
     case MessageGroupEntry(MessageGroupInfo, [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)], ChatPresentationData)
     case UnreadEntry(MessageIndex, ChatPresentationData)
@@ -49,7 +49,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
     case ChatInfoEntry(String, String, TelegramMediaImage?, TelegramMediaFile?, ChatPresentationData)
     case SearchEntry(PresentationTheme, PresentationStrings)
     
-    var stableId: UInt64 {
+    public var stableId: UInt64 {
         switch self {
             case let .MessageEntry(message, _, _, _, _, attributes):
                 let type: UInt64
@@ -75,7 +75,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         }
     }
     
-    var index: MessageIndex {
+    public var index: MessageIndex {
         switch self {
             case let .MessageEntry(message, _, _, _, _, _):
                 return message.index
@@ -92,7 +92,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         }
     }
     
-    var firstIndex: MessageIndex {
+    public var firstIndex: MessageIndex {
         switch self {
             case let .MessageEntry(message, _, _, _, _, _):
                 return message.index
@@ -109,7 +109,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         }
     }
 
-    static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
+    public static func ==(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         switch lhs {
             case let .MessageEntry(lhsMessage, lhsPresentationData, lhsRead, _, lhsSelection, lhsAttributes):
                 switch rhs {
@@ -264,7 +264,7 @@ enum ChatHistoryEntry: Identifiable, Comparable {
         }
     }
     
-    static func <(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
+    public static func <(lhs: ChatHistoryEntry, rhs: ChatHistoryEntry) -> Bool {
         let lhsIndex = lhs.index
         let rhsIndex = rhs.index
         if lhsIndex == rhsIndex {

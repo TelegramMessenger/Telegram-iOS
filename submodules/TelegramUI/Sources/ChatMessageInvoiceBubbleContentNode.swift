@@ -7,6 +7,8 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
 import TelegramStringFormatting
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)

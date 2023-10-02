@@ -7,7 +7,7 @@ import TelegramStringFormatting
 import LocalizedPeerData
 import AccountContext
 
-enum MessageTimestampStatusFormat {
+public enum MessageTimestampStatusFormat {
     case regular
     case minimal
 }
@@ -29,7 +29,7 @@ private func dateStringForDay(strings: PresentationStrings, dateTimeFormat: Pres
     }
 }
 
-func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, associatedData: ChatMessageItemAssociatedData) -> String {
+public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, associatedData: ChatMessageItemAssociatedData) -> String {
     if let adAttribute = message.adAttribute {
         switch adAttribute.messageType {
         case .sponsored:

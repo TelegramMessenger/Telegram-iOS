@@ -341,6 +341,11 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ForwardAccessoryPanelNode",
         "//submodules/TelegramUI/Components/LegacyMessageInputPanel",
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageTextBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/EditableTokenListNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

@@ -15,6 +15,8 @@ import Markdown
 import ChatControllerInteraction
 import ChatMessageForwardInfoNode
 import ChatMessageDateAndStatusNode
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
 
 private let nameFont = Font.medium(14.0)
 

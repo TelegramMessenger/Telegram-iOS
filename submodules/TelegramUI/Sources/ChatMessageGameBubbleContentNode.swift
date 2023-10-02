@@ -5,6 +5,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
     private var game: TelegramMediaGame?

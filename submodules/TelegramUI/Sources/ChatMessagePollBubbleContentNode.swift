@@ -12,6 +12,8 @@ import AvatarNode
 import TelegramPresentationData
 import ChatMessageBackground
 import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
     if poll.isClosed {

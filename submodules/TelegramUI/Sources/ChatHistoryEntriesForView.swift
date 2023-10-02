@@ -5,6 +5,7 @@ import TemporaryCachedPeerDataManager
 import Emoji
 import AccountContext
 import TelegramPresentationData
+import ChatHistoryEntry
 
 func chatHistoryEntriesForView(
     location: ChatLocation,

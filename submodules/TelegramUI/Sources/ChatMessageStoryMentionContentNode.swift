@@ -21,6 +21,8 @@ import Markdown
 import ComponentFlow
 import AvatarStoryIndicatorComponent
 import AvatarNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?

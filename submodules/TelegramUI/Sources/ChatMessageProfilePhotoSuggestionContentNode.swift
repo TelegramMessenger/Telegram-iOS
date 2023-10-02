@@ -18,6 +18,8 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import GalleryUI
 import Markdown
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?

@@ -7,16 +7,23 @@ import TelegramPresentationData
 import AvatarNode
 import AccountContext
 
-struct EditableTokenListToken {
-    enum Subject {
+public struct EditableTokenListToken {
+    public enum Subject {
         case peer(EnginePeer)
         case category(UIImage?)
     }
     
-    let id: AnyHashable
-    let title: String
-    let fixedPosition: Int?
-    let subject: Subject
+    public let id: AnyHashable
+    public let title: String
+    public let fixedPosition: Int?
+    public let subject: Subject
+
+    public init(id: AnyHashable, title: String, fixedPosition: Int?, subject: Subject) {
+        self.id = id
+        self.title = title
+        self.fixedPosition = fixedPosition
+        self.subject = subject
+    }
 }
 
 private let caretIndicatorImage = generateVerticallyStretchableFilledCircleImage(radius: 1.0, color: UIColor(rgb: 0x3350ee))
@@ -54,18 +61,18 @@ private func generateRemoveIcon(_ color: UIColor) -> UIImage? {
     })
 }
 
-final class EditableTokenListNodeTheme {
-    let backgroundColor: UIColor
-    let separatorColor: UIColor
-    let placeholderTextColor: UIColor
-    let primaryTextColor: UIColor
-    let tokenBackgroundColor: UIColor
-    let selectedTextColor: UIColor
-    let selectedBackgroundColor: UIColor
-    let accentColor: UIColor
-    let keyboardColor: PresentationThemeKeyboardColor
+public final class EditableTokenListNodeTheme {
+    public let backgroundColor: UIColor
+    public let separatorColor: UIColor
+    public let placeholderTextColor: UIColor
+    public let primaryTextColor: UIColor
+    public let tokenBackgroundColor: UIColor
+    public let selectedTextColor: UIColor
+    public let selectedBackgroundColor: UIColor
+    public let accentColor: UIColor
+    public let keyboardColor: PresentationThemeKeyboardColor
     
-    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, tokenBackgroundColor: UIColor, selectedTextColor: UIColor, selectedBackgroundColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+    public init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, tokenBackgroundColor: UIColor, selectedTextColor: UIColor, selectedBackgroundColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.placeholderTextColor = placeholderTextColor
@@ -245,7 +252,7 @@ private final class CaretIndicatorNode: ASImageNode {
     }
 }
 
-final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
+public final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let context: AccountContext
     private let presentationTheme: PresentationTheme
     
@@ -260,11 +267,11 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
     private let caretIndicatorNode: CaretIndicatorNode
     private var selectedTokenId: AnyHashable?
     
-    var textUpdated: ((String) -> Void)?
-    var deleteToken: ((AnyHashable) -> Void)?
-    var textReturned: (() -> Void)?
+    public var textUpdated: ((String) -> Void)?
+    public var deleteToken: ((AnyHashable) -> Void)?
+    public var textReturned: (() -> Void)?
     
-    init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, placeholder: String) {
+    public init(context: AccountContext, presentationTheme: PresentationTheme, theme: EditableTokenListNodeTheme, placeholder: String) {
         self.context = context
         self.presentationTheme = presentationTheme
         self.theme = theme
@@ -326,7 +333,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    public func updateLayout(tokens: [EditableTokenListToken], width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let validTokens = Set<AnyHashable>(tokens.map { $0.id })
         
         for i in (0 ..< self.tokenNodes.count).reversed() {
@@ -466,7 +473,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         return nodeHeight
     }
     
-    @objc func textFieldChanged(_ textField: UITextField) {
+    @objc private func textFieldChanged(_ textField: UITextField) {
         let text = textField.text ?? ""
         self.placeholderNode.isHidden = !text.isEmpty
         self.updateSelectedTokenId(nil)
@@ -476,24 +483,24 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+    public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.textReturned?()
         return false
     }
     
-    func textFieldDidBeginEditing(_ textField: UITextField) {
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
         /*if self.caretIndicatorNode.supernode == self {
             self.caretIndicatorNode.removeFromSupernode()
         }*/
     }
     
-    func textFieldDidEndEditing(_ textField: UITextField) {
+    public func textFieldDidEndEditing(_ textField: UITextField) {
         /*if self.caretIndicatorNode.supernode != self.scrollNode {
             self.scrollNode.addSubnode(self.caretIndicatorNode)
         }*/
     }
     
-    func setText(_ text: String) {
+    public func setText(_ text: String) {
         self.textFieldNode.textField.text = text
         self.textFieldChanged(self.textFieldNode.textField)
     }

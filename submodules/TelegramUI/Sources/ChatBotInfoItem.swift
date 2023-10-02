@@ -14,6 +14,7 @@ import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import WallpaperBackgroundNode
 import ChatControllerInteraction
+import ChatMessageBubbleContentNode
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)

@@ -6,6 +6,9 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import AppBundle
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
+import ChatMessageDateAndStatusNode
 
 private let titleFont: UIFont = Font.medium(16.0)
 private let labelFont: UIFont = Font.regular(13.0)

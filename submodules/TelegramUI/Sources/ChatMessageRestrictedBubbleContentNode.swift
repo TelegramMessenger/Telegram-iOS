@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import TextFormat
 import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageRestrictedBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode

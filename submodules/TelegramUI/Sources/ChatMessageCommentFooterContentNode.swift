@@ -9,6 +9,8 @@ import TelegramPresentationData
 import RadialStatusNode
 import AnimatedCountLabelNode
 import AnimatedAvatarSetNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let separatorNode: ASDisplayNode

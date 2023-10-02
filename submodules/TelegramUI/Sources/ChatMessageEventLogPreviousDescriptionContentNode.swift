@@ -5,6 +5,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 final class ChatMessageEventLogPreviousDescriptionContentNode: ChatMessageBubbleContentNode {
     private let contentNode: ChatMessageAttachedContentNode

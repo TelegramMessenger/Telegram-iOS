@@ -4,7 +4,7 @@ import AsyncDisplayKit
 import Display
 import ShimmerEffect
 
-final class ShimmeringLinkNode: ASDisplayNode {
+public final class ShimmeringLinkNode: ASDisplayNode {
     private let shimmerEffectNode: ShimmerEffectForegroundNode
     private let borderShimmerEffectNode: ShimmerEffectForegroundNode
     
@@ -12,17 +12,17 @@ final class ShimmeringLinkNode: ASDisplayNode {
     private let borderMaskNode: ASImageNode
     
     private(set) var rects: [CGRect] = []
-    var color: UIColor {
+    public var color: UIColor {
         didSet {
             self.backgroundColor = color
         }
     }
     
-    var innerRadius: CGFloat = 4.0
-    var outerRadius: CGFloat = 4.0
-    var inset: CGFloat = 2.0
+    public var innerRadius: CGFloat = 4.0
+    public var outerRadius: CGFloat = 4.0
+    public var inset: CGFloat = 2.0
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.color = color
         
         self.shimmerEffectNode = ShimmerEffectForegroundNode()
@@ -46,14 +46,14 @@ final class ShimmeringLinkNode: ASDisplayNode {
         //self.addSubnode(self.borderShimmerEffectNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.shimmerEffectNode.layer.mask = self.maskNode.layer
         self.borderShimmerEffectNode.layer.mask = self.borderMaskNode.layer
     }
     
-    func updateRects(_ rects: [CGRect], color: UIColor? = nil) {
+    public func updateRects(_ rects: [CGRect], color: UIColor? = nil) {
         var updated = false
         if self.rects != rects {
             updated = true
@@ -86,7 +86,7 @@ final class ShimmeringLinkNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(_ size: CGSize) {
+    public func updateLayout(_ size: CGSize) {
         self.shimmerEffectNode.frame = CGRect(origin: .zero, size: size)
         self.borderShimmerEffectNode.frame = CGRect(origin: .zero, size: size)
         
