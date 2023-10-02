@@ -2,6 +2,8 @@
 
 #import "libavformat/avformat.h"
 
+int FFMPEG_CONSTANT_AVERROR_EOF = AVERROR_EOF;
+
 @interface FFMpegAVIOContext () {
     AVIOContext *_impl;
 }

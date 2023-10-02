@@ -13,7 +13,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     if let fd = context.fd {
         return Int32(read(fd, buffer, Int(bufferSize)))
     }
-    return 0
+    return FFMPEG_CONSTANT_AVERROR_EOF
 }
 
 private func seekCallback(userData: UnsafeMutableRawPointer?, offset: Int64, whence: Int32) -> Int64 {
