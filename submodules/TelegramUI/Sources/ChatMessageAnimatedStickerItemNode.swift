@@ -520,7 +520,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var setupTimestamp: Double?
     private func setupNode(item: ChatMessageItem) {
         self.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-        self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        if self.isNodeLoaded {
+            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        }
         
         guard self.animationNode == nil else {
             return
