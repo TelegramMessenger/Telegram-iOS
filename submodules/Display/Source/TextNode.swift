@@ -1303,7 +1303,7 @@ open class TextNode: ASDisplayNode {
             var blockWidth: CGFloat = 0.0
             
             if let titleLine = segment.titleLine {
-                titleLine.frame = CGRect(origin: CGPoint(x: titleLine.frame.origin.x + insets.left, y: -insets.bottom + size.height + titleLine.frame.size.height), size: titleLine.frame.size)
+                titleLine.frame = CGRect(origin: CGPoint(x: titleLine.frame.origin.x, y: -insets.bottom + size.height + titleLine.frame.size.height), size: titleLine.frame.size)
                 titleLine.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
                 size.height += titleLine.frame.height
                 blockWidth = max(blockWidth, titleLine.frame.origin.x + titleLine.frame.width)
@@ -1312,7 +1312,7 @@ open class TextNode: ASDisplayNode {
             }
             
             for line in segment.lines {
-                line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x + insets.left, y: -insets.bottom + size.height + line.frame.size.height), size: line.frame.size)
+                line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: -insets.bottom + size.height + line.frame.size.height), size: line.frame.size)
                 line.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
                 //line.frame.size.width = max(blockWidth, line.frame.size.width)
                 size.height += line.frame.height
@@ -1373,8 +1373,17 @@ open class TextNode: ASDisplayNode {
             return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
         }
         
-        if "".isEmpty, maximumNumberOfLines == 0 {
-            return calculateLayoutV2(attributedString: attributedString, minimumNumberOfLines: minimumNumberOfLines, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, backgroundColor: backgroundColor, constrainedSize: constrainedSize, alignment: alignment, verticalAlignment: verticalAlignment, lineSpacingFactor: lineSpacingFactor, cutout: cutout, insets: insets, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers, displayEmbeddedItemsUnderSpoilers: displayEmbeddedItemsUnderSpoilers, customTruncationToken: customTruncationToken)
+        if maximumNumberOfLines == 0 {
+            var found = false
+            attributedString.enumerateAttribute(NSAttributedString.Key("Attribute__Blockquote"), in: NSRange(location: 0, length: attributedString.length), using: { value, effectiveRange, _ in
+                if let _ = value as? TextNodeBlockQuoteData {
+                    found = true
+                }
+            })
+            
+            if found {
+                return calculateLayoutV2(attributedString: attributedString, minimumNumberOfLines: minimumNumberOfLines, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, backgroundColor: backgroundColor, constrainedSize: constrainedSize, alignment: alignment, verticalAlignment: verticalAlignment, lineSpacingFactor: lineSpacingFactor, cutout: cutout, insets: insets, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers, displayEmbeddedItemsUnderSpoilers: displayEmbeddedItemsUnderSpoilers, customTruncationToken: customTruncationToken)
+            }
         }
         
         let stringLength = attributedString.length
