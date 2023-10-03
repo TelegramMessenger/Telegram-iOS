@@ -61,8 +61,11 @@ public enum InteractiveTransitionGestureRecognizerEdgeWidth {
 }
 
 public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
-    private let edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
+    private let staticEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     private let allowedDirections: (CGPoint) -> InteractiveTransitionGestureRecognizerDirections
+    public var dynamicEdgeWidth: ((CGPoint) -> InteractiveTransitionGestureRecognizerEdgeWidth)?
+    
+    private var currentEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
@@ -70,7 +73,8 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections, edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth = .constant(16.0)) {
         self.allowedDirections = allowedDirections
-        self.edgeWidth = edgeWidth
+        self.staticEdgeWidth = edgeWidth
+        self.currentEdgeWidth = edgeWidth
         
         super.init(target: target, action: action)
         
@@ -97,6 +101,10 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         if allowedDirections.isEmpty {
             self.state = .failed
             return
+        }
+        
+        if let dynamicEdgeWidth = self.dynamicEdgeWidth {
+            self.currentEdgeWidth = dynamicEdgeWidth(point)
         }
         
         super.touchesBegan(touches, with: event)
@@ -151,7 +159,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
             }
         } else {
             let edgeWidth: CGFloat
-            switch self.edgeWidth {
+            switch self.currentEdgeWidth {
             case let .constant(value):
                 edgeWidth = value
             case let .widthMultiplier(factor, minValue, maxValue):

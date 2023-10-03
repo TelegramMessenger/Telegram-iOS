@@ -529,6 +529,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    override public var interactiveNavivationGestureEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth? {
+        return .widthMultiplier(factor: 0.35, min: 16.0, max: 200.0)
+    }
+    
     private var scheduledScrollToMessageId: (MessageId, Double?)?
     
     public var purposefulAction: (() -> Void)?

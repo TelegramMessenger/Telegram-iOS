@@ -2,8 +2,13 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import CoreText
+import AppBundle
 
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
+
+private let quoteIcon: UIImage = {
+    return UIImage(bundleImageName: "Chat/Message/ReplyQuoteIcon")!.precomposed()
+}()
 
 private final class TextNodeStrikethrough {
     let range: NSRange
@@ -62,10 +67,48 @@ public struct TextRangeRectEdge: Equatable {
     }
 }
 
+public final class TextNodeBlockQuoteData: NSObject {
+    public let id: Int
+    public let title: NSAttributedString?
+    public let color: UIColor
+    
+    public init(id: Int, title: NSAttributedString?, color: UIColor) {
+        self.id = id
+        self.title = title
+        self.color = color
+        
+        super.init()
+    }
+    
+    override public func isEqual(_ object: Any?) -> Bool {
+        guard let other = object as? TextNodeBlockQuoteData else {
+            return false
+        }
+        
+        if self.id != other.id {
+            return false
+        }
+        if let lhsTitle = self.title, let rhsTitle = other.title {
+            if !lhsTitle.isEqual(to: rhsTitle) {
+                return false
+            }
+        } else if (self.title == nil) != (other.title == nil) {
+            return false
+        }
+        if !self.color.isEqual(other.color) {
+            return false
+        }
+        
+        return true
+    }
+}
+
 private final class TextNodeLine {
     let line: CTLine
-    let frame: CGRect
-    let range: NSRange
+    var frame: CGRect
+    let ascent: CGFloat
+    let descent: CGFloat
+    let range: NSRange?
     let isRTL: Bool
     let strikethroughs: [TextNodeStrikethrough]
     let spoilers: [TextNodeSpoiler]
@@ -74,9 +117,11 @@ private final class TextNodeLine {
     let attachments: [TextNodeAttachment]
     let additionalTrailingLine: (CTLine, Double)?
     
-    init(line: CTLine, frame: CGRect, range: NSRange, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
+    init(line: CTLine, frame: CGRect, ascent: CGFloat, descent: CGFloat, range: NSRange?, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
         self.line = line
         self.frame = frame
+        self.ascent = ascent
+        self.descent = descent
         self.range = range
         self.isRTL = isRTL
         self.strikethroughs = strikethroughs
@@ -90,9 +135,11 @@ private final class TextNodeLine {
 
 private final class TextNodeBlockQuote {
     let frame: CGRect
+    let tintColor: UIColor
     
-    init(frame: CGRect) {
+    init(frame: CGRect, tintColor: UIColor) {
         self.frame = frame
+        self.tintColor = tintColor
     }
 }
 
@@ -402,7 +449,14 @@ public final class TextNodeLayout: NSObject {
     
     public var trailingLineWidth: CGFloat {
         if let lastLine = self.lines.last {
-            return lastLine.frame.maxX
+            var width = lastLine.frame.maxX
+            
+            for blockQuote in self.blockQuotes {
+                if lastLine.frame.intersects(blockQuote.frame) {
+                    width = max(width, blockQuote.frame.maxX)
+                }
+            }
+            return width
         } else {
             return 0.0
         }
@@ -424,7 +478,7 @@ public final class TextNodeLayout: NSObject {
                 var closestLine: (Int, CGRect, CGFloat)?
                 for line in self.lines {
                     lineIndex += 1
-                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                     switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
@@ -492,7 +546,7 @@ public final class TextNodeLayout: NSObject {
             var lineIndex = -1
             for line in self.lines {
                 lineIndex += 1
-                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                 switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
@@ -559,7 +613,7 @@ public final class TextNodeLayout: NSObject {
                         }
                     }
                     if index >= 0 && index < attributedString.length {
-                        if index < line.range.location + line.range.length {
+                        if let range = line.range, index < range.location + range.length {
                             return (index, attributedString.attributes(at: index, effectiveRange: nil))
                         }
                     }
@@ -569,7 +623,7 @@ public final class TextNodeLayout: NSObject {
             lineIndex = -1
             for line in self.lines {
                 lineIndex += 1
-                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                 switch self.resolvedAlignment {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
@@ -636,7 +690,7 @@ public final class TextNodeLayout: NSObject {
                         }
                     }
                     if index >= 0 && index < attributedString.length {
-                        if index < line.range.location + line.range.length {
+                        if let range = line.range, index < range.location + range.length {
                             return (index, attributedString.attributes(at: index, effectiveRange: nil))
                         }
                     }
@@ -667,14 +721,17 @@ public final class TextNodeLayout: NSObject {
             var rects: [CGRect] = []
             let range = NSRange(stringRange, in: searchText)
             for line in self.lines {
-                let lineRange = NSIntersectionRange(range, line.range)
+                guard let rangeValue = line.range else {
+                    continue
+                }
+                let lineRange = NSIntersectionRange(range, rangeValue)
                 if lineRange.length != 0 {
                     var leftOffset: CGFloat = 0.0
-                    if lineRange.location != line.range.location {
+                    if lineRange.location != rangeValue.location {
                         leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                     }
                     var rightOffset: CGFloat = line.frame.width
-                    if lineRange.location + lineRange.length != line.range.length {
+                    if lineRange.location + lineRange.length != rangeValue.length {
                         var secondaryOffset: CGFloat = 0.0
                         let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
                         rightOffset = ceil(rawOffset)
@@ -682,7 +739,7 @@ public final class TextNodeLayout: NSObject {
                             rightOffset = ceil(secondaryOffset)
                         }
                     }
-                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                     lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     
                     let width = abs(rightOffset - leftOffset)
@@ -716,14 +773,17 @@ public final class TextNodeLayout: NSObject {
             if let value = value, range.length != 0 {
                 var coveringRect = CGRect()
                 for line in self.lines {
-                    let lineRange = NSIntersectionRange(range, line.range)
+                    guard let rangeValue = line.range else {
+                        continue
+                    }
+                    let lineRange = NSIntersectionRange(range, rangeValue)
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
-                        if lineRange.location != line.range.location {
+                        if lineRange.location != rangeValue.location {
                             leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                         }
                         var rightOffset: CGFloat = line.frame.width
-                        if lineRange.location + lineRange.length != line.range.length {
+                        if lineRange.location + lineRange.length != rangeValue.length {
                             var secondaryOffset: CGFloat = 0.0
                             let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
                             rightOffset = ceil(rawOffset)
@@ -732,7 +792,7 @@ public final class TextNodeLayout: NSObject {
                             }
                         }
                         
-                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                         switch self.resolvedAlignment {
                             case .center:
                                 lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
@@ -765,14 +825,17 @@ public final class TextNodeLayout: NSObject {
             if range.length != 0 {
                 var rects: [(CGRect, CGRect)] = []
                 for line in self.lines {
-                    let lineRange = NSIntersectionRange(range, line.range)
+                    guard let rangeValue = line.range else {
+                        continue
+                    }
+                    let lineRange = NSIntersectionRange(range, rangeValue)
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
-                        if lineRange.location != line.range.location || line.isRTL {
+                        if lineRange.location != rangeValue.location || line.isRTL {
                             leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                         }
                         var rightOffset: CGFloat = line.frame.width
-                        if lineRange.location + lineRange.length != line.range.length || line.isRTL {
+                        if lineRange.location + lineRange.length != rangeValue.length || line.isRTL {
                             var secondaryOffset: CGFloat = 0.0
                             let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
                             rightOffset = ceil(rawOffset)
@@ -780,7 +843,7 @@ public final class TextNodeLayout: NSObject {
                                 rightOffset = ceil(secondaryOffset)
                             }
                         }
-                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                        var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                         
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                         
@@ -806,14 +869,17 @@ public final class TextNodeLayout: NSObject {
         var startEdge: TextRangeRectEdge?
         var endEdge: TextRangeRectEdge?
         for line in self.lines {
-            let lineRange = NSIntersectionRange(range, line.range)
+            guard let rangeValue = line.range else {
+                continue
+            }
+            let lineRange = NSIntersectionRange(range, rangeValue)
             if lineRange.length != 0 {
                 var leftOffset: CGFloat = 0.0
-                if lineRange.location != line.range.location || line.isRTL {
+                if lineRange.location != rangeValue.location || line.isRTL {
                     leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                 }
                 var rightOffset: CGFloat = line.frame.width
-                if lineRange.location + lineRange.length != line.range.upperBound || line.isRTL {
+                if lineRange.location + lineRange.length != rangeValue.upperBound || line.isRTL {
                     var secondaryOffset: CGFloat = 0.0
                     let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
                     rightOffset = ceil(rawOffset)
@@ -821,19 +887,19 @@ public final class TextNodeLayout: NSObject {
                         rightOffset = ceil(secondaryOffset)
                     }
                 }
-                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + line.descent), size: line.frame.size)
                 
                 lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                 
                 let width = max(0.0, abs(rightOffset - leftOffset))
                 
-                if line.range.contains(range.lowerBound) {
+                if rangeValue.contains(range.lowerBound) {
                     let offsetX = floor(CTLineGetOffsetForStringIndex(line.line, range.lowerBound, nil))
                     startEdge = TextRangeRectEdge(x: lineFrame.minX + offsetX, y: lineFrame.minY, height: lineFrame.height)
                 }
-                if line.range.contains(range.upperBound - 1) {
+                if rangeValue.contains(range.upperBound - 1) {
                     let offsetX: CGFloat
-                    if line.range.upperBound == range.upperBound {
+                    if rangeValue.upperBound == range.upperBound {
                         offsetX = lineFrame.maxX
                     } else {
                         var secondaryOffset: CGFloat = 0.0
@@ -1022,386 +1088,788 @@ open class TextNode: ASDisplayNode {
         }
     }
     
-    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool, customTruncationToken: NSAttributedString?) -> TextNodeLayout {
-        if let attributedString = attributedString {
-            let stringLength = attributedString.length
-            
-            let font: CTFont
-            let resolvedAlignment: NSTextAlignment
-            
-            if stringLength != 0 {
-                if let stringFont = attributedString.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) {
-                    font = stringFont as! CTFont
-                } else {
-                    font = defaultFont
+    private static func calculateLayoutV2(
+        attributedString: NSAttributedString,
+        minimumNumberOfLines: Int,
+        maximumNumberOfLines: Int,
+        truncationType: CTLineTruncationType,
+        backgroundColor: UIColor?,
+        constrainedSize: CGSize,
+        alignment: NSTextAlignment,
+        verticalAlignment: TextVerticalAlignment,
+        lineSpacingFactor: CGFloat,
+        cutout: TextNodeCutout?,
+        insets: UIEdgeInsets,
+        lineColor: UIColor?,
+        textShadowColor: UIColor?,
+        textShadowBlur: CGFloat?,
+        textStroke: (UIColor, CGFloat)?,
+        displaySpoilers: Bool,
+        displayEmbeddedItemsUnderSpoilers: Bool,
+        customTruncationToken: NSAttributedString?
+    ) -> TextNodeLayout {
+        let blockQuoteLeftInset: CGFloat = 7.0
+        let blockQuoteRightInset: CGFloat = 0.0
+        let blockQuoteIconInset: CGFloat = 12.0
+        
+        struct StringSegment {
+            let title: NSAttributedString?
+            let substring: NSAttributedString
+            let firstCharacterOffset: Int
+            let isBlockQuote: Bool
+            let tintColor: UIColor?
+        }
+        var stringSegments: [StringSegment] = []
+        
+        let rawWholeString = attributedString.string as NSString
+        let wholeStringLength = rawWholeString.length
+        
+        var segmentCharacterOffset = 0
+        while true {
+            var found = false
+            attributedString.enumerateAttribute(NSAttributedString.Key("Attribute__Blockquote"), in: NSRange(location: segmentCharacterOffset, length: wholeStringLength - segmentCharacterOffset), using: { value, effectiveRange, _ in
+                found = true
+                if segmentCharacterOffset != effectiveRange.location {
+                    stringSegments.append(StringSegment(
+                        title: nil,
+                        substring: attributedString.attributedSubstring(from: NSRange(
+                            location: segmentCharacterOffset,
+                            length: effectiveRange.location - segmentCharacterOffset
+                        )),
+                        firstCharacterOffset: segmentCharacterOffset,
+                        isBlockQuote: false,
+                        tintColor: nil
+                    ))
                 }
-                if alignment == .center {
-                    resolvedAlignment = .center
-                } else {
-                    if let paragraphStyle = attributedString.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
-                        resolvedAlignment = paragraphStyle.alignment
-                    } else {
-                        resolvedAlignment = alignment
+                
+                if let value = value as? TextNodeBlockQuoteData {
+                    if effectiveRange.length != 0 {
+                        stringSegments.append(StringSegment(
+                            title: value.title,
+                            substring: attributedString.attributedSubstring(from: effectiveRange),
+                            firstCharacterOffset: effectiveRange.location,
+                            isBlockQuote: true,
+                            tintColor: value.color
+                        ))
                     }
+                } else {
+                    stringSegments.append(StringSegment(
+                        title: nil,
+                        substring: attributedString.attributedSubstring(from: effectiveRange),
+                        firstCharacterOffset: effectiveRange.location,
+                        isBlockQuote: false,
+                        tintColor: nil
+                    ))
+                }
+                
+                segmentCharacterOffset = effectiveRange.location + effectiveRange.length
+            })
+            if !found {
+                if segmentCharacterOffset != wholeStringLength {
+                    stringSegments.append(StringSegment(
+                        title: nil,
+                        substring: attributedString.attributedSubstring(from: NSRange(
+                            location: segmentCharacterOffset,
+                            length: wholeStringLength - segmentCharacterOffset
+                        )),
+                        firstCharacterOffset: segmentCharacterOffset,
+                        isBlockQuote: false,
+                        tintColor: nil
+                    ))
+                }
+                
+                break
+            }
+        }
+        
+        struct CalculatedSegment {
+            var titleLine: TextNodeLine?
+            var lines: [TextNodeLine] = []
+            var tintColor: UIColor?
+            var isBlockQuote: Bool = false
+            var additionalWidth: CGFloat = 0.0
+        }
+        
+        var calculatedSegments: [CalculatedSegment] = []
+        
+        for segment in stringSegments {
+            var calculatedSegment = CalculatedSegment()
+            calculatedSegment.isBlockQuote = segment.isBlockQuote
+            calculatedSegment.tintColor = segment.tintColor
+            
+            let rawSubstring = segment.substring.string as NSString
+            let substringLength = rawSubstring.length
+            let typesetter = CTTypesetterCreateWithAttributedString(segment.substring as CFAttributedString)
+            
+            var currentLineStartIndex = 0
+            
+            var constrainedSegmentWidth = constrainedSize.width
+            var additionalOffsetX: CGFloat = 0.0
+            if segment.isBlockQuote {
+                constrainedSegmentWidth -= blockQuoteLeftInset + blockQuoteRightInset
+                additionalOffsetX += blockQuoteLeftInset
+                calculatedSegment.additionalWidth += blockQuoteLeftInset + blockQuoteRightInset
+            }
+            
+            var additionalSegmentRightInset = blockQuoteIconInset
+            
+            if let title = segment.title {
+                let rawTitleLine = CTLineCreateWithAttributedString(title)
+                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth + additionalSegmentRightInset, .end, nil) {
+                    var lineAscent: CGFloat = 0.0
+                    var lineDescent: CGFloat = 0.0
+                    let lineWidth = CTLineGetTypographicBounds(titleLine, &lineAscent, &lineDescent, nil)
+                    calculatedSegment.titleLine = TextNodeLine(
+                        line: titleLine,
+                        frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
+                        ascent: lineAscent,
+                        descent: lineDescent,
+                        range: nil,
+                        isRTL: false,
+                        strikethroughs: [],
+                        spoilers: [],
+                        spoilerWords: [],
+                        embeddedItems: [],
+                        attachments: [],
+                        additionalTrailingLine: nil
+                    )
+                    additionalSegmentRightInset = 0.0
+                }
+            }
+            
+            while true {
+                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth + additionalSegmentRightInset)
+                
+                if lineCharacterCount != 0 {
+                    let line = CTTypesetterCreateLine(typesetter, CFRange(location: currentLineStartIndex, length: lineCharacterCount))
+                    var lineAscent: CGFloat = 0.0
+                    var lineDescent: CGFloat = 0.0
+                    let lineWidth = CTLineGetTypographicBounds(line, &lineAscent, &lineDescent, nil)
+                    calculatedSegment.lines.append(TextNodeLine(
+                        line: line,
+                        frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
+                        ascent: lineAscent,
+                        descent: lineDescent,
+                        range: NSRange(location: segment.firstCharacterOffset + currentLineStartIndex, length: lineCharacterCount),
+                        isRTL: false,
+                        strikethroughs: [],
+                        spoilers: [],
+                        spoilerWords: [],
+                        embeddedItems: [],
+                        attachments: [],
+                        additionalTrailingLine: nil
+                    ))
+                }
+                
+                additionalSegmentRightInset = 0.0
+                
+                currentLineStartIndex += lineCharacterCount
+                
+                if currentLineStartIndex >= substringLength {
+                    break
+                }
+            }
+            
+            calculatedSegments.append(calculatedSegment)
+        }
+        
+        var size = CGSize()
+        let isTruncated = false
+        
+        for segment in calculatedSegments {
+            if let titleLine = segment.titleLine {
+                size.width = max(size.width, titleLine.frame.origin.x + titleLine.frame.width + segment.additionalWidth)
+            }
+            for line in segment.lines {
+                size.width = max(size.width, line.frame.origin.x + line.frame.width + segment.additionalWidth)
+            }
+        }
+        
+        var lines: [TextNodeLine] = []
+        var blockQuotes: [TextNodeBlockQuote] = []
+        for i in 0 ..< calculatedSegments.count {
+            let segment = calculatedSegments[i]
+            if i != 0 {
+                if segment.isBlockQuote {
+                    size.height += 6.0
                 }
             } else {
+                if segment.isBlockQuote {
+                    size.height += 7.0
+                }
+            }
+            
+            let blockMinY = size.height - insets.bottom
+            var blockWidth: CGFloat = 0.0
+            
+            if let titleLine = segment.titleLine {
+                titleLine.frame = CGRect(origin: CGPoint(x: titleLine.frame.origin.x + insets.left, y: -insets.bottom + size.height + titleLine.frame.size.height), size: titleLine.frame.size)
+                titleLine.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
+                size.height += titleLine.frame.height
+                blockWidth = max(blockWidth, titleLine.frame.origin.x + titleLine.frame.width)
+                
+                lines.append(titleLine)
+            }
+            
+            for line in segment.lines {
+                line.frame = CGRect(origin: CGPoint(x: line.frame.origin.x + insets.left, y: -insets.bottom + size.height + line.frame.size.height), size: line.frame.size)
+                line.frame.size.width += max(0.0, segment.additionalWidth - 2.0)
+                //line.frame.size.width = max(blockWidth, line.frame.size.width)
+                size.height += line.frame.height
+                blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
+                
+                lines.append(line)
+            }
+            
+            let blockMaxY = size.height - insets.bottom
+            
+            if i != calculatedSegments.count - 1 {
+                if segment.isBlockQuote {
+                    size.height += 8.0
+                }
+            } else {
+                if segment.isBlockQuote {
+                    size.height += 6.0
+                }
+            }
+            
+            if segment.isBlockQuote, let tintColor = segment.tintColor {
+                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor))
+            }
+        }
+        
+        let rawTextSize = size
+        size.width += insets.left + insets.right
+        size.height += insets.top + insets.bottom
+        
+        return TextNodeLayout(
+            attributedString: attributedString,
+            maximumNumberOfLines: maximumNumberOfLines,
+            truncationType: truncationType,
+            constrainedSize: constrainedSize,
+            explicitAlignment: alignment,
+            resolvedAlignment: alignment,
+            verticalAlignment: verticalAlignment,
+            lineSpacing: lineSpacingFactor,
+            cutout: cutout,
+            insets: insets,
+            size: size,
+            rawTextSize: rawTextSize,
+            truncated: isTruncated,
+            firstLineOffset: lines.first?.descent ?? 0.0,
+            lines: lines,
+            blockQuotes: blockQuotes,
+            backgroundColor: backgroundColor,
+            lineColor: lineColor,
+            textShadowColor: textShadowColor,
+            textShadowBlur: textShadowBlur,
+            textStroke: textStroke,
+            displaySpoilers: displaySpoilers
+        )
+    }
+    
+    static func calculateLayout(attributedString: NSAttributedString?, minimumNumberOfLines: Int, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, verticalAlignment: TextVerticalAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?, textShadowBlur: CGFloat?, textStroke: (UIColor, CGFloat)?, displaySpoilers: Bool, displayEmbeddedItemsUnderSpoilers: Bool, customTruncationToken: NSAttributedString?) -> TextNodeLayout {
+        guard let attributedString else {
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
+        }
+        
+        if "".isEmpty, maximumNumberOfLines == 0 {
+            return calculateLayoutV2(attributedString: attributedString, minimumNumberOfLines: minimumNumberOfLines, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, backgroundColor: backgroundColor, constrainedSize: constrainedSize, alignment: alignment, verticalAlignment: verticalAlignment, lineSpacingFactor: lineSpacingFactor, cutout: cutout, insets: insets, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers, displayEmbeddedItemsUnderSpoilers: displayEmbeddedItemsUnderSpoilers, customTruncationToken: customTruncationToken)
+        }
+        
+        let stringLength = attributedString.length
+        
+        let font: CTFont
+        let resolvedAlignment: NSTextAlignment
+        
+        if stringLength != 0 {
+            if let stringFont = attributedString.attribute(NSAttributedString.Key.font, at: 0, effectiveRange: nil) {
+                font = stringFont as! CTFont
+            } else {
                 font = defaultFont
-                resolvedAlignment = alignment
+            }
+            if alignment == .center {
+                resolvedAlignment = .center
+            } else {
+                if let paragraphStyle = attributedString.attribute(NSAttributedString.Key.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle {
+                    resolvedAlignment = paragraphStyle.alignment
+                } else {
+                    resolvedAlignment = alignment
+                }
+            }
+        } else {
+            font = defaultFont
+            resolvedAlignment = alignment
+        }
+        
+        let fontAscent = CTFontGetAscent(font)
+        let fontDescent = CTFontGetDescent(font)
+        let fontLineHeight = floor(fontAscent + fontDescent)
+        let fontLineSpacing = floor(fontLineHeight * lineSpacingFactor)
+        
+        var lines: [TextNodeLine] = []
+        let blockQuotes: [TextNodeBlockQuote] = []
+        
+        var maybeTypesetter: CTTypesetter?
+        maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
+        if maybeTypesetter == nil {
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
+        }
+        
+        let typesetter = maybeTypesetter!
+        
+        var lastLineCharacterIndex: CFIndex = 0
+        var layoutSize = CGSize()
+        
+        var cutoutEnabled = false
+        var cutoutMinY: CGFloat = 0.0
+        var cutoutMaxY: CGFloat = 0.0
+        var cutoutWidth: CGFloat = 0.0
+        var cutoutOffset: CGFloat = 0.0
+        
+        var bottomCutoutEnabled = false
+        var bottomCutoutSize = CGSize()
+                    
+        if let topLeft = cutout?.topLeft {
+            cutoutMinY = -fontLineSpacing
+            cutoutMaxY = topLeft.height + fontLineSpacing
+            cutoutWidth = topLeft.width
+            cutoutOffset = cutoutWidth
+            cutoutEnabled = true
+        } else if let topRight = cutout?.topRight {
+            cutoutMinY = -fontLineSpacing
+            cutoutMaxY = topRight.height + fontLineSpacing
+            cutoutWidth = topRight.width
+            cutoutEnabled = true
+        }
+        
+        if let bottomRight = cutout?.bottomRight {
+            bottomCutoutSize = bottomRight
+            bottomCutoutEnabled = true
+        }
+        
+        let firstLineOffset = floorToScreenPixels(fontDescent)
+        
+        var truncated = false
+        var first = true
+        while true {
+            var strikethroughs: [TextNodeStrikethrough] = []
+            var spoilers: [TextNodeSpoiler] = []
+            var spoilerWords: [TextNodeSpoiler] = []
+            var embeddedItems: [TextNodeEmbeddedItem] = []
+            var attachments: [TextNodeAttachment] = []
+            
+            var lineConstrainedWidth = constrainedSize.width
+            var lineConstrainedWidthDelta: CGFloat = 0.0
+            var lineOriginY = floorToScreenPixels(layoutSize.height + fontAscent)
+            if !first {
+                lineOriginY += fontLineSpacing
+            }
+            var lineCutoutOffset: CGFloat = 0.0
+            var lineAdditionalWidth: CGFloat = 0.0
+            
+            if cutoutEnabled {
+                if lineOriginY - fontLineHeight < cutoutMaxY && lineOriginY + fontLineHeight > cutoutMinY {
+                    lineConstrainedWidth = max(1.0, lineConstrainedWidth - cutoutWidth)
+                    lineConstrainedWidthDelta = -cutoutWidth
+                    lineCutoutOffset = cutoutOffset
+                    lineAdditionalWidth = cutoutWidth
+                }
             }
             
-            let fontAscent = CTFontGetAscent(font)
-            let fontDescent = CTFontGetDescent(font)
-            let fontLineHeight = floor(fontAscent + fontDescent)
-            let fontLineSpacing = floor(fontLineHeight * lineSpacingFactor)
+            let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastLineCharacterIndex, Double(lineConstrainedWidth))
             
-            var lines: [TextNodeLine] = []
-            var blockQuotes: [TextNodeBlockQuote] = []
-            
-            var maybeTypesetter: CTTypesetter?
-            maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
-            if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
+            func addSpoiler(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
+                var secondaryLeftOffset: CGFloat = 0.0
+                let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                var leftOffset = floor(rawLeftOffset)
+                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                    leftOffset = floor(secondaryLeftOffset)
+                }
+                
+                var secondaryRightOffset: CGFloat = 0.0
+                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                var rightOffset = ceil(rawRightOffset)
+                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                    rightOffset = ceil(secondaryRightOffset)
+                }
+                
+                spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
             }
             
-            let typesetter = maybeTypesetter!
+            func addSpoilerWord(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                var secondaryLeftOffset: CGFloat = 0.0
+                let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                var leftOffset = floor(rawLeftOffset)
+                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                    leftOffset = floor(secondaryLeftOffset)
+                }
+                
+                var secondaryRightOffset: CGFloat = 0.0
+                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                var rightOffset = ceil(rawRightOffset)
+                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                    rightOffset = ceil(secondaryRightOffset)
+                }
+                
+                spoilerWords.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
+            }
             
-            var lastLineCharacterIndex: CFIndex = 0
-            var layoutSize = CGSize()
+            func addEmbeddedItem(item: AnyHashable, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                var secondaryLeftOffset: CGFloat = 0.0
+                let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                var leftOffset = floor(rawLeftOffset)
+                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                    leftOffset = floor(secondaryLeftOffset)
+                }
+                
+                var secondaryRightOffset: CGFloat = 0.0
+                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                var rightOffset = ceil(rawRightOffset)
+                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                    rightOffset = ceil(secondaryRightOffset)
+                }
+                
+                embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
+            }
             
-            var cutoutEnabled = false
-            var cutoutMinY: CGFloat = 0.0
-            var cutoutMaxY: CGFloat = 0.0
-            var cutoutWidth: CGFloat = 0.0
-            var cutoutOffset: CGFloat = 0.0
+            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+                var secondaryLeftOffset: CGFloat = 0.0
+                let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
+                var leftOffset = floor(rawLeftOffset)
+                if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+                    leftOffset = floor(secondaryLeftOffset)
+                }
+                
+                var secondaryRightOffset: CGFloat = 0.0
+                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                var rightOffset = ceil(rawRightOffset)
+                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                    rightOffset = ceil(secondaryRightOffset)
+                }
+                
+                attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
+            }
             
-            var bottomCutoutEnabled = false
-            var bottomCutoutSize = CGSize()
+            var isLastLine = false
+            if maximumNumberOfLines != 0 && lines.count == maximumNumberOfLines - 1 && lineCharacterCount > 0 {
+                isLastLine = true
+            } else if layoutSize.height + (fontLineSpacing + fontLineHeight) * 2.0 > constrainedSize.height {
+                isLastLine = true
+            }
+            if isLastLine {
+                if first {
+                    first = false
+                } else {
+                    layoutSize.height += fontLineSpacing
+                }
+                
+                var didClipLinebreak = false
+                var lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
+                let nsString = (attributedString.string as NSString)
+                for i in lineRange.location ..< (lineRange.location + lineRange.length) {
+                    if nsString.character(at: i) == 0x0a {
+                        lineRange.length = max(0, i - lineRange.location)
+                        didClipLinebreak = true
+                        break
+                    }
+                }
+                
+                var brokenLineRange = CFRange(location: lastLineCharacterIndex, length: lineCharacterCount)
+                if brokenLineRange.location + brokenLineRange.length > attributedString.length {
+                    brokenLineRange.length = attributedString.length - brokenLineRange.location
+                }
+                if lineRange.length == 0 && !didClipLinebreak {
+                    break
+                }
+                
+                let coreTextLine: CTLine
+                let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
+                
+                var lineConstrainedSize = constrainedSize
+                lineConstrainedSize.width += lineConstrainedWidthDelta
+                if bottomCutoutEnabled {
+                    lineConstrainedSize.width -= bottomCutoutSize.width
+                }
+                
+                let truncatedTokenString: NSAttributedString
+                if let customTruncationToken {
+                    if lineRange.length == 0 && customTruncationToken.string.hasPrefix("\u{2026} ") {
+                        truncatedTokenString = customTruncationToken.attributedSubstring(from: NSRange(location: 2, length: customTruncationToken.length - 2))
+                    } else {
+                        truncatedTokenString = customTruncationToken
+                    }
+                } else {
+                    var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
+                    truncationTokenAttributes[NSAttributedString.Key.font] = font
+                    truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
+                    let tokenString = "\u{2026}"
+                    
+                    truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
+                }
+                let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
+                let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(truncationToken)
+                
+                var effectiveLineRange = brokenLineRange
+                var additionalTrailingLine: (CTLine, Double)?
+                
+                var measureFitWidth = CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine)
+                if customTruncationToken != nil && lineRange.location + lineRange.length < attributedString.length {
+                    measureFitWidth += truncationTokenWidth
+                }
+                
+                if lineRange.length == 0 || measureFitWidth < Double(lineConstrainedSize.width) {
+                    if didClipLinebreak {
+                        if lineRange.length == 0 {
+                            coreTextLine = CTLineCreateWithAttributedString(NSAttributedString())
+                        } else {
+                            coreTextLine = originalLine
+                        }
+                        additionalTrailingLine = (truncationToken, truncationTokenWidth)
                         
-            if let topLeft = cutout?.topLeft {
-                cutoutMinY = -fontLineSpacing
-                cutoutMaxY = topLeft.height + fontLineSpacing
-                cutoutWidth = topLeft.width
-                cutoutOffset = cutoutWidth
-                cutoutEnabled = true
-            } else if let topRight = cutout?.topRight {
-                cutoutMinY = -fontLineSpacing
-                cutoutMaxY = topRight.height + fontLineSpacing
-                cutoutWidth = topRight.width
-                cutoutEnabled = true
-            }
-            
-            if let bottomRight = cutout?.bottomRight {
-                bottomCutoutSize = bottomRight
-                bottomCutoutEnabled = true
-            }
-            
-            let firstLineOffset = floorToScreenPixels(fontDescent)
-            
-            var truncated = false
-            var first = true
-            while true {
-                var strikethroughs: [TextNodeStrikethrough] = []
-                var spoilers: [TextNodeSpoiler] = []
-                var spoilerWords: [TextNodeSpoiler] = []
-                var embeddedItems: [TextNodeEmbeddedItem] = []
-                var attachments: [TextNodeAttachment] = []
-                
-                var lineConstrainedWidth = constrainedSize.width
-                var lineConstrainedWidthDelta: CGFloat = 0.0
-                var lineOriginY = floorToScreenPixels(layoutSize.height + fontAscent)
-                if !first {
-                    lineOriginY += fontLineSpacing
-                }
-                var lineCutoutOffset: CGFloat = 0.0
-                var lineAdditionalWidth: CGFloat = 0.0
-                
-                if cutoutEnabled {
-                    if lineOriginY - fontLineHeight < cutoutMaxY && lineOriginY + fontLineHeight > cutoutMinY {
-                        lineConstrainedWidth = max(1.0, lineConstrainedWidth - cutoutWidth)
-                        lineConstrainedWidthDelta = -cutoutWidth
-                        lineCutoutOffset = cutoutOffset
-                        lineAdditionalWidth = cutoutWidth
+                        truncated = true
+                    } else {
+                        coreTextLine = originalLine
                     }
-                }
-                
-                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, lastLineCharacterIndex, Double(lineConstrainedWidth))
-                
-                func addSpoiler(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
-                    var secondaryLeftOffset: CGFloat = 0.0
-                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
-                    var leftOffset = floor(rawLeftOffset)
-                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                        leftOffset = floor(secondaryLeftOffset)
+                } else {
+                    if customTruncationToken != nil {
+                        let coreTextLine1 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
+                        let runs = (CTLineGetGlyphRuns(coreTextLine1) as [AnyObject]) as! [CTRun]
+                        var hasTruncationToken = false
+                        for run in runs {
+                            let runRange = CTRunGetStringRange(run)
+                            if runRange.location + runRange.length >= nsString.length {
+                                hasTruncationToken = true
+                                break
+                            }
+                        }
+                        
+                        if hasTruncationToken {
+                            coreTextLine = coreTextLine1
+                        } else {
+                            let coreTextLine2 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width) - truncationTokenWidth), truncationType, truncationToken) ?? truncationToken
+                            coreTextLine = coreTextLine2
+                        }
+                    } else {
+                        coreTextLine = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
+                    }
+                    let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
+                    for run in runs {
+                        let runAttributes: NSDictionary = CTRunGetAttributes(run)
+                        if let _ = runAttributes["CTForegroundColorFromContext"] {
+                            brokenLineRange.length = CTRunGetStringRange(run).location - brokenLineRange.location
+                            break
+                        }
+                    }
+                    if customTruncationToken != nil {
+                        assert(true)
+                    }
+                    effectiveLineRange = CFRange(location: effectiveLineRange.location, length: 0)
+                    for run in runs {
+                        let runRange = CTRunGetStringRange(run)
+                        if runRange.location + runRange.length > brokenLineRange.location + brokenLineRange.length {
+                            continue
+                        }
+                        effectiveLineRange.length = max(effectiveLineRange.length, (runRange.location + runRange.length) - effectiveLineRange.location)
                     }
                     
-                    var secondaryRightOffset: CGFloat = 0.0
-                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                    var rightOffset = ceil(rawRightOffset)
-                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                        rightOffset = ceil(secondaryRightOffset)
+                    if brokenLineRange.location + brokenLineRange.length > attributedString.length {
+                        brokenLineRange.length = attributedString.length - brokenLineRange.location
                     }
-                    
-                    spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+                    if effectiveLineRange.location + effectiveLineRange.length > attributedString.length {
+                        effectiveLineRange.length = attributedString.length - effectiveLineRange.location
+                    }
+                    truncated = true
                 }
                 
-                func addSpoilerWord(line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
-                    var secondaryLeftOffset: CGFloat = 0.0
-                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
-                    var leftOffset = floor(rawLeftOffset)
-                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                        leftOffset = floor(secondaryLeftOffset)
+                var headIndent: CGFloat = 0.0
+                if brokenLineRange.location >= 0 && brokenLineRange.length > 0 && brokenLineRange.location + brokenLineRange.length <= attributedString.length {
+                    attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                            
+                            var startIndex: Int?
+                            var currentIndex: Int?
+                            
+                            let nsString = (attributedString.string as NSString)
+                            nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                    if let currentStartIndex = startIndex {
+                                        startIndex = nil
+                                        let endIndex = range.location
+                                        addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                    }
+                                } else if startIndex == nil {
+                                    startIndex = range.location
+                                }
+                                currentIndex = range.location + range.length
+                            }
+                            
+                            if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                startIndex = nil
+                                let endIndex = currentIndex
+                                addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: truncated ? 12.0 : 0.0)
+                            }
+                            
+                            addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                        } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                        } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
+                            headIndent = paragraphStyle.headIndent
+                        }
+                        
+                        if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
+                            if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                
+                                addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            }
+                        }
+                        
+                        if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                            
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                        }
                     }
-                    
-                    var secondaryRightOffset: CGFloat = 0.0
-                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                    var rightOffset = ceil(rawRightOffset)
-                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                        rightOffset = ceil(secondaryRightOffset)
-                    }
-                    
-                    spoilerWords.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
                 }
                 
-                func addEmbeddedItem(item: AnyHashable, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
-                    var secondaryLeftOffset: CGFloat = 0.0
-                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
-                    var leftOffset = floor(rawLeftOffset)
-                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                        leftOffset = floor(secondaryLeftOffset)
-                    }
-                    
-                    var secondaryRightOffset: CGFloat = 0.0
-                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                    var rightOffset = ceil(rawRightOffset)
-                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                        rightOffset = ceil(secondaryRightOffset)
-                    }
-                    
-                    embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
+                var lineAscent: CGFloat = 0.0
+                var lineDescent: CGFloat = 0.0
+                let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, &lineAscent, &lineDescent, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
+                let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
+                layoutSize.height += fontLineHeight + fontLineSpacing
+                
+                if let (_, additionalTrailingLineWidth) = additionalTrailingLine {
+                    lineAdditionalWidth += additionalTrailingLineWidth
                 }
                 
-                func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
-                    var secondaryLeftOffset: CGFloat = 0.0
-                    let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
-                    var leftOffset = floor(rawLeftOffset)
-                    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
-                        leftOffset = floor(secondaryLeftOffset)
-                    }
-                    
-                    var secondaryRightOffset: CGFloat = 0.0
-                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                    var rightOffset = ceil(rawRightOffset)
-                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                        rightOffset = ceil(secondaryRightOffset)
-                    }
-                    
-                    attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
+                layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
+                
+                if headIndent > 0.0 {
+                    //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
                 }
                 
-                var isLastLine = false
-                if maximumNumberOfLines != 0 && lines.count == maximumNumberOfLines - 1 && lineCharacterCount > 0 {
-                    isLastLine = true
-                } else if layoutSize.height + (fontLineSpacing + fontLineHeight) * 2.0 > constrainedSize.height {
-                    isLastLine = true
+                var isRTL = false
+                let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
+                if glyphRuns.count != 0 {
+                    let run = glyphRuns[0] as! CTRun
+                    if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                        isRTL = true
+                    }
                 }
-                if isLastLine {
+                
+                lines.append(TextNodeLine(
+                    line: coreTextLine,
+                    frame: lineFrame,
+                    ascent: lineAscent,
+                    descent: lineDescent,
+                    range: NSMakeRange(effectiveLineRange.location, effectiveLineRange.length),
+                    isRTL: isRTL,
+                    strikethroughs: strikethroughs,
+                    spoilers: spoilers,
+                    spoilerWords: spoilerWords,
+                    embeddedItems: embeddedItems,
+                    attachments: attachments,
+                    additionalTrailingLine: additionalTrailingLine
+                ))
+                break
+            } else {
+                if lineCharacterCount > 0 {
                     if first {
                         first = false
                     } else {
                         layoutSize.height += fontLineSpacing
                     }
                     
-                    var didClipLinebreak = false
-                    var lineRange = CFRange(location: lastLineCharacterIndex, length: stringLength - lastLineCharacterIndex)
-                    let nsString = (attributedString.string as NSString)
-                    for i in lineRange.location ..< (lineRange.location + lineRange.length) {
-                        if nsString.character(at: i) == 0x0a {
-                            lineRange.length = max(0, i - lineRange.location)
-                            didClipLinebreak = true
-                            break
-                        }
+                    var lineRange = CFRangeMake(lastLineCharacterIndex, lineCharacterCount)
+                    if lineRange.location + lineRange.length > attributedString.length {
+                        lineRange.length = attributedString.length - lineRange.location
                     }
-                    
-                    var brokenLineRange = CFRange(location: lastLineCharacterIndex, length: lineCharacterCount)
-                    if brokenLineRange.location + brokenLineRange.length > attributedString.length {
-                        brokenLineRange.length = attributedString.length - brokenLineRange.location
-                    }
-                    if lineRange.length == 0 && !didClipLinebreak {
+                    if lineRange.length < 0 {
                         break
                     }
-                    
-                    let coreTextLine: CTLine
-                    let originalLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 0.0)
-                    
-                    var lineConstrainedSize = constrainedSize
-                    lineConstrainedSize.width += lineConstrainedWidthDelta
-                    if bottomCutoutEnabled {
-                        lineConstrainedSize.width -= bottomCutoutSize.width
-                    }
-                    
-                    let truncatedTokenString: NSAttributedString
-                    if let customTruncationToken {
-                        if lineRange.length == 0 && customTruncationToken.string.hasPrefix("\u{2026} ") {
-                            truncatedTokenString = customTruncationToken.attributedSubstring(from: NSRange(location: 2, length: customTruncationToken.length - 2))
-                        } else {
-                            truncatedTokenString = customTruncationToken
-                        }
-                    } else {
-                        var truncationTokenAttributes: [NSAttributedString.Key : AnyObject] = [:]
-                        truncationTokenAttributes[NSAttributedString.Key.font] = font
-                        truncationTokenAttributes[NSAttributedString.Key(rawValue:  kCTForegroundColorFromContextAttributeName as String)] = true as NSNumber
-                        let tokenString = "\u{2026}"
-                        
-                        truncatedTokenString = NSAttributedString(string: tokenString, attributes: truncationTokenAttributes)
-                    }
-                    let truncationToken = CTLineCreateWithAttributedString(truncatedTokenString)
-                    let truncationTokenWidth = CTLineGetTypographicBounds(truncationToken, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(truncationToken)
-                    
-                    var effectiveLineRange = brokenLineRange
-                    var additionalTrailingLine: (CTLine, Double)?
-                    
-                    var measureFitWidth = CTLineGetTypographicBounds(originalLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(originalLine)
-                    if customTruncationToken != nil && lineRange.location + lineRange.length < attributedString.length {
-                        measureFitWidth += truncationTokenWidth
-                    }
-                    
-                    if lineRange.length == 0 || measureFitWidth < Double(lineConstrainedSize.width) {
-                        if didClipLinebreak {
-                            if lineRange.length == 0 {
-                                coreTextLine = CTLineCreateWithAttributedString(NSAttributedString())
-                            } else {
-                                coreTextLine = originalLine
-                            }
-                            additionalTrailingLine = (truncationToken, truncationTokenWidth)
-                            
-                            truncated = true
-                        } else {
-                            coreTextLine = originalLine
-                        }
-                    } else {
-                        if customTruncationToken != nil {
-                            let coreTextLine1 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
-                            let runs = (CTLineGetGlyphRuns(coreTextLine1) as [AnyObject]) as! [CTRun]
-                            var hasTruncationToken = false
-                            for run in runs {
-                                let runRange = CTRunGetStringRange(run)
-                                if runRange.location + runRange.length >= nsString.length {
-                                    hasTruncationToken = true
-                                    break
-                                }
-                            }
-                            
-                            if hasTruncationToken {
-                                coreTextLine = coreTextLine1
-                            } else {
-                                let coreTextLine2 = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width) - truncationTokenWidth), truncationType, truncationToken) ?? truncationToken
-                                coreTextLine = coreTextLine2
-                            }
-                        } else {
-                            coreTextLine = CTLineCreateTruncatedLine(originalLine, max(1.0, Double(lineConstrainedSize.width)), truncationType, truncationToken) ?? truncationToken
-                        }
-                        let runs = (CTLineGetGlyphRuns(coreTextLine) as [AnyObject]) as! [CTRun]
-                        for run in runs {
-                            let runAttributes: NSDictionary = CTRunGetAttributes(run)
-                            if let _ = runAttributes["CTForegroundColorFromContext"] {
-                                brokenLineRange.length = CTRunGetStringRange(run).location - brokenLineRange.location
-                                break
-                            }
-                        }
-                        if customTruncationToken != nil {
-                            assert(true)
-                        }
-                        effectiveLineRange = CFRange(location: effectiveLineRange.location, length: 0)
-                        for run in runs {
-                            let runRange = CTRunGetStringRange(run)
-                            if runRange.location + runRange.length > brokenLineRange.location + brokenLineRange.length {
-                                continue
-                            }
-                            effectiveLineRange.length = max(effectiveLineRange.length, (runRange.location + runRange.length) - effectiveLineRange.location)
-                        }
-                        
-                        if brokenLineRange.location + brokenLineRange.length > attributedString.length {
-                            brokenLineRange.length = attributedString.length - brokenLineRange.location
-                        }
-                        if effectiveLineRange.location + effectiveLineRange.length > attributedString.length {
-                            effectiveLineRange.length = attributedString.length - effectiveLineRange.location
-                        }
-                        truncated = true
-                    }
+
+                    let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 100.0)
+                    lastLineCharacterIndex += lineCharacterCount
                     
                     var headIndent: CGFloat = 0.0
-                    if brokenLineRange.location >= 0 && brokenLineRange.length > 0 && brokenLineRange.location + brokenLineRange.length <= attributedString.length {
-                        attributedString.enumerateAttributes(in: NSMakeRange(brokenLineRange.location, brokenLineRange.length), options: []) { attributes, range, _ in
-                            if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
-                                var ascent: CGFloat = 0.0
-                                var descent: CGFloat = 0.0
-                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                
-                                var startIndex: Int?
-                                var currentIndex: Int?
-                                
-                                let nsString = (attributedString.string as NSString)
-                                nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
-                                    if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
-                                        if let currentStartIndex = startIndex {
-                                            startIndex = nil
-                                            let endIndex = range.location
-                                            addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
-                                        }
-                                    } else if startIndex == nil {
-                                        startIndex = range.location
+                    attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                                                            
+                            var startIndex: Int?
+                            var currentIndex: Int?
+                            
+                            let nsString = (attributedString.string as NSString)
+                            nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                    if let currentStartIndex = startIndex {
+                                        startIndex = nil
+                                        let endIndex = range.location
+                                        addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
                                     }
-                                    currentIndex = range.location + range.length
+                                } else if startIndex == nil {
+                                    startIndex = range.location
                                 }
-                                
-                                if let currentStartIndex = startIndex, let currentIndex = currentIndex {
-                                    startIndex = nil
-                                    let endIndex = currentIndex
-                                    addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: truncated ? 12.0 : 0.0)
-                                }
-                                
-                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                            } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
-                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                                let x = lowerX < upperX ? lowerX : upperX
-                                strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                            } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
-                                headIndent = paragraphStyle.headIndent
+                                currentIndex = range.location + range.length
                             }
                             
-                            if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
-                                if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
-                                    var ascent: CGFloat = 0.0
-                                    var descent: CGFloat = 0.0
-                                    CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                    
-                                    addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                                }
+                            if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                startIndex = nil
+                                let endIndex = currentIndex
+                                addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
                             }
                             
-                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                            addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                        } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                        } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
+                            headIndent = paragraphStyle.headIndent
+                        }
+                        
+                        if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
+                            if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
                                 var ascent: CGFloat = 0.0
                                 var descent: CGFloat = 0.0
                                 CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                                 
-                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                                addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                             }
+                        }
+                        
+                        if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
+                            
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
                         }
                     }
                     
-                    let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
+                    var lineAscent: CGFloat = 0.0
+                    var lineDescent: CGFloat = 0.0
+                    let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, &lineAscent, &lineDescent, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
                     let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
-                    layoutSize.height += fontLineHeight + fontLineSpacing
-                    
-                    if let (_, additionalTrailingLineWidth) = additionalTrailingLine {
-                        lineAdditionalWidth += additionalTrailingLineWidth
-                    }
-                    
-                    layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
+                    layoutSize.height += fontLineHeight
+                    layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth + headIndent)
                     
                     if headIndent > 0.0 {
-                        blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
+                        //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
                     }
                     
                     var isRTL = false
@@ -1413,141 +1881,53 @@ open class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(effectiveLineRange.location, effectiveLineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments, additionalTrailingLine: additionalTrailingLine))
-                    break
+                    lines.append(TextNodeLine(
+                        line: coreTextLine,
+                        frame: lineFrame,
+                        ascent: lineAscent,
+                        descent: lineDescent,
+                        range: NSMakeRange(lineRange.location, lineRange.length),
+                        isRTL: isRTL,
+                        strikethroughs: strikethroughs,
+                        spoilers: spoilers,
+                        spoilerWords: spoilerWords,
+                        embeddedItems: embeddedItems,
+                        attachments: attachments,
+                        additionalTrailingLine: nil
+                    ))
                 } else {
-                    if lineCharacterCount > 0 {
-                        if first {
-                            first = false
-                        } else {
-                            layoutSize.height += fontLineSpacing
-                        }
-                        
-                        var lineRange = CFRangeMake(lastLineCharacterIndex, lineCharacterCount)
-                        if lineRange.location + lineRange.length > attributedString.length {
-                            lineRange.length = attributedString.length - lineRange.location
-                        }
-                        if lineRange.length < 0 {
-                            break
-                        }
-
-                        let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 100.0)
-                        lastLineCharacterIndex += lineCharacterCount
-                        
-                        var headIndent: CGFloat = 0.0
-                        attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                            if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
-                                var ascent: CGFloat = 0.0
-                                var descent: CGFloat = 0.0
-                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                                                
-                                var startIndex: Int?
-                                var currentIndex: Int?
-                                
-                                let nsString = (attributedString.string as NSString)
-                                nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
-                                    if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
-                                        if let currentStartIndex = startIndex {
-                                            startIndex = nil
-                                            let endIndex = range.location
-                                            addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
-                                        }
-                                    } else if startIndex == nil {
-                                        startIndex = range.location
-                                    }
-                                    currentIndex = range.location + range.length
-                                }
-                                
-                                if let currentStartIndex = startIndex, let currentIndex = currentIndex {
-                                    startIndex = nil
-                                    let endIndex = currentIndex
-                                    addSpoilerWord(line: coreTextLine, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
-                                }
-                                
-                                addSpoiler(line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                            } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
-                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                                let x = lowerX < upperX ? lowerX : upperX
-                                strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                            } else if let paragraphStyle = attributes[NSAttributedString.Key.paragraphStyle] as? NSParagraphStyle {
-                                headIndent = paragraphStyle.headIndent
-                            }
-                            
-                            if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
-                                if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
-                                    var ascent: CGFloat = 0.0
-                                    var descent: CGFloat = 0.0
-                                    CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                    
-                                    addEmbeddedItem(item: embeddedItem, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                                }
-                            }
-                            
-                            if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
-                                var ascent: CGFloat = 0.0
-                                var descent: CGFloat = 0.0
-                                CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
-                                
-                                addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
-                            }
-                        }
-                        
-                        let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
-                        let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
-                        layoutSize.height += fontLineHeight
-                        layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
-                        
-                        if headIndent > 0.0 {
-                            blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
-                        }
-                        
-                        var isRTL = false
-                        let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
-                        if glyphRuns.count != 0 {
-                            let run = glyphRuns[0] as! CTRun
-                            if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
-                                isRTL = true
-                            }
-                        }
-                        
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: embeddedItems, attachments: attachments, additionalTrailingLine: nil))
-                    } else {
-                        if !lines.isEmpty {
-                            layoutSize.height += fontLineSpacing
-                        }
-                        break
-                    }
-                }
-            }
-            
-            let rawLayoutSize = layoutSize
-            if !lines.isEmpty && bottomCutoutEnabled {
-                let proposedWidth = lines[lines.count - 1].frame.width + bottomCutoutSize.width
-                if proposedWidth > layoutSize.width {
-                    if proposedWidth <= constrainedSize.width + .ulpOfOne {
-                        layoutSize.width = proposedWidth
-                    } else {
-                        layoutSize.height += bottomCutoutSize.height
-                    }
-                }
-            }
-            
-            if lines.count < minimumNumberOfLines {
-                var lineCount = lines.count
-                while lineCount < minimumNumberOfLines {
-                    if lineCount != 0 {
+                    if !lines.isEmpty {
                         layoutSize.height += fontLineSpacing
                     }
-                    layoutSize.height += fontLineHeight
-                    lineCount += 1
+                    break
                 }
             }
-            
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
-        } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: alignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
         }
+        
+        let rawLayoutSize = layoutSize
+        if !lines.isEmpty && bottomCutoutEnabled {
+            let proposedWidth = lines[lines.count - 1].frame.width + bottomCutoutSize.width
+            if proposedWidth > layoutSize.width {
+                if proposedWidth <= constrainedSize.width + .ulpOfOne {
+                    layoutSize.width = proposedWidth
+                } else {
+                    layoutSize.height += bottomCutoutSize.height
+                }
+            }
+        }
+        
+        if lines.count < minimumNumberOfLines {
+            var lineCount = lines.count
+            while lineCount < minimumNumberOfLines {
+                if lineCount != 0 {
+                    layoutSize.height += fontLineSpacing
+                }
+                layoutSize.height += fontLineHeight
+                lineCount += 1
+            }
+        }
+        
+        return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, explicitAlignment: alignment, resolvedAlignment: resolvedAlignment, verticalAlignment: verticalAlignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor, textShadowBlur: textShadowBlur, textStroke: textStroke, displaySpoilers: displaySpoilers)
     }
     
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
@@ -1584,6 +1964,46 @@ open class TextNode: ASDisplayNode {
                 context.fill(bounds)
             }
             
+            let alignment = layout.resolvedAlignment
+            var offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
+            switch layout.verticalAlignment {
+                case .top:
+                    break
+                case .middle:
+                    offset.y = floor((bounds.height - layout.size.height) / 2.0) + layout.insets.top
+                case .bottom:
+                    offset.y = floor(bounds.height - layout.size.height) + layout.insets.top
+            }
+            
+            if !layout.lines.isEmpty {
+                offset.y += layout.lines[0].descent
+            }
+            
+            for blockQuote in layout.blockQuotes {
+                let radius: CGFloat = 3.0
+                
+                let blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
+                
+                context.setFillColor(blockQuote.tintColor.withMultipliedAlpha(0.1).cgColor)
+                context.addPath(UIBezierPath(roundedRect: blockFrame, cornerRadius: radius).cgPath)
+                context.fillPath()
+                
+                context.setFillColor(blockQuote.tintColor.cgColor)
+                
+                let quoteRect = CGRect(origin: CGPoint(x: blockFrame.maxX - 4.0 - quoteIcon.size.width, y: blockFrame.minY + 4.0), size: quoteIcon.size)
+                context.clip(to: quoteRect, mask: quoteIcon.cgImage!)
+                context.fill(quoteRect)
+                context.resetClip()
+                
+                let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: radius, height: blockFrame.height))
+                context.move(to: CGPoint(x: lineFrame.minX, y: lineFrame.minY + radius))
+                context.addArc(tangent1End: CGPoint(x: lineFrame.minX, y: lineFrame.minY), tangent2End: CGPoint(x: lineFrame.minX + radius, y: lineFrame.minY), radius: radius)
+                context.addLine(to: CGPoint(x: lineFrame.minX + radius, y: lineFrame.maxY))
+                context.addArc(tangent1End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY), tangent2End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY - radius), radius: radius)
+                context.closePath()
+                context.fillPath()
+            }
+            
             if let textShadowColor = layout.textShadowColor {
                 context.setTextDrawingMode(.fill)
                 context.setShadow(offset: layout.textShadowBlur != nil ? .zero : CGSize(width: 0.0, height: 1.0), blur: layout.textShadowBlur ?? 0.0, color: textShadowColor.cgColor)
@@ -1605,17 +2025,6 @@ open class TextNode: ASDisplayNode {
             let textPosition = context.textPosition
             context.textMatrix = CGAffineTransform(scaleX: 1.0, y: -1.0)
             
-            let alignment = layout.resolvedAlignment
-            var offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
-            switch layout.verticalAlignment {
-                case .top:
-                    break
-                case .middle:
-                    offset.y = floor((bounds.height - layout.size.height) / 2.0) + layout.insets.top
-                case .bottom:
-                    offset.y = floor(bounds.height - layout.size.height) + layout.insets.top
-            }
-            
             for i in 0 ..< layout.lines.count {
                 let line = layout.lines[i]
                 
@@ -1632,6 +2041,12 @@ open class TextNode: ASDisplayNode {
                         lineFrame.origin.x += offset.x
                     }
                 }
+                
+                //context.setStrokeColor(UIColor.red.cgColor)
+                //context.stroke(lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height))
+                
+                lineFrame.origin.y += -line.descent
+                
                 context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
                 
                 if layout.displaySpoilers && !line.spoilers.isEmpty {
@@ -1688,8 +2103,11 @@ open class TextNode: ASDisplayNode {
                 
                 if !line.strikethroughs.isEmpty {
                     for strikethrough in line.strikethroughs {
+                        guard let lineRange = line.range else {
+                            continue
+                        }
                         var textColor: UIColor?
-                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(line.range.location, line.range.length), options: []) { attributes, range, _ in
+                        layout.attributedString?.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
                             if range == strikethrough.range, let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
                                 textColor = color
                             }
@@ -1758,34 +2176,6 @@ open class TextNode: ASDisplayNode {
                         }
                     }
                 }
-            }
-            
-            var blockQuoteFrames: [CGRect] = []
-            var currentBlockQuoteFrame: CGRect?
-            for blockQuote in layout.blockQuotes {
-                if let frame = currentBlockQuoteFrame {
-                    if blockQuote.frame.minY - frame.maxY < 20.0 {
-                        currentBlockQuoteFrame = frame.union(blockQuote.frame)
-                    } else {
-                        blockQuoteFrames.append(frame)
-                        currentBlockQuoteFrame = frame
-                    }
-                } else {
-                    currentBlockQuoteFrame = blockQuote.frame
-                }
-            }
-            
-            if let frame = currentBlockQuoteFrame {
-                blockQuoteFrames.append(frame)
-            }
-            
-            for frame in blockQuoteFrames {
-                if let lineColor = layout.lineColor {
-                    context.setFillColor(lineColor.cgColor)
-                }
-                let rect = UIBezierPath(roundedRect: CGRect(x: frame.minX - 9.0, y: frame.minY - 14.0, width: 2.0, height: frame.height), cornerRadius: 1.0)
-                context.addPath(rect.cgPath)
-                context.fillPath()
             }
             
             context.textMatrix = textMatrix
@@ -1944,7 +2334,7 @@ open class TextView: UIView {
             let fontLineSpacing = floor(fontLineHeight * lineSpacingFactor)
             
             var lines: [TextNodeLine] = []
-            var blockQuotes: [TextNodeBlockQuote] = []
+            let blockQuotes: [TextNodeBlockQuote] = []
             
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
@@ -2175,13 +2565,15 @@ open class TextView: UIView {
                         }
                     }
                     
-                    let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
+                    var lineAscent: CGFloat = 0.0
+                    var lineDescent: CGFloat = 0.0
+                    let lineWidth = min(lineConstrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, &lineAscent, &lineDescent, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
                     let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                     
                     if headIndent > 0.0 {
-                        blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
+                        //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
                     }
                     
                     var isRTL = false
@@ -2193,7 +2585,20 @@ open class TextView: UIView {
                         }
                     }
                     
-                    lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments, additionalTrailingLine: nil))
+                    lines.append(TextNodeLine(
+                        line: coreTextLine,
+                        frame: lineFrame,
+                        ascent: lineAscent,
+                        descent: lineDescent,
+                        range: NSMakeRange(lineRange.location, lineRange.length),
+                        isRTL: isRTL,
+                        strikethroughs: strikethroughs,
+                        spoilers: spoilers,
+                        spoilerWords: spoilerWords,
+                        embeddedItems: [],
+                        attachments: attachments,
+                        additionalTrailingLine: nil
+                    ))
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -2263,13 +2668,15 @@ open class TextView: UIView {
                             }
                         }
                         
-                        let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
+                        var lineAscent: CGFloat = 0.0
+                        var lineDescent: CGFloat = 0.0
+                        let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, &lineAscent, &lineDescent, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
                         let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                         layoutSize.height += fontLineHeight
                         layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                         
                         if headIndent > 0.0 {
-                            blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
+                            //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
                         }
                         
                         var isRTL = false
@@ -2281,7 +2688,20 @@ open class TextView: UIView {
                             }
                         }
                         
-                        lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs, spoilers: spoilers, spoilerWords: spoilerWords, embeddedItems: [], attachments: attachments, additionalTrailingLine: nil))
+                        lines.append(TextNodeLine(
+                            line: coreTextLine,
+                            frame: lineFrame,
+                            ascent: lineAscent,
+                            descent: lineDescent,
+                            range: NSMakeRange(lineRange.location, lineRange.length),
+                            isRTL: isRTL,
+                            strikethroughs: strikethroughs,
+                            spoilers: spoilers,
+                            spoilerWords: spoilerWords,
+                            embeddedItems: [],
+                            attachments: attachments,
+                            additionalTrailingLine: nil
+                        ))
                     } else {
                         if !lines.isEmpty {
                             layoutSize.height += fontLineSpacing

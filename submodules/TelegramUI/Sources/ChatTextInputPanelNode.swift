@@ -3568,7 +3568,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     return ASEditableTextNodeTargetForAction(target: nil)
                 }
             }
-        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) {
+        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) || action == #selector(self.formatAttributesQuote(_:)) {
             if case .format = self.inputMenu.state {
                 if action == #selector(self.formatAttributesSpoiler(_:)), let selectedRange = self.textInputNode?.selectedRange {
                     var intersectsMonospace = false
@@ -3582,6 +3582,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     } else {
                         return ASEditableTextNodeTargetForAction(target: nil)
                     }
+                } else if action == #selector(self.formatAttributesQuote(_:)), let selectedRange = self.textInputNode?.selectedRange {
+                    let _ = selectedRange
+                    return ASEditableTextNodeTargetForAction(target: self)
                 } else if action == #selector(self.formatAttributesMonospace(_:)), let selectedRange = self.textInputNode?.selectedRange {
                     var intersectsSpoiler = false
                     self.inputTextState.inputText.enumerateAttributes(in: selectedRange, options: [], using: { attributes, _, _ in
@@ -3614,7 +3617,29 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
             
         } else {
-            var children: [UIAction] = [
+            var children: [UIAction] = []
+            
+            //TODO:localize
+            children.append(UIAction(title: "Quote", image: nil) { [weak self] (action) in
+                if let strongSelf = self {
+                    strongSelf.formatAttributesQuote(strongSelf)
+                }
+            })
+            
+            var hasSpoilers = true
+            if self.presentationInterfaceState?.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
+                hasSpoilers = false
+            }
+            
+            if hasSpoilers {
+                children.append(UIAction(title: self.strings?.TextFormat_Spoiler ?? "Spoiler", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesSpoiler(strongSelf)
+                    }
+                })
+            }
+            
+            children.append(contentsOf: [
                 UIAction(title: self.strings?.TextFormat_Bold ?? "Bold", image: nil) { [weak self] (action) in
                     if let strongSelf = self {
                         strongSelf.formatAttributesBold(strongSelf)
@@ -3645,20 +3670,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         strongSelf.formatAttributesUnderline(strongSelf)
                     }
                 }
-            ]
-            
-            var hasSpoilers = true
-            if self.presentationInterfaceState?.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
-                hasSpoilers = false
-            }
-            
-            if hasSpoilers {
-                children.append(UIAction(title: self.strings?.TextFormat_Spoiler ?? "Spoiler", image: nil) { [weak self] (action) in
-                    if let strongSelf = self {
-                        strongSelf.formatAttributesSpoiler(strongSelf)
-                    }
-                })
-            }
+            ] as [UIAction])
             
             let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
             actions.insert(formatMenu, at: 3)
@@ -3734,6 +3746,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
             return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline), inputMode)
+        }
+    }
+    
+    @objc func formatAttributesQuote(_ sender: Any) {
+        self.inputMenu.back()
+        
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.quote), inputMode)
         }
     }
     

@@ -58,7 +58,7 @@
       [_textStorage setAttributedString:attributedString];
     }
     
-    _textContainer = [[ASCustomTextContainer alloc] initWithSize:constrainedSize];
+    _textContainer = [[ASCustomTextContainer alloc] initWithSize:constrainedSize textStorage:nil];
     // We want the text laid out up to the very edges of the container.
     _textContainer.lineFragmentPadding = 0;
     _textContainer.lineBreakMode = lineBreakMode;

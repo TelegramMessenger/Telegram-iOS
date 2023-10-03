@@ -24,6 +24,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ShimmeringLinkNode
 import ChatMessageItemCommon
+import RichTextView
 
 private final class CachedChatMessageText {
     let text: String
@@ -343,7 +344,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textFont = item.presentationData.messageFont
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentControlColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -609,6 +610,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .bankCard(bankCard)
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
+            } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
+                return .copy(code)
             } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
                 return .customEmoji(file)
             } else {

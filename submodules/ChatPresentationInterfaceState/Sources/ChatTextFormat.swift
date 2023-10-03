@@ -106,3 +106,29 @@ public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: 
         return state
     }
 }
+
+public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>) -> ChatTextInputState {
+    if selectionRange.isEmpty {
+        return state
+    }
+    let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
+    var quoteRange = nsRange
+    var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
+    state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+        for (key, _) in attributes {
+            if key == ChatTextInputAttributes.quote {
+                attributesToRemove.append((key, range))
+                quoteRange = quoteRange.union(range)
+            } else {
+                attributesToRemove.append((key, nsRange))
+            }
+        }
+    }
+    
+    let result = NSMutableAttributedString(attributedString: state.inputText)
+    for (attribute, range) in attributesToRemove {
+        result.removeAttribute(attribute, range: range)
+    }
+    result.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+    return ChatTextInputState(inputText: result, selectionRange: selectionRange)
+}

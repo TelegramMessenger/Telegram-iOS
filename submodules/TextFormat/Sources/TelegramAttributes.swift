@@ -42,4 +42,5 @@ public struct TelegramTextAttributes {
     public static let BlockQuote = "TelegramBlockQuote"
     public static let Pre = "TelegramPre"
     public static let Spoiler = "TelegramSpoiler"
+    public static let Code = "TelegramCode"
 }

@@ -16,6 +16,13 @@
 
 @implementation ASCustomTextContainer
 
+- (instancetype)initWithSize:(CGSize)size textStorage:(NSTextStorage *)textStorage {
+    self = [super initWithSize:size];
+    if (self != nil) {
+    }
+    return self;
+}
+
 - (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
     CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
     
@@ -139,8 +146,7 @@
   components.layoutManager = layoutManager;
   [components.textStorage addLayoutManager:components.layoutManager];
 
-  components.textContainer = [[ASCustomTextContainer alloc] initWithSize:textContainerSize];
-    //components.textContainer.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(textContainerSize.width - 60.0, 0.0, 60.0, 40.0)]];
+  components.textContainer = [[ASCustomTextContainer alloc] initWithSize:textContainerSize textStorage:textStorage];
   components.textContainer.lineFragmentPadding = 0.0; // We want the text laid out up to the very edges of the text-view.
   [components.layoutManager addTextContainer:components.textContainer];
 
