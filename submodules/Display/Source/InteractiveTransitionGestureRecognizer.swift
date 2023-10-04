@@ -158,27 +158,39 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                 }
             }
         } else {
-            let edgeWidth: CGFloat
+            let defaultEdgeWidth: CGFloat
+            switch self.staticEdgeWidth {
+            case let .constant(value):
+                defaultEdgeWidth = value
+            case let .widthMultiplier(factor, minValue, maxValue):
+                defaultEdgeWidth = max(minValue, min(size.width * factor, maxValue))
+            }
+            
+            let extendedEdgeWidth: CGFloat
             switch self.currentEdgeWidth {
             case let .constant(value):
-                edgeWidth = value
+                extendedEdgeWidth = value
             case let .widthMultiplier(factor, minValue, maxValue):
-                edgeWidth = max(minValue, min(size.width * factor, maxValue))
+                extendedEdgeWidth = max(minValue, min(size.width * factor, maxValue))
             }
             
             if !self.validatedGesture {
-                if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
+                if self.firstLocation.x < extendedEdgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
                     self.state = .failed
                     return
                 }
-                if self.firstLocation.x > size.width - edgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
+                if self.firstLocation.x > size.width - extendedEdgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
                     self.state = .failed
                     return
                 }
                 
-                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < edgeWidth {
+                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < defaultEdgeWidth {
                     self.validatedGesture = true
-                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - edgeWidth {
+                } else if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < extendedEdgeWidth && translation.x > 0.0 {
+                    self.validatedGesture = true
+                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - defaultEdgeWidth {
+                    self.validatedGesture = true
+                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - extendedEdgeWidth && translation.x < 0.0 {
                     self.validatedGesture = true
                 } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
                     self.state = .failed
