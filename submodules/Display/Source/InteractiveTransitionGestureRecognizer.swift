@@ -184,23 +184,28 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                     return
                 }
                 
-                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < defaultEdgeWidth {
-                    self.validatedGesture = true
-                } else if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < extendedEdgeWidth && translation.x > 0.0 {
-                    self.validatedGesture = true
-                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - defaultEdgeWidth {
-                    self.validatedGesture = true
-                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - extendedEdgeWidth && translation.x < 0.0 {
-                    self.validatedGesture = true
-                } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
-                    self.state = .failed
-                } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
-                    self.state = .failed
-                } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
-                    self.state = .failed
-                } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
-                    self.validatedGesture = true
-                    fireBegan = true
+                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < extendedEdgeWidth {
+                    if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.validatedGesture = true
+                        fireBegan = true
+                    }
+                } else {
+                    if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < defaultEdgeWidth {
+                        self.validatedGesture = true
+                    } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - defaultEdgeWidth {
+                        self.validatedGesture = true
+                    } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
+                        self.state = .failed
+                    } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
+                        self.state = .failed
+                    } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.validatedGesture = true
+                        fireBegan = true
+                    }
                 }
             }
         }
