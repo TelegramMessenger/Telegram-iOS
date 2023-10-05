@@ -261,11 +261,18 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                 let peerId: PeerId = chatPeerId.peerId
                 
                 switch replyTo {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
-                    let targetId = MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                    var replyIds = ReferencedReplyMessageIds()
-                    replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
-                    return (replyIds, [])
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                    let _ = replyHeader
+                    let _ = replyToTopId
+                    let _ = quoteText
+                    let _ = quoteEntities
+                    
+                    if let replyToMsgId = replyToMsgId {
+                        let targetId = MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        var replyIds = ReferencedReplyMessageIds()
+                        replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
+                        return (replyIds, [])
+                    }
                 case .messageReplyStoryHeader:
                     break
                 }
@@ -275,11 +282,18 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
         case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
-                    let targetId = MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                    var replyIds = ReferencedReplyMessageIds()
-                    replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
-                    return (replyIds, [])
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                    let _ = replyHeader
+                    let _ = replyToTopId
+                    let _ = quoteText
+                    let _ = quoteEntities
+                    
+                    if let replyToMsgId = replyToMsgId {
+                        let targetId = MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        var replyIds = ReferencedReplyMessageIds()
+                        replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
+                        return (replyIds, [])
+                    }
                 case .messageReplyStoryHeader:
                     break
                 }
@@ -387,7 +401,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
             return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil)
-        case let .messageMediaGiveaway(channels, quantity, months, untilDate):
+        case let .messageMediaGiveaway(_, channels, quantity, months, untilDate):
             return (TelegramMediaGiveaway(channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil)
         }
     }
@@ -549,40 +563,45 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyToTopId):
+                    case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                        let _ = replyHeader
+                        let _ = quoteText
+                        let _ = quoteEntities
                         let isForumTopic = (flags & (1 << 3)) != 0
                         
-                        let replyPeerId = replyToPeerId?.peerId ?? peerId
-                        if let replyToTopId = replyToTopId {
-                            if peerIsForum {
-                                if isForumTopic {
+                        if let replyToMsgId = replyToMsgId {
+                            let replyPeerId = replyToPeerId?.peerId ?? peerId
+                            if let replyToTopId = replyToTopId {
+                                if peerIsForum {
+                                    if isForumTopic {
+                                        let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                        threadMessageId = threadIdValue
+                                        if replyPeerId == peerId {
+                                            threadId = makeMessageThreadId(threadIdValue)
+                                        }
+                                    }
+                                } else {
                                     let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
                                     threadMessageId = threadIdValue
                                     if replyPeerId == peerId {
                                         threadId = makeMessageThreadId(threadIdValue)
                                     }
                                 }
-                            } else {
-                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                                threadMessageId = threadIdValue
-                                if replyPeerId == peerId {
-                                    threadId = makeMessageThreadId(threadIdValue)
-                                }
-                            }
-                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                            
-                            if peerIsForum {
-                                if isForumTopic {
+                            } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                                
+                                if peerIsForum {
+                                    if isForumTopic {
+                                        threadMessageId = threadIdValue
+                                        threadId = makeMessageThreadId(threadIdValue)
+                                    }
+                                } else {
                                     threadMessageId = threadIdValue
                                     threadId = makeMessageThreadId(threadIdValue)
                                 }
-                            } else {
-                                threadMessageId = threadIdValue
-                                threadId = makeMessageThreadId(threadIdValue)
                             }
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                         }
-                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }
@@ -814,26 +833,32 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyToTopId):
-                        let replyPeerId = replyToPeerId?.peerId ?? peerId
-                        if let replyToTopId = replyToTopId {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                            threadMessageId = threadIdValue
-                            if replyPeerId == peerId {
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                        let _ = replyHeader
+                        let _ = quoteText
+                        let _ = quoteEntities
+                        
+                        if let replyToMsgId = replyToMsgId {
+                            let replyPeerId = replyToPeerId?.peerId ?? peerId
+                            if let replyToTopId = replyToTopId {
+                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                threadMessageId = threadIdValue
+                                if replyPeerId == peerId {
+                                    threadId = makeMessageThreadId(threadIdValue)
+                                }
+                            } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                                threadMessageId = threadIdValue
                                 threadId = makeMessageThreadId(threadIdValue)
                             }
-                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                            threadMessageId = threadIdValue
-                            threadId = makeMessageThreadId(threadIdValue)
+                            switch action {
+                            case .messageActionTopicEdit:
+                                threadId = Int64(replyToMsgId)
+                            default:
+                                break
+                            }
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                         }
-                        switch action {
-                        case .messageActionTopicEdit:
-                            threadId = Int64(replyToMsgId)
-                        default:
-                            break
-                        }
-                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }

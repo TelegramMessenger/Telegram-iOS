@@ -209,6 +209,7 @@ public extension Api {
 public extension Api {
     indirect enum InputInvoice: TypeConstructorDescription {
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
+        case inputInvoicePremiumGiftCode(purpose: Api.InputStorePaymentPurpose, option: Api.PremiumGiftCodeOption)
         case inputInvoiceSlug(slug: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -219,6 +220,13 @@ public extension Api {
                     }
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
+                    break
+                case .inputInvoicePremiumGiftCode(let purpose, let option):
+                    if boxed {
+                        buffer.appendInt32(-1734841331)
+                    }
+                    purpose.serialize(buffer, true)
+                    option.serialize(buffer, true)
                     break
                 case .inputInvoiceSlug(let slug):
                     if boxed {
@@ -233,6 +241,8 @@ public extension Api {
         switch self {
                 case .inputInvoiceMessage(let peer, let msgId):
                 return ("inputInvoiceMessage", [("peer", peer as Any), ("msgId", msgId as Any)])
+                case .inputInvoicePremiumGiftCode(let purpose, let option):
+                return ("inputInvoicePremiumGiftCode", [("purpose", purpose as Any), ("option", option as Any)])
                 case .inputInvoiceSlug(let slug):
                 return ("inputInvoiceSlug", [("slug", slug as Any)])
     }
@@ -249,6 +259,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InputInvoice.inputInvoiceMessage(peer: _1!, msgId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputInvoicePremiumGiftCode(_ reader: BufferReader) -> InputInvoice? {
+            var _1: Api.InputStorePaymentPurpose?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputStorePaymentPurpose
+            }
+            var _2: Api.PremiumGiftCodeOption?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.PremiumGiftCodeOption
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputInvoice.inputInvoicePremiumGiftCode(purpose: _1!, option: _2!)
             }
             else {
                 return nil

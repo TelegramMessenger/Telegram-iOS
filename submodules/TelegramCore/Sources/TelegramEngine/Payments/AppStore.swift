@@ -65,7 +65,7 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
             guard let apiBoostPeer = apiInputPeer(peer) else {
                 return .complete()
             }
-            return .single(.inputStorePaymentPremiumGiveaway(flags: 0, boostPeer: apiBoostPeer, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
+            return .single(.inputStorePaymentPremiumGiveaway(flags: 0, boostPeer: apiBoostPeer, additionalPeers: nil, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
         }
     }
 }

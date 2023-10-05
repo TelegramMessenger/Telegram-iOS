@@ -1523,10 +1523,22 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgId, message, entities, date):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, date):
                         var replyToMessageId: MessageId?
-                        if let replyToMsgId = replyToMsgId {
-                            replyToMessageId = MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                        if let replyToMsgHeader = replyToMsgHeader {
+                            switch replyToMsgHeader {
+                            case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                                let _ = flags
+                                let _ = replyHeader
+                                let _ = replyToTopId
+                                let _ = quoteText
+                                let _ = quoteEntities
+                                if let replyToMsgId = replyToMsgId {
+                                    replyToMessageId = MessageId(peerId: replyToPeerId?.peerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                                }
+                            case .messageReplyStoryHeader:
+                                break
+                            }
                         }
                         inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
                 }

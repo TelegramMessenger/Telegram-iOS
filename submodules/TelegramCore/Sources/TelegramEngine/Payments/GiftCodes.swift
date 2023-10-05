@@ -76,7 +76,7 @@ func _internal_checkPremiumGiftCode(account: Account, slug: String) -> Signal<Pr
     |> mapToSignal { result -> Signal<PremiumGiftCodeInfo?, NoError> in
         if let result = result {
             switch result {
-            case let .checkedGiftCode(_, _, _, _, _, _, chats, users):
+            case let .checkedGiftCode(_, _, _, _, _, _, _, chats, users):
                 return account.postbox.transaction { transaction in
                     let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
                     updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
@@ -107,7 +107,7 @@ func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Ne
 extension PremiumGiftCodeOption {
     init(apiGiftCodeOption: Api.PremiumGiftCodeOption) {
         switch apiGiftCodeOption {
-        case let .premiumGiftCodeOption(_, users, months, storeProduct):
+        case let .premiumGiftCodeOption(_, users, months, storeProduct, _, _, _):
             self.init(users: users, months: months, storeProductId: storeProduct)
         }
     }
@@ -116,7 +116,7 @@ extension PremiumGiftCodeOption {
 extension PremiumGiftCodeInfo {
     init(apiCheckedGiftCode: Api.payments.CheckedGiftCode, slug: String) {
         switch apiCheckedGiftCode {
-        case let .checkedGiftCode(flags, fromId, toId, date, months, usedDate, _, _):
+        case let .checkedGiftCode(flags, fromId, _, toId, date, months, usedDate, _, _):
             self.slug = slug
             self.fromPeerId = fromId.peerId
             self.toPeerId = toId.flatMap { EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value($0)) }

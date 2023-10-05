@@ -141,19 +141,27 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
     if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
         var flags: Int32 = 0
         if let inputState = inputState {
-            if inputState.replyToMessageId != nil {
-                flags |= (1 << 0)
-            }
             if !inputState.entities.isEmpty {
                 flags |= (1 << 3)
             }
         }
         var topMsgId: Int32?
         if let threadId = threadId {
-            flags |= (1 << 2)
             topMsgId = Int32(clamping: threadId)
         }
-        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, topMsgId: topMsgId, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
+        
+        var replyTo: Api.InputReplyTo?
+        if inputState?.replyToMessageId != nil || topMsgId != nil {
+            flags |= 1 << 0
+            
+            var innerFlags: Int32 = 0
+            if topMsgId != 0 {
+                innerFlags |= 1 << 0
+            }
+            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: inputState?.replyToMessageId?.id ?? topMsgId ?? 0, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+        }
+        
+        return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
         |> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
