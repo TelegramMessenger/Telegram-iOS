@@ -565,9 +565,12 @@ extension StoreMessage {
                     switch replyTo {
                     case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
                         let _ = replyHeader
-                        let _ = quoteText
-                        let _ = quoteEntities
                         let isForumTopic = (flags & (1 << 3)) != 0
+                        
+                        var quote: EngineMessageReplyQuote?
+                        if let quoteText = quoteText {
+                            quote = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []))
+                        }
                         
                         if let replyToMsgId = replyToMsgId {
                             let replyPeerId = replyToPeerId?.peerId ?? peerId
@@ -600,7 +603,7 @@ extension StoreMessage {
                                     threadId = makeMessageThreadId(threadIdValue)
                                 }
                             }
-                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
                         }
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
@@ -835,8 +838,11 @@ extension StoreMessage {
                     switch replyTo {
                     case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
                         let _ = replyHeader
-                        let _ = quoteText
-                        let _ = quoteEntities
+                        
+                        var quote: EngineMessageReplyQuote?
+                        if let quoteText = quoteText {
+                            quote = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []))
+                        }
                         
                         if let replyToMsgId = replyToMsgId {
                             let replyPeerId = replyToPeerId?.peerId ?? peerId
@@ -857,7 +863,7 @@ extension StoreMessage {
                             default:
                                 break
                             }
-                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
                         }
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))

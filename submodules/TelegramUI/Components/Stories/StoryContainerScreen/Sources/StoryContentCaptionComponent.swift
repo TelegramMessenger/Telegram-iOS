@@ -540,7 +540,8 @@ final class StoryContentCaptionComponent: Component {
                 fixedFont: Font.monospace(16.0),
                 blockQuoteFont: Font.monospace(16.0),
                 message: nil,
-                entityFiles: component.entityFiles
+                entityFiles: component.entityFiles,
+                adjustQuoteFontSize: true
             )
             
             let truncationToken = NSMutableAttributedString()

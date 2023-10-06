@@ -4,14 +4,16 @@ import Postbox
 public class ReplyMessageAttribute: MessageAttribute {
     public let messageId: MessageId
     public let threadMessageId: MessageId?
+    public let quote: EngineMessageReplyQuote?
     
     public var associatedMessageIds: [MessageId] {
         return [self.messageId]
     }
     
-    public init(messageId: MessageId, threadMessageId: MessageId?) {
+    public init(messageId: MessageId, threadMessageId: MessageId?, quote: EngineMessageReplyQuote?) {
         self.messageId = messageId
         self.threadMessageId = threadMessageId
+        self.quote = quote
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -23,6 +25,8 @@ public class ReplyMessageAttribute: MessageAttribute {
         } else {
             self.threadMessageId = nil
         }
+        
+        self.quote = decoder.decodeCodable(EngineMessageReplyQuote.self, forKey: "qu")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -33,6 +37,11 @@ public class ReplyMessageAttribute: MessageAttribute {
             let threadNamespaceAndId = Int64(threadMessageId.namespace) | (Int64(threadMessageId.id) << 32)
             encoder.encodeInt64(threadNamespaceAndId, forKey: "ti")
             encoder.encodeInt64(threadMessageId.peerId.toInt64(), forKey: "tp")
+        }
+        if let quote = self.quote {
+            encoder.encodeCodable(quote, forKey: "qu")
+        } else {
+            encoder.encodeNil(forKey: "qu")
         }
     }
 }

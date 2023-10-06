@@ -881,7 +881,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil))
             }
 
             var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -1113,7 +1113,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil))
             }
             
             var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -1392,7 +1392,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil))
             }
             
             var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -1593,7 +1593,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
             }
             
             if let replyToRandomId = replyToRandomId, let replyMessageId = messageIdForGloballyUniqueMessageId(replyToRandomId) {
-                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil))
+                attributes.append(ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil))
             }
             
             var entitiesAttribute: TextEntitiesMessageAttribute?

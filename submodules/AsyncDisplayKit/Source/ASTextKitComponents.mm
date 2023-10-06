@@ -23,17 +23,40 @@
     return self;
 }
 
+- (BOOL)isSimpleRectangularTextContainer {
+    return false;
+}
+
 - (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
     CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
     
-/*#if DEBUG
-    if (result.origin.y < 10.0f) {
-        result.size.width -= 21.0f;
-        if (result.size.width < 0.0f) {
-            result.size.width = 0.0f;
+    NSTextStorage *textStorage = self.layoutManager.textStorage;
+    if (textStorage != nil) {
+        NSString *string = textStorage.string;
+        int index = (int)characterIndex;
+        if (index >= 0 && index < string.length) {
+            NSDictionary *attributes = [textStorage attributesAtIndex:index effectiveRange:nil];
+            NSObject *blockQuote = attributes[@"Attribute__Blockquote"];
+            if (blockQuote != nil) {
+                bool isFirstLine = false;
+                if (index == 0) {
+                    isFirstLine = true;
+                } else {
+                    NSDictionary *previousAttributes = [textStorage attributesAtIndex:index - 1 effectiveRange:nil];
+                    NSObject *previousBlockQuote = previousAttributes[@"Attribute__Blockquote"];
+                    if (previousBlockQuote == nil) {
+                        isFirstLine = true;
+                    } else if (![blockQuote isEqual:previousBlockQuote]) {
+                        isFirstLine = true;
+                    }
+                }
+                
+                if (isFirstLine) {
+                    result.size.width -= 100.0f;
+                }
+            }
         }
     }
-#endif*/
     
     return result;
 }

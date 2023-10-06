@@ -28,6 +28,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let context: AccountContext
         public let type: ChatMessageReplyInfoType
         public let message: Message?
+        public let quote: EngineMessageReplyQuote?
         public let story: StoryId?
         public let parentMessage: Message
         public let constrainedSize: CGSize
@@ -41,6 +42,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             context: AccountContext,
             type: ChatMessageReplyInfoType,
             message: Message?,
+            quote: EngineMessageReplyQuote?,
             story: StoryId?,
             parentMessage: Message,
             constrainedSize: CGSize,
@@ -53,6 +55,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.context = context
             self.type = type
             self.message = message
+            self.quote = quote
             self.story = story
             self.parentMessage = parentMessage
             self.constrainedSize = constrainedSize
@@ -70,8 +73,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
     
+    private let backgroundView: UIImageView
     private let contentNode: ASDisplayNode
-    private let lineNode: ASImageNode
     private var titleNode: TextNode?
     private var textNode: TextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
@@ -80,24 +83,20 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     private var expiredStoryIconView: UIImageView?
     
     override public init() {
+        self.backgroundView = UIImageView()
+        
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
         self.contentNode.displaysAsynchronously = false
         self.contentNode.contentMode = .left
         self.contentNode.contentsScale = UIScreenScale
         
-        self.lineNode = ASImageNode()
-        self.lineNode.displaysAsynchronously = false
-        self.lineNode.displayWithoutProcessing = true
-        self.lineNode.isLayerBacked = true
-        
         super.init()
         
         self.addSubnode(self.contentNode)
-        self.contentNode.addSubnode(self.lineNode)
     }
     
-    public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode) {
+    public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
@@ -172,7 +171,6 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let placeholderColor: UIColor = arguments.parentMessage.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             
             let titleColor: UIColor
-            let lineImage: UIImage?
             let textColor: UIColor
             let dustColor: UIColor
             
@@ -200,10 +198,20 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
+            let mainColor: UIColor
+            
             switch arguments.type {
                 case let .bubble(incoming):
                     titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    lineImage = incoming ? (authorNameColor.flatMap({ PresentationResourcesChat.chatBubbleVerticalLineImage(color: $0) }) ??  PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(arguments.presentationData.theme.theme)) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(arguments.presentationData.theme.theme)
+                    if incoming {
+                        if let authorNameColor {
+                            mainColor = authorNameColor
+                        } else {
+                            mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
+                        }
+                    } else {
+                        mainColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    }
                     if isExpiredStory || isStory {
                         textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     } else if isMedia {
@@ -216,8 +224,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
                     titleColor = serviceColor.primaryText
                     
-                    let graphics = PresentationResourcesChat.additionalGraphics(arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper, bubbleCorners: arguments.presentationData.chatBubbleCorners)
-                    lineImage = graphics.chatServiceVerticalLineImage
+                    mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
                     textColor = titleColor
                     dustColor = titleColor
             }
@@ -225,8 +232,16 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText, let message = arguments.message {
-                var text = foldLineBreaks(message.text)
-                var messageEntities = message.textEntitiesAttribute?.entities ?? []
+                var text: String
+                var messageEntities: [MessageTextEntity]
+                
+                if let quote = arguments.quote {
+                    text = quote.text
+                    messageEntities = quote.entities
+                } else {
+                    text = foldLineBreaks(message.text)
+                    messageEntities = message.textEntitiesAttribute?.entities ?? []
+                }
                 
                 if let translateToLanguage = arguments.associatedData.translateToLanguage, !text.isEmpty {
                     for attribute in message.attributes {
@@ -310,7 +325,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 imageTextInset += floor(arguments.presentationData.fontSize.baseDisplaySize * 32.0 / 17.0)
             }
             
-            let maximumTextWidth = max(0.0, arguments.constrainedSize.width - imageTextInset)
+            let maximumTextWidth = max(0.0, arguments.constrainedSize.width - 8.0 - imageTextInset)
             
             var contrainedTextSize = CGSize(width: maximumTextWidth, height: arguments.constrainedSize.height)
             
@@ -320,16 +335,28 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             if isExpiredStory || isStory {
                 contrainedTextSize.width -= 26.0
             }
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
+            var maxTextNumberOfLines = 1
+            var adjustedConstrainedTextSize = contrainedTextSize
+            var textCutout: TextNodeCutout?
+            var textCutoutWidth: CGFloat = 0.0
+            if arguments.quote != nil {
+                maxTextNumberOfLines = 5
+                if imageTextInset != 0.0 {
+                    adjustedConstrainedTextSize.width += imageTextInset
+                    textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset, height: 10.0))
+                    textCutoutWidth = imageTextInset + 4.0
+                }
+            }
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: maxTextNumberOfLines, truncationType: .end, constrainedSize: adjustedConstrainedTextSize, alignment: .natural, lineSpacing: 0.05, cutout: textCutout, insets: textInsets))
             
             let imageSide: CGFloat
-            imageSide = titleLayout.size.height + textLayout.size.height - 12.0
+            imageSide = titleLayout.size.height + titleLayout.size.height - 14.0
             
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
                 let boundingSize = CGSize(width: imageSide, height: imageSide)
                 leftInset += imageSide + 6.0
-                var radius: CGFloat = 6.0
+                var radius: CGFloat = 4.0
                 var imageSize = imageDimensions.aspectFilled(boundingSize)
                 if hasRoundImage {
                     radius = boundingSize.width / 2.0
@@ -374,12 +401,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            var size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right) + leftInset, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
+            var size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right - textCutoutWidth) + leftInset + 6.0, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
             if isExpiredStory || isStory {
                 size.width += 16.0
             }
             
-            return (size, { attemptSynchronous in
+            return (size, { realSize, attemptSynchronous in
                 let node: ChatMessageReplyInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode
@@ -419,7 +446,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
-                    imageNode.frame = CGRect(origin: CGPoint(x: 8.0, y: 3.0), size: CGSize(width: imageSide, height: imageSide))
+                    imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 4.0), size: CGSize(width: imageSide, height: imageSide))
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)
@@ -434,7 +461,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
                 
-                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
+                let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0 - textCutoutWidth, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
                 textNode.textNode.frame = textFrame.offsetBy(dx: (isExpiredStory || isStory) ? 18.0 : 0.0, dy: 0.0)
                 
                 if isExpiredStory || isStory {
@@ -490,9 +517,16 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     dustNode.removeFromSupernode()
                     node.dustNode = nil
                 }
-                    
-                node.lineNode.image = lineImage
-                node.lineNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 3.0), size: CGSize(width: 2.0, height: max(0.0, size.height - 4.0)))
+                
+                if node.backgroundView.image == nil {
+                    node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme)
+                    if node.backgroundView.superview == nil {
+                        node.contentNode.view.insertSubview(node.backgroundView, at: 0)
+                    }
+                }
+                
+                node.backgroundView.tintColor = mainColor
+                node.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height + 2.0))
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 
@@ -588,19 +622,19 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         }
 
         do {
-            let lineNode = self.lineNode
+            let backgroundView = self.backgroundView
 
             let offset = CGPoint(
-                x: localRect.minX + sourceReplyPanel.lineNode.frame.minX - lineNode.frame.minX,
-                y: localRect.minY + sourceReplyPanel.lineNode.frame.minY - lineNode.frame.minY
+                x: localRect.minX + sourceReplyPanel.lineNode.frame.minX - backgroundView.frame.minX,
+                y: localRect.minY + sourceReplyPanel.lineNode.frame.minY - backgroundView.frame.minY
             )
 
-            transition.horizontal.animatePositionAdditive(node: lineNode, offset: CGPoint(x: offset.x, y: 0.0))
-            transition.vertical.animatePositionAdditive(node: lineNode, offset: CGPoint(x: 0.0, y: offset.y))
+            transition.horizontal.animatePositionAdditive(layer: backgroundView.layer, offset: CGPoint(x: offset.x, y: 0.0))
+            transition.vertical.animatePositionAdditive(layer: backgroundView.layer, offset: CGPoint(x: 0.0, y: offset.y))
 
             sourceParentNode.addSubnode(sourceReplyPanel.lineNode)
 
-            lineNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            backgroundView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
 
             sourceReplyPanel.lineNode.frame = sourceReplyPanel.lineNode.frame
                 .offsetBy(dx: sourceParentOffset.x, dy: sourceParentOffset.y)

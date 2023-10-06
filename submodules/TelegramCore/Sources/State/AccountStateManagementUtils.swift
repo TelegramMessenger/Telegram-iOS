@@ -1524,23 +1524,32 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     case .draftMessageEmpty:
                         inputState = nil
                     case let .draftMessage(_, replyToMsgHeader, message, entities, date):
-                        var replyToMessageId: MessageId?
+                        var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
-                                let _ = flags
+                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
                                 let _ = replyHeader
                                 let _ = replyToTopId
-                                let _ = quoteText
-                                let _ = quoteEntities
+                                
+                                var quote: EngineMessageReplyQuote?
+                                if let quoteText = quoteText {
+                                    quote = EngineMessageReplyQuote(
+                                        text: quoteText,
+                                        entities: messageTextEntitiesFromApiEntities(quoteEntities ?? [])
+                                    )
+                                }
+                                
                                 if let replyToMsgId = replyToMsgId {
-                                    replyToMessageId = MessageId(peerId: replyToPeerId?.peerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                                    replySubject = EngineMessageReplySubject(
+                                        messageId: MessageId(peerId: replyToPeerId?.peerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId),
+                                        quote: quote
+                                    )
                                 }
                             case .messageReplyStoryHeader:
                                 break
                             }
                         }
-                        inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
+                        inputState = SynchronizeableChatInputState(replySubject: replySubject, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
                 }
                 var threadId: Int64?
                 if let topMsgId = topMsgId {

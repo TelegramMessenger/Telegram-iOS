@@ -531,6 +531,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     //component.controller()?.present(translateController, in: .window(.root))
                     self.controllerInteraction?.presentController(translateController, nil)
                 })
+            case .quote:
+                break
             }
         })
         

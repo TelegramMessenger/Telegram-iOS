@@ -2,14 +2,14 @@ import Foundation
 import Postbox
 
 public struct SynchronizeableChatInputState: Codable, Equatable {
-    public let replyToMessageId: MessageId?
+    public let replySubject: EngineMessageReplySubject?
     public let text: String
     public let entities: [MessageTextEntity]
     public let timestamp: Int32
     public let textSelection: Range<Int>?
     
-    public init(replyToMessageId: MessageId?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?) {
-        self.replyToMessageId = replyToMessageId
+    public init(replySubject: EngineMessageReplySubject?, text: String, entities: [MessageTextEntity], timestamp: Int32, textSelection: Range<Int>?) {
+        self.replySubject = replySubject
         self.text = text
         self.entities = entities
         self.timestamp = timestamp
@@ -22,10 +22,14 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
         self.entities = (try? container.decode([MessageTextEntity].self, forKey: "e")) ?? []
         self.timestamp = (try? container.decode(Int32.self, forKey: "s")) ?? 0
 
-        if let messageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "m.p"), let messageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "m.n"), let messageIdId = try? container.decodeIfPresent(Int32.self, forKey: "m.i") {
-            self.replyToMessageId = MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId)
+        if let replySubject = try? container.decodeIfPresent(EngineMessageReplySubject.self, forKey: "rep") {
+            self.replySubject = replySubject
         } else {
-            self.replyToMessageId = nil
+            if let messageIdPeerId = try? container.decodeIfPresent(Int64.self, forKey: "m.p"), let messageIdNamespace = try? container.decodeIfPresent(Int32.self, forKey: "m.n"), let messageIdId = try? container.decodeIfPresent(Int32.self, forKey: "m.i") {
+                self.replySubject = EngineMessageReplySubject(messageId: MessageId(peerId: PeerId(messageIdPeerId), namespace: messageIdNamespace, id: messageIdId), quote: nil)
+            } else {
+                self.replySubject = nil
+            }
         }
         self.textSelection = nil
     }
@@ -36,19 +40,11 @@ public struct SynchronizeableChatInputState: Codable, Equatable {
         try container.encode(self.text, forKey: "t")
         try container.encode(self.entities, forKey: "e")
         try container.encode(self.timestamp, forKey: "s")
-        if let replyToMessageId = self.replyToMessageId {
-            try container.encode(replyToMessageId.peerId.toInt64(), forKey: "m.p")
-            try container.encode(replyToMessageId.namespace, forKey: "m.n")
-            try container.encode(replyToMessageId.id, forKey: "m.i")
-        } else {
-            try container.encodeNil(forKey: "m.p")
-            try container.encodeNil(forKey: "m.n")
-            try container.encodeNil(forKey: "m.i")
-        }
+        try container.encodeIfPresent(self.replySubject, forKey: "rep")
     }
     
     public static func ==(lhs: SynchronizeableChatInputState, rhs: SynchronizeableChatInputState) -> Bool {
-        if lhs.replyToMessageId != rhs.replyToMessageId {
+        if lhs.replySubject != rhs.replySubject {
             return false
         }
         if lhs.text != rhs.text {
@@ -103,7 +99,7 @@ func _internal_updateChatInputState(transaction: Transaction, peerId: PeerId, th
         let storedState = StoredPeerChatInterfaceState(
             overrideChatTimestamp: inputState?.timestamp,
             historyScrollMessageIndex: previousState?.historyScrollMessageIndex,
-            associatedMessageIds: (inputState?.replyToMessageId).flatMap({ [$0] }) ?? [],
+            associatedMessageIds: (inputState?.replySubject?.messageId).flatMap({ [$0] }) ?? [],
             data: updatedStateData
         )
         if let threadId = threadId {

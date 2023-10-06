@@ -294,11 +294,11 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                     if let currentText = strongSelf.textNode.attributedText {
                         if currentText.string != attributedText.string || updatedTheme != nil {
                             strongSelf.textNode.attributedText = attributedText
-                            refreshGenericTextInputAttributes(strongSelf.textNode, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                            refreshGenericTextInputAttributes(strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
                         }
                     } else {
                         strongSelf.textNode.attributedText = attributedText
-                        refreshGenericTextInputAttributes(strongSelf.textNode, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                        refreshGenericTextInputAttributes(strongSelf.textNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {
@@ -577,7 +577,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
         if let item = self.item {
             if let _ = self.textNode.attributedText {
-                refreshGenericTextInputAttributes(editableTextNode, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+                refreshGenericTextInputAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
                 let updatedText = stateAttributedStringForText(self.textNode.attributedText!)
                 item.textUpdated(updatedText)
             } else {
@@ -606,8 +606,8 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
                 UIMenuController.shared.update()
             }
             
-            refreshChatTextInputTypingAttributes(editableTextNode, theme: item.presentationData.theme, baseFontSize: 17.0)
-            refreshGenericTextInputAttributes(editableTextNode, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+            refreshChatTextInputTypingAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0)
+            refreshGenericTextInputAttributes(editableTextNode.textView, theme: item.presentationData.theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
         }
     }
     
@@ -657,8 +657,8 @@ private func chatTextInputAddFormattingAttribute(item: CreatePollTextInputItem, 
         textNode.attributedText = result
         textNode.selectedRange = nsRange
         
-        refreshChatTextInputTypingAttributes(textNode, theme: theme, baseFontSize: 17.0)
-        refreshGenericTextInputAttributes(textNode, theme: theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
+        refreshChatTextInputTypingAttributes(textNode.textView, theme: theme, baseFontSize: 17.0)
+        refreshGenericTextInputAttributes(textNode.textView, theme: theme, baseFontSize: 17.0, availableEmojis: Set(), emojiViewProvider: nil)
         
         let updatedText = stateAttributedStringForText(textNode.attributedText!)
         item.textUpdated(updatedText)

@@ -4140,6 +4140,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                             case .translate:
                                 self.sendMessageContext.performTranslateTextAction(view: self, text: text.string)
+                            case .quote:
+                                break
                             }
                         },
                         controller: { [weak self] in

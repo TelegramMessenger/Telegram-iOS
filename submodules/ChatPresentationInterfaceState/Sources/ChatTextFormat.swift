@@ -22,7 +22,17 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
             result.removeAttribute(attribute, range: nsRange)
         }
         if addAttribute {
-            result.addAttribute(attribute, value: true as Bool, range: nsRange)
+            if attribute == ChatTextInputAttributes.quote {
+                result.addAttribute(attribute, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+                if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
+                }
+                if nsRange.lowerBound != 0 && (result.string as NSString).character(at: nsRange.lowerBound - 1) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.lowerBound)
+                }
+            } else {
+                result.addAttribute(attribute, value: true as Bool, range: nsRange)
+            }
         }
         return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
     } else {

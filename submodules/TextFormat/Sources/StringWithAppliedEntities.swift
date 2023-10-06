@@ -55,7 +55,7 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
     return string
 }
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:]) -> NSAttributedString {
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false) -> NSAttributedString {
     let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
     
     var nsString: NSString?
@@ -289,9 +289,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         func addFont(ranges: [NSRange], fontAttributes: ChatTextFontAttributes) {
             for range in ranges {
                 var font: UIFont?
-                if fontAttributes.contains(.blockQuote) {
-                    font = baseFont.withSize(round(baseFont.pointSize * 0.8235294117647058))
-                } else if fontAttributes == [.bold, .italic] {
+                
+                if fontAttributes == [.bold, .italic] {
                     font = boldItalicFont
                 } else if fontAttributes == [.bold] {
                     font = boldFont
@@ -299,7 +298,14 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 } else if fontAttributes == [.italic] {
                     font = italicFont
                     addedAttributes.append((range, fontAttributes))
+                } else {
+                    font = baseFont
                 }
+                
+                if adjustQuoteFontSize, let fontValue = font, fontAttributes.contains(.blockQuote) {
+                    font = fontValue.withSize(round(fontValue.pointSize * 0.8235294117647058))
+                }
+                
                 if let font = font {
                     string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
                 }

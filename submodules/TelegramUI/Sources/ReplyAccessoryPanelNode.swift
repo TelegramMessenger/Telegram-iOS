@@ -21,6 +21,7 @@ import AccessoryPanelNode
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
     let messageId: MessageId
+    let quote: EngineMessageReplyQuote?
     
     private var previousMediaReference: AnyMediaReference?
     
@@ -39,8 +40,9 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageId: MessageId, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+    init(context: AccountContext, messageId: MessageId, quote: EngineMessageReplyQuote?, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.messageId = messageId
+        self.quote = quote
         
         self.context = context
         self.theme = theme
@@ -227,9 +229,15 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         updateImageSignal = .single({ _ in return nil })
                     }
                 }
-                                
-                strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
-                strongSelf.textNode.attributedText = messageText
+                
+                if let quote = strongSelf.quote {
+                    //TODO:localize
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: "Reply to quote by \(authorName)", font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    strongSelf.textNode.attributedText = NSAttributedString(string: quote.text, font: textFont, textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
+                } else {
+                    strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    strongSelf.textNode.attributedText = messageText
+                }
                                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {

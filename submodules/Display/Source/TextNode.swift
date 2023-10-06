@@ -1108,9 +1108,9 @@ open class TextNode: ASDisplayNode {
         displayEmbeddedItemsUnderSpoilers: Bool,
         customTruncationToken: NSAttributedString?
     ) -> TextNodeLayout {
-        let blockQuoteLeftInset: CGFloat = 7.0
+        let blockQuoteLeftInset: CGFloat = 9.0
         let blockQuoteRightInset: CGFloat = 0.0
-        let blockQuoteIconInset: CGFloat = 12.0
+        let blockQuoteIconInset: CGFloat = 7.0
         
         struct StringSegment {
             let title: NSAttributedString?
@@ -1991,7 +1991,9 @@ open class TextNode: ASDisplayNode {
             for blockQuote in layout.blockQuotes {
                 let radius: CGFloat = 3.0
                 
-                let blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
+                var blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
+                blockFrame.size.width += 4.0
+                blockFrame.origin.x -= 2.0
                 
                 context.setFillColor(blockQuote.tintColor.withMultipliedAlpha(0.1).cgColor)
                 context.addPath(UIBezierPath(roundedRect: blockFrame, cornerRadius: radius).cgPath)
@@ -2000,8 +2002,13 @@ open class TextNode: ASDisplayNode {
                 context.setFillColor(blockQuote.tintColor.cgColor)
                 
                 let quoteRect = CGRect(origin: CGPoint(x: blockFrame.maxX - 4.0 - quoteIcon.size.width, y: blockFrame.minY + 4.0), size: quoteIcon.size)
+                context.saveGState()
+                context.translateBy(x: quoteRect.midX, y: quoteRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -quoteRect.midX, y: -quoteRect.midY)
                 context.clip(to: quoteRect, mask: quoteIcon.cgImage!)
                 context.fill(quoteRect)
+                context.restoreGState()
                 context.resetClip()
                 
                 let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: radius, height: blockFrame.height))

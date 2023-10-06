@@ -239,7 +239,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode)?
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
@@ -316,6 +316,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             if !ignoreHeaders {
                 var replyMessage: Message?
+                var replyQuote: EngineMessageReplyQuote?
                 var replyStory: StoryId?
                 
                 for attribute in item.message.attributes {
@@ -345,6 +346,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         } else {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                         }
+                        replyQuote = replyAttribute.quote
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyStory = attribute.storyId
                     }
@@ -359,6 +361,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             context: item.context,
                             type: .standalone,
                             message: replyMessage,
+                            quote: replyQuote,
                             story: replyStory,
                             parentMessage: item.message,
                             constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
@@ -979,12 +982,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
-                        let replyInfoNode = replyInfoApply(false)
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        
+                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, false)
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)
                         }
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
                         animation.animator.updateFrame(layer: replyInfoNode.layer, frame: replyInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: messageInfoSize.height + replyInfoSize.height)

@@ -204,12 +204,13 @@ public final class TextSelectionNodeView: UIView {
     }
 }
 
-public enum TextSelectionAction {
+public enum TextSelectionAction: Equatable {
     case copy
     case share
     case lookup
     case speak
     case translate
+    case quote(range: Range<Int>)
 }
 
 public final class TextSelectionNode: ASDisplayNode {
@@ -235,6 +236,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private var displayLinkAnimator: DisplayLinkAnimator?
     
     public var enableLookup: Bool = true
+    public var enableQuote: Bool = false
     
     public var didRecognizeTap: Bool {
         return self.recognizer?.didRecognizeTap ?? false
@@ -572,7 +574,12 @@ public final class TextSelectionNode: ASDisplayNode {
             self?.performAction(string, .copy)
             self?.cancelSelection()
         }))
-        if self.enableLookup {
+        if self.enableQuote {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuQuote, accessibilityLabel: self.strings.Conversation_ContextMenuQuote), action: { [weak self] in
+                self?.performAction(string, .quote(range: range.lowerBound ..< range.upperBound))
+                self?.cancelSelection()
+            }))
+        } else if self.enableLookup {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuLookUp, accessibilityLabel: self.strings.Conversation_ContextMenuLookUp), action: { [weak self] in
                 self?.performAction(string, .lookup)
                 self?.cancelSelection()

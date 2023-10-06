@@ -25,8 +25,8 @@ func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants
     let minRadius: CGFloat = 4.0
     let maxRadius: CGFloat = 16.0
     let radiusTransition = (presentationData.chatBubbleCorners.mainRadius - minRadius) / (maxRadius - minRadius)
-    let minInset: CGFloat = 9.0
-    let maxInset: CGFloat = 12.0
+    let minInset: CGFloat = result.text.bubbleInsets.left
+    let maxInset: CGFloat = 11.0
     let textInset: CGFloat = min(maxInset, ceil(maxInset * radiusTransition + minInset * (1.0 - radiusTransition)))
     result.text.bubbleInsets.left = textInset
     result.text.bubbleInsets.right = textInset

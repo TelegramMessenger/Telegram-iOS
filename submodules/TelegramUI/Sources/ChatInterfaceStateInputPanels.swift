@@ -182,7 +182,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             }
                         }
                     }
-                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed && chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed && chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
                     if !canManage {
                         if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                             return (currentPanel, nil)
@@ -253,7 +253,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             if channel.flags.contains(.isForum) {
                 /*if let _ = chatPresentationInterfaceState.threadData {
                 } else {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                    if chatPresentationInterfaceState.interfaceState.replyMessageSubject == nil {
                         if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                             return (currentPanel, nil)
                         } else {
