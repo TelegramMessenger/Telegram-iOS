@@ -32,6 +32,7 @@ import ChatMessageForwardInfoNode
 import ChatMessageDateAndStatusNode
 import ChatMessageItemCommon
 import ChatMessageBubbleContentNode
+import ChatMessageReplyInfoNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -2874,7 +2875,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
-            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            let mappedPanel = ChatMessageReplyInfoNode.TransitionReplyPanel(
+                titleNode: sourceReplyPanel.titleNode,
+                textNode: sourceReplyPanel.textNode,
+                lineNode: sourceReplyPanel.lineNode,
+                imageNode: sourceReplyPanel.imageNode,
+                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+            )
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: mappedPanel, localRect: localRect, transition: transition)
             if let replyBackgroundNode = self.replyBackgroundNode {
                 transition.animatePositionAdditive(layer: replyBackgroundNode.layer, offset: offset)
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)

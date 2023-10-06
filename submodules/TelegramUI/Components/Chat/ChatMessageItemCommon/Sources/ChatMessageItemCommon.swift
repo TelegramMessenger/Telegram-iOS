@@ -190,3 +190,13 @@ public func canViewMessageReactionList(message: Message) -> Bool {
         return false
     }
 }
+
+public let chatMessagePeerIdColors: [UIColor] = [
+    UIColor(rgb: 0xfc5c51),
+    UIColor(rgb: 0xfa790f),
+    UIColor(rgb: 0x895dd5),
+    UIColor(rgb: 0x0fb297),
+    UIColor(rgb: 0x00c0c2),
+    UIColor(rgb: 0x3ca5ec),
+    UIColor(rgb: 0x3d72ed)
+]

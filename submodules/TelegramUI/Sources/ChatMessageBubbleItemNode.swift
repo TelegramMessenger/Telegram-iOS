@@ -35,6 +35,7 @@ import ChatMessageBubbleContentNode
 import ChatHistoryEntry
 import ChatMessageTextBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageReplyInfoNode
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -356,16 +357,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     return (result, needSeparateContainers, needReactions)
 }
-
-let chatMessagePeerIdColors: [UIColor] = [
-    UIColor(rgb: 0xfc5c51),
-    UIColor(rgb: 0xfa790f),
-    UIColor(rgb: 0x895dd5),
-    UIColor(rgb: 0x0fb297),
-    UIColor(rgb: 0x00c0c2),
-    UIColor(rgb: 0x3ca5ec),
-    UIColor(rgb: 0x3d72ed)
-]
 
 private enum ContentNodeOperation {
     case remove(index: Int)
@@ -926,7 +917,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
-            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, unclippedTransitionNode: self.mainContextSourceNode.contentNode, localRect: localRect, transition: transition)
+            let mappedPanel = ChatMessageReplyInfoNode.TransitionReplyPanel(
+                titleNode: sourceReplyPanel.titleNode,
+                textNode: sourceReplyPanel.textNode,
+                lineNode: sourceReplyPanel.lineNode,
+                imageNode: sourceReplyPanel.imageNode,
+                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+            )
+            let _ = replyInfoNode.animateFromInputPanel(sourceReplyPanel: mappedPanel, unclippedTransitionNode: self.mainContextSourceNode.contentNode, localRect: localRect, transition: transition)
         }
     }
 

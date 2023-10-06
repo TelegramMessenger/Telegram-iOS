@@ -15,13 +15,36 @@ import InvisibleInkDustNode
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import ChatMessageItemCommon
 
 public enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
 }
 
+private let quoteIcon: UIImage = {
+    return UIImage(bundleImageName: "Chat/Message/ReplyQuoteIcon")!.precomposed().withRenderingMode(.alwaysTemplate)
+}()
+
 public class ChatMessageReplyInfoNode: ASDisplayNode {
+    public final class TransitionReplyPanel {
+        public let titleNode: ASDisplayNode
+        public let textNode: ASDisplayNode
+        public let lineNode: ASDisplayNode
+        public let imageNode: ASDisplayNode
+        public let relativeSourceRect: CGRect
+        public let relativeTargetRect: CGRect
+        
+        public init(titleNode: ASDisplayNode, textNode: ASDisplayNode, lineNode: ASDisplayNode, imageNode: ASDisplayNode, relativeSourceRect: CGRect, relativeTargetRect: CGRect) {
+            self.titleNode = titleNode
+            self.textNode = textNode
+            self.lineNode = lineNode
+            self.imageNode = imageNode
+            self.relativeSourceRect = relativeSourceRect
+            self.relativeTargetRect = relativeTargetRect
+        }
+    }
+    
     public class Arguments {
         public let presentationData: ChatPresentationData
         public let strings: PresentationStrings
@@ -74,6 +97,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     }
     
     private let backgroundView: UIImageView
+    private var quoteIconView: UIImageView?
     private let contentNode: ASDisplayNode
     private var titleNode: TextNode?
     private var textNode: TextNodeWithEntities?
@@ -331,23 +355,29 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
             
-            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: contrainedTextSize, alignment: .natural, cutout: nil, insets: textInsets))
-            if isExpiredStory || isStory {
-                contrainedTextSize.width -= 26.0
-            }
+            var additionalTitleWidth: CGFloat = 0.0
             var maxTextNumberOfLines = 1
             var adjustedConstrainedTextSize = contrainedTextSize
             var textCutout: TextNodeCutout?
             var textCutoutWidth: CGFloat = 0.0
             if arguments.quote != nil {
-                maxTextNumberOfLines = 5
-                if imageTextInset != 0.0 {
-                    adjustedConstrainedTextSize.width += imageTextInset
-                    textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset, height: 10.0))
-                    textCutoutWidth = imageTextInset + 4.0
+                additionalTitleWidth += 10.0
+                if case .bubble = arguments.type {
+                    maxTextNumberOfLines = 5
+                    if imageTextInset != 0.0 {
+                        adjustedConstrainedTextSize.width += imageTextInset
+                        textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset + 6.0, height: 10.0))
+                        textCutoutWidth = imageTextInset + 6.0
+                    }
                 }
             }
-            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: maxTextNumberOfLines, truncationType: .end, constrainedSize: adjustedConstrainedTextSize, alignment: .natural, lineSpacing: 0.05, cutout: textCutout, insets: textInsets))
+            
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
+            if isExpiredStory || isStory {
+                contrainedTextSize.width -= 26.0
+            }
+            
+            let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: maxTextNumberOfLines, truncationType: .end, constrainedSize: adjustedConstrainedTextSize, alignment: .natural, lineSpacing: 0.07, cutout: textCutout, insets: textInsets))
             
             let imageSide: CGFloat
             imageSide = titleLayout.size.height + titleLayout.size.height - 14.0
@@ -401,7 +431,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            var size = CGSize(width: max(titleLayout.size.width - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right - textCutoutWidth) + leftInset + 6.0, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
+            var size = CGSize(width: max(titleLayout.size.width + additionalTitleWidth - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right - textCutoutWidth) + leftInset + 6.0, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
             if isExpiredStory || isStory {
                 size.width += 16.0
             }
@@ -446,7 +476,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
-                    imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 4.0), size: CGSize(width: imageSide, height: imageSide))
+                    imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 3.0 + UIScreenPixel), size: CGSize(width: imageSide, height: imageSide))
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)
@@ -519,14 +549,41 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                 
                 if node.backgroundView.image == nil {
-                    node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme)
+                    if case .standalone = arguments.type {
+                        node.backgroundView.image = PresentationResourcesChat.chatReplyServiceBackgroundTemplateImage(arguments.presentationData.theme.theme)
+                    } else {
+                        node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme)
+                    }
                     if node.backgroundView.superview == nil {
                         node.contentNode.view.insertSubview(node.backgroundView, at: 0)
                     }
                 }
                 
+                var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height + 2.0))
+                if case .standalone = arguments.type {
+                    backgroundFrame.size.height -= 1.0
+                }
+                
                 node.backgroundView.tintColor = mainColor
-                node.backgroundView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height + 2.0))
+                node.backgroundView.frame = backgroundFrame
+                
+                if arguments.quote != nil {
+                    let quoteIconView: UIImageView
+                    if let current = node.quoteIconView {
+                        quoteIconView = current
+                    } else {
+                        quoteIconView = UIImageView(image: quoteIcon)
+                        node.quoteIconView = quoteIconView
+                        node.contentNode.view.addSubview(quoteIconView)
+                    }
+                    quoteIconView.tintColor = mainColor
+                    quoteIconView.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 4.0 - quoteIcon.size.width, y: backgroundFrame.minY + 4.0), size: quoteIcon.size)
+                } else {
+                    if let quoteIconView = node.quoteIconView {
+                        node.quoteIconView = nil
+                        quoteIconView.removeFromSuperview()
+                    }
+                }
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                 
@@ -535,7 +592,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
 
-    func animateFromInputPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, unclippedTransitionNode: ASDisplayNode? = nil, localRect: CGRect, transition: CombinedTransition) -> CGPoint {
+    public func animateFromInputPanel(sourceReplyPanel: TransitionReplyPanel, unclippedTransitionNode: ASDisplayNode? = nil, localRect: CGRect, transition: CombinedTransition) -> CGPoint {
         let sourceParentNode = ASDisplayNode()
 
         let sourceParentOffset: CGPoint
