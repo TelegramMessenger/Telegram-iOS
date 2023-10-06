@@ -5550,6 +5550,12 @@ public final class StoryItemSetContainerComponent: Component {
                 }
             }
             
+            for mediaArea in component.slice.item.storyItem.mediaAreas {
+                if case let .reaction(_, reaction, _) = mediaArea, case let .custom(fileId) = reaction {
+                    emojiFileIds.append(fileId)
+                }
+            }
+            
             if !emojiFileIds.isEmpty || hasLinkedStickers, let peerReference = PeerReference(component.slice.peer._asPeer()) {
                 let context = component.context
                 
