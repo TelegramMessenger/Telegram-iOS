@@ -218,13 +218,16 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 
                 let paragraphBreak = "\n"
+            
+                var nsString = string.string as NSString
+                var stringLength = nsString.length
                 
                 let paragraphRange: NSRange
                 if range.lowerBound == 0 {
                     paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
-                } else if string.string[string.string.index(string.string.startIndex, offsetBy: range.lowerBound)] == "\n" {
+                } else if nsString.character(at: range.lowerBound) == 0x0a {
                     paragraphRange = NSRange(location: range.lowerBound + 1, length: range.upperBound - range.lowerBound - 1)
-                } else if string.string[string.string.index(string.string.startIndex, offsetBy: range.lowerBound - 1)] == "\n" {
+                } else if nsString.character(at: range.lowerBound - 1) == 0x0a {
                     paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
                 } else {
                     string.insert(NSAttributedString(string: paragraphBreak), at: range.lowerBound)
@@ -234,8 +237,11 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(id: nextBlockId, title: nil, color: baseQuoteTintColor), range: paragraphRange)
                 nextBlockId += 1
             
-                if string.string.index(string.string.startIndex, offsetBy: paragraphRange.upperBound) != string.string.endIndex {
-                    if string.string[string.string.index(string.string.startIndex, offsetBy: paragraphRange.upperBound)] == "\n" {
+                nsString = string.string as NSString
+                stringLength = nsString.length
+                
+                if paragraphRange.upperBound < stringLength {
+                    if nsString.character(at: paragraphRange.upperBound) == 0x0a {
                         string.replaceCharacters(in: NSMakeRange(paragraphRange.upperBound, 1), with: "")
                         rangeOffset -= 1
                     }
