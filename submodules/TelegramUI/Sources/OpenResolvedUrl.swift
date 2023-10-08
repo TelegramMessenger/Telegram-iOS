@@ -961,11 +961,50 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             |> deliverOnMainQueue).startStandalone(next: { giftCode in
                 if let giftCode {
                     var dismissImpl: (() -> Void)?
-                    let controller = PremiumGiftCodeScreen(context: context, giftCode: giftCode, forceDark: forceDark, action: {
-                        dismissImpl?()
+                    let controller = PremiumGiftCodeScreen(
+                        context: context,
+                        giftCode: giftCode,
+                        forceDark: forceDark,
+                        action: {
+                            dismissImpl?()
                         
-                        let _ = context.engine.payments.applyPremiumGiftCode(slug: slug).startStandalone()
-                    })
+                            let _ = context.engine.payments.applyPremiumGiftCode(slug: slug).startStandalone()
+                        },
+                        openPeer: { peer in
+                            openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                        },
+                        openMessage: { messageId in
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
+                            |> deliverOnMainQueue).startStandalone(next: { peer in
+                                guard let peer else {
+                                    return
+                                }
+                                openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: true, timecode: nil), peekData: nil))
+                            })
+                        },
+                        shareLink: { link in
+                            let messages: [EnqueueMessage] = [.message(text: link, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, replyToStoryId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]
+                            
+                            let peerSelectionController = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled], multipleSelection: false, selectForumThreads: true))
+                            peerSelectionController.peerSelected = { [weak peerSelectionController] peer, threadId in
+                                if let _ = peerSelectionController {
+                                    Queue.mainQueue().after(0.88) {
+                                        HapticFeedback().success()
+                                    }
+
+                                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                    (navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: true, text: peer.id == context.account.peerId ? presentationData.strings.GiftLink_LinkSharedToSavedMessages : presentationData.strings.GiftLink_LinkSharedToChat(peer.compactDisplayTitle).string), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .window(.root))
+                                    
+                                    let _ = (enqueueMessages(account: context.account, peerId: peer.id, messages: messages)
+                                    |> deliverOnMainQueue).startStandalone()
+                                    if let peerSelectionController = peerSelectionController {
+                                        peerSelectionController.dismiss()
+                                    }
+                                }
+                            }
+                            navigationController?.pushViewController(peerSelectionController)
+                        }
+                    )
                     dismissImpl = { [weak controller] in
                         controller?.dismiss()
                     }

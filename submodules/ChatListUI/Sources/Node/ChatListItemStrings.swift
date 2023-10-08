@@ -305,6 +305,8 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         } else {
                             messageText = strings.Notification_Story
                         }
+                    case _ as TelegramMediaGiveaway:
+                        messageText = strings.Message_Giveaway
                     default:
                         break
                 }

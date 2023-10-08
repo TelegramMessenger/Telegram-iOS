@@ -36,36 +36,47 @@ private struct CameraState: Equatable {
         case holding
         case handsFree
     }
+    enum FlashTint {
+        case white
+        case yellow
+        case blue
+    }
+    
     let mode: CameraMode
     let position: Camera.Position
     let flashMode: Camera.FlashMode
     let flashModeDidChange: Bool
+    let flashTint: FlashTint
     let recording: Recording
     let duration: Double
     let isDualCameraEnabled: Bool
     
     func updatedMode(_ mode: CameraMode) -> CameraState {
-        return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedPosition(_ position: Camera.Position) -> CameraState {
-        return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedFlashMode(_ flashMode: Camera.FlashMode) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+    }
+    
+    func updatedFlashTint(_ flashTint: FlashTint) -> CameraState {
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedRecording(_ recording: Recording) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedDuration(_ duration: Double) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedIsDualCameraEnabled(_ isDualCameraEnabled: Bool) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, recording: self.recording, duration: self.duration, isDualCameraEnabled: isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: isDualCameraEnabled)
     }
 }
 
@@ -162,6 +173,7 @@ private final class CameraScreenComponent: CombinedComponent {
         enum ImageKey: Hashable {
             case cancel
             case flip
+            case flashImage
         }
         private var cachedImages: [ImageKey: UIImage] = [:]
         func image(_ key: ImageKey) -> UIImage {
@@ -171,9 +183,21 @@ private final class CameraScreenComponent: CombinedComponent {
                 var image: UIImage
                 switch key {
                 case .cancel:
-                    image = UIImage(bundleImageName: "Camera/CloseIcon")!
+                    image = UIImage(bundleImageName: "Camera/CloseIcon")!.withRenderingMode(.alwaysTemplate)
                 case .flip:
-                    image = UIImage(bundleImageName: "Camera/FlipIcon")!
+                    image = UIImage(bundleImageName: "Camera/FlipIcon")!.withRenderingMode(.alwaysTemplate)
+                case .flashImage:
+                    image = generateImage(CGSize(width: 393.0, height: 852.0), rotatedContext: { size, context in
+                        context.clear(CGRect(origin: .zero, size: size))
+                        
+                        var locations: [CGFloat] = [0.0, 0.2, 0.6, 1.0]
+                        let colors: [CGColor] = [UIColor(rgb: 0xffffff, alpha: 0.25).cgColor, UIColor(rgb: 0xffffff, alpha: 0.25).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor, UIColor(rgb: 0xffffff, alpha: 1.0).cgColor]
+                        let colorSpace = CGColorSpaceCreateDeviceRGB()
+                        let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
+                        
+                        let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0 - 10.0)
+                        context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: size.width, options: .drawsAfterEndLocation)
+                    })!.withRenderingMode(.alwaysTemplate)
                 }
                 cachedImages[key] = image
                 return image
@@ -589,7 +613,7 @@ private final class CameraScreenComponent: CombinedComponent {
     
     static var body: Body {
         let placeholder = Child(PlaceholderComponent.self)
-        let frontFlash = Child(Rectangle.self)
+        let frontFlash = Child(Image.self)
         let cancelButton = Child(CameraButton.self)
         let captureControls = Child(CaptureControlsComponent.self)
         let zoomControl = Child(ZoomComponent.self)
@@ -689,19 +713,29 @@ private final class CameraScreenComponent: CombinedComponent {
 //                )
             }
             
-            if case .none = component.cameraState.recording {
-                
-            } else if case .front = component.cameraState.position {
+            var controlsTintColor: UIColor = .white
+            if case .front = component.cameraState.position, case .on = component.cameraState.flashMode {
+                let flashTintColor: UIColor
+                switch component.cameraState.flashTint {
+                case .white:
+                    flashTintColor = .white
+                case .yellow:
+                    flashTintColor = UIColor(rgb: 0xffed8c)
+                case .blue:
+                    flashTintColor = UIColor(rgb: 0x8cdfff)
+                }
                 let frontFlash = frontFlash.update(
-                    component: Rectangle(color: UIColor(white: 1.0, alpha: 0.6)),
-                    availableSize: CGSize(width: availableSize.width, height: previewHeight),
+                    component: Image(image: state.image(.flashImage), tintColor: flashTintColor),
+                    availableSize: availableSize,
                     transition: .easeInOut(duration: 0.2)
                 )
                 context.add(frontFlash
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: environment.safeInsets.top + previewHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )
+                
+                controlsTintColor = .black
             }
             
             let shutterState: ShutterButtonState
@@ -737,6 +771,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     isTablet: isTablet,
                     hasAppeared: component.hasAppeared && hasAllRequiredAccess,
                     hasAccess: hasAllRequiredAccess,
+                    tintColor: controlsTintColor,
                     shutterState: shutterState,
                     lastGalleryAsset: state.lastGalleryAsset,
                     tag: captureControlsTag,
@@ -823,6 +858,7 @@ private final class CameraScreenComponent: CombinedComponent {
                             component: AnyComponent(
                                 Image(
                                     image: state.image(.cancel),
+                                    tintColor: controlsTintColor,
                                     size: CGSize(width: 40.0, height: 40.0)
                                 )
                             )
@@ -867,7 +903,7 @@ private final class CameraScreenComponent: CombinedComponent {
                                     range: nil,
                                     waitForCompletion: false
                                 ),
-                                colors: [:],
+                                colors: ["__allcolors__": controlsTintColor],
                                 size: CGSize(width: 40.0, height: 40.0)
                             )
                         )
@@ -878,7 +914,7 @@ private final class CameraScreenComponent: CombinedComponent {
                         component: AnyComponent(
                             BundleIconComponent(
                                 name: "Camera/FlashOffIcon",
-                                tintColor: nil
+                                tintColor: controlsTintColor
                             )
                         )
                     )
@@ -909,7 +945,10 @@ private final class CameraScreenComponent: CombinedComponent {
                                 content: AnyComponentWithIdentity(
                                     id: "dual",
                                     component: AnyComponent(
-                                        DualIconComponent(isSelected: component.cameraState.isDualCameraEnabled)
+                                        DualIconComponent(
+                                            isSelected: component.cameraState.isDualCameraEnabled,
+                                            tintColor: controlsTintColor
+                                        )
                                     )
                                 ),
                                 action: { [weak state] in
@@ -938,7 +977,8 @@ private final class CameraScreenComponent: CombinedComponent {
                             component: AnyComponent(
                                 FlipButtonContentComponent(
                                     action: animateFlipAction,
-                                    maskFrame: .zero
+                                    maskFrame: .zero,
+                                    tintColor: controlsTintColor
                                 )
                             )
                         ),
@@ -971,7 +1011,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 let durationString =  String(format: "%02d:%02d", (duration / 60) % 60, duration % 60)
                 let timeLabel = timeLabel.update(
                     component: MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: durationString, font: Font.with(size: 21.0, design: .camera), textColor: .white)),
+                        text: .plain(NSAttributedString(string: durationString, font: Font.with(size: 21.0, design: .camera), textColor: controlsTintColor)),
                         horizontalAlignment: .center,
                         textShadowColor: UIColor(rgb: 0x000000, alpha: 0.2)
                     ),
@@ -1021,7 +1061,10 @@ private final class CameraScreenComponent: CombinedComponent {
                     }
                     if let hintText {
                         let hintLabel = hintLabel.update(
-                            component: HintLabelComponent(text: hintText),
+                            component: HintLabelComponent(
+                                text: hintText,
+                                tintColor: controlsTintColor
+                            ),
                             availableSize: availableSize,
                             transition: .immediate
                         )
@@ -1045,6 +1088,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     component: ModeComponent(
                         isTablet: isTablet,
                         strings: environment.strings,
+                        tintColor: controlsTintColor,
                         availableModes: [.photo, .video],
                         currentMode: component.cameraState.mode,
                         updatedMode: { [weak state] mode in
@@ -1358,6 +1402,7 @@ public class CameraScreen: ViewController {
                 position: cameraFrontPosition ? .front : .back,
                 flashMode: .off,
                 flashModeDidChange: false,
+                flashTint: .white,
                 recording: .none,
                 duration: 0.0,
                 isDualCameraEnabled: isDualCameraEnabled
@@ -2820,15 +2865,21 @@ private final class DualIconComponent: Component {
     typealias EnvironmentType = Empty
     
     let isSelected: Bool
+    let tintColor: UIColor
     
     init(
-        isSelected: Bool
+        isSelected: Bool,
+        tintColor: UIColor
     ) {
         self.isSelected = isSelected
+        self.tintColor = tintColor
     }
     
     static func ==(lhs: DualIconComponent, rhs: DualIconComponent) -> Bool {
         if lhs.isSelected != rhs.isSelected {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
             return false
         }
         return true
@@ -2849,7 +2900,7 @@ private final class DualIconComponent: Component {
                 if let image = UIImage(bundleImageName: "Camera/DualIcon"), let cgImage = image.cgImage {
                     context.draw(cgImage, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0) - 1.0), size: image.size))
                 }
-            })
+            })?.withRenderingMode(.alwaysTemplate)
             
             let selectedImage = generateImage(CGSize(width: 36.0, height: 36.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: .zero, size: size))
@@ -2861,7 +2912,7 @@ private final class DualIconComponent: Component {
                     context.clip(to: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0) - 1.0), size: image.size), mask: cgImage)
                     context.fill(CGRect(origin: .zero, size: size))
                 }
-            })
+            })?.withRenderingMode(.alwaysTemplate)
             
             self.iconView.image = image
             self.iconView.highlightedImage = selectedImage
@@ -2885,6 +2936,8 @@ private final class DualIconComponent: Component {
             let size = CGSize(width: 36.0, height: 36.0)
             self.iconView.frame = CGRect(origin: .zero, size: size)
             self.iconView.isHighlighted = component.isSelected
+            
+            self.iconView.tintColor = component.tintColor
             
             return size
         }

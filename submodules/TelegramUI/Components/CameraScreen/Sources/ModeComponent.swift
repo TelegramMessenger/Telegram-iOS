@@ -21,6 +21,7 @@ private let buttonSize = CGSize(width: 55.0, height: 44.0)
 final class ModeComponent: Component {
     let isTablet: Bool
     let strings: PresentationStrings
+    let tintColor: UIColor
     let availableModes: [CameraMode]
     let currentMode: CameraMode
     let updatedMode: (CameraMode) -> Void
@@ -29,6 +30,7 @@ final class ModeComponent: Component {
     init(
         isTablet: Bool,
         strings: PresentationStrings,
+        tintColor: UIColor,
         availableModes: [CameraMode],
         currentMode: CameraMode,
         updatedMode: @escaping (CameraMode) -> Void,
@@ -36,6 +38,7 @@ final class ModeComponent: Component {
     ) {
         self.isTablet = isTablet
         self.strings = strings
+        self.tintColor = tintColor
         self.availableModes = availableModes
         self.currentMode = currentMode
         self.updatedMode = updatedMode
@@ -47,6 +50,9 @@ final class ModeComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
             return false
         }
         if lhs.availableModes != rhs.availableModes {
@@ -82,8 +88,17 @@ final class ModeComponent: Component {
                 self.pressed()
             }
             
-            func update(value: String, selected: Bool) {
-                self.setAttributedTitle(NSAttributedString(string: value.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: selected ? UIColor(rgb: 0xf8d74a) : .white, paragraphAlignment: .center), for: .normal)
+            func update(value: String, selected: Bool, tintColor: UIColor) {
+                let accentColor: UIColor
+                let normalColor: UIColor
+                if tintColor.rgb == 0xffffff {
+                    accentColor = UIColor(rgb: 0xf8d74a)
+                    normalColor = .white
+                } else {
+                    accentColor = tintColor
+                    normalColor = tintColor.withAlphaComponent(0.5)
+                }
+                self.setAttributedTitle(NSAttributedString(string: value.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: selected ? accentColor : normalColor, paragraphAlignment: .center), for: .normal)
             }
         }
         
@@ -152,7 +167,7 @@ final class ModeComponent: Component {
                     updatedMode(mode)
                 }
                
-                itemView.update(value: mode.title(strings: component.strings), selected: mode == component.currentMode)
+                itemView.update(value: mode.title(strings: component.strings), selected: mode == component.currentMode, tintColor: component.tintColor)
                 itemView.bounds = CGRect(origin: .zero, size: itemFrame.size)
                 
                 if isTablet {
@@ -199,15 +214,21 @@ final class ModeComponent: Component {
 
 final class HintLabelComponent: Component {
     let text: String
+    let tintColor: UIColor
     
     init(
-        text: String
+        text: String,
+        tintColor: UIColor
     ) {
         self.text = text
+        self.tintColor = tintColor
     }
     
     static func ==(lhs: HintLabelComponent, rhs: HintLabelComponent) -> Bool {
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.tintColor != rhs.tintColor {
             return false
         }
         return true
@@ -247,7 +268,7 @@ final class HintLabelComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(
                     MultilineTextComponent(
-                        text: .plain(NSAttributedString(string: component.text.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: .white)),
+                        text: .plain(NSAttributedString(string: component.text.uppercased(), font: Font.with(size: 14.0, design: .camera, weight: .semibold), textColor: component.tintColor)),
                         horizontalAlignment: .center
                     )
                 ),

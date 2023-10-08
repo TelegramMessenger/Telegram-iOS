@@ -10095,3 +10095,8 @@ Sorry for the inconvenience.";
 
 "PremiumGift.LabelRecipients_1" = "1 recipient";
 "PremiumGift.LabelRecipients_any" = "%d recipients";
+
+"Message.Giveaway" = "Giveaway";
+
+"GiftLink.LinkSharedToChat" = "Gift link forwarded to **%@**";
+"GiftLink.LinkSharedToSavedMessages" = "Gift link forwarded to **Saved Messages**";

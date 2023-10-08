@@ -67,7 +67,8 @@ fragment half4 cameraBlobFragment(RasterizerData in[[stage_in]],
     
     float t = AARadius / resolution.y;
     
-    float cAlpha = 1.0 - primaryParameters.y;
+    float cAlpha = min(1.0, 1.0 - primaryParameters.y);
+    float minColor = min(1.0, 1.0 + primaryParameters.y);
     float bound = primaryParameters.x + 0.05;
     if (abs(offset) > bound) {
         cAlpha = mix(0.0, 1.0, min(1.0, (abs(offset) - bound) * 2.4));
@@ -75,5 +76,5 @@ fragment half4 cameraBlobFragment(RasterizerData in[[stage_in]],
 
     float c = smoothstep(t, -t, map(uv, primaryParameters, primaryOffset, secondaryParameters, secondaryOffset));
     
-    return half4(c, max(cAlpha, 0.231), max(cAlpha, 0.188), c);
+    return half4(min(minColor, c), min(minColor, max(cAlpha, 0.231)), min(minColor, max(cAlpha, 0.188)), c);
 }

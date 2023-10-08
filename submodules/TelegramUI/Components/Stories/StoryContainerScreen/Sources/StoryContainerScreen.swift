@@ -395,6 +395,9 @@ private final class StoryContainerScreenComponent: Component {
         
         private var didDisplayReactionTooltip: Bool = false
         
+        private let interactionGuide = ComponentView<Empty>()
+        private var isDisplayingInteractionGuide: Bool = true
+        
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.backgroundLayer.backgroundColor = UIColor.black.cgColor
@@ -890,6 +893,10 @@ private final class StoryContainerScreenComponent: Component {
                         self.didAnimateIn = true
                         self.state?.updated(transition: .immediate)
                     }
+                    
+                    if let view = self.interactionGuide.view as? StoryInteractionGuideComponent.View {
+                        view.animateIn(transitionIn: transitionIn)
+                    }
                 } else {
                     self.didAnimateIn = true
                     self.state?.updated(transition: .immediate)
@@ -929,7 +936,7 @@ private final class StoryContainerScreenComponent: Component {
                 })
             })
         }
-        
+                
         func animateOut(completion: @escaping () -> Void) {
             self.isAnimatingOut = true
             
@@ -1288,6 +1295,9 @@ private final class StoryContainerScreenComponent: Component {
                 isProgressPaused = true
             }
             if self.pendingNavigationToItemId != nil {
+                isProgressPaused = true
+            }
+            if self.isDisplayingInteractionGuide {
                 isProgressPaused = true
             }
             
@@ -1696,6 +1706,35 @@ private final class StoryContainerScreenComponent: Component {
                     inVoiceOver: false
                 )
                 controller.presentationContext.containerLayoutUpdated(subLayout, transition: transition.containedViewLayoutTransition)
+            }
+            
+            if self.isDisplayingInteractionGuide {
+                let _ = self.interactionGuide.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        StoryInteractionGuideComponent(
+                            context: component.context,
+                            theme: environment.theme,
+                            strings: environment.strings,
+                            action: { [weak self] in
+                                self?.isDisplayingInteractionGuide = false
+                            }
+                        )
+                    ),
+                    environment: {},
+                    containerSize: availableSize
+                )
+                if let view = self.interactionGuide.view {
+                    if view.superview == nil {
+                        self.addSubview(view)
+                    }
+                    view.layer.zPosition = 1000.0
+                    view.frame = CGRect(origin: .zero, size: availableSize)
+                }
+            } else if let view = self.interactionGuide.view as? StoryInteractionGuideComponent.View, view.superview != nil {
+                view.animateOut(completion: {
+                    view.removeFromSuperview()
+                })
             }
             
             return availableSize

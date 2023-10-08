@@ -19,7 +19,6 @@ import InAppPurchaseManager
 import ConfettiEffect
 import TextFormat
 import UniversalMediaPlayer
-import AttachmentUI
 
 public enum PremiumGiftSource: Equatable {
     case profile
@@ -674,6 +673,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             let _ = (self.context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     if available {
                         strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(product.storeProduct, purpose: purpose)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
@@ -693,7 +693,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                                 strongSelf.updateInProgress(false)
                                 strongSelf.updated(transition: .immediate)
 
-                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                                 var errorText: String?
                                 switch error {
                                     case .generic:
@@ -992,7 +991,7 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
     }
 }
 
-public final class PremiumGiftScreen: ViewControllerComponentContainer, AttachmentContainable {
+open class PremiumGiftScreen: ViewControllerComponentContainer {
     fileprivate let context: AccountContext
     
     private var didSetReady = false
@@ -1005,7 +1004,9 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer, Attachme
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    fileprivate let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
+    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
+    
+    public let mainButtonStatePromise = Promise<AttachmentMainButtonState?>(nil)
     private let mainButtonActionSlot = ActionSlot<Void>()
     
     public init(context: AccountContext, peerId: PeerId, options: [CachedPremiumGiftOption], source: PremiumGiftSource, pushController: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
@@ -1092,55 +1093,7 @@ public final class PremiumGiftScreen: ViewControllerComponentContainer, Attachme
         }
     }
     
-    @objc fileprivate func mainButtonPressed() {
+    @objc public func mainButtonPressed() {
         self.mainButtonActionSlot.invoke(Void())
-    }
-    
-    public var requestAttachmentMenuExpansion: () -> Void = {}
-    public var updateNavigationStack: (@escaping ([AttachmentContainable]) -> ([AttachmentContainable], AttachmentMediaPickerContext?)) -> Void = { _ in }
-    public var updateTabBarAlpha: (CGFloat, ContainedViewLayoutTransition) -> Void = { _, _ in }
-    public var cancelPanGesture: () -> Void = { }
-    public var isContainerPanning: () -> Bool = { return false }
-    public var isContainerExpanded: () -> Bool = { return false }
-    
-    public var mediaPickerContext: AttachmentMediaPickerContext? {
-        return PremiumGiftContext(controller: self)
-    }
-}
-
-private final class PremiumGiftContext: AttachmentMediaPickerContext {
-    private weak var controller: PremiumGiftScreen?
-    
-    var selectionCount: Signal<Int, NoError> {
-        return .single(0)
-    }
-    
-    var caption: Signal<NSAttributedString?, NoError> {
-        return .single(nil)
-    }
-    
-    public var loadingProgress: Signal<CGFloat?, NoError> {
-        return .single(nil)
-    }
-    
-    public var mainButtonState: Signal<AttachmentMainButtonState?, NoError> {
-        return self.controller?.mainButtonStatePromise.get() ?? .single(nil)
-    }
-    
-    init(controller: PremiumGiftScreen) {
-        self.controller = controller
-    }
-            
-    func setCaption(_ caption: NSAttributedString) {
-    }
-    
-    func send(mode: AttachmentMediaPickerSendMode, attachmentMode: AttachmentMediaPickerAttachmentMode) {
-    }
-    
-    func schedule() {
-    }
-    
-    func mainButtonAction() {
-        self.controller?.mainButtonPressed()
     }
 }

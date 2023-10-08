@@ -1918,7 +1918,7 @@ final class StoryItemSetContainerSendMessage {
         present(controller, mediaPickerContext)
     }
     
-    private func presentOldMediaPicker(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, fileMode: Bool, editingMedia: Bool, present: @escaping (AttachmentContainable, AttachmentMediaPickerContext) -> Void, completion: @escaping ([Any], Bool, Int32) -> Void) {
+    private func presentOldMediaPicker(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, fileMode: Bool, editingMedia: Bool, push: @escaping (ViewController) -> Void, completion: @escaping ([Any], Bool, Int32) -> Void) {
         guard let component = view.component else {
             return
         }
@@ -2047,14 +2047,14 @@ final class StoryItemSetContainerSendMessage {
                         }
                     }
                     view.endEditing(true)
-                    present(legacyController, LegacyAssetPickerContext(controller: controller))
+                    push(legacyController)
                 }
             })
         })
     }
     
     private func presentFileGallery(view: StoryItemSetContainerComponent.View, peer: EnginePeer, replyMessageId: EngineMessage.Id?, replyToStoryId: StoryId?, editingMessage: Bool = false) {
-        self.presentOldMediaPicker(view: view, peer: peer, replyMessageId: replyMessageId, replyToStoryId: replyToStoryId, fileMode: true, editingMedia: editingMessage, present: { [weak view] c, _ in
+        self.presentOldMediaPicker(view: view, peer: peer, replyMessageId: replyMessageId, replyToStoryId: replyToStoryId, fileMode: true, editingMedia: editingMessage, push: { [weak view] c in
             view?.component?.controller()?.push(c)
         }, completion: { [weak self, weak view] signals, silentPosting, scheduleTime in
             guard let self, let view else {

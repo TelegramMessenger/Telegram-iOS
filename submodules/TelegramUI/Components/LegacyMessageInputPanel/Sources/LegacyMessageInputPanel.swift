@@ -106,6 +106,12 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
         self.currentIsVideo = isVideo
     }
     
+    public func activateInput() {
+        if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
+            view.activateInput()
+        }
+    }
+    
     public func dismissInput() -> Bool {
         if let view = self.inputPanel.view as? MessageInputPanelComponent.View {
             if view.canDeactivateInput() {

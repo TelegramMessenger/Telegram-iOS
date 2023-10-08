@@ -64,7 +64,6 @@ private final class AnimatableProperty<T: Interpolatable> {
     }
     
     func tick(timestamp: Double) -> Bool {
-        
         guard let animation = self.animation, case let .curve(duration, curve) = animation.animation else {
             return false
         }
@@ -163,10 +162,14 @@ final class ShutterBlobView: UIView {
             }
         }
         
-        var primaryRedness: CGFloat {
+        func primaryRedness(tintColor: UIColor) -> CGFloat {
             switch self {
             case .generic:
-                return 0.0
+                if tintColor.rgb == 0x000000 {
+                    return -1.0
+                } else {
+                    return 0.0
+                }
             default:
                 return 1.0
             }
@@ -290,14 +293,14 @@ final class ShutterBlobView: UIView {
         self.displayLink?.invalidate()
     }
     
-    func updateState(_ state: BlobState, transition: Transition = .immediate) {
+    func updateState(_ state: BlobState, tintColor: UIColor, transition: Transition = .immediate) {
         guard self.state != state else {
             return
         }
         self.state = state
-
+        
         self.primarySize.update(value: state.primarySize, transition: transition)
-        self.primaryRedness.update(value: state.primaryRedness, transition: transition)
+        self.primaryRedness.update(value: state.primaryRedness(tintColor: tintColor), transition: transition)
         self.primaryCornerRadius.update(value: state.primaryCornerRadius, transition: transition)
         self.secondarySize.update(value: state.secondarySize, transition: transition)
         self.secondaryRedness.update(value: state.secondaryRedness, transition: transition)
@@ -453,7 +456,6 @@ final class ShutterBlobView: UIView {
         renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6, instanceCount: 1)
         renderEncoder.endEncoding()
 
-        
         var storedDrawable: MetalImageLayer.Drawable? = drawable
         commandBuffer.addCompletedHandler { _ in
             DispatchQueue.main.async {

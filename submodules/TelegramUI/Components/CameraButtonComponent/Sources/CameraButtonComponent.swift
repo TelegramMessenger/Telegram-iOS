@@ -8,19 +8,22 @@ public final class CameraButton: Component {
     let tag: AnyObject?
     let isEnabled: Bool
     let action: () -> Void
+    let longTapAction: (() -> Void)?
 
     public init(
         content: AnyComponentWithIdentity<Empty>,
         minSize: CGSize? = nil,
         tag: AnyObject? = nil,
         isEnabled: Bool = true,
-        action: @escaping () -> Void
+        action: @escaping () -> Void,
+        longTapAction: (() -> Void)? = nil
     ) {
         self.content = content
         self.minSize = minSize
         self.tag = tag
         self.isEnabled = isEnabled
         self.action = action
+        self.longTapAction = longTapAction
     }
     
     public func tagged(_ tag: AnyObject) -> CameraButton {
@@ -29,7 +32,8 @@ public final class CameraButton: Component {
             minSize: self.minSize,
             tag: tag,
             isEnabled: self.isEnabled,
-            action: self.action
+            action: self.action,
+            longTapAction: self.longTapAction
         )
     }
     
@@ -73,6 +77,8 @@ public final class CameraButton: Component {
             }
             transition.setScale(view: self, scale: scale)
         }
+        
+        private var longTapGestureRecognizer: UILongPressGestureRecognizer?
     
         public override init(frame: CGRect) {
             self.contentView = ComponentHostView<Empty>()
@@ -86,6 +92,10 @@ public final class CameraButton: Component {
             self.addSubview(self.contentView)
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            let longTapGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress))
+            self.longTapGestureRecognizer = longTapGestureRecognizer
+            self.addGestureRecognizer(longTapGestureRecognizer)
         }
         
         required init?(coder: NSCoder) {
@@ -100,6 +110,10 @@ public final class CameraButton: Component {
                 }
             }
             return false
+        }
+        
+        @objc private func handleLongPress() {
+            self.component?.longTapAction?()
         }
         
         @objc private func pressed() {
@@ -159,6 +173,7 @@ public final class CameraButton: Component {
             
             self.updateScale(transition: transition)
             self.isEnabled = component.isEnabled
+            self.longTapGestureRecognizer?.isEnabled = component.longTapAction != nil
             
             self.contentView.frame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize)
             

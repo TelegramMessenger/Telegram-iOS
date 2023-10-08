@@ -18,7 +18,15 @@ private let productIdentifiers = [
 
     "org.telegram.telegramPremium.threeMonths.code_x1",
     "org.telegram.telegramPremium.sixMonths.code_x1",
-    "org.telegram.telegramPremium.twelveMonths.code_x1"
+    "org.telegram.telegramPremium.twelveMonths.code_x1",
+    
+    "org.telegram.telegramPremium.threeMonths.code_x5",
+    "org.telegram.telegramPremium.sixMonths.code_x5",
+    "org.telegram.telegramPremium.twelveMonths.code_x5",
+    
+    "org.telegram.telegramPremium.threeMonths.code_x10",
+    "org.telegram.telegramPremium.sixMonths.code_x10",
+    "org.telegram.telegramPremium.twelveMonths.code_x10"
 ]
 
 private extension NSDecimalNumber {
@@ -253,7 +261,7 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product, purpose: AppStoreTransactionPurpose) -> Signal<PurchaseState, PurchaseError> {
+    public func buyProduct(_ product: Product, quantity: Int32 = 1, purpose: AppStoreTransactionPurpose) -> Signal<PurchaseState, PurchaseError> {
         if !self.canMakePayments {
             return .fail(.cantMakePayments)
         }
@@ -266,7 +274,7 @@ public final class InAppPurchaseManager: NSObject {
         
         let payment = SKMutablePayment(product: product.skProduct)
         payment.applicationUsername = accountPeerId
-        payment.quantity = purpose.quantity
+        payment.quantity = Int(quantity)
         SKPaymentQueue.default().add(payment)
         
         let productIdentifier = payment.productIdentifier
@@ -564,6 +572,8 @@ private final class PendingInAppPurchaseState: Codable {
             case peer
             case peers
             case boostPeer
+            case additionalPeerIds
+            case onlyNewSubscribers
             case randomId
             case untilDate
         }
@@ -582,7 +592,7 @@ private final class PendingInAppPurchaseState: Codable {
         case restore
         case gift(peerId: EnginePeer.Id)
         case giftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?)
-        case giveaway(boostPeer: EnginePeer.Id, randomId: Int64, untilDate: Int32)
+        case giveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32)
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -607,6 +617,8 @@ private final class PendingInAppPurchaseState: Codable {
             case .giveaway:
                 self = .giveaway(
                     boostPeer: EnginePeer.Id(try container.decode(Int64.self, forKey: .boostPeer)),
+                    additionalPeerIds: try container.decode([Int64].self, forKey: .randomId).map { EnginePeer.Id($0) },
+                    onlyNewSubscribers: try container.decode(Bool.self, forKey: .onlyNewSubscribers),
                     randomId: try container.decode(Int64.self, forKey: .randomId),
                     untilDate: try container.decode(Int32.self, forKey: .untilDate)
                 )
@@ -632,9 +644,11 @@ private final class PendingInAppPurchaseState: Codable {
                 try container.encode(PurposeType.giftCode.rawValue, forKey: .type)
                 try container.encode(peerIds.map { $0.toInt64() }, forKey: .peers)
                 try container.encodeIfPresent(boostPeer?.toInt64(), forKey: .boostPeer)
-            case let .giveaway(boostPeer, randomId, untilDate):
+            case let .giveaway(boostPeer, additionalPeerIds, onlyNewSubscribers, randomId, untilDate):
                 try container.encode(PurposeType.giveaway.rawValue, forKey: .type)
                 try container.encode(boostPeer.toInt64(), forKey: .boostPeer)
+                try container.encode(additionalPeerIds.map { $0.toInt64() }, forKey: .additionalPeerIds)
+                try container.encode(onlyNewSubscribers, forKey: .onlyNewSubscribers)
                 try container.encode(randomId, forKey: .randomId)
                 try container.encode(untilDate, forKey: .untilDate)
             }
@@ -652,8 +666,8 @@ private final class PendingInAppPurchaseState: Codable {
                 self = .gift(peerId: peerId)
             case let .giftCode(peerIds, boostPeer, _, _):
                 self = .giftCode(peerIds: peerIds, boostPeer: boostPeer)
-            case let .giveaway(boostPeer, randomId, untilDate, _, _):
-                self = .giveaway(boostPeer: boostPeer, randomId: randomId, untilDate: untilDate)
+            case let .giveaway(boostPeer, additionalPeerIds, onlyNewSubscribers, randomId, untilDate, _, _):
+                self = .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, onlyNewSubscribers: onlyNewSubscribers, randomId: randomId, untilDate: untilDate)
             }
         }
         
@@ -670,19 +684,8 @@ private final class PendingInAppPurchaseState: Codable {
                 return .gift(peerId: peerId, currency: currency, amount: amount)
             case let .giftCode(peerIds, boostPeer):
                 return .giftCode(peerIds: peerIds, boostPeer: boostPeer, currency: currency, amount: amount)
-            case let .giveaway(boostPeer, randomId, untilDate):
-                return .giveaway(boostPeer: boostPeer, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
-            }
-        }
-        
-        var quantity: Int {
-            switch self {
-            case .subscription, .upgrade, .restore, .gift:
-                return 1
-            case let .giftCode(peerIds, _):
-                return peerIds.count
-            case .giveaway:
-                return 1
+            case let .giveaway(boostPeer, additionalPeerIds, onlyNewSubscribers, randomId, untilDate):
+                return .giveaway(boostPeer: boostPeer, additionalPeerIds: additionalPeerIds, onlyNewSubscribers: onlyNewSubscribers, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
             }
         }
     }

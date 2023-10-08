@@ -387,8 +387,12 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
             return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil)
-        case let .messageMediaGiveaway(channels, quantity, months, untilDate):
-            return (TelegramMediaGiveaway(channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil)
+        case let .messageMediaGiveaway(apiFlags, channels, quantity, months, untilDate):
+            var flags: TelegramMediaGiveaway.Flags = []
+            if (apiFlags & (1 << 0)) != 0 {
+                flags.insert(.onlyNewSubscribers)
+            }
+            return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil)
         }
     }
     
@@ -582,7 +586,7 @@ extension StoreMessage {
                                 threadId = makeMessageThreadId(threadIdValue)
                             }
                         }
-                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
+                        attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: 0), threadMessageId: threadMessageId))
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
                     }

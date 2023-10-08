@@ -11,7 +11,8 @@ import AccountContext
 import TelegramStringFormatting
 import UIKitRuntimeUtils
 import MediaResources
-import AttachmentTextInputPanelNode
+import LegacyMessageInputPanel
+import LegacyMessageInputPanelInputView
 
 public enum AttachmentButtonType: Equatable {
     case gallery
@@ -184,7 +185,7 @@ public class AttachmentController: ViewController {
     private let initialButton: AttachmentButtonType
     private let fromMenu: Bool
     private let hasTextInput: Bool
-    private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
     public var animateAppearance: Bool = false
     
     public var willDismiss: () -> Void = {}
@@ -209,7 +210,7 @@ public class AttachmentController: ViewController {
         private let dim: ASDisplayNode
         private let shadowNode: ASImageNode
         fileprivate let container: AttachmentContainer
-        private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+        private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
         let panel: AttachmentPanel
         
         private var currentType: AttachmentButtonType?
@@ -279,7 +280,7 @@ public class AttachmentController: ViewController {
                  
         private let wrapperNode: ASDisplayNode
         
-        init(controller: AttachmentController, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+        init(controller: AttachmentController, makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?) {
             self.controller = controller
             self.makeEntityInputView = makeEntityInputView
             
@@ -910,7 +911,7 @@ public class AttachmentController: ViewController {
     
     public var getSourceRect: (() -> CGRect?)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView? = { return nil}) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatLocation: ChatLocation?, isScheduledMessages: Bool = false, buttons: [AttachmentButtonType], initialButton: AttachmentButtonType = .gallery, fromMenu: Bool = false, hasTextInput: Bool = true, makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView? = { return nil}) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.chatLocation = chatLocation

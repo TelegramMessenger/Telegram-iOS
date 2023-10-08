@@ -1,4 +1,60 @@
 public extension Api.upload {
+    enum CdnFile: TypeConstructorDescription {
+        case cdnFile(bytes: Buffer)
+        case cdnFileReuploadNeeded(requestToken: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .cdnFile(let bytes):
+                    if boxed {
+                        buffer.appendInt32(-1449145777)
+                    }
+                    serializeBytes(bytes, buffer: buffer, boxed: false)
+                    break
+                case .cdnFileReuploadNeeded(let requestToken):
+                    if boxed {
+                        buffer.appendInt32(-290921362)
+                    }
+                    serializeBytes(requestToken, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .cdnFile(let bytes):
+                return ("cdnFile", [("bytes", bytes as Any)])
+                case .cdnFileReuploadNeeded(let requestToken):
+                return ("cdnFileReuploadNeeded", [("requestToken", requestToken as Any)])
+    }
+    }
+    
+        public static func parse_cdnFile(_ reader: BufferReader) -> CdnFile? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.upload.CdnFile.cdnFile(bytes: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_cdnFileReuploadNeeded(_ reader: BufferReader) -> CdnFile? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.upload.CdnFile.cdnFileReuploadNeeded(requestToken: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.upload {
     enum File: TypeConstructorDescription {
         case file(type: Api.storage.FileType, mtime: Int32, bytes: Buffer)
         case fileCdnRedirect(dcId: Int32, fileToken: Buffer, encryptionKey: Buffer, encryptionIv: Buffer, fileHashes: [Api.FileHash])

@@ -19,6 +19,8 @@ import MediaResources
 import MultilineTextComponent
 import ShimmerEffect
 import TextFormat
+import LegacyMessageInputPanel
+import LegacyMessageInputPanelInputView
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -375,54 +377,6 @@ private final class LoadingProgressNode: ASDisplayNode {
     }
 }
 
-public struct AttachmentMainButtonState {
-    public enum Background {
-        case color(UIColor)
-        case premium
-    }
-    
-    public enum Progress: Equatable {
-        case none
-        case side
-        case center
-    }
-    
-    public enum Font: Equatable {
-        case regular
-        case bold
-    }
-    
-    public let text: String?
-    public let font: Font
-    public let background: Background
-    public let textColor: UIColor
-    public let isVisible: Bool
-    public let progress: Progress
-    public let isEnabled: Bool
-    
-    public init(
-        text: String?,
-        font: Font,
-        background: Background,
-        textColor: UIColor,
-        isVisible: Bool,
-        progress: Progress,
-        isEnabled: Bool
-    ) {
-        self.text = text
-        self.font = font
-        self.background = background
-        self.textColor = textColor
-        self.isVisible = isVisible
-        self.progress = progress
-        self.isEnabled = isEnabled
-    }
-    
-    static var initial: AttachmentMainButtonState {
-        return AttachmentMainButtonState(text: nil, font: .bold, background: .color(.clear), textColor: .clear, isVisible: false, progress: .none, isEnabled: false)
-    }
-}
-
 private final class MainButtonNode: HighlightTrackingButtonNode {
     private var state: AttachmentMainButtonState
     private var size: CGSize?
@@ -734,7 +688,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private var presentationInterfaceState: ChatPresentationInterfaceState
     private var interfaceInteraction: ChatPanelInterfaceInteraction?
     
-    private let makeEntityInputView: () -> AttachmentTextInputPanelInputView?
+    private let makeEntityInputView: () -> LegacyMessageInputPanelInputView?
     
     private let containerNode: ASDisplayNode
     private let backgroundNode: NavigationBackgroundNode
@@ -742,7 +696,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private let separatorNode: ASDisplayNode
     private var buttonViews: [Int: ComponentHostView<Empty>] = [:]
     
-    private var textInputPanelNode: AttachmentTextInputPanelNode?
+    private var textInputPanelNode: LegacyMessageInputPanelNode?
     private var progressNode: LoadingProgressNode?
     private var mainButtonNode: MainButtonNode
     
@@ -776,7 +730,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     
     var mainButtonPressed: () -> Void = { }
     
-    init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> AttachmentTextInputPanelInputView?) {
+    init(context: AccountContext, chatLocation: ChatLocation?, isScheduledMessages: Bool, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, makeEntityInputView: @escaping () -> LegacyMessageInputPanelInputView?) {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.isScheduledMessages = isScheduledMessages
@@ -937,7 +891,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                             })
                         }
                         if let textInputPanelNode = strongSelf.textInputPanelNode {
-                            textInputPanelNode.ensureFocused()
+                            textInputPanelNode.activateInput()
                         }
                         strongSelf.updateChatPresentationInterfaceState(animated: true, { state in
                             return state.updatedInputMode({ _ in return inputMode }).updatedInterfaceState({
@@ -950,52 +904,53 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
-        }, displaySendMessageOptions: { [weak self] node, gesture in
-            guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
-                return
-            }
-            textInputPanelNode.loadTextInputNodeIfNeeded()
-            guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation?.peerId else {
-                return
-            }
-            
-            var hasEntityKeyboard = false
-            if case .media = strongSelf.presentationInterfaceState.inputMode {
-                hasEntityKeyboard = true
-            }
-            let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
-            |> take(1)
-            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
-                guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
-                    return
-                }
-                var sendWhenOnlineAvailable = false
-                if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status {
-                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                    if currentTime > until {
-                        sendWhenOnlineAvailable = true
-                    }
-                }
-                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
-                    sendWhenOnlineAvailable = false
-                }
-                
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, canSendWhenOnline: sendWhenOnlineAvailable, completion: {
-                }, sendMessage: { [weak textInputPanelNode] mode in
-                    switch mode {
-                    case .generic:
-                        textInputPanelNode?.sendMessage(.generic)
-                    case .silently:
-                        textInputPanelNode?.sendMessage(.silent)
-                    case .whenOnline:
-                        textInputPanelNode?.sendMessage(.whenOnline)
-                    }
-                }, schedule: { [weak textInputPanelNode] in
-                    textInputPanelNode?.sendMessage(.schedule)
-                })
-                controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
-                strongSelf.presentInGlobalOverlay(controller)
-            })
+        }, displaySendMessageOptions: { node, gesture in
+            let _ = node
+            let _ = gesture
+//            guard let strongSelf = self, let textInputPanelNode = strongSelf.textInputPanelNode else {
+//                return
+//            }
+//            guard let textInputNode = textInputPanelNode.textInputNode, let peerId = chatLocation?.peerId else {
+//                return
+//            }
+//            
+//            var hasEntityKeyboard = false
+//            if case .media = strongSelf.presentationInterfaceState.inputMode {
+//                hasEntityKeyboard = true
+//            }
+//            let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
+//            |> take(1)
+//            |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
+//                guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
+//                    return
+//                }
+//                var sendWhenOnlineAvailable = false
+//                if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status {
+//                    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+//                    if currentTime > until {
+//                        sendWhenOnlineAvailable = true
+//                    }
+//                }
+//                if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
+//                    sendWhenOnlineAvailable = false
+//                }
+//                
+//                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, attachment: true, canSendWhenOnline: sendWhenOnlineAvailable, completion: {
+//                }, sendMessage: { [weak textInputPanelNode] mode in
+//                    switch mode {
+//                    case .generic:
+//                        textInputPanelNode?.sendMessage(.generic)
+//                    case .silently:
+//                        textInputPanelNode?.sendMessage(.silent)
+//                    case .whenOnline:
+//                        textInputPanelNode?.sendMessage(.whenOnline)
+//                    }
+//                }, schedule: { [weak textInputPanelNode] in
+//                    textInputPanelNode?.sendMessage(.schedule)
+//                })
+//                controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
+//                strongSelf.presentInGlobalOverlay(controller)
+//            })
         }, openScheduledMessages: {
         }, openPeersNearby: {
         }, displaySearchResultsTooltip: { _, _ in
@@ -1075,10 +1030,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func updateCaption(_ caption: NSAttributedString) {
-        if !caption.string.isEmpty {
-            self.loadTextNodeIfNeeded()
-        }
-        self.updateChatPresentationInterfaceState(animated: false, { $0.updatedInterfaceState { $0.withUpdatedComposeInputState(ChatTextInputState(inputText: caption))} })
+        self.textInputPanelNode?.setCaption(caption)
     }
 
     private func updateChatPresentationInterfaceState(animated: Bool = true, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
@@ -1086,16 +1038,16 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateChatPresentationInterfaceState(transition: ContainedViewLayoutTransition, _ f: (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState, completion externalCompletion: @escaping (ContainedViewLayoutTransition) -> Void = { _ in }) {
-        let presentationInterfaceState = f(self.presentationInterfaceState)
-        let updateInputTextState = self.presentationInterfaceState.interfaceState.effectiveInputState != presentationInterfaceState.interfaceState.effectiveInputState
-        
-        self.presentationInterfaceState = presentationInterfaceState
-        
-        if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
-            textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
-
-            self.textUpdated(presentationInterfaceState.interfaceState.effectiveInputState.inputText)
-        }
+//        let presentationInterfaceState = f(self.presentationInterfaceState)
+//        let updateInputTextState = self.presentationInterfaceState.interfaceState.effectiveInputState != presentationInterfaceState.interfaceState.effectiveInputState
+//        
+//        self.presentationInterfaceState = presentationInterfaceState
+//        
+//        if let textInputPanelNode = self.textInputPanelNode, updateInputTextState {
+//            textInputPanelNode.updateInputTextState(presentationInterfaceState.interfaceState.effectiveInputState, animated: transition.isAnimated)
+//
+//            self.textUpdated(presentationInterfaceState.interfaceState.effectiveInputState.inputText)
+//        }
     }
     
     func updateSelectedIndex(_ index: Int) {
@@ -1250,32 +1202,52 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
     private func loadTextNodeIfNeeded() {
         if let _ = self.textInputPanelNode {
         } else {
-            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, isAttachment: true, isScheduledMessages: self.isScheduledMessages, presentController: { [weak self] c in
-                if let strongSelf = self {
-                    strongSelf.present(c)
-                }
-            }, makeEntityInputView: self.makeEntityInputView)
-            textInputPanelNode.interfaceInteraction = self.interfaceInteraction
-            textInputPanelNode.sendMessage = { [weak self] mode in
-                if let strongSelf = self {
-                    strongSelf.sendMessagePressed(mode)
-                }
-            }
-            textInputPanelNode.focusUpdated = { [weak self] focus in
-                if let strongSelf = self, focus {
-                    strongSelf.beganTextEditing()
-                }
-            }
-            textInputPanelNode.updateHeight = { [weak self] _ in
-                if let strongSelf = self {
-                    strongSelf.requestLayout()
-                }
-            }
+            
+            let textInputPanelNode = LegacyMessageInputPanelNode(
+                context: self.context,
+                chatLocation: self.presentationInterfaceState.chatLocation,
+                isScheduledMessages: self.isScheduledMessages,
+                present: { [weak self] c in
+                    if let strongSelf = self {
+                        strongSelf.present(c)
+                    }
+                },
+                presentInGlobalOverlay: { [weak self] c in
+                    if let strongSelf = self {
+                        strongSelf.present(c)
+                    }
+                },
+                makeEntityInputView: self.makeEntityInputView
+            )
             self.addSubnode(textInputPanelNode)
             self.textInputPanelNode = textInputPanelNode
             
-            textInputPanelNode.alpha = self.isSelecting ? 1.0 : 0.0
-            textInputPanelNode.isUserInteractionEnabled = self.isSelecting
+//            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, isAttachment: true, isScheduledMessages: self.isScheduledMessages, presentController: { [weak self] c in
+//                if let strongSelf = self {
+//                    strongSelf.present(c)
+//                }
+//            }, makeEntityInputView: self.makeEntityInputView)
+//            textInputPanelNode.interfaceInteraction = self.interfaceInteraction
+//            textInputPanelNode.sendMessage = { [weak self] mode in
+//                if let strongSelf = self {
+//                    strongSelf.sendMessagePressed(mode)
+//                }
+//            }
+//            textInputPanelNode.focusUpdated = { [weak self] focus in
+//                if let strongSelf = self, focus {
+//                    strongSelf.beganTextEditing()
+//                }
+//            }
+//            textInputPanelNode.updateHeight = { [weak self] _ in
+//                if let strongSelf = self {
+//                    strongSelf.requestLayout()
+//                }
+//            }
+//            self.addSubnode(textInputPanelNode)
+//            self.textInputPanelNode = textInputPanelNode
+//            
+//            textInputPanelNode.alpha = self.isSelecting ? 1.0 : 0.0
+//            textInputPanelNode.isUserInteractionEnabled = self.isSelecting
         }
     }
     
@@ -1448,7 +1420,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         if isSelecting {
             self.loadTextNodeIfNeeded()
         } else {
-            self.textInputPanelNode?.ensureUnfocused()
+            let _ = self.textInputPanelNode?.dismissInput()
         }
         var textPanelHeight: CGFloat = 0.0
         if let textInputPanelNode = self.textInputPanelNode {
@@ -1458,7 +1430,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + layout.safeInsets.left, rightInset: insets.right + layout.safeInsets.right, bottomInset: 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
+            let panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: insets.left + layout.safeInsets.left, rightInset: insets.right + layout.safeInsets.right, bottomInset: 0.0, keyboardHeight: layout.inputHeight ?? 0.0, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, metrics: layout.metrics, isMediaInputExpanded: false)
             let panelFrame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: panelHeight)
             if textInputPanelNode.frame.width.isZero {
                 textInputPanelNode.frame = panelFrame

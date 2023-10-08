@@ -224,6 +224,9 @@ public final class LottieAnimationComponent: Component {
             
             if updateColors, let animationView = self.animationView {
                 if let value = component.colors["__allcolors__"] {
+                    for keypath in animationView.allKeypaths(predicate: { $0.keys.last == "Colors" }) {
+                        animationView.setValueProvider(GradientValueProvider([value.lottieColorValue, value.lottieColorValue]), keypath: AnimationKeypath(keypath: keypath))
+                    }
                     for keypath in animationView.allKeypaths(predicate: { $0.keys.last == "Color" }) {
                         animationView.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
                     }
