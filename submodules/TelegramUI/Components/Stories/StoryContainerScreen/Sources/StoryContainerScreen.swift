@@ -396,7 +396,7 @@ private final class StoryContainerScreenComponent: Component {
         private var didDisplayReactionTooltip: Bool = false
         
         private let interactionGuide = ComponentView<Empty>()
-        private var isDisplayingInteractionGuide: Bool = true
+        private var isDisplayingInteractionGuide: Bool = false
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
