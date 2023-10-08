@@ -14,6 +14,7 @@ import ManagedAnimationNode
 import ChatPresentationInterfaceState
 import ChatSendButtonRadialStatusNode
 import AudioWaveformNode
+import ChatInputPanelNode
 
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
 }

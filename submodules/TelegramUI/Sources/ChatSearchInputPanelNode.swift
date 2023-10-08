@@ -9,6 +9,7 @@ import TelegramNotices
 import TelegramPresentationData
 import ActivityIndicator
 import ChatPresentationInterfaceState
+import ChatInputPanelNode
 
 private let labelFont = Font.regular(15.0)
 

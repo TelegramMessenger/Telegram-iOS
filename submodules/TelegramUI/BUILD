@@ -353,6 +353,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatOverscrollControl",
         "//submodules/TelegramUI/Components/AudioWaveformNode",
         "//submodules/TelegramUI/Components/Chat/ChatBotInfoItem",
+        "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

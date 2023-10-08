@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ChatPresentationInterfaceState
 import SolidRoundedButtonNode
 import TooltipUI
+import ChatInputPanelNode
 
 final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     private let button: SolidRoundedButtonNode

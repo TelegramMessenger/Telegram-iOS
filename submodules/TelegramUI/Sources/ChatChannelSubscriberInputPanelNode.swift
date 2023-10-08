@@ -11,6 +11,7 @@ import PresentationDataUtils
 import PeerInfoUI
 import UndoUI
 import ChatPresentationInterfaceState
+import ChatInputPanelNode
 
 private enum SubscriberAction: Equatable {
     case join

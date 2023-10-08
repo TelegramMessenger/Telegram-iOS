@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import ChatPresentationInterfaceState
+import ChatInputPanelNode
 
 final class DeleteChatInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode
