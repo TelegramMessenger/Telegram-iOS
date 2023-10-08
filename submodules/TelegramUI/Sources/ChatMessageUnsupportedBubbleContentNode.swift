@@ -6,6 +6,8 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNode {
     private var buttonNode: ChatMessageAttachedContentButtonNode

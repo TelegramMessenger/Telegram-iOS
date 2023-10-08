@@ -40,6 +40,7 @@ swift_library(
         "//submodules/StickerPackPreviewUI",
         "//submodules/TelegramUI/Components/EntityKeyboardGifContent:EntityKeyboardGifContent",
         "//submodules/TelegramUI/Components/LegacyMessageInputPanelInputView:LegacyMessageInputPanelInputView",
+        "//submodules/AttachmentTextInputPanelNode",
     ],
     visibility = [
         "//visibility:public",

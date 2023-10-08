@@ -11,6 +11,7 @@ import AccountContext
 import Emoji
 import PersistentStringHash
 import ChatControllerInteraction
+import ChatHistoryEntry
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes, location: MessageHistoryEntryLocation?)

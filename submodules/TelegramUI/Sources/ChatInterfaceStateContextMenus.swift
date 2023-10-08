@@ -1106,7 +1106,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuTranslate, icon: { theme in
                         return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Translate"), color: theme.actionSheet.primaryTextColor)
                     }, action: { _, f in
-                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: messageText), .translate)
+                        controllerInteraction.performTextSelectionAction(message, !isCopyProtected, NSAttributedString(string: messageText), .translate)
                         f(.default)
                     })))
                 }
@@ -1120,7 +1120,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                            let translation = message.attributes.first(where: { ($0 as? TranslationMessageAttribute)?.toLang == translationState.toLang }) as? TranslationMessageAttribute, !translation.text.isEmpty {
                             text = translation.text
                         }
-                        controllerInteraction.performTextSelectionAction(!isCopyProtected, NSAttributedString(string: text), .speak)
+                        controllerInteraction.performTextSelectionAction(message, !isCopyProtected, NSAttributedString(string: text), .speak)
                         f(.default)
                     })))
                 }

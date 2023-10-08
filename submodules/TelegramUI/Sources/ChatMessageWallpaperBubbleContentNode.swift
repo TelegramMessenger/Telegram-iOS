@@ -18,6 +18,8 @@ import Markdown
 import RadialStatusNode
 import ComponentFlow
 import AudioTranscriptionPendingIndicatorComponent
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?

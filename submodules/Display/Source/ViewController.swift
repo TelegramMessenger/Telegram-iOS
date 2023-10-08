@@ -227,6 +227,10 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     }
     
     private var navigationBarOrigin: CGFloat = 0.0
+    
+    open var interactiveNavivationGestureEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth? {
+        return nil
+    }
 
     open func navigationLayout(layout: ContainerViewLayout) -> NavigationLayout {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0

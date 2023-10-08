@@ -16,17 +16,47 @@
 
 @implementation ASCustomTextContainer
 
+- (instancetype)initWithSize:(CGSize)size textStorage:(NSTextStorage *)textStorage {
+    self = [super initWithSize:size];
+    if (self != nil) {
+    }
+    return self;
+}
+
+- (BOOL)isSimpleRectangularTextContainer {
+    return false;
+}
+
 - (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
     CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
     
-/*#if DEBUG
-    if (result.origin.y < 10.0f) {
-        result.size.width -= 21.0f;
-        if (result.size.width < 0.0f) {
-            result.size.width = 0.0f;
+    NSTextStorage *textStorage = self.layoutManager.textStorage;
+    if (textStorage != nil) {
+        NSString *string = textStorage.string;
+        int index = (int)characterIndex;
+        if (index >= 0 && index < string.length) {
+            NSDictionary *attributes = [textStorage attributesAtIndex:index effectiveRange:nil];
+            NSObject *blockQuote = attributes[@"Attribute__Blockquote"];
+            if (blockQuote != nil) {
+                bool isFirstLine = false;
+                if (index == 0) {
+                    isFirstLine = true;
+                } else {
+                    NSDictionary *previousAttributes = [textStorage attributesAtIndex:index - 1 effectiveRange:nil];
+                    NSObject *previousBlockQuote = previousAttributes[@"Attribute__Blockquote"];
+                    if (previousBlockQuote == nil) {
+                        isFirstLine = true;
+                    } else if (![blockQuote isEqual:previousBlockQuote]) {
+                        isFirstLine = true;
+                    }
+                }
+                
+                if (isFirstLine) {
+                    result.size.width -= 100.0f;
+                }
+            }
         }
     }
-#endif*/
     
     return result;
 }
@@ -139,8 +169,7 @@
   components.layoutManager = layoutManager;
   [components.textStorage addLayoutManager:components.layoutManager];
 
-  components.textContainer = [[ASCustomTextContainer alloc] initWithSize:textContainerSize];
-    //components.textContainer.exclusionPaths = @[[UIBezierPath bezierPathWithRect:CGRectMake(textContainerSize.width - 60.0, 0.0, 60.0, 40.0)]];
+  components.textContainer = [[ASCustomTextContainer alloc] initWithSize:textContainerSize textStorage:textStorage];
   components.textContainer.lineFragmentPadding = 0.0; // We want the text laid out up to the very edges of the text-view.
   [components.layoutManager addTextContainer:components.textContainer];
 

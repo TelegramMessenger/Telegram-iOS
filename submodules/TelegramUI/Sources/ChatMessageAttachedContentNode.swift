@@ -19,6 +19,10 @@ import AnimationCache
 import MultiAnimationRenderer
 import ChatControllerInteraction
 import ShimmerEffect
+import ChatMessageDateAndStatusNode
+import ChatHistoryEntry
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
 
 private let buttonFont = Font.semibold(13.0)
 
@@ -479,7 +483,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }
                 if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil))
+                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil, adjustQuoteFontSize: true))
                 } else {
                     string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
                 }

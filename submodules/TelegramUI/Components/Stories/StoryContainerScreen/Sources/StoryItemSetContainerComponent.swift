@@ -4140,6 +4140,8 @@ public final class StoryItemSetContainerComponent: Component {
                                 }
                             case .translate:
                                 self.sendMessageContext.performTranslateTextAction(view: self, text: text.string)
+                            case .quote:
+                                break
                             }
                         },
                         controller: { [weak self] in
@@ -5544,6 +5546,12 @@ public final class StoryItemSetContainerComponent: Component {
             var emojiFileIds: [Int64] = []
             for entity in component.slice.item.storyItem.entities {
                 if case let .CustomEmoji(_, fileId) = entity.type {
+                    emojiFileIds.append(fileId)
+                }
+            }
+            
+            for mediaArea in component.slice.item.storyItem.mediaAreas {
+                if case let .reaction(_, reaction, _) = mediaArea, case let .custom(fileId) = reaction {
                     emojiFileIds.append(fileId)
                 }
             }

@@ -838,6 +838,9 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
                 __weak MTProto *weakSelf = self;
                 MTSignal *checkSignal = [[MTConnectionProbing probeProxyWithContext:_context datacenterId:_datacenterId settings:transport.proxySettings] delay:5.0 onQueue:[MTQueue concurrentDefaultQueue]];
                 checkSignal = [[checkSignal then:[[MTSignal complete] delay:20.0 onQueue:[MTQueue concurrentDefaultQueue]]] restart];
+                if (_probingDisposable == nil) {
+                    _probingDisposable = [[MTMetaDisposable alloc] init];
+                }
                 [_probingDisposable setDisposable:[checkSignal startWithNextStrict:^(NSNumber *next) {
                     [[MTProto managerQueue] dispatchOnQueue:^{
                         __strong MTProto *strongSelf = weakSelf;

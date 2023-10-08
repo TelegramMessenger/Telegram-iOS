@@ -321,6 +321,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
     case strikethrough
     case underline
     case spoiler
+    case quote
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
@@ -348,6 +349,8 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             self = .underline
         case 8:
             self = .spoiler
+        case 9:
+            self = .quote
         default:
             assertionFailure()
             self = .bold
@@ -379,6 +382,8 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
             try container.encode(7 as Int32, forKey: "t")
         case .spoiler:
             try container.encode(8 as Int32, forKey: "t")
+        case .quote:
+            try container.encode(0 as Int32, forKey: "t")
         }
     }
 }
@@ -452,6 +457,9 @@ public struct ChatTextInputStateText: Codable, Equatable {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .underline, range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.spoiler {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .spoiler, range: range.location ..< (range.location + range.length)))
+                } else if key == ChatTextInputAttributes.quote, let value = value as? ChatTextInputTextQuoteAttribute {
+                    let _ = value
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .quote, range: range.location ..< (range.location + range.length)))
                 }
             }
         })
@@ -496,6 +504,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case .spoiler:
                 result.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case .quote:
+                result.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result

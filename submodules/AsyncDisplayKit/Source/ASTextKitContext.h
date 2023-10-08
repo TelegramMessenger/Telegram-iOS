@@ -52,6 +52,8 @@ AS_SUBCLASSING_RESTRICTED
 
 @interface ASCustomTextContainer : NSTextContainer
 
+- (instancetype)initWithSize:(CGSize)size textStorage:(NSTextStorage *)textStorage;
+
 @end
 
 #endif

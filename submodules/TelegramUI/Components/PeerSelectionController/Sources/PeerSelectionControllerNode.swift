@@ -682,7 +682,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 hasEntityKeyboard = true
             }
             
-            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputNode: textInputNode, canSendWhenOnline: false, completion: {
+            let controller = ChatSendMessageActionSheetController(context: strongSelf.context, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputNode.textView, canSendWhenOnline: false, completion: {
             }, sendMessage: { [weak textInputPanelNode] mode in
                 switch mode {
                 case .generic:

@@ -20,6 +20,7 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/TextFormat:TextFormat",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
     ],
     visibility = [
         "//visibility:public",

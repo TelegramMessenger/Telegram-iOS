@@ -155,6 +155,9 @@ public extension TelegramEngine {
                 return results
             }
         }
+        
+        /*public func subscribe<each T: TelegramEngineDataItem>(_ ts: repeat each T) -> Signal<repeat each T, NoError> {
+        }*/
 
         public func subscribe<T0: TelegramEngineDataItem>(_ t0: T0) -> Signal<T0.Result, NoError> {
             return self._subscribe(items: [t0 as! AnyPostboxViewDataItem])

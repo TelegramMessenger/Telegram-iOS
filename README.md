@@ -72,7 +72,28 @@ python3 build-system/Make/Make.py \
     --configuration=release_arm64
 ```
 
-## Tips
+# FAQ
+
+## Xcode is stuck at "build-request.json not updated yet"
+
+Occasionally, you might observe the following message in your build log:
+```
+"/Users/xxx/Library/Developer/Xcode/DerivedData/Telegram-xxx/Build/Intermediates.noindex/XCBuildData/xxx.xcbuilddata/build-request.json" not updated yet, waiting...
+```
+
+Should this occur, simply cancel the ongoing build and initiate a new one.
+
+## Telegram_xcodeproj: no such package 
+
+Following a system restart, the auto-generated Xcode project might encounter a build failure accompanied by this error:
+```
+ERROR: Skipping '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodeproj:Telegram_xcodeproj': no such package '@rules_xcodeproj_generated//generator/Telegram/Telegram_xcodeproj': BUILD file not found in directory 'generator/Telegram/Telegram_xcodeproj' of external repository @rules_xcodeproj_generated. Add a BUILD file to a directory to mark it as a package.
+```
+
+If you encounter this issue, re-run the project generation steps in the README.
+
+
+# Tips
 
 ## Codesigning is not required for simulator-only builds
 

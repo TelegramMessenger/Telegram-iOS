@@ -141,19 +141,72 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
     if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
         var flags: Int32 = 0
         if let inputState = inputState {
-            if inputState.replyToMessageId != nil {
-                flags |= (1 << 0)
-            }
             if !inputState.entities.isEmpty {
                 flags |= (1 << 3)
             }
         }
         var topMsgId: Int32?
         if let threadId = threadId {
-            flags |= (1 << 2)
             topMsgId = Int32(clamping: threadId)
         }
-        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, topMsgId: topMsgId, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
+        
+        var replyTo: Api.InputReplyTo?
+        if let replySubject = inputState?.replySubject {
+            flags |= 1 << 0
+            
+            var innerFlags: Int32 = 0
+            //inputReplyToMessage#73ec805 flags:# reply_to_msg_id:int top_msg_id:flags.0?int reply_to_peer_id:flags.1?InputPeer quote_text:flags.2?string quote_entities:flags.3?Vector<MessageEntity> = InputReplyTo;
+            var replyToPeer: Api.InputPeer?
+            var discard = false
+            if replySubject.messageId.peerId != peerId {
+                replyToPeer = transaction.getPeer(replySubject.messageId.peerId).flatMap(apiInputPeer)
+                if replyToPeer == nil {
+                    discard = true
+                }
+            }
+            
+            var quoteText: String?
+            var quoteEntities: [Api.MessageEntity]?
+            if let replyQuote = replySubject.quote {
+                quoteText = replyQuote.text
+                
+                if !replyQuote.entities.isEmpty {
+                    var associatedPeers = SimpleDictionary<PeerId, Peer>()
+                    for entity in replyQuote.entities {
+                        for associatedPeerId in entity.associatedPeerIds {
+                            if associatedPeers[associatedPeerId] == nil {
+                                if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                    associatedPeers[associatedPeerId] = associatedPeer
+                                }
+                            }
+                        }
+                    }
+                    quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
+                }
+            }
+            
+            if replyToPeer != nil {
+                innerFlags |= 1 << 1
+            }
+            if quoteText != nil {
+                innerFlags |= 1 << 2
+            }
+            if quoteEntities != nil {
+                innerFlags |= 1 << 3
+            }
+            
+            if !discard {
+                replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities)
+            }
+        } else if let topMsgId = topMsgId {
+            flags |= 1 << 0
+            
+            var innerFlags: Int32 = 0
+            innerFlags |= 1 << 0
+            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+        }
+        
+        return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
         |> delay(2.0, queue: Queue.concurrentDefaultQueue())
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)

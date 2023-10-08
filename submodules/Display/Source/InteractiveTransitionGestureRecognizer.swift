@@ -61,8 +61,11 @@ public enum InteractiveTransitionGestureRecognizerEdgeWidth {
 }
 
 public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
-    private let edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
+    private let staticEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     private let allowedDirections: (CGPoint) -> InteractiveTransitionGestureRecognizerDirections
+    public var dynamicEdgeWidth: ((CGPoint) -> InteractiveTransitionGestureRecognizerEdgeWidth)?
+    
+    private var currentEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
@@ -70,7 +73,8 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     public init(target: Any?, action: Selector?, allowedDirections: @escaping (CGPoint) -> InteractiveTransitionGestureRecognizerDirections, edgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth = .constant(16.0)) {
         self.allowedDirections = allowedDirections
-        self.edgeWidth = edgeWidth
+        self.staticEdgeWidth = edgeWidth
+        self.currentEdgeWidth = edgeWidth
         
         super.init(target: target, action: action)
         
@@ -97,6 +101,10 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         if allowedDirections.isEmpty {
             self.state = .failed
             return
+        }
+        
+        if let dynamicEdgeWidth = self.dynamicEdgeWidth {
+            self.currentEdgeWidth = dynamicEdgeWidth(point)
         }
         
         super.touchesBegan(touches, with: event)
@@ -150,37 +158,54 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                 }
             }
         } else {
-            let edgeWidth: CGFloat
-            switch self.edgeWidth {
+            let defaultEdgeWidth: CGFloat
+            switch self.staticEdgeWidth {
             case let .constant(value):
-                edgeWidth = value
+                defaultEdgeWidth = value
             case let .widthMultiplier(factor, minValue, maxValue):
-                edgeWidth = max(minValue, min(size.width * factor, maxValue))
+                defaultEdgeWidth = max(minValue, min(size.width * factor, maxValue))
+            }
+            
+            let extendedEdgeWidth: CGFloat
+            switch self.currentEdgeWidth {
+            case let .constant(value):
+                extendedEdgeWidth = value
+            case let .widthMultiplier(factor, minValue, maxValue):
+                extendedEdgeWidth = max(minValue, min(size.width * factor, maxValue))
             }
             
             if !self.validatedGesture {
-                if self.firstLocation.x < edgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
+                if self.firstLocation.x < extendedEdgeWidth && !self.currentAllowedDirections.contains(.rightEdge) {
                     self.state = .failed
                     return
                 }
-                if self.firstLocation.x > size.width - edgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
+                if self.firstLocation.x > size.width - extendedEdgeWidth && !self.currentAllowedDirections.contains(.leftEdge) {
                     self.state = .failed
                     return
                 }
                 
-                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < edgeWidth {
-                    self.validatedGesture = true
-                } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - edgeWidth {
-                    self.validatedGesture = true
-                } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
-                    self.state = .failed
-                } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
-                    self.state = .failed
-                } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
-                    self.state = .failed
-                } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
-                    self.validatedGesture = true
-                    fireBegan = true
+                if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < extendedEdgeWidth {
+                    if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.validatedGesture = true
+                        fireBegan = true
+                    }
+                } else {
+                    if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < defaultEdgeWidth {
+                        self.validatedGesture = true
+                    } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - defaultEdgeWidth {
+                        self.validatedGesture = true
+                    } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
+                        self.state = .failed
+                    } else if !self.currentAllowedDirections.contains(.rightCenter) && translation.x > 0.0 {
+                        self.state = .failed
+                    } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
+                        self.state = .failed
+                    } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.validatedGesture = true
+                        fireBegan = true
+                    }
                 }
             }
         }

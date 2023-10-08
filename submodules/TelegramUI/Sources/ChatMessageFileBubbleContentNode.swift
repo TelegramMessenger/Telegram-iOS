@@ -8,6 +8,9 @@ import TelegramCore
 import TelegramUIPreferences
 import ComponentFlow
 import AudioTranscriptionButtonComponent
+import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ChatMessageItemCommon
 
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     let interactiveFileNode: ChatMessageInteractiveFileNode

@@ -23,6 +23,7 @@ import ChatPresentationInterfaceState
 import TelegramNotices
 import ChatControllerInteraction
 import TranslateUI
+import ChatHistoryEntry
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {

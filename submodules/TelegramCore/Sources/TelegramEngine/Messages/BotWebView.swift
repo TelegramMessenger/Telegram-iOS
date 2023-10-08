@@ -83,7 +83,7 @@ private func keepWebViewSignal(network: Network, stateManager: AccountStateManag
                 if threadId != nil {
                     replyFlags |= 1 << 0
                 }
-                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)))
+                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
             }
             let signal: Signal<Never, KeepWebViewError> = network.request(Api.functions.messages.prolongWebView(flags: flags, peer: peer, bot: bot, queryId: queryId, replyTo: replyTo, sendAs: sendAs))
             |> mapError { _ -> KeepWebViewError in
@@ -157,7 +157,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
             if threadId != nil {
                 replyFlags |= 1 << 0
             }
-            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)))
+            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyToMessageId.id, topMsgId: threadId.flatMap(Int32.init(clamping:)), replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
         }
 
         return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, platform: botWebViewPlatform, replyTo: replyTo, sendAs: nil))

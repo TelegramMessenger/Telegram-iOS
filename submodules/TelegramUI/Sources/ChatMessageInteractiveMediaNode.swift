@@ -25,6 +25,9 @@ import ContextUI
 import InvisibleInkDustNode
 import ChatControllerInteraction
 import StoryContainerScreen
+import ChatMessageDateAndStatusNode
+import ChatHistoryEntry
+import ChatMessageItemCommon
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

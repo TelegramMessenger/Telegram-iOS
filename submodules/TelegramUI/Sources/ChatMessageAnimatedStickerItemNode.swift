@@ -29,6 +29,10 @@ import ChatPresentationInterfaceState
 import TextNodeWithEntities
 import ChatControllerInteraction
 import ChatMessageForwardInfoNode
+import ChatMessageDateAndStatusNode
+import ChatMessageItemCommon
+import ChatMessageBubbleContentNode
+import ChatMessageReplyInfoNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -517,7 +521,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var setupTimestamp: Double?
     private func setupNode(item: ChatMessageItem) {
         self.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-        self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        if self.isNodeLoaded {
+            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        }
         
         guard self.animationNode == nil else {
             return
@@ -1113,7 +1119,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
                 let font = Font.regular(fontSizeForEmojiString(item.message.text))
                 let textColor = item.presentationData.theme.theme.list.itemPrimaryTextColor
-                let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: textColor, linkColor: textColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message)
+                let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: textColor, linkColor: textColor, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message, adjustQuoteFontSize: true)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural))
                 
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)
@@ -1210,7 +1216,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)?
-            var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode)?
             var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -1231,6 +1237,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var replyMessage: Message?
+            var replyQuote: EngineMessageReplyQuote?
             var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
@@ -1257,6 +1264,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
+                    replyQuote = replyAttribute.quote
                 } else if let attribute = attribute as? ReplyStoryAttribute {
                     replyStory = attribute.storyId
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
@@ -1291,6 +1299,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
+                    quote: replyQuote,
                     story: replyStory,
                     parentMessage: item.message,
                     constrainedSize: CGSize(width: availableContentWidth, height: CGFloat.greatestFiniteMagnitude),
@@ -1635,12 +1644,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
-                        let replyInfoNode = replyInfoApply(synchronousLoads)
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 11.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 9.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        
+                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads)
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
                         }
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 11.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 9.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: replyInfoSize)
                         replyInfoNode.frame = replyInfoFrame
                         
                         messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: messageInfoSize.height + replyInfoSize.height)
@@ -2865,7 +2875,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
-            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: sourceReplyPanel, localRect: localRect, transition: transition)
+            let mappedPanel = ChatMessageReplyInfoNode.TransitionReplyPanel(
+                titleNode: sourceReplyPanel.titleNode,
+                textNode: sourceReplyPanel.textNode,
+                lineNode: sourceReplyPanel.lineNode,
+                imageNode: sourceReplyPanel.imageNode,
+                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+            )
+            let offset = replyInfoNode.animateFromInputPanel(sourceReplyPanel: mappedPanel, localRect: localRect, transition: transition)
             if let replyBackgroundNode = self.replyBackgroundNode {
                 transition.animatePositionAdditive(layer: replyBackgroundNode.layer, offset: offset)
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)

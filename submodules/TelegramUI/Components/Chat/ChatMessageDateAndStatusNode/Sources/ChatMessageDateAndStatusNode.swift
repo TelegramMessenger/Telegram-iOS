@@ -29,13 +29,13 @@ private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     layer.add(basicAnimation, forKey: "clockFrameAnimation")
 }
 
-enum ChatMessageDateAndStatusOutgoingType: Equatable {
+public enum ChatMessageDateAndStatusOutgoingType: Equatable {
     case Sent(read: Bool)
     case Sending
     case Failed
 }
 
-enum ChatMessageDateAndStatusType: Equatable {
+public enum ChatMessageDateAndStatusType: Equatable {
     case BubbleIncoming
     case BubbleOutgoing(ChatMessageDateAndStatusOutgoingType)
     case ImageIncoming
@@ -176,27 +176,27 @@ private final class StatusReactionNode: ASDisplayNode {
     }
 }
 
-class ChatMessageDateAndStatusNode: ASDisplayNode {
-    struct TrailingReactionSettings {
-        var displayInline: Bool
-        var preferAdditionalInset: Bool
+public class ChatMessageDateAndStatusNode: ASDisplayNode {
+    public struct TrailingReactionSettings {
+        public var displayInline: Bool
+        public var preferAdditionalInset: Bool
         
-        init(displayInline: Bool, preferAdditionalInset: Bool) {
+        public init(displayInline: Bool, preferAdditionalInset: Bool) {
             self.displayInline = displayInline
             self.preferAdditionalInset = preferAdditionalInset
         }
     }
     
-    struct StandaloneReactionSettings {
-        init() {
+    public struct StandaloneReactionSettings {
+        public init() {
         }
     }
     
-    enum LayoutInput {
+    public enum LayoutInput {
         case trailingContent(contentWidth: CGFloat, reactionSettings: TrailingReactionSettings?)
         case standalone(reactionSettings: StandaloneReactionSettings?)
         
-        var displayInlineReactions: Bool {
+        public var displayInlineReactions: Bool {
             switch self {
             case let .trailingContent(_, reactionSettings):
                 if let reactionSettings = reactionSettings {
@@ -214,7 +214,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    struct Arguments {
+    public struct Arguments {
         var context: AccountContext
         var presentationData: ChatPresentationData
         var edited: Bool
@@ -234,7 +234,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var animationCache: AnimationCache
         var animationRenderer: MultiAnimationRenderer
         
-        init(
+        public init(
             context: AccountContext,
             presentationData: ChatPresentationData,
             edited: Bool,
@@ -297,8 +297,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     
     private var tapGestureRecognizer: UITapGestureRecognizer?
 
-    var openReplies: (() -> Void)?
-    var pressed: (() -> Void)? {
+    public var openReplies: (() -> Void)?
+    public var pressed: (() -> Void)? {
         didSet {
             if self.pressed != nil {
                 if self.tapGestureRecognizer == nil {
@@ -312,10 +312,10 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             }
         }
     }
-    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
-    override init() {
+    override public init() {
         self.dateNode = TextNode()
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.displaysAsynchronously = false
@@ -333,7 +333,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (_ arguments: Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)) {
+    public func asyncLayout() -> (_ arguments: Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void)) {
         let dateLayout = TextNode.asyncLayout(self.dateNode)
         
         var checkReadNode = self.checkReadNode
@@ -1310,7 +1310,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ arguments: Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)) {
+    public static func asyncLayout(_ node: ChatMessageDateAndStatusNode?) -> (_ arguments: Arguments) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)) {
         let currentLayout = node?.asyncLayout()
         return { arguments in
             let resultNode: ChatMessageDateAndStatusNode
@@ -1334,7 +1334,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         }
     }
     
-    func reactionView(value: MessageReaction.Reaction) -> UIView? {
+    public func reactionView(value: MessageReaction.Reaction) -> UIView? {
         for (id, node) in self.reactionNodes {
             if id == value {
                 return node.iconView
@@ -1348,7 +1348,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         return nil
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for (_, button) in self.reactionButtonsContainer.buttons {
             if button.view.frame.contains(point) {
                 if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {
@@ -1365,6 +1365,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     }
 }
 
-func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool, forceInline: Bool) -> Bool {
+public func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool, forceInline: Bool) -> Bool {
     return forceInline
 }

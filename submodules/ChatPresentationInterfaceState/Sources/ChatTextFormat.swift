@@ -22,7 +22,17 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
             result.removeAttribute(attribute, range: nsRange)
         }
         if addAttribute {
-            result.addAttribute(attribute, value: true as Bool, range: nsRange)
+            if attribute == ChatTextInputAttributes.quote {
+                result.addAttribute(attribute, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+                if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
+                }
+                if nsRange.lowerBound != 0 && (result.string as NSString).character(at: nsRange.lowerBound - 1) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.lowerBound)
+                }
+            } else {
+                result.addAttribute(attribute, value: true as Bool, range: nsRange)
+            }
         }
         return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
     } else {
@@ -105,4 +115,30 @@ public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: 
     } else {
         return state
     }
+}
+
+public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>) -> ChatTextInputState {
+    if selectionRange.isEmpty {
+        return state
+    }
+    let nsRange = NSRange(location: selectionRange.lowerBound, length: selectionRange.count)
+    var quoteRange = nsRange
+    var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
+    state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+        for (key, _) in attributes {
+            if key == ChatTextInputAttributes.quote {
+                attributesToRemove.append((key, range))
+                quoteRange = quoteRange.union(range)
+            } else {
+                attributesToRemove.append((key, nsRange))
+            }
+        }
+    }
+    
+    let result = NSMutableAttributedString(attributedString: state.inputText)
+    for (attribute, range) in attributesToRemove {
+        result.removeAttribute(attribute, range: range)
+    }
+    result.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+    return ChatTextInputState(inputText: result, selectionRange: selectionRange)
 }

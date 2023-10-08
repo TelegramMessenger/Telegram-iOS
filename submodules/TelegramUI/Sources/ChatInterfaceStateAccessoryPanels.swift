@@ -67,13 +67,13 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
-    } else if let replyMessageId = chatPresentationInterfaceState.interfaceState.replyMessageId {
-        if let replyPanelNode = currentPanel as? ReplyAccessoryPanelNode, replyPanelNode.messageId == replyMessageId {
+    } else if let replyMessageSubject = chatPresentationInterfaceState.interfaceState.replyMessageSubject {
+        if let replyPanelNode = currentPanel as? ReplyAccessoryPanelNode, replyPanelNode.messageId == replyMessageSubject.messageId && replyPanelNode.quote == replyMessageSubject.quote {
             replyPanelNode.interfaceInteraction = interfaceInteraction
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
         } else {
-            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageId, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
+            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageSubject.messageId, quote: replyMessageSubject.quote, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

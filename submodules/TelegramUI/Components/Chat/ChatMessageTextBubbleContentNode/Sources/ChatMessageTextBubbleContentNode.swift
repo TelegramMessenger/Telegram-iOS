@@ -20,6 +20,11 @@ import LottieAnimationCache
 import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextNodeWithEntities
+import ChatMessageDateAndStatusNode
+import ChatMessageBubbleContentNode
+import ShimmeringLinkNode
+import ChatMessageItemCommon
+import RichTextView
 
 private final class CachedChatMessageText {
     let text: String
@@ -47,7 +52,7 @@ private final class CachedChatMessageText {
     }
 }
 
-class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNodeWithEntities
     private var spoilerTextNode: TextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
@@ -62,7 +67,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var cachedChatMessageText: CachedChatMessageText?
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
                 switch self.visibility {
@@ -80,7 +85,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required init() {
+    required public init() {
         self.textNode = TextNodeWithEntities()
         
         self.statusNode = ChatMessageDateAndStatusNode()
@@ -117,11 +122,11 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let spoilerTextLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
         let statusLayout = self.statusNode.asyncLayout()
@@ -339,7 +344,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textFont = item.presentationData.messageFont
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentControlColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -565,22 +570,22 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.textNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.textNode.frame
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
@@ -605,6 +610,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .bankCard(bankCard)
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
+            } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
+                return .copy(code)
             } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
                 return .customEmoji(file)
             } else {
@@ -634,7 +641,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.statusNode.supernode != nil, let result = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: event) {
             return result
         }
@@ -667,7 +674,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             })
         }
     }
-    override func updateTouchesAtPoint(_ point: CGPoint?) {
+    override public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?
             var spoilerRects: [CGRect]?
@@ -717,29 +724,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func peekPreviewContent(at point: CGPoint) -> (Message, ChatMessagePeekPreviewContent)? {
-        if let item = self.item {
-            let textNodeFrame = self.textNode.textNode.frame
-            if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-                if let value = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                    if let rects = self.textNode.textNode.attributeRects(name: TelegramTextAttributes.URL, at: index), !rects.isEmpty {
-                        var rect = rects[0]
-                        for i in 1 ..< rects.count {
-                            rect = rect.union(rects[i])
-                        }
-                        var concealed = true
-                        if let (attributeText, fullText) = self.textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                            concealed = !doesUrlMatchText(url: value, text: attributeText, fullText: fullText)
-                        }
-                        return (item.message, .url(self, rect, value, concealed))
-                    }
-                }
-            }
-        }
-        return nil
-    }
-    
-    override func updateSearchTextHighlightState(text: String?, messages: [MessageIndex]?) {
+    override public func updateSearchTextHighlightState(text: String?, messages: [MessageIndex]?) {
         guard let item = self.item else {
             return
         }
@@ -768,7 +753,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+    override public func willUpdateIsExtractedToContextPreview(_ value: Bool) {
         if !value {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
@@ -781,7 +766,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func updateIsExtractedToContextPreview(_ value: Bool) {
+    override public func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
             if self.textSelectionNode == nil, let item = self.item, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
@@ -804,7 +789,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     guard let strongSelf = self, let item = strongSelf.item else {
                         return
                     }
-                    item.controllerInteraction.performTextSelectionAction(true, text, action)
+                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
                 })
                 textSelectionNode.updateRange = { [weak self] selectionRange in
                     if let strongSelf = self, let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {
@@ -816,6 +801,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                 }
+                textSelectionNode.enableQuote = item.controllerInteraction.canSetupReply(item.message) == .reply
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
                 self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode.textNode)
@@ -839,18 +825,18 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionView(value: value)
         }
         return nil
     }
     
-    override func getStatusNode() -> ASDisplayNode? {
+    override public func getStatusNode() -> ASDisplayNode? {
         return self.statusNode
     }
 
-    func animateFrom(sourceView: UIView, scrollOffset: CGFloat, widthDifference: CGFloat, transition: CombinedTransition) {
+    public func animateFrom(sourceView: UIView, scrollOffset: CGFloat, widthDifference: CGFloat, transition: CombinedTransition) {
         self.view.addSubview(sourceView)
 
         sourceView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak sourceView] _ in

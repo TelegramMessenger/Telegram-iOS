@@ -28,7 +28,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     private let gesture: ContextGesture
     private let sourceSendButton: ASDisplayNode
-    private let textInputNode: EditableTextNode
+    private let textInputView: UITextView
     private let attachment: Bool
     private let canSendWhenOnline: Bool
     private let completion: () -> Void
@@ -46,7 +46,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
     
     public var emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputNode: EditableTextNode, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id?, isScheduledMessages: Bool = false, forwardMessageIds: [EngineMessage.Id]?, hasEntityKeyboard: Bool, gesture: ContextGesture, sourceSendButton: ASDisplayNode, textInputView: UITextView, attachment: Bool = false, canSendWhenOnline: Bool, completion: @escaping () -> Void, sendMessage: @escaping (SendMode) -> Void, schedule: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.isScheduledMessages = isScheduledMessages
@@ -54,7 +54,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
         self.hasEntityKeyboard = hasEntityKeyboard
         self.gesture = gesture
         self.sourceSendButton = sourceSendButton
-        self.textInputNode = textInputNode
+        self.textInputView = textInputView
         self.attachment = attachment
         self.canSendWhenOnline = canSendWhenOnline
         self.completion = completion
@@ -107,7 +107,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
             canSchedule = false
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputNode: self.textInputNode, attachment: self.attachment, canSendWhenOnline: self.canSendWhenOnline, forwardedCount: forwardedCount, hasEntityKeyboard: self.hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, presentationData: self.presentationData, reminders: reminders, gesture: gesture, sourceSendButton: self.sourceSendButton, textInputView: self.textInputView, attachment: self.attachment, canSendWhenOnline: self.canSendWhenOnline, forwardedCount: forwardedCount, hasEntityKeyboard: self.hasEntityKeyboard, emojiViewProvider: self.emojiViewProvider, send: { [weak self] in
             self?.sendMessage(.generic)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

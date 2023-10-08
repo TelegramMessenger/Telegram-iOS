@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Postbox
 import TelegramCore
+import Display
 
 public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
     var nsString: NSString?
@@ -45,6 +46,8 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
                 string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
             case let .CustomEmoji(_, fileId):
                 string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: range)
+            case .BlockQuote:
+                string.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: range)
             default:
                 break
         }
@@ -52,7 +55,9 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
     return string
 }
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:]) -> NSAttributedString {
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false) -> NSAttributedString {
+    let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
+    
     var nsString: NSString?
     let string = NSMutableAttributedString(string: text, attributes: [NSAttributedString.Key.font: baseFont, NSAttributedString.Key.foregroundColor: baseColor])
     var skipEntity = false
@@ -61,6 +66,8 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         underlineAllLinks = true
     }
     var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]
+    
+    var nextBlockId = 0
     
     var rangeOffset: Int = 0
     for i in 0 ..< entities.count {
@@ -197,13 +204,13 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
-            case .Code, .Pre:
+            case .Pre:
                 string.addAttribute(NSAttributedString.Key.font, value: fixedFont, range: range)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
-            case .BlockQuote:
+            case .BlockQuote, .Code:
                 if let fontAttribute = fontAttributes[range] {
                     fontAttributes[range] = fontAttribute.union(.blockQuote)
                 } else {
@@ -211,17 +218,37 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 
                 let paragraphBreak = "\n"
-                string.insert(NSAttributedString(string: paragraphBreak), at: range.lowerBound)
             
-                let paragraphRange = NSRange(location: range.lowerBound + paragraphBreak.count, length: range.upperBound - range.lowerBound)
+                var nsString = string.string as NSString
+                var stringLength = nsString.length
                 
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.headIndent = 10.0
-                paragraphStyle.tabStops = [NSTextTab(textAlignment: .left, location: paragraphStyle.headIndent, options: [:])]
-                string.addAttribute(NSAttributedString.Key.paragraphStyle, value: paragraphStyle, range: paragraphRange)
+                let paragraphRange: NSRange
+                if range.lowerBound == 0 {
+                    paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
+                } else if nsString.character(at: range.lowerBound) == 0x0a {
+                    paragraphRange = NSRange(location: range.lowerBound + 1, length: range.upperBound - range.lowerBound - 1)
+                } else if nsString.character(at: range.lowerBound - 1) == 0x0a {
+                    paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
+                } else {
+                    string.insert(NSAttributedString(string: paragraphBreak), at: range.lowerBound)
+                    paragraphRange = NSRange(location: range.lowerBound + paragraphBreak.count, length: range.upperBound - range.lowerBound)
+                }
+                
+                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(id: nextBlockId, title: nil, color: baseQuoteTintColor), range: paragraphRange)
+                nextBlockId += 1
             
-                string.insert(NSAttributedString(string: paragraphBreak), at: paragraphRange.upperBound)
-                rangeOffset += paragraphBreak.count
+                nsString = string.string as NSString
+                stringLength = nsString.length
+                
+                if paragraphRange.upperBound < stringLength {
+                    if nsString.character(at: paragraphRange.upperBound) == 0x0a {
+                        string.replaceCharacters(in: NSMakeRange(paragraphRange.upperBound, 1), with: "")
+                        rangeOffset -= 1
+                    }
+                }
+            
+                rangeOffset += 0
+                //rangeOffset += paragraphBreak.count
             case .BankCard:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -268,6 +295,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         func addFont(ranges: [NSRange], fontAttributes: ChatTextFontAttributes) {
             for range in ranges {
                 var font: UIFont?
+                
                 if fontAttributes == [.bold, .italic] {
                     font = boldItalicFont
                 } else if fontAttributes == [.bold] {
@@ -276,7 +304,14 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 } else if fontAttributes == [.italic] {
                     font = italicFont
                     addedAttributes.append((range, fontAttributes))
+                } else {
+                    font = baseFont
                 }
+                
+                if adjustQuoteFontSize, let fontValue = font, fontAttributes.contains(.blockQuote) {
+                    font = fontValue.withSize(round(fontValue.pointSize * 0.8235294117647058))
+                }
+                
                 if let font = font {
                     string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
                 }

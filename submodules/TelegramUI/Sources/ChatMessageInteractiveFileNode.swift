@@ -29,6 +29,9 @@ import AudioTranscriptionPendingIndicatorComponent
 import UndoUI
 import TelegramNotices
 import ChatControllerInteraction
+import ChatMessageDateAndStatusNode
+import ChatHistoryEntry
+import ChatMessageItemCommon
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -1800,8 +1803,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     guard let strongSelf = self, let item = strongSelf.arguments else {
                         return
                     }
-                    item.controllerInteraction.performTextSelectionAction(true, text, action)
+                    item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
                 })
+                textSelectionNode.enableQuote = item.controllerInteraction.canSetupReply(item.message) == .reply
                 self.textSelectionNode = textSelectionNode
                 self.textClippingNode.addSubnode(textSelectionNode)
                 self.textClippingNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)

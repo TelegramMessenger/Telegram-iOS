@@ -43,6 +43,7 @@ import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
 import LegacyMessageInputPanel
 import StatisticsUI
+import ChatHistoryEntry
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1508,7 +1509,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, scheduleCurrentMessage: {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
-        }, performTextSelectionAction: { _, _, _ in
+        }, performTextSelectionAction: { _, _, _, _ in
         }, displayImportedMessageTooltip: { _ in
         }, displaySwipeToReplyHint: {
         }, dismissReplyMarkupMessage: { _ in

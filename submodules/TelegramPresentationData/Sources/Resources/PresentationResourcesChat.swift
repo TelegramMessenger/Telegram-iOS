@@ -1284,4 +1284,36 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Stories/InputLikeOn"), color: UIColor(rgb: 0xFF3B30))
         })
     }
+    
+    public static func chatReplyBackgroundTemplateImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatReplyBackgroundTemplateImage.rawValue, { theme in
+            let radius: CGFloat = 3.0
+            
+            return generateImage(CGSize(width: radius * 2.0 + 1.0, height: radius * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
+                context.clip()
+                
+                context.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: size))
+                
+                context.setFillColor(UIColor.white.cgColor)
+                context.fill(CGRect(origin: CGPoint(), size: CGSize(width: radius, height: size.height)))
+            })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius)).withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+    public static func chatReplyServiceBackgroundTemplateImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatReplyServiceBackgroundTemplateImage.rawValue, { theme in
+            let radius: CGFloat = 3.0
+            
+            return generateImage(CGSize(width: radius * 2.0 + 1.0, height: radius * 2.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                
+                context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: CGSize(width: radius, height: size.height)), cornerRadius: radius).cgPath)
+                context.fillPath()
+            })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius)).withRenderingMode(.alwaysTemplate)
+        })
+    }
 }
