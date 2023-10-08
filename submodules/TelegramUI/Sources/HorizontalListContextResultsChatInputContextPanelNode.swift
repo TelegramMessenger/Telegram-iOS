@@ -16,6 +16,8 @@ import ChatPresentationInterfaceState
 import UndoUI
 import PremiumUI
 import ChatControllerInteraction
+import ChatContextResultPeekContent
+import ChatInputContextPanelNode
 
 private struct ChatContextResultStableId: Hashable {
     let result: ChatContextResult

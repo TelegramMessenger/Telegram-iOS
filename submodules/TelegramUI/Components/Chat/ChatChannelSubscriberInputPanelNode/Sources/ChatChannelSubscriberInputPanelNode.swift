@@ -114,7 +114,7 @@ private func actionForPeer(peer: Peer, interfaceState: ChatPresentationInterface
 
 private let badgeFont = Font.regular(14.0)
 
-final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
+public final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode
     private let discussButton: HighlightableButtonNode
     private let discussButtonText: ImmediateTextNode
@@ -134,7 +134,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     
     private var layoutData: (CGFloat, CGFloat, CGFloat, CGFloat, UIEdgeInsets, CGFloat, Bool, LayoutMetrics)?
     
-    override init() {
+    public override init() {
         self.button = HighlightableButtonNode()
         self.discussButton = HighlightableButtonNode()
         self.activityIndicator = UIActivityIndicatorView(style: .gray)
@@ -177,18 +177,18 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         self.badgeDisposable.dispose()
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
         }
         return super.hitTest(point, with: event)
     }
     
-    @objc func helpPressed() {
+    @objc private func helpPressed() {
         self.interfaceInteraction?.presentGigagroupHelp()
     }
     
-    @objc func buttonPressed() {
+    @objc private func buttonPressed() {
         guard let context = self.context, let action = self.action, let presentationInterfaceState = self.presentationInterfaceState, let peer = presentationInterfaceState.renderedPeer?.peer else {
             return
         }
@@ -270,7 +270,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+    override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         return self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: transition, interfaceState: interfaceState, metrics: metrics, force: false)
     }
     
@@ -362,7 +362,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         return panelHeight
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override public func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return defaultHeight(metrics: metrics)
     }
 }

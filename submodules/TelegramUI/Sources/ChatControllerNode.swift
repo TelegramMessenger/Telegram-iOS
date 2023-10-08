@@ -29,6 +29,7 @@ import AccessoryPanelNode
 import ForwardAccessoryPanelNode
 import ChatOverscrollControl
 import ChatInputPanelNode
+import ChatInputContextPanelNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

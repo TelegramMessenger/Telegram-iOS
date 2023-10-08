@@ -11,14 +11,14 @@ import SolidRoundedButtonNode
 import TooltipUI
 import ChatInputPanelNode
 
-final class ChatBotStartInputPanelNode: ChatInputPanelNode {
+public final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     private let button: SolidRoundedButtonNode
     
     private var statusDisposable: Disposable?
     
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     
-    override var interfaceInteraction: ChatPanelInterfaceInteraction? {
+    override public var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
             if let _ = self.interfaceInteraction {
                 if self.statusDisposable == nil {
@@ -52,7 +52,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     private var tooltipController: TooltipScreen?
     private var tooltipDismissed = false
     
-    init(theme: PresentationTheme, strings: PresentationStrings) {
+    public init(theme: PresentationTheme, strings: PresentationStrings) {
         self.theme = theme
         self.strings = strings
         
@@ -73,7 +73,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         self.tooltipController?.dismiss()
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         if self.theme !== theme || self.strings !== strings {
             self.theme = theme
             self.strings = strings
@@ -82,7 +82,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    @objc func buttonPressed() {
+    @objc private func buttonPressed() {
         guard let _ = self.context, let presentationInterfaceState = self.presentationInterfaceState else {
             return
         }
@@ -96,7 +96,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
         super.updateAbsoluteRect(rect, within: containerSize, transition: transition)
         
         let absoluteFrame = self.button.view.convert(self.button.bounds, to: nil)
@@ -108,7 +108,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
     }
     
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+    override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         if self.presentationInterfaceState != interfaceState {
             self.presentationInterfaceState = interfaceState
         }
@@ -155,7 +155,7 @@ final class ChatBotStartInputPanelNode: ChatInputPanelNode {
         return panelHeight
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override public func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return defaultHeight(metrics: metrics) + 27.0
     }
 }

@@ -354,6 +354,11 @@ swift_library(
         "//submodules/TelegramUI/Components/AudioWaveformNode",
         "//submodules/TelegramUI/Components/Chat/ChatBotInfoItem",
         "//submodules/TelegramUI/Components/Chat/ChatInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatBotStartInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatButtonKeyboardInputNode",
+        "//submodules/TelegramUI/Components/Chat/ChatChannelSubscriberInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatContextResultPeekContent",
+        "//submodules/TelegramUI/Components/Chat/ChatInputContextPanelNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],
