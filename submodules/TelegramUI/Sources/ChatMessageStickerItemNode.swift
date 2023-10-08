@@ -272,7 +272,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         super.setupItem(item, synchronousLoad: synchronousLoad)
         
         self.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-        self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        if self.isNodeLoaded {
+            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        }
         
         for media in item.message.media {
             if let telegramFile = media as? TelegramMediaFile {
