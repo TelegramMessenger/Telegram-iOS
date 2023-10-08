@@ -25,6 +25,7 @@ import ChatControllerInteraction
 import TranslateUI
 import ChatHistoryEntry
 import ChatOverscrollControl
+import ChatBotInfoItem
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {

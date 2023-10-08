@@ -22,7 +22,7 @@ private let messageItalicFont = Font.italic(17.0)
 private let messageBoldItalicFont = Font.semiboldItalic(17.0)
 private let messageFixedFont = UIFont(name: "Menlo-Regular", size: 16.0) ?? UIFont.systemFont(ofSize: 17.0)
 
-final class ChatBotInfoItem: ListViewItem {
+public final class ChatBotInfoItem: ListViewItem {
     fileprivate let title: String
     fileprivate let text: String
     fileprivate let photo: TelegramMediaImage?
@@ -31,7 +31,7 @@ final class ChatBotInfoItem: ListViewItem {
     fileprivate let presentationData: ChatPresentationData
     fileprivate let context: AccountContext
     
-    init(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
+    public init(title: String, text: String, photo: TelegramMediaImage?, video: TelegramMediaFile?, controllerInteraction: ChatControllerInteraction, presentationData: ChatPresentationData, context: AccountContext) {
         self.title = title
         self.text = text
         self.photo = photo
@@ -41,7 +41,7 @@ final class ChatBotInfoItem: ListViewItem {
         self.context = context
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         let configure = {
             let node = ChatBotInfoItemNode()
             
@@ -66,7 +66,7 @@ final class ChatBotInfoItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ChatBotInfoItemNode {
                 let nodeLayout = nodeValue.asyncLayout()
@@ -84,20 +84,20 @@ final class ChatBotInfoItem: ListViewItem {
     }
 }
 
-final class ChatBotInfoItemNode: ListViewItemNode {
-    var controllerInteraction: ChatControllerInteraction?
+public final class ChatBotInfoItemNode: ListViewItemNode {
+    public var controllerInteraction: ChatControllerInteraction?
     
-    let offsetContainer: ASDisplayNode
-    let backgroundNode: ASImageNode
-    let imageNode: TransformImageNode
-    var videoNode: UniversalVideoNode?
-    let titleNode: TextNode
-    let textNode: TextNode
+    public let offsetContainer: ASDisplayNode
+    public let backgroundNode: ASImageNode
+    public let imageNode: TransformImageNode
+    public var videoNode: UniversalVideoNode?
+    public let titleNode: TextNode
+    public let textNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
     private let fetchDisposable = MetaDisposable()
     
-    var currentTextAndEntities: (String, [MessageTextEntity])?
+    public var currentTextAndEntities: (String, [MessageTextEntity])?
     
     private var theme: ChatPresentationThemeData?
     
@@ -108,7 +108,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
     
     private var item: ChatBotInfoItem?
     
-    init() {
+    public init() {
         self.offsetContainer = ASDisplayNode()
         
         self.backgroundNode = ASImageNode()
@@ -163,7 +163,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         videoNode.play()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -190,7 +190,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         super.updateAbsoluteRect(rect, within: containerSize)
         
         self.absolutePosition = (rect, containerSize)
@@ -202,7 +202,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
+    public func asyncLayout() -> (_ item: ChatBotInfoItem, _ width: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -351,7 +351,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    override func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
         if height.isLessThanOrEqualTo(0.0) {
             transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(), size: self.offsetContainer.bounds.size))
         } else {
@@ -359,25 +359,25 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.5)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.5, removeOnCompletion: false)
     }
     
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    override public func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         let result = super.point(inside: point, with: event)
         let extra = self.offsetContainer.frame.contains(point)
         return result || extra
     }
     
-    func updateTouchesAtPoint(_ point: CGPoint?) {
+    public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [CGRect]?
             if let point = point {
@@ -419,7 +419,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - self.offsetContainer.frame.minX - textNodeFrame.minX, y: point.y - self.offsetContainer.frame.minY - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -444,7 +444,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         }
     }
     
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
