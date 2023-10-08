@@ -13,9 +13,9 @@ import AnimationUI
 import ManagedAnimationNode
 import ChatPresentationInterfaceState
 import ChatSendButtonRadialStatusNode
+import AudioWaveformNode
 
 extension AudioWaveformNode: CustomMediaPlayerScrubbingForegroundNode {
-    
 }
 
 final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {

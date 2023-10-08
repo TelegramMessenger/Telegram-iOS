@@ -24,6 +24,7 @@ import TelegramNotices
 import ChatControllerInteraction
 import TranslateUI
 import ChatHistoryEntry
+import ChatOverscrollControl
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {

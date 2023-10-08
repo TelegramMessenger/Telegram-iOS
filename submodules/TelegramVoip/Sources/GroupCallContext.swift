@@ -46,7 +46,7 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
     private var dataSource: AudioBroadcastDataSource?
     
     #if DEBUG
-    private let debugDumpDirectory = EngineTempBox.shared.tempDirectory()
+    private let debugDumpDirectory: EngineTempBox.Directory?
     #endif
     
     init(queue: Queue, engine: TelegramEngine, callId: Int64, accessHash: Int64, isExternalStream: Bool) {
@@ -55,6 +55,10 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
         self.callId = callId
         self.accessHash = accessHash
         self.isExternalStream = isExternalStream
+        
+        #if DEBUG && true
+        self.debugDumpDirectory = EngineTempBox.shared.tempDirectory()
+        #endif
     }
 
     func requestTime(completion: @escaping (Int64) -> Void) -> Disposable {
@@ -143,9 +147,10 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
         }
         |> deliverOn(self.queue)
             
-        /*#if DEBUG
+        #if DEBUG
         let debugDumpDirectory = self.debugDumpDirectory
-        #endif*/
+        #endif
+        
         return signal.start(next: { result in
             guard let result = result else {
                 completion(OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: Double(timestampIdMilliseconds), status: .notReady, oggData: Data()))
@@ -154,11 +159,13 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
             let part: OngoingGroupCallBroadcastPart
             switch result.status {
             case let .data(dataValue):
-                /*#if DEBUG
-                let tempFilePath = debugDumpDirectory.path + "/\(timestampMilliseconds).mp4"
-                let _ = try? dataValue.subdata(in: 32 ..< dataValue.count).write(to: URL(fileURLWithPath: tempFilePath))
-                print("Dump stream part: \(tempFilePath)")
-                #endif*/
+                #if DEBUG
+                if let debugDumpDirectory {
+                    let tempFilePath = debugDumpDirectory.path + "/\(timestampMilliseconds).mp4"
+                    let _ = try? dataValue.subdata(in: 32 ..< dataValue.count).write(to: URL(fileURLWithPath: tempFilePath))
+                    print("Dump stream part: \(tempFilePath)")
+                }
+                #endif
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .success, oggData: dataValue)
             case .notReady:
                 part = OngoingGroupCallBroadcastPart(timestampMilliseconds: timestampIdMilliseconds, responseTimestamp: result.responseTimestamp, status: .notReady, oggData: Data())
