@@ -520,7 +520,7 @@ final class ShareWithPeersScreenComponent: Component {
                     if translation.y > 100.0 || velocity.y > 10.0 {
                         controller.requestDismiss()
                         if case .members = component.stateContext.subject {
-                            
+                        } else if case .channels = component.stateContext.subject {
                         } else {
                             Queue.mainQueue().justDispatch {
                                 controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .spring))
@@ -826,6 +826,8 @@ final class ShareWithPeersScreenComponent: Component {
             
             if case .members = component.stateContext.subject {
                 return
+            } else if case .channels = component.stateContext.subject {
+                return
             }
             
             var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
@@ -962,6 +964,8 @@ final class ShareWithPeersScreenComponent: Component {
                         } else if section.id == 1 {
                             if case .members = component.stateContext.subject {
                                 sectionTitle = "SUBSCRIBERS"
+                            } else if case .channels = component.stateContext.subject {
+                                sectionTitle = "CHANNELS"
                             } else {
                                 sectionTitle = environment.strings.Story_Privacy_ContactsHeader
                             }
@@ -1395,9 +1399,13 @@ final class ShareWithPeersScreenComponent: Component {
                         let subtitle: String?
                         if case let .legacyGroup(group) = peer {
                             subtitle = environment.strings.Conversation_StatusMembers(Int32(group.participantCount))
-                        } else if case .channel = peer {
+                        } else if case let .channel(channel) = peer {
                             if let count = stateValue.participants[peer.id] {
-                                subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                if case .broadcast = channel.info {
+                                    subtitle = environment.strings.Conversation_StatusSubscribers(Int32(count))
+                                } else {
+                                    subtitle = environment.strings.Conversation_StatusMembers(Int32(count))
+                                }
                             } else {
                                 subtitle = nil
                             }
@@ -1430,27 +1438,60 @@ final class ShareWithPeersScreenComponent: Component {
                                 selectionState: .editing(isSelected: isSelected, isTinted: false),
                                 hasNext: true,
                                 action: { [weak self] peer in
-                                    guard let self else {
+                                    guard let self, let environment = self.environment, let controller = environment.controller() as? ShareWithPeersScreen else {
                                         return
                                     }
-                                    if peer.id.isGroupOrChannel {
-                                        self.toggleGroupPeer(peer)
-                                    } else {
+                                    let update = {
+                                        let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
+                                        self.state?.updated(transition: transition)
+                                        
+                                        if self.searchStateContext != nil {
+                                            if let navigationTextFieldView = self.navigationTextField.view as? TokenListTextField.View {
+                                                navigationTextFieldView.clearText()
+                                            }
+                                        }
+                                    }
+                                    
+                                    let togglePeer = {
                                         if let index = self.selectedPeers.firstIndex(of: peer.id) {
                                             self.selectedPeers.remove(at: index)
                                             self.updateSelectedGroupPeers()
                                         } else {
                                             self.selectedPeers.append(peer.id)
                                         }
+                                        update()
                                     }
-                                    
-                                    let transition = Transition(animation: .curve(duration: 0.35, curve: .spring))
-                                    self.state?.updated(transition: transition)
-                                    
-                                    if self.searchStateContext != nil {
-                                        if let navigationTextFieldView = self.navigationTextField.view as? TokenListTextField.View {
-                                            navigationTextFieldView.clearText()
+                                    if peer.id.isGroupOrChannel {
+                                        if case .channels = component.stateContext.subject, self.selectedPeers.count >= 10 {
+                                            return
                                         }
+                                        if case .channels = component.stateContext.subject {
+                                            if case let .channel(channel) = peer, channel.addressName == nil, !self.selectedPeers.contains(peer.id) {
+                                                let alertController = textAlertController(
+                                                    context: component.context,
+                                                    forceTheme: environment.theme,
+                                                    title: "Channel is Private",
+                                                    text: "Are you sure you want to add a private channel? Users won't be able to join it without an invite link.",
+                                                    actions: [
+                                                        TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
+                                                        TextAlertAction(type: .defaultAction, title: "Add", action: {
+                                                            togglePeer()
+                                                        })
+                                                    ]
+                                                )
+                                                controller.present(alertController, in: .window(.root))
+                                            } else {
+                                                togglePeer()
+                                            }
+                                        } else {
+                                            self.toggleGroupPeer(peer)
+                                            update()
+                                        }
+                                    } else {
+                                        if case .members = component.stateContext.subject, self.selectedPeers.count >= 10 {
+                                            return
+                                        }
+                                        togglePeer()
                                     }
                                 }
                             )),
@@ -1644,7 +1685,7 @@ final class ShareWithPeersScreenComponent: Component {
             }
             
             let fadeTransition = Transition.easeInOut(duration: 0.25)
-            if let searchStateContext = self.searchStateContext, case let .search(query, _) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
+            if let searchStateContext = self.searchStateContext, case let .contactsSearch(query, _) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
                 let topInset: CGFloat = topOffset + itemLayout.containerInset + 40.0
@@ -1762,7 +1803,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             if let controller = self.environment?.controller() as? ShareWithPeersScreen {
                 if case .members = component.stateContext.subject {
-                    
+                } else if case .channels = component.stateContext.subject {
                 } else {
                     controller.updateModalStyleOverlayTransitionFactor(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
                 }
@@ -1827,6 +1868,8 @@ final class ShareWithPeersScreenComponent: Component {
                 }
                 self.currentHasChannels = hasChannels
             } else if case .members = component.stateContext.subject {
+                self.dismissPanGesture?.isEnabled = false
+            } else if case .channels = component.stateContext.subject {
                 self.dismissPanGesture?.isEnabled = false
             }
             
@@ -1975,6 +2018,8 @@ final class ShareWithPeersScreenComponent: Component {
                 switch component.stateContext.subject {
                 case .members:
                     placeholder = "Search Subscribers"
+                case .channels:
+                    placeholder = "Search Channels"
                 case .chats:
                     placeholder = environment.strings.Story_Privacy_SearchChats
                 default:
@@ -2015,10 +2060,10 @@ final class ShareWithPeersScreenComponent: Component {
                     if component.initialPrivacy.base == .closeFriends || component.initialPrivacy.base == .contacts {
                         onlyContacts = true
                     }
-                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts) {
+                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .contactsSearch(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts) {
                     } else {
                         self.searchStateDisposable?.dispose()
-                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .search(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts), editing: false)
+                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .contactsSearch(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts), editing: false)
                         var applyState = false
                         self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                             guard let self else {
@@ -2043,6 +2088,8 @@ final class ShareWithPeersScreenComponent: Component {
             transition.setFrame(view: self.dimView, frame: CGRect(origin: CGPoint(), size: availableSize))
             if case .members = component.stateContext.subject {
                 self.dimView .isHidden = true
+            } else if case .channels = component.stateContext.subject {
+                self.dimView .isHidden = true
             } else {
                 self.dimView .isHidden = false
             }
@@ -2065,7 +2112,7 @@ final class ShareWithPeersScreenComponent: Component {
                 containerSize: CGSize(width: itemsContainerWidth, height: 1000.0)
             )
             var isContactsSearch = false
-            if let searchStateContext = self.searchStateContext, case .search(_, true) = searchStateContext.subject {
+            if let searchStateContext = self.searchStateContext, case .contactsSearch(_, true) = searchStateContext.subject {
                 isContactsSearch = true
             }
             let peerItemSize = self.peerTemplateItem.update(
@@ -2218,6 +2265,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             var containerInset: CGFloat = environment.statusBarHeight
             if case .members = component.stateContext.subject {
+            } else if case .channels = component.stateContext.subject {
             } else {
                 containerInset += 10.0
             }
@@ -2274,6 +2322,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             var actionButtonTitle = environment.strings.Story_Privacy_SaveList
             let title: String
+            var subtitle: String?
             switch component.stateContext.subject {
             case .peers:
                 title = environment.strings.Story_Privacy_PostStoryAs
@@ -2301,15 +2350,40 @@ final class ShareWithPeersScreenComponent: Component {
                 case .everyone:
                     title = environment.strings.Story_Privacy_ExcludedPeople
                 }
-            case .search:
+            case .contactsSearch:
                 title = ""
             case .members:
                 title = "Gift Premium"
                 actionButtonTitle = "Save Recipients"
+                subtitle = "select up to 10 subscribers"
+            case .channels:
+                title = "Add Channels"
+                actionButtonTitle = "Save Channels"
+                subtitle = "select up to 10 channels"
             }
+            
+            let titleComponent: AnyComponent<Empty>
+            if let subtitle {
+                titleComponent = AnyComponent(
+                    List([
+                        AnyComponentWithIdentity(
+                            id: "title",
+                            component: AnyComponent(Text(text: title, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor))
+                        ),
+                        AnyComponentWithIdentity(
+                            id: "subtitle",
+                            component: AnyComponent(Text(text: subtitle, font: Font.regular(13.0), color: environment.theme.rootController.navigationBar.secondaryTextColor))
+                        )
+                    ],
+                    centerAlignment: true)
+                )
+            } else {
+                titleComponent = AnyComponent(Text(text: title, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor))
+            }
+            
             let navigationTitleSize = self.navigationTitle.update(
                 transition: .immediate,
-                component: AnyComponent(Text(text: title, font: Font.semibold(17.0), color: environment.theme.rootController.navigationBar.primaryTextColor)),
+                component: titleComponent,
                 environment: {},
                 containerSize: CGSize(width: containerWidth - navigationButtonsWidth, height: navigationHeight)
             )
@@ -2343,6 +2417,8 @@ final class ShareWithPeersScreenComponent: Component {
             } else {
                 var inset: CGFloat
                 if case .members = component.stateContext.subject {
+                    inset = 1000.0
+                } else if case .channels = component.stateContext.subject {
                     inset = 1000.0
                 } else if case let .stories(editing) = component.stateContext.subject {
                     if editing {
@@ -2644,6 +2720,7 @@ final class ShareWithPeersScreenComponent: Component {
             
             var scrollClippingInset: CGFloat = 0.0
             if case .members = component.stateContext.subject {
+            } else if case .channels = component.stateContext.subject {
             } else {
                 scrollClippingInset = 10.0
             }
@@ -2865,6 +2942,8 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         var theme: ViewControllerComponentContainer.Theme = .dark
         if case .members = stateContext.subject {
             theme = .default
+        } else if case .channels = stateContext.subject {
+            theme = .default
         }
         super.init(context: context, component: ShareWithPeersScreenComponent(
             context: context,
@@ -2885,6 +2964,9 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
         
         self.statusBar.statusBarStyle = .Ignore
         if case .members = stateContext.subject {
+            self.navigationPresentation = .modal
+            self.isCustomModal = false
+        } else if case .channels = stateContext.subject {
             self.navigationPresentation = .modal
             self.isCustomModal = false
         } else {

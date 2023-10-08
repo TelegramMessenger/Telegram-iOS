@@ -276,6 +276,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func addBoostsIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.itemListAddBoostsIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Premium/AddBoosts"), color: theme.list.itemAccentColor)
+        })
+    }
+    
     public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
         if !top && !bottom {
             return nil

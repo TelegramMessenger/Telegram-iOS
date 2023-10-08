@@ -112,6 +112,9 @@
             doneImage = pallete != nil ? pallete.doneIconImage : TGTintedImage([UIImage imageNamed:@"Editor/Commit"], [UIColor whiteColor]);
             break;
         }
+        case TGPhotoEditorDoneButtonSchedule:
+            doneImage = pallete != nil ? pallete.scheduleIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");
+            break;
         default:
         {
             doneImage = pallete != nil ? pallete.sendIconImage : TGComponentsImageNamed(@"PhotoPickerSendIcon");

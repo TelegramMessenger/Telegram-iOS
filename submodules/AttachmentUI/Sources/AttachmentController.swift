@@ -11,6 +11,8 @@ import AccountContext
 import TelegramStringFormatting
 import UIKitRuntimeUtils
 import MediaResources
+import LegacyMessageInputPanel
+import LegacyMessageInputPanelInputView
 import AttachmentTextInputPanelNode
 
 public enum AttachmentButtonType: Equatable {

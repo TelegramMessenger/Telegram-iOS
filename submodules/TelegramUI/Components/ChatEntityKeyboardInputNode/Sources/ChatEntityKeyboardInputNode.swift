@@ -20,7 +20,6 @@ import AudioToolbox
 import UndoUI
 import ContextUI
 import GalleryUI
-import AttachmentTextInputPanelNode
 import TelegramPresentationData
 import TelegramNotices
 import StickerPeekUI
@@ -33,6 +32,7 @@ import Pasteboard
 import StickerPackPreviewUI
 import EntityKeyboardGifContent
 import LegacyMessageInputPanelInputView
+import AttachmentTextInputPanelNode
 
 public final class EmptyInputView: UIView, UIInputViewAudioFeedback {
     public var enableInputClicksWhenVisible: Bool {
@@ -2081,7 +2081,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-public final class EntityInputView: UIInputView, LegacyMessageInputPanelInputView, AttachmentTextInputPanelInputView, UIInputViewAudioFeedback {
+public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputView, LegacyMessageInputPanelInputView, UIInputViewAudioFeedback {
     private let context: AccountContext
     
     public var insertText: ((NSAttributedString) -> Void)?

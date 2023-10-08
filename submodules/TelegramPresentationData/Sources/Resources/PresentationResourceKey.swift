@@ -70,6 +70,7 @@ public enum PresentationResourceKey: Int32 {
     case itemListImageIcon
     case itemListCloudIcon
     case itemListTopicArrowIcon
+    case itemListAddBoostsIcon
     
     case itemListVoiceCallIcon
     case itemListVideoCallIcon

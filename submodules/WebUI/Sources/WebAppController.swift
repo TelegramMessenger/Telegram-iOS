@@ -225,12 +225,9 @@ public struct WebAppParameters {
 }
 
 public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
-    var backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
-    var secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
-    if presentationTheme.list.blocksBackgroundColor.rgb == presentationTheme.list.plainBackgroundColor.rgb {
-        backgroundColor = presentationTheme.list.modalPlainBackgroundColor.rgb
-        secondaryBackgroundColor = presentationTheme.list.plainBackgroundColor.rgb
-    }
+    let backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
+    let secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
+
     return [
         "bg_color": Int32(bitPattern: backgroundColor),
         "secondary_bg_color": Int32(bitPattern: secondaryBackgroundColor),
@@ -238,7 +235,13 @@ public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) ->
         "hint_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
         "link_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
         "button_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.fillColor.rgb),
-        "button_text_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.foregroundColor.rgb)
+        "button_text_color": Int32(bitPattern: presentationTheme.list.itemCheckColors.foregroundColor.rgb),
+        "header_bg_color": Int32(bitPattern: presentationTheme.rootController.navigationBar.opaqueBackgroundColor.rgb),
+        "accent_text_color": Int32(bitPattern: presentationTheme.list.itemAccentColor.rgb),
+        "section_bg_color": Int32(bitPattern: presentationTheme.list.itemBlocksBackgroundColor.rgb),
+        "section_header_text_color": Int32(bitPattern: presentationTheme.list.freeTextColor.rgb),
+        "subtitle_text_color": Int32(bitPattern: presentationTheme.list.itemSecondaryTextColor.rgb),
+        "destructive_text_color": Int32(bitPattern: presentationTheme.list.itemDestructiveColor.rgb)
     ]
 }
 
@@ -295,13 +298,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.topOverscrollNode = ASDisplayNode()
             
             super.init()
-            
+                                     
             if self.presentationData.theme.list.plainBackgroundColor.rgb == 0x000000 {
                 self.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
             } else {
                 self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
             }
-                         
+            
             let webView = WebAppWebView()
             webView.alpha = 0.0
             webView.navigationDelegate = self
@@ -768,7 +771,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 case "web_app_open_tg_link":
                     if let json = json, let path = json["path_full"] as? String {
                         controller.openUrl("https://t.me\(path)", false, { [weak controller] in
-                            controller?.dismiss()
+                            let _ = controller
+//                            controller?.dismiss()
                         })
                     }
                 case "web_app_open_invoice":
@@ -990,6 +994,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                         self.invokeCustomMethod(requestId: requestId, method: method, params: paramsString ?? "{}")
                     }
+                case "web_app_setup_settings_button":
+                    if let json = json, let isVisible = json["is_visible"] as? Bool {
+                        self.controller?.hasSettings = isVisible
+                    }
                 default:
                     break
             }
@@ -1009,12 +1017,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
             let color: UIColor?
             var primaryTextColor: UIColor?
             var secondaryTextColor: UIColor?
-            var backgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            var secondaryBackgroundColor = self.presentationData.theme.list.blocksBackgroundColor
-            if self.presentationData.theme.list.blocksBackgroundColor.rgb == self.presentationData.theme.list.plainBackgroundColor.rgb {
-                backgroundColor = self.presentationData.theme.list.modalPlainBackgroundColor
-                secondaryBackgroundColor = self.presentationData.theme.list.plainBackgroundColor
-            }
+            let backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+            let secondaryBackgroundColor = self.presentationData.theme.list.blocksBackgroundColor
             if let headerColor = self.headerColor {
                 color = headerColor
                 let textColor = headerColor.lightness > 0.5 ? UIColor(rgb: 0x000000) : UIColor(rgb: 0xffffff)
@@ -1342,6 +1346,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     private var presentationDataDisposable: Disposable?
     
+    private var hasSettings = false
+    
     public var openUrl: (String, Bool, @escaping () -> Void) -> Void = { _, _, _ in }
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
@@ -1363,7 +1369,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.threadId = threadId
         
         self.updatedPresentationData = updatedPresentationData
-        self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        
+        var presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
+        let updatedTheme = presentationData.theme.withModalBlocksBackground()
+        presentationData = presentationData.withUpdated(theme: updatedTheme)
+        self.presentationData = presentationData
         
         self.cancelButtonNode = WebAppCancelButtonNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
@@ -1399,6 +1409,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.presentationDataDisposable = ((updatedPresentationData?.signal ?? context.sharedContext.presentationData)
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
+                let updatedTheme = presentationData.theme.withModalBlocksBackground()
+                let presentationData = presentationData.withUpdated(theme: updatedTheme)
                 strongSelf.presentationData = presentationData
                 
                 strongSelf.updateNavigationBarTheme(transition: .immediate)
@@ -1469,10 +1481,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         let peerId = self.peerId
         let botId = self.botId
-        let url = self.url
-        let forceHasSettings = self.forceHasSettings
         
         let source = self.source
+        
+        let hasSettings = self.hasSettings
         
         let items = context.engine.messages.attachMenuBots()
         |> take(1)
@@ -1481,16 +1493,15 @@ public final class WebAppController: ViewController, AttachmentContainable {
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
             
-            let hasSettings: Bool
-            if url == nil {
-                if forceHasSettings {
-                    hasSettings = true
-                } else {
-                    hasSettings = attachMenuBot?.flags.contains(.hasSettings) == true
-                }
-            } else {
-                hasSettings = forceHasSettings
-            }
+//            if url == nil {
+//                if forceHasSettings {
+//                    hasSettings = true
+//                } else {
+//                    hasSettings = attachMenuBot?.flags.contains(.hasSettings) == true
+//                }
+//            } else {
+//                hasSettings = forceHasSettings
+//            }
             
             if hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in

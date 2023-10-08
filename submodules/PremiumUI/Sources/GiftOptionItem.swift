@@ -11,25 +11,72 @@ import PresentationDataUtils
 import AccountContext
 import AvatarNode
 
-public final class GiftModeItem: ListViewItem, ItemListItem {
+public final class GiftOptionItem: ListViewItem, ItemListItem {
+    public struct Icon: Equatable {
+        public enum Color {
+            case blue
+            case green
+            case red
+            case violet
+        }
+        public let color: Color
+        public let name: String
+        
+        public init(
+            color: Color,
+            name: String
+        ) {
+            self.color = color
+            self.name = name
+        }
+    }
+    
+    public enum Font {
+        case regular
+        case bold
+    }
+    
+    public enum SubtitleFont {
+        case regular
+        case small
+    }
+    
+    public enum Label {
+        case generic(String)
+        case boosts(Int32)
+        
+        var string: String {
+            switch self {
+            case let .generic(value):
+                return value
+            case let .boosts(value):
+                return "\(value)"
+            }
+        }
+    }
+    
     let presentationData: ItemListPresentationData
     let context: AccountContext
-    let iconName: String?
+    let icon: Icon?
     let title: String
+    let titleFont: Font
     let subtitle: String?
+    let subtitleFont: SubtitleFont
     let subtitleActive: Bool
-    let label: String?
+    let label: Label?
     let badge: String?
-    let isSelected: Bool
+    let isSelected: Bool?
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, iconName: String? = nil, title: String, subtitle: String?, subtitleActive: Bool = false, label: String?, badge: String?, isSelected: Bool, sectionId: ItemListSectionId, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
         self.presentationData = presentationData
-        self.iconName = iconName
+        self.icon = icon
         self.context = context
         self.title = title
+        self.titleFont = titleFont
         self.subtitle = subtitle
+        self.subtitleFont = subtitleFont
         self.subtitleActive = subtitleActive
         self.label = label
         self.badge = badge
@@ -40,7 +87,7 @@ public final class GiftModeItem: ListViewItem, ItemListItem {
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = GiftModeItemNode()
+            let node = GiftOptionItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
             
             node.contentSize = layout.contentSize
@@ -56,7 +103,7 @@ public final class GiftModeItem: ListViewItem, ItemListItem {
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? GiftModeItemNode {
+            if let nodeValue = node() as? GiftOptionItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 var animated = true
@@ -76,7 +123,9 @@ public final class GiftModeItem: ListViewItem, ItemListItem {
         }
     }
     
-    public var selectable: Bool = true
+    public var selectable: Bool {
+        return self.action != nil
+    }
     
     public func selected(listView: ListView){
         listView.clearHighlightAnimated(true)
@@ -84,7 +133,7 @@ public final class GiftModeItem: ListViewItem, ItemListItem {
     }
 }
 
-class GiftModeItemNode: ItemListRevealOptionsItemNode {
+class GiftOptionItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -96,14 +145,18 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
         return self.containerNode
     }
     
-    fileprivate var avatarNode: ASImageNode?
+    fileprivate var iconNode: ASImageNode?
     private let titleNode: TextNode
     private let statusNode: TextNode
+    private var statusArrowNode: ASImageNode?
+    
+    private var labelBackgroundNode: ASImageNode?
     private let labelNode: TextNode
+    private var labelIconNode: ASImageNode?
     private let badgeTextNode: TextNode
     private var badgeBackgroundNode: ASImageNode?
     
-    private var layoutParams: (GiftModeItem, ListViewItemLayoutParams, ItemListNeighbors)?
+    private var layoutParams: (GiftOptionItem, ListViewItemLayoutParams, ItemListNeighbors)?
     
     private var selectableControlNode: ItemListSelectableControlNode?
     
@@ -172,17 +225,31 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
         item.action?()
     }
     
-    func asyncLayout() -> (_ item: GiftModeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
+    func asyncLayout() -> (_ item: GiftOptionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeStatusLayout = TextNode.asyncLayout(self.statusNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
+        let makeBadgeLayout = TextNode.asyncLayout(self.badgeTextNode)
         let selectableControlLayout = ItemListSelectableControlNode.asyncLayout(self.selectableControlNode)
         
         let currentItem = self.layoutParams?.0
         
         return { item, params, neighbors in
-            let titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 17.0 / 17.0))
-            let statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
+            let titleFont: UIFont
+            switch item.titleFont {
+            case .regular:
+                titleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 17.0 / 17.0))
+            case .bold:
+                titleFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 17.0 / 17.0))
+            }
+
+            let statusFont: UIFont
+            switch item.subtitleFont {
+            case .regular:
+                statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            case .small:
+                statusFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 13.0 / 17.0))
+            }
                         
             var updatedTheme: PresentationTheme?
             if currentItem?.presentationData.theme !== item.presentationData.theme {
@@ -193,16 +260,28 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
             
             let titleAttributedString = NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             let statusAttributedString = NSAttributedString(string: item.subtitle ?? "", font: statusFont, textColor: item.subtitleActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
-            let labelAttributedString = NSAttributedString(string: item.label ?? "", font: titleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            let badgeAttributedString = NSAttributedString(string: item.badge ?? "", font: Font.with(size: 14.0, design: .round, weight: .semibold), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
             
-            let leftInset: CGFloat = 17.0 + params.leftInset
-            
-            var avatarInset: CGFloat = 0.0
-            if let _ = item.iconName {
-                avatarInset += 40.0
+            let labelColor: UIColor
+            let labelFont: UIFont
+            if let label = item.label, case .boosts = label {
+                labelColor = item.presentationData.theme.list.itemAccentColor
+                labelFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            } else {
+                labelColor = item.presentationData.theme.list.itemSecondaryTextColor
+                labelFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 17.0 / 17.0))
             }
             
-            let verticalInset: CGFloat = 11.0
+            let labelAttributedString = NSAttributedString(string: item.label?.string ?? "", font: labelFont, textColor: labelColor)
+            
+            let leftInset: CGFloat = 14.0 + params.leftInset
+            
+            var avatarInset: CGFloat = 0.0
+            if let _ = item.icon {
+                avatarInset += 48.0
+            }
+            
+            let verticalInset: CGFloat = 10.0
             let titleSpacing: CGFloat = 2.0
             
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -211,9 +290,11 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
             var selectableControlSizeAndApply: (CGFloat, (CGSize, Bool) -> ItemListSelectableControlNode)?
             var editingOffset: CGFloat = 0.0
             
-            let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, item.isSelected, false)
-            selectableControlSizeAndApply = sizeAndApply
-            editingOffset = sizeAndApply.0
+            if let isSelected = item.isSelected {
+                let sizeAndApply = selectableControlLayout(item.presentationData.theme.list.itemCheckColors.strokeColor, item.presentationData.theme.list.itemCheckColors.fillColor, item.presentationData.theme.list.itemCheckColors.foregroundColor, isSelected, false)
+                selectableControlSizeAndApply = sizeAndApply
+                editingOffset = sizeAndApply.0
+            }
                         
             let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: labelAttributedString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: .greatestFiniteMagnitude)))
             
@@ -221,6 +302,8 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: textConstrainedWidth, height: .greatestFiniteMagnitude)))
             let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: textConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (badgeLayout, badgeApply) = makeBadgeLayout(TextNodeLayoutArguments(attributedString: badgeAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: textConstrainedWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize = CGSize(width: params.width, height: verticalInset * 2.0 + titleLayout.size.height + titleSpacing + statusLayout.size.height)
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -249,30 +332,35 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     let iconSize = CGSize(width: 40.0, height: 40.0)
-                    if let iconName = item.iconName {
+                    if let icon = item.icon {
                         let iconNode: ASImageNode
                         
-                        if let current = strongSelf.avatarNode {
+                        if let current = strongSelf.iconNode {
                             iconNode = current
                         } else {
                             iconNode = ASImageNode()
                             iconNode.displaysAsynchronously = false
                             strongSelf.addSubnode(iconNode)
                             
-                            strongSelf.avatarNode = iconNode
+                            strongSelf.iconNode = iconNode
                         }
                         
                         let colors: [UIColor]
-                        if iconName.contains("away") {
-                            colors = [UIColor(rgb: 0x4faaff), UIColor(rgb: 0x017aff)]
-                        } else {
-                            colors = [UIColor(rgb: 0xc36eff), UIColor(rgb: 0x8c61fa)]
+                        switch icon.color {
+                        case .blue:
+                            colors = [UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x71d4fc)]
+                        case .green:
+                            colors = [UIColor(rgb: 0x54cb68), UIColor(rgb: 0xa0de7e)]
+                        case .red:
+                            colors = [UIColor(rgb: 0xff516a), UIColor(rgb: 0xff885e)]
+                        case .violet:
+                            colors = [UIColor(rgb: 0xd569ec), UIColor(rgb: 0xe0a2f3)]
                         }
                         if iconNode.image == nil {
-                            iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: iconName), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors.reversed())
+                            iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: icon.name), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors)
                         }
                         
-                        let iconFrame = CGRect(origin: CGPoint(x: leftInset + 38.0, y: floorToScreenPixels((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
+                        let iconFrame = CGRect(origin: CGPoint(x: leftInset - 3.0 + editingOffset, y: floorToScreenPixels((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
                         iconNode.frame = iconFrame
                     }
                     
@@ -304,6 +392,7 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
                     let _ = titleApply()
                     let _ = statusApply()
                     let _ = labelApply()
+                    let _ = badgeApply()
                                                             
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -332,7 +421,7 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
                     let bottomStripeOffset: CGFloat
                     switch neighbors.bottom {
                         case .sameSection(false):
-                            bottomStripeInset = leftInset + editingOffset
+                            bottomStripeInset = leftInset + editingOffset + avatarInset
                             bottomStripeOffset = -separatorHeight
                             strongSelf.bottomStripeNode.isHidden = false
                         default:
@@ -350,9 +439,91 @@ class GiftModeItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.topStripeNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight)))
                     transition.updateFrame(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight)))
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: verticalInset), size: titleLayout.size))
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
-                    transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 18.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
+                    let titleVerticalOriginY: CGFloat
+                    if statusLayout.size.height > 0.0 {
+                        titleVerticalOriginY = verticalInset
+                    } else {
+                        titleVerticalOriginY = floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0)
+                    }
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: titleVerticalOriginY), size: titleLayout.size))
+                    
+                    var badgeOffset: CGFloat = 0.0
+                    if badgeLayout.size.width > 0.0 {
+                        let badgeFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset + 2.0, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: badgeLayout.size)
+                        let badgeBackgroundFrame = badgeFrame.insetBy(dx: -2.0, dy: -2.0)
+                        
+                        let badgeBackgroundNode: ASImageNode
+                        if let current = strongSelf.badgeBackgroundNode {
+                            badgeBackgroundNode = current
+                        } else {
+                            badgeBackgroundNode = ASImageNode()
+                            badgeBackgroundNode.displaysAsynchronously = false
+                            badgeBackgroundNode.image = generateStretchableFilledCircleImage(radius: 5.0, color: item.presentationData.theme.list.itemCheckColors.fillColor)
+                            strongSelf.badgeBackgroundNode = badgeBackgroundNode
+                            
+                            strongSelf.containerNode.addSubnode(badgeBackgroundNode)
+                            strongSelf.containerNode.addSubnode(strongSelf.badgeTextNode)
+                        }
+
+                        transition.updateFrame(node: badgeBackgroundNode, frame: badgeBackgroundFrame)
+                        transition.updateFrame(node: strongSelf.badgeTextNode, frame: badgeFrame)
+                        
+                        badgeOffset = badgeLayout.size.width + 10.0
+                    }
+                    
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset + badgeOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
+                                        
+                    if let label = item.label, case .boosts = label {
+                        let backgroundNode: ASImageNode
+                        let iconNode: ASImageNode
+                        if let currentBackground = strongSelf.labelBackgroundNode, let currentIcon = strongSelf.labelIconNode {
+                            backgroundNode = currentBackground
+                            iconNode = currentIcon
+                        } else {
+                            backgroundNode = ASImageNode()
+                            backgroundNode.displaysAsynchronously = false
+                            backgroundNode.image = generateStretchableFilledCircleImage(radius: 13.0, color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.1))
+                            strongSelf.containerNode.insertSubnode(backgroundNode, at: 1)
+                            
+                            iconNode = ASImageNode()
+                            iconNode.displaysAsynchronously = false
+                            iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostChannel"), color: item.presentationData.theme.list.itemAccentColor)
+                            strongSelf.containerNode.addSubnode(iconNode)
+                            
+                            strongSelf.labelBackgroundNode = backgroundNode
+                            strongSelf.labelIconNode = backgroundNode
+                        }
+                        
+                        if let icon = iconNode.image {
+                            let labelFrame = CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 21.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                            let iconFrame = CGRect(origin: CGPoint(x: labelFrame.minX - icon.size.width - 2.0, y: labelFrame.minY - 1.0), size: icon.size)
+                            let totalFrame = CGRect(x: iconFrame.minX - 7.0, y: labelFrame.minY - 4.0, width: iconFrame.width + labelFrame.width + 18.0, height: 26.0)
+                            transition.updateFrame(node: backgroundNode, frame: totalFrame)
+                            transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
+                            transition.updateFrame(node: iconNode, frame: iconFrame)
+                        }
+                    } else {
+                        transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 18.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
+                    }
+                    
+                    if item.subtitleActive {
+                        let statusArrowNode: ASImageNode
+                        if let current = strongSelf.statusArrowNode {
+                            statusArrowNode = current
+                        } else {
+                            statusArrowNode = ASImageNode()
+                            statusArrowNode.displaysAsynchronously = false
+                            statusArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Contact List/SubtitleArrow"), color: item.presentationData.theme.list.itemAccentColor)
+                            strongSelf.statusArrowNode = statusArrowNode
+                            strongSelf.containerNode.addSubnode(statusArrowNode)
+                        }
+                        if let arrowSize = statusArrowNode.image?.size {
+                            transition.updateFrame(node: statusArrowNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset + statusLayout.size.width + 4.0, y: strongSelf.titleNode.frame.maxY + titleSpacing + 4.0), size: arrowSize))
+                        }
+                    } else if let statusArrowNode = strongSelf.statusArrowNode {
+                        strongSelf.statusArrowNode = nil
+                        statusArrowNode.removeFromSupernode()
+                    }
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
                     

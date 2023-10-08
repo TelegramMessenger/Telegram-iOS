@@ -9,52 +9,33 @@ import PresentationDataUtils
 import Markdown
 import ComponentFlow
 
-final class CreateGiveawayHeaderItem: ListViewItem, ItemListItem {
+final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let theme: PresentationTheme
     let title: String
     let text: String
-    let sectionId: ItemListSectionId
+    let cancel: () -> Void
     
-    init(theme: PresentationTheme, title: String, text: String, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, title: String, text: String, cancel: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.text = text
-        self.sectionId = sectionId
+        self.cancel = cancel
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
-            let node = CreateGiveawayHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-            
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-            
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in apply() })
-                })
-            }
+    func isEqual(to: ItemListControllerHeaderItem) -> Bool {
+        if let item = to as? CreateGiveawayHeaderItem {
+            return self.theme === item.theme && self.title == item.title && self.text == item.text
+        } else {
+            return false
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
-        Queue.mainQueue().async {
-            guard let nodeValue = node() as? CreateGiveawayHeaderItemNode else {
-                assertionFailure()
-                return
-            }
-            
-            let makeLayout = nodeValue.asyncLayout()
-            
-            async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                Queue.mainQueue().async {
-                    completion(layout, { _ in
-                        apply()
-                    })
-                }
-            }
+    func node(current: ItemListControllerHeaderItemNode?) -> ItemListControllerHeaderItemNode {
+        if let current = current as? CreateGiveawayHeaderItemNode {
+            current.item = self
+            return current
+        } else {
+            return CreateGiveawayHeaderItemNode(item: self)
         }
     }
 }
@@ -62,31 +43,63 @@ final class CreateGiveawayHeaderItem: ListViewItem, ItemListItem {
 private let titleFont = Font.semibold(20.0)
 private let textFont = Font.regular(15.0)
 
-class CreateGiveawayHeaderItemNode: ListViewItemNode {
-    private let titleNode: TextNode
-    private let textNode: TextNode
+class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
+    private let backgroundNode: NavigationBackgroundNode
+    private let separatorNode: ASDisplayNode
+    private let titleNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
+    
+    private let cancelNode: HighlightableButtonNode
     
     private var hostView: ComponentHostView<Empty>?
     
-    private var params: (AnyComponent<Empty>, CGSize, ListViewItemNodeLayout)?
+    private var component: AnyComponent<Empty>?
+    private var validLayout: ContainerViewLayout?
         
-    private var item: CreateGiveawayHeaderItem?
+    fileprivate var item: CreateGiveawayHeaderItem {
+        didSet {
+            self.updateItem()
+            if let layout = self.validLayout {
+                let _ = self.updateLayout(layout: layout, transition: .immediate)
+            }
+        }
+    }
     
-    init() {
-        self.titleNode = TextNode()
+    init(item: CreateGiveawayHeaderItem) {
+        self.item = item
+        
+        self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.navigationBar.blurredBackgroundColor)
+        
+        self.separatorNode = ASDisplayNode()
+        
+        self.titleNode = ImmediateTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
         
-        self.textNode = TextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .left
         self.textNode.contentsScale = UIScreen.main.scale
+        self.textNode.maximumNumberOfLines = 0
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        self.cancelNode = HighlightableButtonNode()
         
-        self.addSubnode(self.titleNode)
+        super.init()
+        
         self.addSubnode(self.textNode)
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.separatorNode)
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.cancelNode)
+        
+        self.cancelNode.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+        
+        self.updateItem()
+    }
+    
+    @objc private func cancelPressed() {
+        self.item.cancel()
     }
     
     override func didLoad() {
@@ -94,76 +107,121 @@ class CreateGiveawayHeaderItemNode: ListViewItemNode {
         
         let hostView = ComponentHostView<Empty>()
         self.hostView = hostView
-        self.view.addSubview(hostView)
+        self.view.insertSubview(hostView, at: 0)
         
-        if let (component, containerSize, layout) = self.params {
+        if let layout = self.validLayout, let component = self.component {
+            let containerSize = CGSize(width: min(414.0, layout.size.width), height: 220.0)
+            
             let size = hostView.update(
                 transition: .immediate,
                 component: component,
                 environment: {},
                 containerSize: containerSize
             )
-            hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -121.0), size: size)
+            hostView.bounds = CGRect(origin: .zero, size: size)
         }
     }
     
-    func asyncLayout() -> (_ item: CreateGiveawayHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+    func updateItem() {
+        self.backgroundNode.updateColor(color: self.item.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+        self.separatorNode.backgroundColor = self.item.theme.rootController.navigationBar.separatorColor
         
-        return { item, params, neighbors in
-            let topInset: CGFloat = 2.0
-            let leftInset: CGFloat = 24.0 + params.leftInset
+        let attributedTitle = NSAttributedString(string: self.item.title, font: titleFont, textColor: self.item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        let attributedText = NSAttributedString(string: self.item.text, font: textFont, textColor: self.item.theme.list.freeTextColor, paragraphAlignment: .center)
         
-            let attributedTitle = NSAttributedString(string: item.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
-            let attributedText = NSAttributedString(string: item.text, font: textFont, textColor: item.theme.list.freeTextColor, paragraphAlignment: .center)
-                        
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-            
-            let contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + textLayout.size.height + 80.0)
-            
-            let insets = itemListNeighborsGroupedInsets(neighbors, params)
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            
-            return (layout, { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.item = item
-                    
-                    let component = AnyComponent(PremiumStarComponent(isIntro: true, isVisible: true, hasIdleAnimations: true))
-                    let containerSize = CGSize(width: min(414.0, layout.size.width), height: 220.0)
-                    
-                    if let hostView = strongSelf.hostView {
-                        let size = hostView.update(
-                            transition: .immediate,
-                            component: component,
-                            environment: {},
-                            containerSize: containerSize
-                        )
-                        hostView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - size.width) / 2.0), y: -121.0), size: size)
-                    }
-                    
-                    var origin: CGFloat = 78.0
-                    let _ = titleApply()
-                    strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleLayout.size.width) / 2.0), y: origin), size: titleLayout.size)
-                    
-                    origin += titleLayout.size.height + 10.0
-                    
-                    let _ = textApply()
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - textLayout.size.width) / 2.0), y: origin), size: textLayout.size)
-                    
-                    strongSelf.params = (component, containerSize, layout)
-                }
-            })
+        self.titleNode.attributedText = attributedTitle
+        self.textNode.attributedText = attributedText
+        
+        self.cancelNode.setAttributedTitle(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: self.item.theme.rootController.navigationBar.accentTextColor), for: .normal)
+    }
+    
+    override func updateContentOffset(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let layout = self.validLayout else {
+            return
         }
+        let navigationHeight: CGFloat = 56.0
+        let statusBarHeight = layout.statusBarHeight ?? 0.0
+        
+        let topInset : CGFloat = 0.0
+        let titleOffsetDelta = (topInset + 160.0) - (statusBarHeight + (navigationHeight - statusBarHeight) / 2.0)
+        let topContentOffset = contentOffset + max(0.0, min(1.0, contentOffset / titleOffsetDelta)) * 10.0
+        
+        let titleOffset = topContentOffset
+        let fraction = max(0.0, min(1.0, titleOffset / titleOffsetDelta))
+        let titleScale = 1.0 - fraction * 0.18
+                
+        let topPanelAlpha = min(20.0, max(0.0, contentOffset - 95.0)) / 20.0
+        transition.updateAlpha(node: self.backgroundNode, alpha: topPanelAlpha)
+        transition.updateAlpha(node: self.separatorNode, alpha: topPanelAlpha)
+
+        let starPosition = CGPoint(
+            x: layout.size.width / 2.0,
+            y: -contentOffset + 80.0
+        )
+        if let view = self.hostView {
+            transition.updatePosition(layer: view.layer, position: starPosition)
+        }
+        
+        let titlePosition = CGPoint(
+            x: layout.size.width / 2.0,
+            y: max(topInset + 170.0 - titleOffset, statusBarHeight + (navigationHeight - statusBarHeight) / 2.0)
+        )
+
+        transition.updatePosition(node: self.titleNode, position: titlePosition)
+        transition.updateTransformScale(node: self.titleNode, scale: titleScale)
+        
+        let textPosition = CGPoint(
+            x: layout.size.width / 2.0,
+            y: -contentOffset + 212.0
+        )
+        transition.updatePosition(node: self.textNode, position: textPosition)
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+    override func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let leftInset: CGFloat = 24.0
+        
+        let navigationBarHeight: CGFloat = 56.0
+        let constrainedSize = CGSize(width: layout.size.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude)
+        let titleSize = self.titleNode.updateLayout(constrainedSize)
+        let textSize = self.textNode.updateLayout(constrainedSize)
+        
+        let cancelSize = self.cancelNode.measure(constrainedSize)
+        transition.updateFrame(node: self.cancelNode, frame: CGRect(origin: CGPoint(x: 16.0 + layout.safeInsets.left, y: floorToScreenPixels((navigationBarHeight - cancelSize.height) / 2.0)), size: cancelSize))
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: navigationBarHeight)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+        
+        self.backgroundNode.update(size: CGSize(width: layout.size.width, height: navigationBarHeight), transition: transition)
+               
+        let component = AnyComponent(PremiumStarComponent(isIntro: true, isVisible: true, hasIdleAnimations: true))
+        let containerSize = CGSize(width: min(414.0, layout.size.width), height: 220.0)
+        
+        if let hostView = self.hostView {
+            let size = hostView.update(
+                transition: .immediate,
+                component: component,
+                environment: {},
+                containerSize: containerSize
+            )
+            hostView.bounds = CGRect(origin: .zero, size: size)
+        }
+
+        self.titleNode.bounds = CGRect(origin: .zero, size: titleSize)
+        self.textNode.bounds = CGRect(origin: .zero, size: textSize)
+        
+        let contentHeight = titleSize.height + textSize.height + 128.0
+        
+        self.component = component
+        self.validLayout = layout
+        
+        return contentHeight
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if let hostView = self.hostView, hostView.frame.contains(point) {
+            return true
+        } else {
+            return super.point(inside: point, with: event)
+        }
     }
 }

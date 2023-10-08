@@ -654,7 +654,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
     if (self.cameraMode == PGCameraModeVideo || self.cameraMode == PGCameraModeSquareVideo || self.cameraMode == PGCameraModeSquareSwing)
         return self.captureSession.videoDevice.torchActive;
     
-    return self.captureSession.videoDevice.flashActive;
+    return self.captureSession.imageOutput.isFlashScene;
 }
 
 - (bool)flashAvailable

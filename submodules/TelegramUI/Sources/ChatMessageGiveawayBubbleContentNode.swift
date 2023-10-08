@@ -14,6 +14,7 @@ import Markdown
 import ShimmerEffect
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import AvatarNode
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
@@ -37,9 +38,13 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     private let dateTitleNode: TextNode
     private let dateTextNode: TextNode
     
+    private let badgeBackgroundNode: ASImageNode
+    private let badgeTextNode: TextNode
+    
     private var giveaway: TelegramMediaGiveaway?
     
     private let buttonNode: ChatMessageAttachedContentButtonNode
+    private let channelButton: PeerButtonNode
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -79,7 +84,13 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         self.dateTitleNode = TextNode()
         self.dateTextNode = TextNode()
         
+        self.badgeBackgroundNode = ASImageNode()
+        self.badgeBackgroundNode.displaysAsynchronously = false
+        
+        self.badgeTextNode = TextNode()
+        
         self.buttonNode = ChatMessageAttachedContentButtonNode()
+        self.channelButton = PeerButtonNode()
         
         super.init()
         
@@ -90,7 +101,10 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.dateTitleNode)
         self.addSubnode(self.dateTextNode)
         self.addSubnode(self.buttonNode)
+        self.addSubnode(self.channelButton)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.badgeBackgroundNode)
+        self.addSubnode(self.badgeTextNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
@@ -148,9 +162,15 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         
         let makeDateTitleLayout = TextNode.asyncLayout(self.dateTitleNode)
         let makeDateTextLayout = TextNode.asyncLayout(self.dateTextNode)
-        
+
+        let makeBadgeTextLayout = TextNode.asyncLayout(self.badgeTextNode)
+
         let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
+        
+        let makeChannelLayout = PeerButtonNode.asyncLayout(self.channelButton)
                 
+        let currentItem = self.item
+        
         return { item, layoutConstants, _, _, constrainedSize, _ in
             var giveaway: TelegramMediaGiveaway?
             for media in item.message.media {
@@ -159,13 +179,27 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             }
             
+            var themeUpdated = false
+            if currentItem?.presentationData.theme.theme !== item.presentationData.theme.theme {
+                themeUpdated = true
+            }
+            
             var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
             if case .forwardedMessages = item.associatedData.subject {
                 incoming = false
             }
             
             let textColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+            let accentColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
             
+            var updatedBadgeImage: UIImage?
+            if themeUpdated {
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: .white, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
+            }
+            
+            let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 1)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: .white)
+            
+//TODO:localize
             let prizeTitleString = NSAttributedString(string: "Giveaway Prizes", font: titleFont, textColor: textColor)
             var prizeTextString: NSAttributedString?
             if let giveaway {
@@ -180,19 +214,40 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             let participantsTitleString = NSAttributedString(string: "Participants", font: titleFont, textColor: textColor)
-            let participantsTextString = NSAttributedString(string: "All subscribers of this channel:", font: textFont, textColor: textColor)
+            let participantsText: String
+            if let giveaway {
+                if giveaway.flags.contains(.onlyNewSubscribers) {
+                    if giveaway.channelPeerIds.count > 1 {
+                        participantsText = "All users who join the channels below after this date:"
+                    } else {
+                        participantsText = "All users who join this channel below after this date:"
+                    }
+                } else {
+                    if giveaway.channelPeerIds.count > 1 {
+                        participantsText = "All subscribers of the channels below:"
+                    } else {
+                        participantsText = "All subscribers of this channel:"
+                    }
+                }
+            } else {
+                participantsText = ""
+            }
+                
+            let participantsTextString = NSAttributedString(string: participantsText, font: textFont, textColor: textColor)
             
             let dateTitleString = NSAttributedString(string: "Winners Selection Date", font: titleFont, textColor: textColor)
             var dateTextString: NSAttributedString?
             if let giveaway {
                 dateTextString = NSAttributedString(string: stringForFullDate(timestamp: giveaway.untilDate, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), font: textFont, textColor: textColor)
             }
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let sideInsets = layoutConstants.text.bubbleInsets.right * 2.0
-                
                 let maxTextWidth = min(200.0, max(1.0, constrainedSize.width - 7.0 - sideInsets))
+                
+                let (badgeTextLayout, badgeTextApply) = makeBadgeTextLayout(TextNodeLayoutArguments(attributedString: badgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
                 let (prizeTitleLayout, prizeTitleApply) = makePrizeTitleLayout(TextNodeLayoutArguments(attributedString: prizeTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                                 
                 let (prizeTextLayout, prizeTextApply) = makePrizeTextLayout(TextNodeLayoutArguments(attributedString: prizeTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -294,7 +349,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                     titleHighlightedColor = bubbleColors.fill[0]
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, false, "HOW DOES IT WORK?", titleColor, titleHighlightedColor, false)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, false, "LEARN MORE", titleColor, titleHighlightedColor, false)
                 
                 let months = giveaway?.months ?? 0
                 let animationName: String
@@ -322,15 +377,26 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                 maxContentWidth = max(maxContentWidth, buttonWidth)
                 maxContentWidth += 30.0
                 
+                var channelPeer: EnginePeer?
+                if let channelPeerId = giveaway?.channelPeerIds.first, let peer = item.message.peers[channelPeerId] {
+                    channelPeer = EnginePeer(peer)
+                }
+                let (_, continueChannelLayout) = makeChannelLayout(item.context, maxContentWidth - 30.0, channelPeer, accentColor, accentColor.withAlphaComponent(0.1))
+                
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
                 return (contentWidth, { boundingWidth in
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
                     let buttonSpacing: CGFloat = 4.0
                     
+                    let (channelButtonSize, channelButtonApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
-                    var layoutSize = CGSize(width: contentWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 100.0)
+                    var layoutSize = CGSize(width: contentWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
+                    
+                    layoutSize.height += channelButtonSize.height
+                    
                     if let statusSizeAndApply = statusSizeAndApply {
                         layoutSize.height += statusSizeAndApply.0.height - 4.0
                     }
@@ -347,6 +413,8 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.updateVisibility()
                                                         
+                            let _ = badgeTextApply()
+                            
                             let _ = prizeTitleApply()
                             let _ = prizeTextApply()
                             
@@ -356,6 +424,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             let _ = dateTitleApply()
                             let _ = dateTextApply()
                             
+                            let _ = channelButtonApply()
                             let _ = buttonApply()
                             
                             let smallSpacing: CGFloat = 2.0
@@ -364,10 +433,18 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             var originY: CGFloat = 0.0
                             
                             let iconSize = CGSize(width: 140.0, height: 140.0)
-                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - iconSize.width) / 2.0), y: originY - 50.0), size: iconSize)
+                            strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - iconSize.width) / 2.0), y: originY - 40.0), size: iconSize)
                             strongSelf.animationNode.updateLayout(size: iconSize)
-                            originY += 95.0
                             
+                            let badgeTextFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - badgeTextLayout.size.width) / 2.0) + 1.0, y: originY + 88.0), size: badgeTextLayout.size)
+                            strongSelf.badgeTextNode.frame = badgeTextFrame
+                            strongSelf.badgeBackgroundNode.frame = badgeTextFrame.insetBy(dx: -6.0, dy: -5.0).offsetBy(dx: -1.0, dy: 0.0)
+                            if let updatedBadgeImage {
+                                strongSelf.badgeBackgroundNode.image = updatedBadgeImage
+                            }
+                            
+                            originY += 112.0
+                                                        
                             strongSelf.prizeTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - prizeTitleLayout.size.width) / 2.0), y: originY), size: prizeTitleLayout.size)
                             originY += prizeTitleLayout.size.height + smallSpacing
                             strongSelf.prizeTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - prizeTextLayout.size.width) / 2.0), y: originY), size: prizeTextLayout.size)
@@ -376,7 +453,10 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.participantsTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTitleLayout.size.width) / 2.0), y: originY), size: participantsTitleLayout.size)
                             originY += participantsTitleLayout.size.height + smallSpacing
                             strongSelf.participantsTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTextLayout.size.width) / 2.0), y: originY), size: participantsTextLayout.size)
-                            originY += participantsTextLayout.size.height + largeSpacing
+                            originY += participantsTextLayout.size.height + smallSpacing * 2.0 + 3.0
+                            
+                            strongSelf.channelButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - channelButtonSize.width) / 2.0), y: originY), size: channelButtonSize)
+                            originY += channelButtonSize.height + largeSpacing
                             
                             strongSelf.dateTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - dateTitleLayout.size.width) / 2.0), y: originY), size: dateTitleLayout.size)
                             originY += dateTitleLayout.size.height + smallSpacing
@@ -419,47 +499,6 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private func updateVisibility() {
-//        guard let item = self.item else {
-//            return
-//        }
-//                
-//        let isPlaying = self.visibilityStatus == true
-//        if self.isPlaying != isPlaying {
-//            self.isPlaying = isPlaying
-//            self.animationNode.visibility = isPlaying
-//        }
-//        
-//        if isPlaying && self.setupTimestamp == nil {
-//            self.setupTimestamp = CACurrentMediaTime()
-//        }
-//        
-//        if isPlaying {
-//            var alreadySeen = true
-//            
-//            if item.message.flags.contains(.Incoming) {
-//                if let unreadRange = item.controllerInteraction.unreadMessageRange[UnreadMessageRangeKey(peerId: item.message.id.peerId, namespace: item.message.id.namespace)] {
-//                    if unreadRange.contains(item.message.id.id) {
-//                        alreadySeen = false
-//                    }
-//                }
-//            } else {
-//                if item.controllerInteraction.playNextOutgoingGift && !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
-//                    alreadySeen = false
-//                }
-//            }
-//            
-//            if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
-//                item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
-//                self.animationNode.playOnce()
-//            }
-//            
-//            if !alreadySeen && self.animationNode.isPlaying {
-//                item.controllerInteraction.playNextOutgoingGift = false
-//                Queue.mainQueue().after(1.0) {
-//                    item.controllerInteraction.animateDiceSuccess(false, true)
-//                }
-//            }
-//        }
     }
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -517,5 +556,104 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
             return result
         }
         return super.hitTest(point, with: event)
+    }
+}
+
+private final class PeerButtonNode: HighlightTrackingButtonNode {
+    private let backgroundNode: ASImageNode
+    private let textNode: TextNode
+    private let avatarNode: AvatarNode
+    
+    var currentBackgroundColor: UIColor?
+    var pressed: (() -> Void)?
+      
+    init() {
+        self.textNode = TextNode()
+        self.textNode.isUserInteractionEnabled = false
+      
+        self.backgroundNode = ASImageNode()
+        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode.displayWithoutProcessing = true
+        self.backgroundNode.displaysAsynchronously = false
+        
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+        
+        super.init()
+        
+        self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.avatarNode)
+        
+        self.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.alpha = 0.4
+                } else {
+                    strongSelf.alpha = 1.0
+                    strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        
+        self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+    
+    @objc func buttonPressed() {
+        self.pressed?()
+    }
+        
+    static func asyncLayout(_ current: PeerButtonNode?) -> (_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonNode)) {
+        let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
+        
+        return { context, width, peer, titleColor, backgroundColor in
+            let targetNode: PeerButtonNode
+            if let current = current {
+                targetNode = current
+            } else {
+                targetNode = PeerButtonNode()
+            }
+            
+            let makeTextLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
+            if let maybeMakeTextLayout = maybeMakeTextLayout {
+                makeTextLayout = maybeMakeTextLayout
+            } else {
+                makeTextLayout = TextNode.asyncLayout(targetNode.textNode)
+            }
+                        
+            let inset: CGFloat = 1.0
+            let avatarSize = CGSize(width: 22.0, height: 22.0)
+            let spacing: CGFloat = 5.0
+            
+            let (textSize, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: peer?.compactDisplayTitle ?? "", font: Font.medium(14.0), textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - avatarSize.width - (spacing + inset) * 2.0), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
+            
+            let refinedWidth = avatarSize.width + textSize.size.width + (spacing + inset) * 2.0
+            return (refinedWidth, { _ in
+                return (CGSize(width: refinedWidth, height: 24.0), {
+                    let _ = textApply()
+                    
+                    let backgroundFrame = CGRect(origin: .zero, size: CGSize(width: refinedWidth, height: 24.0))
+                    let textFrame = CGRect(origin: CGPoint(x: inset + avatarSize.width + spacing, y: floorToScreenPixels((backgroundFrame.height - textSize.size.height) / 2.0)), size: textSize.size)
+                    targetNode.backgroundNode.frame = backgroundFrame
+                    
+                    if targetNode.currentBackgroundColor != backgroundColor {
+                        targetNode.currentBackgroundColor = backgroundColor
+                        targetNode.backgroundNode.image = generateStretchableFilledCircleImage(radius: 12.0, color: backgroundColor, backgroundColor: nil)
+                    }
+                    
+                    targetNode.avatarNode.setPeer(
+                        context: context,
+                        theme: context.sharedContext.currentPresentationData.with({ $0 }).theme,
+                        peer: peer,
+                        synchronousLoad: false
+                    )
+                    targetNode.avatarNode.frame = CGRect(origin: CGPoint(x: inset, y: inset), size: avatarSize)
+                    
+                    targetNode.textNode.frame = textFrame
+                    
+                    return targetNode
+                })
+            })
+        }
     }
 }

@@ -27,7 +27,6 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",
         "//submodules/TextFormat:TextFormat",
-        "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/DrawingUI:DrawingUI",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/TelegramUI/Components/MediaEditor",

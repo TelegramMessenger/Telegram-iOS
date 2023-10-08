@@ -910,6 +910,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController
     
+    func makeChannelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, boosts: Bool, boostStatus: ChannelBoostStatus?, statsDatacenterId: Int32) -> ViewController
+    
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
     func navigateToCurrentCall()

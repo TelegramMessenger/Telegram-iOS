@@ -4,21 +4,28 @@ import Display
 import ComponentFlow
 import AnimatedTextComponent
 import ActivityIndicator
+import BundleIconComponent
 
 public final class ButtonBadgeComponent: Component {
     let fillColor: UIColor
+    let style: ButtonTextContentComponent.BadgeStyle
     let content: AnyComponent<Empty>
     
     public init(
         fillColor: UIColor,
+        style: ButtonTextContentComponent.BadgeStyle,
         content: AnyComponent<Empty>
     ) {
         self.fillColor = fillColor
+        self.style = style
         self.content = content
     }
     
     public static func ==(lhs: ButtonBadgeComponent, rhs: ButtonBadgeComponent) -> Bool {
         if lhs.fillColor != rhs.fillColor {
+            return false
+        }
+        if lhs.style != rhs.style {
             return false
         }
         if lhs.content != rhs.content {
@@ -46,7 +53,13 @@ public final class ButtonBadgeComponent: Component {
         }
         
         public func update(component: ButtonBadgeComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-            let height: CGFloat = 20.0
+            let height: CGFloat
+            switch component.style {
+            case .round:
+                height = 20.0
+            case .roundedRectangle:
+                height = 18.0
+            }
             let contentInset: CGFloat = 10.0
             
             let themeUpdated = self.component?.fillColor != component.fillColor
@@ -71,7 +84,12 @@ public final class ButtonBadgeComponent: Component {
             }
             
             if themeUpdated || backgroundFrame.height != self.backgroundView.image?.size.height {
-                self.backgroundView.image = generateStretchableFilledCircleImage(diameter: backgroundFrame.height, color: component.fillColor)
+                switch component.style {
+                case .round:
+                    self.backgroundView.image = generateStretchableFilledCircleImage(diameter: backgroundFrame.height, color: component.fillColor)
+                case .roundedRectangle:
+                    self.backgroundView.image = generateFilledRoundedRectImage(size: CGSize(width: height, height: height), cornerRadius: 4.0, color: component.fillColor)?.stretchableImage(withLeftCapWidth: Int(height / 2.0), topCapHeight: Int(height / 2.0))
+                }
             }
             
             return backgroundFrame.size
@@ -88,11 +106,18 @@ public final class ButtonBadgeComponent: Component {
 }
 
 public final class ButtonTextContentComponent: Component {
+    public enum BadgeStyle {
+        case round
+        case roundedRectangle
+    }
+    
     public let text: String
     public let badge: Int
     public let textColor: UIColor
     public let badgeBackground: UIColor
     public let badgeForeground: UIColor
+    public let badgeStyle: BadgeStyle
+    public let badgeIconName: String?
     public let combinedAlignment: Bool
     
     public init(
@@ -101,6 +126,8 @@ public final class ButtonTextContentComponent: Component {
         textColor: UIColor,
         badgeBackground: UIColor,
         badgeForeground: UIColor,
+        badgeStyle: BadgeStyle = .round,
+        badgeIconName: String? = nil,
         combinedAlignment: Bool = false
     ) {
         self.text = text
@@ -108,6 +135,8 @@ public final class ButtonTextContentComponent: Component {
         self.textColor = textColor
         self.badgeBackground = badgeBackground
         self.badgeForeground = badgeForeground
+        self.badgeStyle = badgeStyle
+        self.badgeIconName = badgeIconName
         self.combinedAlignment = combinedAlignment
     }
     
@@ -125,6 +154,12 @@ public final class ButtonTextContentComponent: Component {
             return false
         }
         if lhs.badgeForeground != rhs.badgeForeground {
+            return false
+        }
+        if lhs.badgeStyle != rhs.badgeStyle {
+            return false
+        }
+        if lhs.badgeIconName != rhs.badgeIconName {
             return false
         }
         if lhs.combinedAlignment != rhs.combinedAlignment {
@@ -158,7 +193,10 @@ public final class ButtonTextContentComponent: Component {
             self.component = component
             self.componentState = state
             
-            let badgeSpacing: CGFloat = 6.0
+            var badgeSpacing: CGFloat = 6.0
+            if component.badgeIconName != nil {
+                badgeSpacing += 4.0
+            }
             
             let contentSize = self.content.update(
                 transition: .immediate,
@@ -182,17 +220,34 @@ public final class ButtonTextContentComponent: Component {
                     badge = ComponentView()
                     self.badge = badge
                 }
+                
+                var badgeContent: [AnyComponentWithIdentity<Empty>] = []
+                if let badgeIconName = component.badgeIconName {
+                    badgeContent.append(AnyComponentWithIdentity(
+                        id: "icon",
+                        component: AnyComponent(BundleIconComponent(
+                            name: badgeIconName,
+                            tintColor: component.badgeForeground
+                        )))
+                    )
+                }
+                badgeContent.append(AnyComponentWithIdentity(
+                    id: "text", 
+                    component: AnyComponent(AnimatedTextComponent(
+                        font: Font.with(size: 15.0, design: .round, weight: .semibold, traits: .monospacedNumbers),
+                        color: component.badgeForeground,
+                        items: [
+                            AnimatedTextComponent.Item(id: AnyHashable(0), content: .number(component.badge, minDigits: 0))
+                        ]
+                    )))
+                )
+                
                 badgeSize = badge.update(
                     transition: badgeTransition,
                     component: AnyComponent(ButtonBadgeComponent(
                         fillColor: component.badgeBackground,
-                        content: AnyComponent(AnimatedTextComponent(
-                            font: Font.semibold(15.0),
-                            color: component.badgeForeground,
-                            items: [
-                                AnimatedTextComponent.Item(id: AnyHashable(0), content: .number(component.badge, minDigits: 0))
-                            ]
-                        ))
+                        style: component.badgeStyle,
+                        content: AnyComponent(HStack(badgeContent, spacing: 2.0))
                     )),
                     environment: {},
                     containerSize: CGSize(width: 100.0, height: 100.0)

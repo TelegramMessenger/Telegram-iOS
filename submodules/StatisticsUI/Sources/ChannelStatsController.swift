@@ -34,8 +34,9 @@ private final class ChannelStatsControllerArguments {
     let openPeer: (EnginePeer) -> Void
     let expandBoosters: () -> Void
     let openGifts: () -> Void
+    let createPrepaidGiveaway: (Int32, Int32) -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (Int32, Int32) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
@@ -45,6 +46,7 @@ private final class ChannelStatsControllerArguments {
         self.openPeer = openPeer
         self.expandBoosters = expandBoosters
         self.openGifts = openGifts
+        self.createPrepaidGiveaway = createPrepaidGiveaway
     }
 }
 
@@ -62,6 +64,7 @@ private enum StatsSection: Int32 {
     case instantPageInteractions
     case boostLevel
     case boostOverview
+    case boostPrepaid
     case boosters
     case boostLink
     case gifts
@@ -106,6 +109,10 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostOverviewTitle(PresentationTheme, String)
     case boostOverview(PresentationTheme, ChannelBoostStatus)
     
+    case boostPrepaidTitle(PresentationTheme, String)
+    case boostPrepaid(Int32, PresentationTheme, String, String, Int32, Int32)
+    case boostPrepaidInfo(PresentationTheme, String)
+    
     case boostersTitle(PresentationTheme, String)
     case boostersPlaceholder(PresentationTheme, String)
     case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
@@ -147,6 +154,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.boostLevel.rawValue
             case .boostOverviewTitle, .boostOverview:
                 return StatsSection.boostOverview.rawValue
+            case .boostPrepaidTitle, .boostPrepaid, .boostPrepaidInfo:
+                return StatsSection.boostPrepaid.rawValue
             case .boostersTitle, .boostersPlaceholder, .booster, .boostersExpand, .boostersInfo:
                 return StatsSection.boosters.rawValue
             case .boostLinkTitle, .boostLink, .boostLinkInfo:
@@ -208,12 +217,18 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2001
             case .boostOverview:
                 return 2002
-            case .boostersTitle:
+            case .boostPrepaidTitle:
                 return 2003
+            case let .boostPrepaid(index, _, _, _, _, _):
+                return 2004 + index
+            case .boostPrepaidInfo:
+                return 2100
+            case .boostersTitle:
+                return 2101
             case .boostersPlaceholder:
-                return 2004
+                return 2102
             case let .booster(index, _, _, _, _):
-                return 2005 + index
+                return 2103 + index
             case .boostersExpand:
                 return 10000
             case .boostersInfo:
@@ -383,6 +398,24 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .boostPrepaidTitle(lhsTheme, lhsText):
+                if case let .boostPrepaidTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .boostPrepaid(lhsIndex, lhsTheme, lhsTitle, lhsSubtitle, lhsMonths, lhsCount):
+                if case let .boostPrepaid(rhsIndex, rhsTheme, rhsTitle, rhsSubtitle, rhsMonths, rhsCount) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsMonths == rhsMonths, lhsCount == rhsCount {
+                    return true
+                } else {
+                    return false
+                }
+            case let .boostPrepaidInfo(lhsTheme, lhsText):
+                if case let .boostPrepaidInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
             case let .boostersTitle(lhsTheme, lhsText):
                 if case let .boostersTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -466,12 +499,14 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .postsTitle(_, text),
                  let .instantPageInteractionsTitle(_, text),
                  let .boostOverviewTitle(_, text),
+                 let .boostPrepaidTitle(_, text),
                  let .boostersTitle(_, text),
                  let .boostLinkTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .boostersInfo(_, text),
+            case let .boostPrepaidInfo(_, text),
+                 let .boostersInfo(_, text),
                  let .boostLinkInfo(_, text),
-                let .giftsInfo(_, text):
+                 let .giftsInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .overview(_, stats):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats, sectionId: self.section, style: .blocks)
@@ -523,8 +558,23 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .boostersPlaceholder(_, text):
                 return ItemListPlaceholderItem(theme: presentationData.theme, text: text, sectionId: self.section, style: .blocks)
             case let .gifts(theme, title):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addBoostsIcon(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.openGifts()
+                })
+            case let .boostPrepaid(_, _, title, subtitle, months, count):
+                let color: GiftOptionItem.Icon.Color
+                switch months {
+                case 3:
+                    color = .green
+                case 6:
+                    color = .blue
+                case 12:
+                    color = .red
+                default:
+                    color = .blue
+                }
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(count), sectionId: self.section, action: {
+                    arguments.createPrepaidGiveaway(months, count)
                 })
         }
     }
@@ -649,6 +699,12 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             
             entries.append(.boostOverviewTitle(presentationData.theme, presentationData.strings.Stats_Boosts_OverviewHeader))
             entries.append(.boostOverview(presentationData.theme, boostData))
+            
+//TODO:localize
+            entries.append(.boostPrepaidTitle(presentationData.theme, "PREPAID GIVEAWAYS"))
+            entries.append(.boostPrepaid(0, presentationData.theme, "70 Telegram Premium", "3-month subscriptions", 3, 70))
+            entries.append(.boostPrepaid(1, presentationData.theme, "200 Telegram Premium", "6-month subscriptions", 6, 200))
+            entries.append(.boostPrepaidInfo(presentationData.theme, "Select a giveaway you already paid for to set it up."))
             
             let boostersTitle: String
             let boostersPlaceholder: String?
@@ -812,7 +868,11 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         updateState { $0.withUpdatedBoostersExpanded(true) }
     },
     openGifts: {
-        let controller = createGiveawayController(context: context, peerId: peerId)
+        let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
+        pushImpl?(controller)
+    },
+    createPrepaidGiveaway: { months, count in
+        let controller = createGiveawayController(context: context, peerId: peerId, subject: .prepaid(months: months, count: count))
         pushImpl?(controller)
     })
     

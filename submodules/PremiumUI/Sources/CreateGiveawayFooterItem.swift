@@ -2,25 +2,30 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import ComponentFlow
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
-import SolidRoundedButtonNode
+import ButtonComponent
 
 final class CreateGiveawayFooterItem: ItemListControllerFooterItem {
     let theme: PresentationTheme
     let title: String
+    let badgeCount: Int32
+    let isLoading: Bool
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, badgeCount: Int32, isLoading: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
+        self.badgeCount = badgeCount
+        self.isLoading = isLoading
         self.action = action
     }
     
     func isEqual(to: ItemListControllerFooterItem) -> Bool {
         if let item = to as? CreateGiveawayFooterItem {
-            return self.theme === item.theme  && self.title == item.title
+            return self.theme === item.theme && self.title == item.title && self.badgeCount == item.badgeCount && self.isLoading == item.isLoading
         } else {
             return false
         }
@@ -39,10 +44,11 @@ final class CreateGiveawayFooterItem: ItemListControllerFooterItem {
 final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
     private let backgroundNode: NavigationBackgroundNode
     private let separatorNode: ASDisplayNode
-    private let buttonNode: SolidRoundedButtonNode
-    
+    private let button = ComponentView<Empty>()
+
     private var validLayout: ContainerViewLayout?
     
+    private var currentIsLoading = false
     var item: CreateGiveawayFooterItem {
         didSet {
             self.updateItem()
@@ -58,26 +64,32 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
         self.backgroundNode = NavigationBackgroundNode(color: item.theme.rootController.tabBar.backgroundColor)
         self.separatorNode = ASDisplayNode()
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0)
-        
         super.init()
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.buttonNode)
         
         self.updateItem()
     }
-    
+        
     private func updateItem() {
         self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
-        self.buttonNode.updateTheme(SolidRoundedButtonTheme(backgroundColor: self.item.theme.list.itemCheckColors.fillColor, foregroundColor: self.item.theme.list.itemCheckColors.foregroundColor))
-        self.buttonNode.title = self.item.title
         
-        self.buttonNode.pressed = { [weak self] in
-            self?.item.action()
-        }
+        
+//        if self.item.isLoading != self.currentIsLoading {
+//            self.currentIsLoading = self.item.isLoading
+//            
+//            if self.currentIsLoading {
+//                self.buttonNode.transitionToProgress()
+//            } else {
+//                self.buttonNode.transitionFromProgress()
+//            }
+//        }
+        
+//        self.buttonNode.pressed = { [weak self] in
+//            self?.item.action()
+//        }
     }
     
     override func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -86,16 +98,16 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
     }
     
     override func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
+        let hadLayout = self.validLayout != nil
         self.validLayout = layout
         
         let buttonInset: CGFloat = 16.0
         let buttonWidth = layout.size.width - layout.safeInsets.left - layout.safeInsets.right - buttonInset * 2.0
-        let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
         let inset: CGFloat = 9.0
         
         let insets = layout.insets(options: [.input])
         
-        var panelHeight: CGFloat = buttonHeight + inset * 2.0
+        var panelHeight: CGFloat = 50.0 + inset * 2.0
         let totalPanelHeight: CGFloat
         if let inputHeight = layout.inputHeight, inputHeight > 0.0 {
             totalPanelHeight = panelHeight + insets.bottom
@@ -105,7 +117,53 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
         }
         
         let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - totalPanelHeight), size: CGSize(width: layout.size.width, height: panelHeight))
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: CGSize(width: buttonWidth, height: buttonHeight)))
+        
+        var buttonTransition: Transition = .easeInOut(duration: 0.2)
+        if !hadLayout {
+            buttonTransition = .immediate
+        }
+        let buttonSize = self.button.update(
+            transition: buttonTransition,
+            component: AnyComponent(
+                ButtonComponent(
+                    background: ButtonComponent.Background(
+                        color: self.item.theme.list.itemCheckColors.fillColor,
+                        foreground: self.item.theme.list.itemCheckColors.foregroundColor,
+                        pressedColor: self.item.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.9)
+                    ),
+                    content: AnyComponentWithIdentity(
+                        id: AnyHashable(0),
+                        component: AnyComponent(ButtonTextContentComponent(
+                            text: self.item.title,
+                            badge: Int(self.item.badgeCount),
+                            textColor: self.item.theme.list.itemCheckColors.foregroundColor,
+                            badgeBackground: self.item.theme.list.itemCheckColors.foregroundColor,
+                            badgeForeground: self.item.theme.list.itemCheckColors.fillColor,
+                            badgeStyle: .roundedRectangle,
+                            badgeIconName: "Premium/BoostButtonIcon",
+                            combinedAlignment: true
+                        ))
+                    ),
+                    isEnabled: true,
+                    displaysProgress: self.item.isLoading,
+                    action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.item.action()
+                    }
+                )
+            ),
+            environment: {},
+            containerSize: CGSize(width: buttonWidth, height: 50.0)
+        )
+        if let view = self.button.view {
+            if view.superview == nil {
+                self.view.addSubview(view)
+            }
+            transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left + buttonInset, y: panelFrame.minY + inset), size: buttonSize))
+        }
+        
         
         transition.updateFrame(node: self.backgroundNode, frame: panelFrame)
         self.backgroundNode.update(size: panelFrame.size, transition: transition)

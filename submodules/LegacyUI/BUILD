@@ -20,7 +20,6 @@ swift_library(
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/StickerResources:StickerResources",
-        "//submodules/AttachmentUI:AttachmentUI",
     ],
     visibility = [
         "//visibility:public",

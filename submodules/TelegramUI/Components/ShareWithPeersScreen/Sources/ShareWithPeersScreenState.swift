@@ -46,8 +46,9 @@ public extension ShareWithPeersScreen {
             case stories(editing: Bool)
             case chats(blocked: Bool)
             case contacts(base: EngineStoryPrivacy.Base)
-            case search(query: String, onlyContacts: Bool)
-            case members(peerId: EnginePeer.Id)
+            case contactsSearch(query: String, onlyContacts: Bool)
+            case members(peerId: EnginePeer.Id, searchQuery: String?)
+            case channels(exclude: Set<EnginePeer.Id>)
         }
         
         var stateValue: State?
@@ -431,7 +432,7 @@ public extension ShareWithPeersScreen {
                     
                     self.readySubject.set(true)
                 })
-            case let .search(query, onlyContacts):
+            case let .contactsSearch(query, onlyContacts):
                 let signal: Signal<([EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer.Presence>], [EnginePeer.Id: Optional<Int>]), NoError>
                 if onlyContacts {
                     signal = combineLatest(
@@ -508,18 +509,16 @@ public extension ShareWithPeersScreen {
                     
                     self.readySubject.set(true)
                 })
-            case let .members(peerId):
+            case let .members(peerId, searchQuery):
                 let membersState = Promise<ChannelMemberListState>()
                 let contactsState = Promise<ChannelMemberListState>()
-              
-                
-                
+
                 let disposableAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
-                disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, updated: { state in
+                disposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.recent(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: searchQuery, updated: { state in
                     membersState.set(.single(state))
                 })
                 
-                let contactsDisposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.contacts(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: nil, updated: { state in
+                let contactsDisposableAndLoadMoreControl = context.peerChannelMemberCategoriesContextsManager.contacts(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId, searchQuery: searchQuery, updated: { state in
                     contactsState.set(.single(state))
                 })
                 
@@ -585,6 +584,81 @@ public extension ShareWithPeersScreen {
                 self.stateDisposable = combinedDisposable
                 
                 self.listControl = disposableAndLoadMoreControl.1
+            case let .channels(excludePeerIds):
+                self.stateDisposable = (combineLatest(
+                    context.engine.messages.chatList(group: .root, count: 500) |> take(1),
+                    context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init)))
+                )
+                |> mapToSignal { chatList, initialPeers -> Signal<(EngineChatList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]), NoError> in
+                    return context.engine.data.subscribe(
+                        EngineDataMap(chatList.items.map(\.renderedPeer.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
+                    )
+                    |> map { participantCountMap -> (EngineChatList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]) in
+                        return (chatList, initialPeers, participantCountMap)
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] chatList, initialPeers, participantCounts in
+                    guard let self else {
+                        return
+                    }
+                    
+                    var participants: [EnginePeer.Id: Int] = [:]
+                    for (key, value) in participantCounts {
+                        if let value {
+                            participants[key] = value
+                        }
+                    }
+                    
+                    var existingIds = Set<EnginePeer.Id>()
+                    var selectedPeers: [EnginePeer] = []
+                                     
+                    for item in chatList.items.reversed() {
+                        if let peer = item.renderedPeer.peer {
+                            if self.initialPeerIds.contains(peer.id) {
+                                selectedPeers.append(peer)
+                                existingIds.insert(peer.id)
+                            }
+                        }
+                    }
+                    
+                    for peerId in self.initialPeerIds {
+                        if !existingIds.contains(peerId), let maybePeer = initialPeers[peerId], let peer = maybePeer {
+                            selectedPeers.append(peer)
+                            existingIds.insert(peerId)
+                        }
+                    }
+
+                    var peers: [EnginePeer] = []
+                    peers = chatList.items.filter { peer in
+                        if let peer = peer.renderedPeer.peer {
+                            if excludePeerIds.contains(peer.id) {
+                                return false
+                            }
+                            if self.initialPeerIds.contains(peer.id) {
+                                return false
+                            }
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                return true
+                            }
+                            return false
+                        } else {
+                            return false
+                        }
+                    }.reversed().compactMap { $0.renderedPeer.peer }
+                    for peer in peers {
+                        existingIds.insert(peer.id)
+                    }
+                    peers.insert(contentsOf: selectedPeers, at: 0)
+                    
+                    let state = State(
+                        peers: peers,
+                        participants: participants
+                    )
+                    self.stateValue = state
+                    self.stateSubject.set(.single(state))
+                    
+                    self.readySubject.set(true)
+                })
             }
         }
         

@@ -88,9 +88,9 @@ final class WebAppWebView: WKWebView {
             return point.x > 30.0
         }
         self.allowsBackForwardNavigationGestures = false
-//        if #available(iOS 16.4, *) {
-//            self.isInspectable = true
-//        } 
+        if #available(iOS 16.4, *) {
+            self.isInspectable = true
+        } 
         
         handleScriptMessageImpl = { [weak self] message in
             if let strongSelf = self {

@@ -29,19 +29,28 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
     let action: () -> Void
     let cancel: () -> Void
     let openPeer: (EnginePeer) -> Void
+    let openMessage: (EngineMessage.Id) -> Void
+    let copyLink: (String) -> Void
+    let shareLink: (String) -> Void
     
     init(
         context: AccountContext,
         giftCode: PremiumGiftCodeInfo,
         action: @escaping () -> Void,
         cancel: @escaping  () -> Void,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer) -> Void,
+        openMessage: @escaping (EngineMessage.Id) -> Void,
+        copyLink: @escaping (String) -> Void,
+        shareLink: @escaping (String) -> Void
     ) {
         self.context = context
         self.giftCode = giftCode
         self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
+        self.openMessage = openMessage
+        self.copyLink = copyLink
+        self.shareLink = shareLink
     }
     
     static func ==(lhs: PremiumGiftCodeSheetContent, rhs: PremiumGiftCodeSheetContent) -> Bool {
@@ -210,7 +219,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         LinkButtonContentComponent(theme: environment.theme, text: link)
                     ),
                     action: {
-                        UIPasteboard.general.string = link
+                        component.copyLink(link)
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -231,6 +240,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
                         action: {
                             if let peer = fromPeer {
+                                component.cancel()
                                 component.openPeer(peer)
                             }
                         }
@@ -247,6 +257,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
                             action: {
                                 if let peer = toPeer {
+                                    component.cancel()
                                     component.openPeer(peer)
                                 }
                             }
@@ -268,12 +279,21 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 )
             ))
             
-            let giftReason = giftCode.isGiveaway ? "Giveaway" : "Gift"
+            let giftReason = giftCode.isGiveaway ? "Giveaway" : "You were selected by the channel"
             tableItems.append(.init(
                 id: "reason",
                 title: "Reason",
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: tableLinkColor)))
+                    Button(
+                        content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: giftCode.messageId != nil ? tableLinkColor : tableTextColor)))),
+                        isEnabled: true,
+                        action: {
+                            component.cancel()
+                            if let messageId = giftCode.messageId {
+                                component.openMessage(messageId)
+                            }
+                        }
+                    )
                 )
             ))
             tableItems.append(.init(
@@ -298,7 +318,18 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     text: .markdown(text: additionalText, attributes: markdownAttributes),
                     horizontalAlignment: .center,
                     maximumNumberOfLines: 0,
-                    lineSpacing: 0.1
+                    lineSpacing: 0.1,
+                    highlightColor: linkColor.withAlphaComponent(0.2),
+                    highlightAction: { attributes in
+                        if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                            return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                        } else {
+                            return nil
+                        }
+                    },
+                    tapAction: { attributes, _ in
+                        component.shareLink("https://t.me/giftcode/\(giftCode.slug)")
+                    }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                 transition: .immediate
@@ -383,19 +414,28 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
     let action: () -> Void
     let cancel: () -> Void
     let openPeer: (EnginePeer) -> Void
-
+    let openMessage: (EngineMessage.Id) -> Void
+    let copyLink: (String) -> Void
+    let shareLink: (String) -> Void
+    
     init(
         context: AccountContext,
         giftCode: PremiumGiftCodeInfo,
         action: @escaping () -> Void,
         cancel: @escaping () -> Void,
-        openPeer: @escaping (EnginePeer) -> Void
+        openPeer: @escaping (EnginePeer) -> Void,
+        openMessage: @escaping (EngineMessage.Id) -> Void,
+        copyLink: @escaping (String) -> Void,
+        shareLink: @escaping (String) -> Void
     ) {
         self.context = context
         self.giftCode = giftCode
         self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
+        self.openMessage = openMessage
+        self.copyLink = copyLink
+        self.shareLink = shareLink
     }
     
     static func ==(lhs: PremiumGiftCodeSheetComponent, rhs: PremiumGiftCodeSheetComponent) -> Bool {
@@ -429,7 +469,10 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                                 }
                             })
                         },
-                        openPeer: context.component.openPeer
+                        openPeer: context.component.openPeer,
+                        openMessage: context.component.openMessage,
+                        copyLink: context.component.copyLink,
+                        shareLink: context.component.shareLink
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     animateOut: animateOut
@@ -481,13 +524,28 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
         forceDark: Bool = false,
         cancel: @escaping () -> Void = {},
         action: @escaping () -> Void,
-        openPeer: @escaping (EnginePeer) -> Void = { _ in }
+        openPeer: @escaping (EnginePeer) -> Void = { _ in },
+        openMessage: @escaping (EngineMessage.Id) -> Void = { _ in },
+        shareLink: @escaping (String) -> Void = { _ in }
     ) {
         self.context = context
         
-        super.init(context: context, component: PremiumGiftCodeSheetComponent(context: context, giftCode: giftCode, action: action, cancel: cancel, openPeer: openPeer), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
+        var copyLinkImpl: ((String) -> Void)?
+        super.init(context: context, component: PremiumGiftCodeSheetComponent(context: context, giftCode: giftCode, action: action, cancel: cancel, openPeer: openPeer, openMessage: openMessage, copyLink: { link in
+            copyLinkImpl?(link)
+        }, shareLink: shareLink), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
+        
+        copyLinkImpl = { [weak self] link in
+            UIPasteboard.general.string = link
+            
+            guard let self else {
+                return
+            }
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, action: { _ in return true }), in: .window(.root))
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {

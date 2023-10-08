@@ -37,6 +37,8 @@ swift_library(
         "//submodules/Components/MultilineTextComponent:MultilineTextComponent",
         "//submodules/ShimmerEffect:ShimmerEffect",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/LegacyMessageInputPanel",
+        "//submodules/TelegramUI/Components/LegacyMessageInputPanelInputView",
     ],
     visibility = [
         "//visibility:public",

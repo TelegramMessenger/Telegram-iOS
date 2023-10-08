@@ -57,5 +57,9 @@ public extension TelegramEngine {
         public func premiumGiftCodeOptions(peerId: EnginePeer.Id) -> Signal<[PremiumGiftCodeOption], NoError> {
             return _internal_premiumGiftCodeOptions(account: self.account, peerId: peerId)
         }
+        
+        public func premiumGiveawayInfo(peerId: EnginePeer.Id, messageId: EngineMessage.Id) -> Signal<PremiumGiveawayInfo?, NoError> {
+            return _internal_getPremiumGiveawayInfo(account: self.account, peerId: peerId, messageId: messageId)
+        }
     }
 }

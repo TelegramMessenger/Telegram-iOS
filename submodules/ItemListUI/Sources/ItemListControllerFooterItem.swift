@@ -17,3 +17,19 @@ open class ItemListControllerFooterItemNode: ASDisplayNode {
         
     }
 }
+
+
+public protocol ItemListControllerHeaderItem {
+    func isEqual(to: ItemListControllerHeaderItem) -> Bool
+    func node(current: ItemListControllerHeaderItemNode?) -> ItemListControllerHeaderItemNode
+}
+
+open class ItemListControllerHeaderItemNode: ASDisplayNode {
+    open func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) -> CGFloat {
+        return 0.0
+    }
+    
+    open func updateContentOffset(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {
+        
+    }
+}

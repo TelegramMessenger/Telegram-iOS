@@ -30,7 +30,8 @@ typedef enum
 {
     TGPhotoEditorDoneButtonSend,
     TGPhotoEditorDoneButtonCheck,
-    TGPhotoEditorDoneButtonDone
+    TGPhotoEditorDoneButtonDone,
+    TGPhotoEditorDoneButtonSchedule
 } TGPhotoEditorDoneButton;
 
 @interface TGPhotoToolbarView : UIView

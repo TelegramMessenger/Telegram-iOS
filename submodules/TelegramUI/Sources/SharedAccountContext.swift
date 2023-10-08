@@ -42,6 +42,7 @@ import PeerInfoStoryGridScreen
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
 import LegacyMessageInputPanel
+import StatisticsUI
 import ChatHistoryEntry
 
 private final class AccountUserInterfaceInUseContext {
@@ -1807,6 +1808,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, forceTheme: PresentationTheme?) -> ViewController {
         return installedStickerPacksController(context: context, mode: mode, forceTheme: forceTheme)
+    }
+    
+    public func makeChannelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, boosts: Bool, boostStatus: ChannelBoostStatus?, statsDatacenterId: Int32) -> ViewController {
+        return channelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, section: boosts ? .boosts : .stats, boostStatus: nil, statsDatacenterId: statsDatacenterId)
     }
 }
 

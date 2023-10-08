@@ -127,6 +127,7 @@ private struct ItemListNodeTransition {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let toolbarItem: ItemListToolbarItem?
+    let headerItem: ItemListControllerHeaderItem?
     let footerItem: ItemListControllerFooterItem?
     let focusItemTag: ItemListItemTag?
     let ensureVisibleItemTag: ItemListItemTag?
@@ -146,6 +147,7 @@ public final class ItemListNodeState {
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
     let toolbarItem: ItemListToolbarItem?
+    let headerItem: ItemListControllerHeaderItem?
     let footerItem: ItemListControllerFooterItem?
     let animateChanges: Bool
     let crossfadeState: Bool
@@ -154,13 +156,14 @@ public final class ItemListNodeState {
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, toolbarItem: ItemListToolbarItem? = nil, footerItem: ItemListControllerFooterItem? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+    public init<T: ItemListNodeEntry>(presentationData: ItemListPresentationData, entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, toolbarItem: ItemListToolbarItem? = nil, headerItem: ItemListControllerHeaderItem? = nil, footerItem: ItemListControllerFooterItem? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
         self.presentationData = presentationData
         self.entries = entries.map { $0 }
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.searchItem = searchItem
         self.toolbarItem = toolbarItem
+        self.headerItem = headerItem
         self.footerItem = footerItem
         self.crossfadeState = crossfadeState
         self.animateChanges = animateChanges
@@ -250,6 +253,9 @@ open class ItemListControllerNode: ASDisplayNode {
     private var searchNode: ItemListControllerSearchNode?
     
     private var toolbarItem: ItemListToolbarItem?
+
+    private var headerItem: ItemListControllerHeaderItem?
+    private var headerItemNode: ItemListControllerHeaderItemNode?
     
     private var footerItem: ItemListControllerFooterItem?
     private var footerItemNode: ItemListControllerFooterItemNode?
@@ -375,9 +381,19 @@ open class ItemListControllerNode: ASDisplayNode {
                         } else {
                             transition = .immediate
                         }
-                        strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                        if let headerItemNode = strongSelf.headerItemNode {
+                            headerItemNode.updateContentOffset(value, transition: transition)
+                            strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+                        } else {
+                            strongSelf.navigationBar.updateBackgroundAlpha(min(30.0, value) / 30.0, transition: transition)
+                        }
                     case .unknown, .none:
-                        strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+                        if let headerItemNode = strongSelf.headerItemNode {
+                            headerItemNode.updateContentOffset(0.0, transition: .immediate)
+                            strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
+                        } else {
+                            strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)
+                        }
                 }
                 
                 strongSelf.previousContentOffset = offset
@@ -425,7 +441,7 @@ open class ItemListControllerNode: ASDisplayNode {
                 scrollToItem = state.initialScrollToItem
             }
             
-            return ItemListNodeTransition(theme: presentationData.theme, strings: presentationData.strings, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, toolbarItem: state.toolbarItem, footerItem: state.footerItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
+            return ItemListNodeTransition(theme: presentationData.theme, strings: presentationData.strings, entries: transition, updateStyle: updatedStyle, emptyStateItem: state.emptyStateItem, searchItem: state.searchItem, toolbarItem: state.toolbarItem, headerItem: state.headerItem, footerItem: state.footerItem, focusItemTag: state.focusItemTag, ensureVisibleItemTag: state.ensureVisibleItemTag, scrollToItem: scrollToItem, firstTime: previous == nil, animated: previous != nil && state.animateChanges, animateAlpha: previous != nil && state.animateChanges, crossfade: state.crossfadeState, mergedEntries: state.entries, scrollEnabled: state.scrollEnabled)
         })
         |> deliverOnMainQueue).start(next: { [weak self] transition in
             if let strongSelf = self {
@@ -563,6 +579,12 @@ open class ItemListControllerNode: ASDisplayNode {
             }
         }
     
+        if let headerItemNode = self.headerItemNode {
+            let headerHeight = headerItemNode.updateLayout(layout: layout, transition: transition)
+            headerItemNode.frame = CGRect(origin: .zero, size: CGSize(width: layout.size.width, height: 56.0))
+            insets.top += headerHeight
+        }
+        
         if let footerItemNode = self.footerItemNode {
             let footerHeight = footerItemNode.updateLayout(layout: layout, transition: transition)
             insets.bottom += footerHeight
@@ -853,6 +875,43 @@ open class ItemListControllerNode: ASDisplayNode {
                         emptyStateNode?.removeFromSupernode()
                     })
                     self.emptyStateNode = nil
+                }
+            }
+            var updateHeaderItem = false
+            if let headerItem = self.headerItem, let updatedHeaderItem = transition.headerItem {
+                updateHeaderItem = !headerItem.isEqual(to: updatedHeaderItem)
+            } else if (self.headerItem != nil) != (transition.headerItem != nil) {
+                updateHeaderItem = true
+            }
+            if updateHeaderItem {
+                self.headerItem = transition.headerItem
+                if let headerItem = transition.headerItem {
+                    let updatedNode = headerItem.node(current: self.headerItemNode)
+                    if let headerItemNode = self.headerItemNode, updatedNode !== headerItemNode {
+                        headerItemNode.removeFromSupernode()
+                    }
+                    if self.headerItemNode !== updatedNode {
+                        self.headerItemNode = updatedNode
+                        
+                        let headerHeight: CGFloat
+                        if let validLayout = self.validLayout {
+                            headerHeight = updatedNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                        } else {
+                            headerHeight = 100.0
+                        }
+                        let _ = headerHeight
+                        self.addSubnode(updatedNode)
+                    }
+                } else if let headerItemNode = self.headerItemNode {
+                    let headerHeight: CGFloat
+                    if let validLayout = self.validLayout {
+                        headerHeight = headerItemNode.updateLayout(layout: validLayout.0, transition: .immediate)
+                    } else {
+                        headerHeight = 100.0
+                    }
+                    let _ = headerHeight
+                    headerItemNode.removeFromSupernode()
+                    self.headerItemNode = nil
                 }
             }
             var updateFooterItem = false

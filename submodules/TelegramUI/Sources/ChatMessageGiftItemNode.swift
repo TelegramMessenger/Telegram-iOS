@@ -196,20 +196,21 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             months = monthsValue
                             text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
                         case let .giftCode(_, fromGiveaway, channelId, monthsValue):
+                            giftSize.width += 34.0
+                            giftSize.height += 84.0
+                            textSpacing += 13.0
+                            
+                            title = "Congratulations!"
+                            var peerName = ""
+                            if let channelId, let channel = item.message.peers[channelId] {
+                                peerName = EnginePeer(channel).compactDisplayTitle
+                            }
                             if fromGiveaway {
-                                giftSize.width += 34.0
-                                giftSize.height += 84.0
-                                textSpacing += 20.0
-                                
-                                title = "Congratulations!"
-                                var peerName = ""
-                                if let channelId, let channel = item.message.peers[channelId] {
-                                    peerName = EnginePeer(channel).compactDisplayTitle
-                                }
                                 text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
                             } else {
-                                text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
+                                text = "You've received a gift from **\(peerName)**.\n\nYour gift is a **Telegram Premium** subscription for **\(monthsValue)** months."
                             }
+                            
                             months = monthsValue
                             buttonTitle = "Open Gift Link"
                             hasServiceMessage = false

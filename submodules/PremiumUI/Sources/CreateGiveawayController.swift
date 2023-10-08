@@ -18,6 +18,7 @@ import ItemListDatePickerItem
 import ItemListPeerActionItem
 import ShareWithPeersScreen
 import InAppPurchaseManager
+import UndoUI
 
 private final class CreateGiveawayControllerArguments {
     let context: AccountContext
@@ -25,13 +26,15 @@ private final class CreateGiveawayControllerArguments {
     let dismissInput: () -> Void
     let openPeersSelection: () -> Void
     let openChannelsSelection: () -> Void
+    let openPremiumIntro: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.dismissInput = dismissInput
         self.openPeersSelection = openPeersSelection
         self.openChannelsSelection = openChannelsSelection
+        self.openPremiumIntro = openPremiumIntro
     }
 }
 
@@ -63,12 +66,15 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case createGiveaway(PresentationTheme, String, String, Bool)
     case awardUsers(PresentationTheme, String, String, Bool)
     
-    case subscriptionsHeader(PresentationTheme, String)
+    case prepaidHeader(PresentationTheme, String)
+    case prepaid(PresentationTheme, String, String, Int32, Int32)
+    
+    case subscriptionsHeader(PresentationTheme, String, String)
     case subscriptions(PresentationTheme, Int32)
     case subscriptionsInfo(PresentationTheme, String)
     
     case channelsHeader(PresentationTheme, String)
-    case channel(Int32, PresentationTheme, EnginePeer, Int32)
+    case channel(Int32, PresentationTheme, EnginePeer, Int32?)
     case channelAdd(PresentationTheme, String)
     case channelsInfo(PresentationTheme, String)
     
@@ -83,14 +89,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case timeInfo(PresentationTheme, String)
     
     case durationHeader(PresentationTheme, String)
-    case duration(Int32, PresentationTheme, String, String, String, String, String?, Bool)
+    case duration(Int32, PresentationTheme, Int32, String, String, String, String?, Bool)
     case durationInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
         case .header:
             return CreateGiveawaySection.header.rawValue
-        case .createGiveaway, .awardUsers:
+        case .createGiveaway, .awardUsers, .prepaidHeader, .prepaid:
             return CreateGiveawaySection.mode.rawValue
         case .subscriptionsHeader, .subscriptions, .subscriptionsInfo:
             return CreateGiveawaySection.subscriptions.rawValue
@@ -113,16 +119,20 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 return 0
             case .awardUsers:
                 return 1
-            case .subscriptionsHeader:
+            case .prepaidHeader:
                 return 2
-            case .subscriptions:
+            case .prepaid:
                 return 3
-            case .subscriptionsInfo:
+            case .subscriptionsHeader:
                 return 4
-            case .channelsHeader:
+            case .subscriptions:
                 return 5
+            case .subscriptionsInfo:
+                return 6
+            case .channelsHeader:
+                return 7
             case let .channel(index, _, _, _):
-                return 6 + index
+                return 8 + index
             case .channelAdd:
                 return 100
             case .channelsInfo:
@@ -172,8 +182,20 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .subscriptionsHeader(lhsTheme, lhsText):
-            if case let .subscriptionsHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+        case let .prepaidHeader(lhsTheme, lhsText):
+            if case let .prepaidHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .prepaid(lhsTheme, lhsText, lhsSubtext, lhsBoosts, lhsMonths):
+            if case let .prepaid(rhsTheme, rhsText, rhsSubtext, rhsBoosts, rhsMonths) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSubtext == rhsSubtext, lhsBoosts == rhsBoosts, lhsMonths == rhsMonths {
+                return true
+            } else {
+                return false
+            }
+        case let .subscriptionsHeader(lhsTheme, lhsText, lhsAdditionalText):
+            if case let .subscriptionsHeader(rhsTheme, rhsText, rhsAdditionalText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsAdditionalText == rhsAdditionalText {
                 return true
             } else {
                 return false
@@ -269,8 +291,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .duration(lhsIndex, lhsTheme, lhsProductId, lhsTitle, lhsSubtitle, lhsLabel, lhsBadge, lhsIsSelected):
-            if case let .duration(rhsIndex, rhsTheme, rhsProductId, rhsTitle, rhsSubtitle, rhsLabel, rhsBadge, rhsIsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsProductId == rhsProductId, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsBadge == rhsBadge, lhsIsSelected == rhsIsSelected {
+        case let .duration(lhsIndex, lhsTheme, lhsMonths, lhsTitle, lhsSubtitle, lhsLabel, lhsBadge, lhsIsSelected):
+            if case let .duration(rhsIndex, rhsTheme, rhsMonths, rhsTitle, rhsSubtitle, rhsLabel, rhsBadge, rhsIsSelected) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsMonths == rhsMonths, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsLabel == rhsLabel, lhsBadge == rhsBadge, lhsIsSelected == rhsIsSelected {
                 return true
             } else {
                 return false
@@ -292,9 +314,9 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         let arguments = arguments as! CreateGiveawayControllerArguments
         switch self {
         case let .header(_, title, text):
-            return CreateGiveawayHeaderItem(theme: presentationData.theme, title: title, text: text, sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .plain(title + text), sectionId: self.section)
         case let .createGiveaway(_, title, subtitle, isSelected):
-            return GiftModeItem(presentationData: presentationData, context: arguments.context, iconName: "Premium/Giveaway", title: title, subtitle: subtitle, label: nil, badge: nil, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: .blue, name: "Premium/Giveaway"), title: title, subtitle: subtitle, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.mode = .giveaway
@@ -302,7 +324,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .awardUsers(_, title, subtitle, isSelected):
-            return GiftModeItem(presentationData: presentationData, context: arguments.context, iconName: "Media Editor/Privacy/SelectedUsers", title: title, subtitle: subtitle, subtitleActive: true, label: nil, badge: nil, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: .violet, name: "Media Editor/Privacy/SelectedUsers"), title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
                 var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
@@ -316,11 +338,26 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                     arguments.openPeersSelection()
                 }
             })
-        case let .subscriptionsHeader(_, text):
+        case let .prepaidHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .prepaid(_, title, subtitle, boosts, months):
+            let _ = boosts
+            let color: GiftOptionItem.Icon.Color
+            switch months {
+            case 3:
+                color = .green
+            case 6:
+                color = .blue
+            case 12:
+                color = .red
+            default:
+                color = .blue
+            }
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(boosts), sectionId: self.section, action: nil)
+        case let .subscriptionsHeader(_, text, additionalText):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .subscriptions(_, value):
-            let text = "\(value) Subscriptions / Boosts"
-            return SubscriptionsCountItem(theme: presentationData.theme, strings: presentationData.strings, text: text, value: value, range: 1 ..< 11, sectionId: self.section, updated: { value in
+            return SubscriptionsCountItem(theme: presentationData.theme, strings: presentationData.strings, value: value, sectionId: self.section, updated: { value in
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.subscriptions = value
@@ -332,11 +369,11 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .channelsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .channel(_, _, peer, boosts):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text("this channel will receive \(boosts) boosts", .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text("this channel will receive \($0) boosts", .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
 //                arguments.openPeer(peer)
             }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
         case let .channelAdd(theme, text):
-            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.roundPlusIconImage(theme), title: text, alwaysPlain: false, hasSeparator: true, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+            return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.roundPlusIconImage(theme), title: text, alwaysPlain: false, hasSeparator: true, sectionId: self.section, height: .compactPeerList, color: .accent, editing: false, action: {
                 arguments.openChannelsSelection()
             })
         case let .channelsInfo(_, text):
@@ -344,7 +381,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .usersHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .usersAll(_, title, isSelected):
-            return GiftModeItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, label: nil, badge: nil, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.onlyNewEligible = false
@@ -352,7 +389,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .usersNew(_, title, isSelected):
-            return GiftModeItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, label: nil, badge: nil, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.onlyNewEligible = true
@@ -390,16 +427,18 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .durationHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .duration(_, _, productId, title, subtitle, label, badge, isSelected):
-            return GiftModeItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, label: label, badge: badge, isSelected: isSelected, sectionId: self.section, action: {
+        case let .duration(_, _, months, title, subtitle, label, badge, isSelected):
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleFont: .small, label: .generic(label), badge: badge, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
-                    updatedState.selectedProductId = productId
+                    updatedState.selectedMonths = months
                     return updatedState
                 }
             })
         case let .durationInfo(_, text):
-            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
+            return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
+                arguments.openPremiumIntro()
+            })
         }
     }
 }
@@ -425,43 +464,50 @@ private struct PremiumGiftProduct: Equatable {
     }
 }
 
-private func createGiveawayControllerEntries(state: CreateGiveawayControllerState, presentationData: PresentationData, peers: [EnginePeer.Id: EnginePeer], products: [PremiumGiftProduct]) -> [CreateGiveawayEntry] {
+private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: CreateGiveawaySubject, state: CreateGiveawayControllerState, presentationData: PresentationData, peers: [EnginePeer.Id: EnginePeer], products: [PremiumGiftProduct], defaultPrice: (Int64, NSDecimalNumber)) -> [CreateGiveawayEntry] {
     var entries: [CreateGiveawayEntry] = []
-    
-    entries.append(.header(presentationData.theme, "Boosts via Gifts", "Get more boosts for your channel by gifting\nPremium to your subscribers."))
-    
-    entries.append(.createGiveaway(presentationData.theme, "Create Giveaway", "winners are chosen randomly", state.mode == .giveaway))
-    
-    let recipientsText: String
-    if !state.peers.isEmpty {
-        var peerNamesArray: [String] = []
-        let peersCount = state.peers.count
-        for peerId in state.peers.prefix(2) {
-            if let peer = peers[peerId] {
-                peerNamesArray.append(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
+        
+    switch subject {
+    case .generic:
+        entries.append(.createGiveaway(presentationData.theme, "Create Giveaway", "winners are chosen randomly", state.mode == .giveaway))
+        
+        let recipientsText: String
+        if !state.peers.isEmpty {
+            var peerNamesArray: [String] = []
+            let peersCount = state.peers.count
+            for peerId in state.peers.prefix(2) {
+                if let peer = peers[peerId] {
+                    peerNamesArray.append(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))
+                }
             }
-        }
-        let peerNames = String(peerNamesArray.map { $0 }.joined(separator: ", "))
-        if !peerNames.isEmpty {
-            recipientsText = peerNames
+            let peerNames = String(peerNamesArray.map { $0 }.joined(separator: ", "))
+            if !peerNames.isEmpty {
+                recipientsText = peerNames
+            } else {
+                recipientsText = presentationData.strings.PremiumGift_LabelRecipients(Int32(peersCount))
+            }
         } else {
-            recipientsText = presentationData.strings.PremiumGift_LabelRecipients(Int32(peersCount))
+            recipientsText = "select recipients"
         }
-    } else {
-        recipientsText = "select recipients"
+        entries.append(.awardUsers(presentationData.theme, "Award Specific Users", recipientsText, state.mode == .gift))
+    case let .prepaid(months, count):
+        entries.append(.prepaidHeader(presentationData.theme, "PREPAID GIVEAWAY"))
+        entries.append(.prepaid(presentationData.theme, "\(count) Telegram Premium", "\(months)-month subscriptions", count, months))
     }
-    entries.append(.awardUsers(presentationData.theme, "Award Specific Users", recipientsText, state.mode == .gift))
     
     if case .giveaway = state.mode {
-        entries.append(.subscriptionsHeader(presentationData.theme, "QUANTITY OF PRIZES / BOOSTS".uppercased()))
-        entries.append(.subscriptions(presentationData.theme, state.subscriptions))
-        entries.append(.subscriptionsInfo(presentationData.theme, "Choose how many Premium subscriptions to give away and boosts to receive."))
+        if case .generic = subject {
+            entries.append(.subscriptionsHeader(presentationData.theme, "QUANTITY OF PRIZES".uppercased(), "\(state.subscriptions) BOOSTS"))
+            entries.append(.subscriptions(presentationData.theme, state.subscriptions))
+            entries.append(.subscriptionsInfo(presentationData.theme, "Choose how many Premium subscriptions to give away and boosts to receive."))
+        }
         
         entries.append(.channelsHeader(presentationData.theme, "CHANNELS INCLUDED IN THE GIVEAWAY".uppercased()))
         var index: Int32 = 0
-        for peerId in state.channels {
-            if let peer = peers[peerId] {
-                entries.append(.channel(index, presentationData.theme, peer, state.subscriptions))
+        let channels = [peerId] + state.channels
+        for channelId in channels {
+            if let channel = peers[channelId] {
+                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions : nil))
             }
             index += 1
         }
@@ -480,61 +526,53 @@ private func createGiveawayControllerEntries(state: CreateGiveawayControllerStat
         }
         entries.append(.timeInfo(presentationData.theme, "Choose when \(state.subscriptions) subscribers of your channel will be randomly selected to receive Telegram Premium."))
     }
-                
-    entries.append(.durationHeader(presentationData.theme, "DURATION OF PREMIUM SUBSCRIPTIONS".uppercased()))
     
-    let recipientCount: Int
-    switch state.mode {
-    case .giveaway:
-        recipientCount = Int(state.subscriptions)
-    case .gift:
-        recipientCount = state.peers.count
-    }
-    
-    let shortestOptionPrice: (Int64, NSDecimalNumber)
-    if let product = products.last {
-        shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
-    } else {
-        shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
-    }
-    
-    var i: Int32 = 0
-    for product in products {
-        let giftTitle: String
-        if product.months == 12 {
-            giftTitle = presentationData.strings.Premium_Gift_Years(1)
-        } else {
-            giftTitle = presentationData.strings.Premium_Gift_Months(product.months)
+    if case .generic = subject {
+        entries.append(.durationHeader(presentationData.theme, "DURATION OF PREMIUM SUBSCRIPTIONS".uppercased()))
+        
+        let recipientCount: Int
+        switch state.mode {
+        case .giveaway:
+            recipientCount = Int(state.subscriptions)
+        case .gift:
+            recipientCount = state.peers.count
         }
         
-        let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice.0)) * 100.0)
-        let discount: String?
-        if discountValue > 0 {
-            discount = "-\(discountValue)%"
-        } else {
-            discount = nil
+        var i: Int32 = 0
+        var existingMonths = Set<Int32>()
+        for product in products {
+            if existingMonths.contains(product.months) {
+                continue
+            }
+            existingMonths.insert(product.months)
+            let giftTitle: String
+            if product.months == 12 {
+                giftTitle = presentationData.strings.Premium_Gift_Years(1)
+            } else {
+                giftTitle = presentationData.strings.Premium_Gift_Months(product.months)
+            }
+            
+            let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(defaultPrice.0)) * 100.0)
+            let discount: String?
+            if discountValue > 0 {
+                discount = "-\(discountValue)%"
+            } else {
+                discount = nil
+            }
+            
+            let subtitle = "\(product.storeProduct.price) x \(recipientCount)"
+            let label = product.storeProduct.multipliedPrice(count: recipientCount)
+            
+            let selectedMonths = state.selectedMonths ?? 12
+            let isSelected = product.months == selectedMonths
+            
+            entries.append(.duration(i, presentationData.theme, product.months, giftTitle, subtitle, label, discount, isSelected))
+            
+            i += 1
         }
         
-        let subtitle = "\(product.storeProduct.price) x \(recipientCount)"
-        let label = product.storeProduct.multipliedPrice(count: recipientCount)
-      
-        var isSelected = false
-        if let selectedProductId = state.selectedProductId {
-            isSelected = product.id == selectedProductId
-        } else if i == 0 {
-            isSelected = true
-        }
-        
-        entries.append(.duration(i, presentationData.theme, product.id, giftTitle, subtitle, label, discount, isSelected))
-       
-        i += 1
+        entries.append(.durationInfo(presentationData.theme, "You can review the list of features and terms of use for Telegram Premium [here]()."))
     }
-    
-//    entries.append(.duration(0, presentationData.theme, "3 Months", "$13.99 x \(state.subscriptions)", "$41.99", nil, true))
-//    entries.append(.duration(1, presentationData.theme, "6 Months", "$15.99 x \(state.subscriptions)", "$47.99", nil, false))
-//    entries.append(.duration(2, presentationData.theme, "1 Year", "$29.99 x \(state.subscriptions)", "$89.99", nil, false))
-    
-    entries.append(.durationInfo(presentationData.theme, "You can review the list of features and terms of use for Telegram Premium [here]()."))
     
     return entries
 }
@@ -549,18 +587,30 @@ private struct CreateGiveawayControllerState: Equatable {
     var subscriptions: Int32
     var channels: [EnginePeer.Id]
     var peers: [EnginePeer.Id]
-    var selectedProductId: String?
+    var selectedMonths: Int32?
     var onlyNewEligible: Bool
     var time: Int32
     var pickingTimeLimit = false
     var updating = false
 }
 
-public func createGiveawayController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, completion: (() -> Void)? = nil) -> ViewController {
+public enum CreateGiveawaySubject {
+    case generic
+    case prepaid(months: Int32, count: Int32)
+}
+
+public func createGiveawayController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, subject: CreateGiveawaySubject,  completion: (() -> Void)? = nil) -> ViewController {
     let actionsDisposable = DisposableSet()
     
+    let initialSubscriptions: Int32
+    if case let .prepaid(_, count) = subject {
+        initialSubscriptions = count
+    } else {
+        initialSubscriptions = 5
+    }
+    
     let expiryTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) + 86400 * 5
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: 5, channels: [peerId], peers: [], onlyNewEligible: false, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], onlyNewEligible: false, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -573,6 +623,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     var buyActionImpl: (() -> Void)?
     var openPeersSelectionImpl: (() -> Void)?
     var openChannelsSelectionImpl: (() -> Void)?
+    var openPremiumIntroImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
@@ -586,11 +637,13 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         openPeersSelectionImpl?()
     }, openChannelsSelection: {
         openChannelsSelectionImpl?()
+    }, openPremiumIntro: {
+        openPremiumIntroImpl?()
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     
-    let products = combineLatest(
+    let productsAndDefaultPrice: Signal<([PremiumGiftProduct], (Int64, NSDecimalNumber)), NoError> = combineLatest(
         .single([]) |> then(context.engine.payments.premiumGiftCodeOptions(peerId: peerId)),
         context.inAppPurchaseManager?.availableProducts ?? .single([])
     )
@@ -601,7 +654,13 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 gifts.append(PremiumGiftProduct(giftOption: option, storeProduct: product))
             }
         }
-        return gifts
+        let defaultPrice: (Int64, NSDecimalNumber)
+        if let defaultProduct = products.first(where: { $0.id == "org.telegram.telegramPremium.monthly" }) {
+            defaultPrice = (defaultProduct.priceCurrencyAndAmount.amount, defaultProduct.priceValue)
+        } else {
+            defaultPrice = (1, NSDecimalNumber(value: 1))
+        }
+        return (gifts, defaultPrice)
     }
     
     let previousState = Atomic<CreateGiveawayControllerState?>(value: nil)
@@ -610,7 +669,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         statePromise.get()
         |> mapToSignal { state in
             return context.engine.data.get(EngineDataMap(
-                Set(state.channels + state.peers).map {
+                Set([peerId] + state.channels + state.peers).map {
                     TelegramEngine.EngineData.Item.Peer.Peer(id: $0)
                 }
             ))
@@ -618,23 +677,34 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 return (state, peers)
             }
         },
-        products
+        productsAndDefaultPrice
     )
     |> deliverOnMainQueue
-    |> map { presentationData, stateAndPeersMap, products -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, stateAndPeersMap, productsAndDefaultPrice -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var presentationData = presentationData
+        
+        let (products, defaultPrice) = productsAndDefaultPrice
         
         let updatedTheme = presentationData.theme.withModalBlocksBackground()
         presentationData = presentationData.withUpdated(theme: updatedTheme)
         
         let (state, peersMap) = stateAndPeersMap
                 
-        let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? "Gift Premium" : "Start Giveaway", action: {
-            buyActionImpl?()
-        })
-        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, title: "Boosts via Gifts", text: "Get more boosts for your channel by gifting\nPremium to your subscribers.", cancel: {
             dismissImpl?()
         })
+        
+        let badgeCount: Int32
+        switch state.mode {
+        case .giveaway:
+            badgeCount = state.subscriptions
+        case .gift:
+            badgeCount = Int32(state.peers.count)
+        }
+        let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? "Gift Premium" : "Start Giveaway", badgeCount: badgeCount, isLoading: state.updating, action: {
+            buyActionImpl?()
+        })
+        let leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
         
         let _ = productsValue.swap(products)
         
@@ -652,7 +722,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(""), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(state: state, presentationData: presentationData, peers: peers, products: products), style: .blocks, emptyStateItem: nil, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(peerId: peerId, subject: subject, state: state, presentationData: presentationData, peers: peers, products: products, defaultPrice: defaultPrice), style: .blocks, emptyStateItem: nil, headerItem: headerItem, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -678,17 +748,30 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         controller?.dismiss()
     }
     
-    buyActionImpl = {
+    buyActionImpl = { [weak controller] in
         let state = stateValue.with { $0 }
-        guard let products = productsValue.with({ $0 }) else {
+        guard let products = productsValue.with({ $0 }), !products.isEmpty else {
             return
         }
         
-        let selectedProduct: PremiumGiftProduct
-        if let selectedProductId = state.selectedProductId, let product = products.first(where: { $0.id == selectedProductId }) {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    
+        var selectedProduct: PremiumGiftProduct?
+        let selectedMonths = state.selectedMonths ?? 12
+        if let product = products.first(where: { $0.months == selectedMonths && $0.giftOption.users == state.subscriptions }) {
             selectedProduct = product
-        } else {
-            selectedProduct = products.first!
+        }
+        
+        guard let selectedProduct else {
+            let alertController = textAlertController(context: context, title: "Reduce Quantity", text: "You can't acquire \(state.subscriptions) \(selectedMonths)-month subscriptions in the app. Do you want to reduce quantity to 25?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "Reduce", action: {
+                updateState { state in
+                    var updatedState = state
+                    updatedState.subscriptions = 25
+                    return updatedState
+                }
+            })], parseMarkdown: true)
+            presentControllerImpl?(alertController)
+            return
         }
         
         let (currency, amount) = selectedProduct.storeProduct.priceCurrencyAndAmount
@@ -696,20 +779,64 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let purpose: AppStoreTransactionPurpose
         switch state.mode {
         case .giveaway:
-            purpose = .giveaway(boostPeer: peerId, randomId: 1000, untilDate: state.time, currency: currency, amount: amount)
+            purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId}, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
         case .gift:
             purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
         }
-        
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                
+        updateState { state in
+            var updatedState = state
+            updatedState.updating = true
+            return updatedState
+        }
         
         let _ = (context.engine.payments.canPurchasePremium(purpose: purpose)
-        |> deliverOnMainQueue).startStandalone(next: { available in
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller] available in
             if available, let inAppPurchaseManager = context.inAppPurchaseManager {
-                let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, purpose: purpose)
-                |> deliverOnMainQueue).startStandalone(next: { status in
+                let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, quantity: selectedProduct.giftOption.storeQuantity, purpose: purpose)
+                |> deliverOnMainQueue).startStandalone(next: { [weak controller] status in
                     if case .purchased = status {
-                        dismissImpl?()
+                        if let controller, let navigationController = controller.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            var count = 0
+                            for c in controllers.reversed() {
+                                if c is PeerInfoScreen {
+                                    if case .giveaway = state.mode {
+                                        count += 1
+                                    }
+                                    break
+                                } else {
+                                    count += 1
+                                }
+                            }
+                            controllers.removeLast(count)
+                            navigationController.setViewControllers(controllers, animated: true)
+                            
+                            let title: String
+                            let text: String
+                            switch state.mode {
+                            case .giveaway:
+                                title = "Giveaway Created"
+                                text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
+                            case .gift:
+                                title = "Premium Subscriptions Gifted"
+                                text = "Check your channel's [Statistics]() to see how gifts boosted your channel."
+                            }
+                            
+                            let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
+                                |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
+                                    guard let statsDatacenterId else {
+                                        return
+                                    }
+                                    let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
+                                    navigationController?.pushViewController(statsController)
+                                })
+                            }), elevatedLayout: false, action: { _ in
+                                return true
+                            })
+                            (controllers.last as? ViewController)?.present(tooltipController, in: .current)
+                        }
                     }
                 }, error: { error in
                     var errorText: String?
@@ -732,10 +859,22 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                         let alertController = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                         presentControllerImpl?(alertController)
                     }
+                    
+                    updateState { state in
+                        var updatedState = state
+                        updatedState.updating = false
+                        return updatedState
+                    }
                 })
             } else {
                 let alertController = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Premium_Purchase_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
                 presentControllerImpl?(alertController)
+                
+                updateState { state in
+                    var updatedState = state
+                    updatedState.updating = false
+                    return updatedState
+                }
             }
         })
     }
@@ -745,7 +884,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         
         let stateContext = ShareWithPeersScreen.StateContext(
             context: context,
-            subject: .members(peerId: peerId),
+            subject: .members(peerId: peerId, searchQuery: nil),
             initialPeerIds: Set(state.peers)
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in
@@ -757,6 +896,9 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     updateState { state in
                         var updatedState = state
                         updatedState.peers = privacy.additionallyIncludePeers
+                        if updatedState.peers.isEmpty {
+                            updatedState.mode = .giveaway
+                        }
                         return updatedState
                     }
                 }
@@ -766,17 +908,32 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     }
     
     openChannelsSelectionImpl = {
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, requestPeerType: [ReplyMarkupButtonRequestPeerType.channel(ReplyMarkupButtonRequestPeerType.Channel(isCreator: false, hasUsername: nil, userAdminRights: TelegramChatAdminRights(rights: [.canChangeInfo]), botAdminRights: nil))]))
-        controller.peerSelected = { [weak controller] peer, _ in
-            updateState { state in
-                var updatedState = state
-                var channels = state.channels
-                channels.append(peer.id)
-                updatedState.channels = channels
-                return updatedState
-            }
-            controller?.dismiss()
-        }
+        let state = stateValue.with { $0 }
+        
+        let stateContext = ShareWithPeersScreen.StateContext(
+            context: context,
+            subject: .channels(exclude: Set([peerId])),
+            initialPeerIds: Set(state.channels.filter { $0 != peerId })
+        )
+        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in
+            let controller = ShareWithPeersScreen(
+                context: context,
+                initialPrivacy: EngineStoryPrivacy(base: .nobody, additionallyIncludePeers: state.peers),
+                stateContext: stateContext,
+                completion: { _, privacy ,_, _, _, _ in
+                    updateState { state in
+                        var updatedState = state
+                        updatedState.channels = privacy.additionallyIncludePeers
+                        return updatedState
+                    }
+                }
+            )
+            pushControllerImpl?(controller)
+        })
+    }
+    
+    openPremiumIntroImpl = {
+        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller)
     }
     

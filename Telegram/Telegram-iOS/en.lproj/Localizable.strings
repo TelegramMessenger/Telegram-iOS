@@ -10097,3 +10097,8 @@ Sorry for the inconvenience.";
 "PremiumGift.LabelRecipients_any" = "%d recipients";
 
 "Conversation.ContextMenuQuote" = "Quote";
+
+"Message.Giveaway" = "Giveaway";
+
+"GiftLink.LinkSharedToChat" = "Gift link forwarded to **%@**";
+"GiftLink.LinkSharedToSavedMessages" = "Gift link forwarded to **Saved Messages**";
