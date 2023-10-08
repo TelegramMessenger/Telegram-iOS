@@ -514,6 +514,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                     overlayNode = current
                 } else {
                     overlayNode = ASDisplayNode()
+                    overlayNode.frame = self.bounds
                     self.overlayNode = overlayNode
                     self.addSubnode(overlayNode)
                 }

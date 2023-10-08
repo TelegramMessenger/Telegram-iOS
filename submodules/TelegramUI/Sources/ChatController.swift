@@ -17111,7 +17111,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             messageIds.map(TelegramEngine.EngineData.Item.Messages.Message.init)
         ))
         |> deliverOnMainQueue).startStandalone(next: { [weak self] messages in
-            self?.forwardMessages(messages: messages.values.compactMap { $0?._asMessage() }, options: options, resetCurrent: resetCurrent)
+            let sortedMessages = messages.values.compactMap { $0?._asMessage() }.sorted { lhs, rhs in
+                return lhs.id < rhs.id
+            }
+            self?.forwardMessages(messages: sortedMessages, options: options, resetCurrent: resetCurrent)
         })
     }
     
