@@ -392,11 +392,10 @@ private final class StoryContainerScreenComponent: Component {
         var longPressRecognizer: StoryLongPressRecognizer?
         
         private var pendingNavigationToItemId: (peerId: EnginePeer.Id, id: Int32)?
-        
-        private var didDisplayReactionTooltip: Bool = false
-        
+                
         private let interactionGuide = ComponentView<Empty>()
         private var isDisplayingInteractionGuide: Bool = false
+        private var displayInteractionGuideDisposable: Disposable?
         
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
@@ -637,6 +636,7 @@ private final class StoryContainerScreenComponent: Component {
             self.headphonesDisposable?.dispose()
             self.stealthModeDisposable?.dispose()
             self.stealthModeTimer?.invalidate()
+            self.displayInteractionGuideDisposable?.dispose()
         }
         
         override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -893,10 +893,6 @@ private final class StoryContainerScreenComponent: Component {
                         self.didAnimateIn = true
                         self.state?.updated(transition: .immediate)
                     }
-                    
-                    if let view = self.interactionGuide.view as? StoryInteractionGuideComponent.View {
-                        view.animateIn(transitionIn: transitionIn)
-                    }
                 } else {
                     self.didAnimateIn = true
                     self.state?.updated(transition: .immediate)
@@ -926,13 +922,11 @@ private final class StoryContainerScreenComponent: Component {
                     guard let self else {
                         return
                     }
-                    if !value {
+                    if !value && !self.isDisplayingInteractionGuide {
                         if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let currentItemView = itemSetView.view.view as? StoryItemSetContainerComponent.View {
                             currentItemView.maybeDisplayReactionTooltip()
                         }
                     }
-                    
-                    self.didDisplayReactionTooltip = true
                 })
             })
         }
@@ -1116,6 +1110,22 @@ private final class StoryContainerScreenComponent: Component {
                         if update {
                             self.state?.updated(transition: .immediate)
                         }
+                    }
+                })
+                
+                let accountManager = component.context.sharedContext.accountManager
+                self.displayInteractionGuideDisposable = (ApplicationSpecificNotice.displayStoryInteractionGuide(accountManager: accountManager)
+                |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                    guard let self else {
+                        return
+                    }
+                    if !value {
+                        self.isDisplayingInteractionGuide = true
+                        if update {
+                            self.state?.updated(transition: .immediate)
+                        }
+                        
+                        let _ = ApplicationSpecificNotice.setDisplayStoryInteractionGuide(accountManager: accountManager).startStandalone()
                     }
                 })
                 
@@ -1718,15 +1728,18 @@ private final class StoryContainerScreenComponent: Component {
                             strings: environment.strings,
                             action: { [weak self] in
                                 self?.isDisplayingInteractionGuide = false
+                                self?.state?.updated()
                             }
                         )
                     ),
                     environment: {},
                     containerSize: availableSize
                 )
-                if let view = self.interactionGuide.view {
+                if let view = self.interactionGuide.view as? StoryInteractionGuideComponent.View {
                     if view.superview == nil {
                         self.addSubview(view)
+                        
+                        view.animateIn()
                     }
                     view.layer.zPosition = 1000.0
                     view.frame = CGRect(origin: .zero, size: availableSize)

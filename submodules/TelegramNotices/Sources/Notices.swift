@@ -181,6 +181,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case storyStealthModeReplyCount = 47
     case viewOnceTooltip = 48
     case displayStoryUnmuteTooltip = 49
+    case displayStoryInteractionGuide = 50
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -433,6 +434,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func displayStoryUnmuteTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayStoryUnmuteTooltip.key)
+    }
+    
+    static func displayStoryInteractionGuide() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayStoryInteractionGuide.key)
     }
 }
 
@@ -1650,6 +1655,27 @@ public struct ApplicationSpecificNotice {
     
     public static func displayStoryUnmuteTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
         return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayStoryUnmuteTooltip())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDisplayStoryInteractionGuide(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.displayStoryInteractionGuide(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func displayStoryInteractionGuide(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayStoryInteractionGuide())
         |> map { view -> Bool in
             if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
                 return true

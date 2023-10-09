@@ -486,18 +486,22 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                     action(peers, nil)
                 })
             case .phone:
-                var phoneNumber: String?
+                var code: String?
+                var number: String?
                 controller?.forEachItemNode { itemNode in
                     if let itemNode = itemNode as? DeleteAccountPhoneItemNode {
-                        var phoneValue = itemNode.phoneNumber
-                        if phoneValue.hasPrefix("+939998") {
-                            phoneValue = phoneValue.replacingOccurrences(of: "+939998", with: "+9998")
+                        let value = itemNode.codeNumberAndFullNumber
+                        if value.0 == "+93" && value.1.hasPrefix("9998") {
+                            code = "+"
+                            number = value.1
+                        } else {
+                            code = value.0
+                            number = value.1
                         }
-                        phoneNumber = phoneValue
                     }
                 }
             
-                if let phoneNumber = phoneNumber, phoneNumber.count > 4 {
+                if let code, var number, (code + number).count > 4 {
                     let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                     |> deliverOnMainQueue)
                     .start(next: { accountPeer in
@@ -505,7 +509,20 @@ func deleteAccountDataController(context: AccountContext, mode: DeleteAccountDat
                             if !phone.hasPrefix("+") {
                                 phone = "+\(phone)"
                             }
-                            if phone != phoneNumber  {
+                            
+                            var matches = false
+                            if phone == (code + number) {
+                                matches = true
+                            } else {
+                                while number.hasPrefix("0") {
+                                    number.removeFirst()
+                                    if phone == (code + number) {
+                                        matches = true
+                                    }
+                                }
+                            }
+                            
+                            if !matches {
                                 secondaryActionDisabled = false
                                 presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.DeleteAccount_InvalidPhoneNumberError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                                 return
