@@ -67,6 +67,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     private var currentEdgeWidth: InteractiveTransitionGestureRecognizerEdgeWidth
     
+    private var ignoreOffset: CGPoint = CGPoint()
     private var validatedGesture = false
     private var firstLocation: CGPoint = CGPoint()
     private var currentAllowedDirections: InteractiveTransitionGestureRecognizerDirections = []
@@ -85,6 +86,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     override public func reset() {
         super.reset()
         
+        self.ignoreOffset = CGPoint()
         self.validatedGesture = false
         self.currentAllowedDirections = []
     }
@@ -136,6 +138,11 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
         }
     }
     
+    override public func translation(in view: UIView?) -> CGPoint {
+        let result = super.translation(in: view)
+        return result.offsetBy(dx: self.ignoreOffset.x, dy: self.ignoreOffset.y)
+    }
+    
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
@@ -154,6 +161,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                 if absTranslationX > 2.0 && absTranslationX > absTranslationY * 2.0 {
                     self.state = .failed
                 } else if absTranslationY > 2.0 && absTranslationX * 2.0 < absTranslationY {
+                    self.ignoreOffset = CGPoint(x: -translation.x, y: -translation.y)
                     self.validatedGesture = true
                 }
             }
@@ -188,13 +196,16 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                     if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                         self.state = .failed
                     } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.ignoreOffset = CGPoint(x: -translation.x, y: -translation.y)
                         self.validatedGesture = true
                         fireBegan = true
                     }
                 } else {
                     if self.currentAllowedDirections.contains(.rightEdge) && self.firstLocation.x < defaultEdgeWidth {
+                        self.ignoreOffset = CGPoint(x: -translation.x, y: -translation.y)
                         self.validatedGesture = true
                     } else if self.currentAllowedDirections.contains(.leftEdge) && self.firstLocation.x > size.width - defaultEdgeWidth {
+                        self.ignoreOffset = CGPoint(x: -translation.x, y: -translation.y)
                         self.validatedGesture = true
                     } else if !self.currentAllowedDirections.contains(.leftCenter) && translation.x < 0.0 {
                         self.state = .failed
@@ -203,6 +214,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
                     } else if absTranslationY > 2.0 && absTranslationY > absTranslationX * 2.0 {
                         self.state = .failed
                     } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
+                        self.ignoreOffset = CGPoint(x: -translation.x, y: -translation.y)
                         self.validatedGesture = true
                         fireBegan = true
                     }
