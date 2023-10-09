@@ -359,6 +359,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatChannelSubscriberInputPanelNode",
         "//submodules/TelegramUI/Components/Chat/ChatContextResultPeekContent",
         "//submodules/TelegramUI/Components/Chat/ChatInputContextPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ReplyAccessoryPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageCallBubbleContentNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

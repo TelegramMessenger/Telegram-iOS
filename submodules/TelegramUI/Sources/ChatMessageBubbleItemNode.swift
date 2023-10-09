@@ -36,6 +36,7 @@ import ChatHistoryEntry
 import ChatMessageTextBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageReplyInfoNode
+import ChatMessageCallBubbleContentNode
 
 enum InternalBubbleTapAction {
     case action(() -> Void)

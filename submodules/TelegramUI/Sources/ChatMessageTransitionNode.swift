@@ -12,6 +12,7 @@ import ReactionSelectionNode
 import ChatControllerInteraction
 import FeaturedStickersScreen
 import ChatTextInputMediaRecordingButton
+import ReplyAccessoryPanelNode
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {

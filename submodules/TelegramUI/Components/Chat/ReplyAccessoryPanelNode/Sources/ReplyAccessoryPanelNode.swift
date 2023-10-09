@@ -19,29 +19,29 @@ import MultiAnimationRenderer
 import AccessoryPanelNode
 import TelegramNotices
 
-final class ReplyAccessoryPanelNode: AccessoryPanelNode {
+public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
-    let messageId: MessageId
-    let quote: EngineMessageReplyQuote?
+    public let messageId: MessageId
+    public let quote: EngineMessageReplyQuote?
     
     private var previousMediaReference: AnyMediaReference?
     
-    let closeButton: HighlightableButtonNode
-    let lineNode: ASImageNode
-    let iconNode: ASImageNode
-    let titleNode: ImmediateTextNode
-    let textNode: ImmediateTextNodeWithEntities
-    let imageNode: TransformImageNode
+    public let closeButton: HighlightableButtonNode
+    public let lineNode: ASImageNode
+    public let iconNode: ASImageNode
+    public let titleNode: ImmediateTextNode
+    public let textNode: ImmediateTextNodeWithEntities
+    public let imageNode: TransformImageNode
     
     private let actionArea: AccessibilityAreaNode
     
     private let context: AccountContext
-    var theme: PresentationTheme
-    var strings: PresentationStrings
+    public var theme: PresentationTheme
+    public var strings: PresentationStrings
     
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    init(context: AccountContext, messageId: MessageId, quote: EngineMessageReplyQuote?, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+    public init(context: AccountContext, messageId: MessageId, quote: EngineMessageReplyQuote?, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
         self.messageId = messageId
         self.quote = quote
         
@@ -264,6 +264,38 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 if let (size, inset, interfaceState) = strongSelf.validLayout {
                     strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
                 }
+                
+                let _ = (ApplicationSpecificNotice.getChatReplyOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager)
+                |> deliverOnMainQueue).start(next: { [weak self] count in
+                    if let strongSelf = self, count < 3 {
+                        Queue.mainQueue().after(3.0) {
+                            if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
+                                let text: String
+                                //TODO:localize
+                                if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
+                                    text = "Tap here for options"
+                                } else {
+                                    text = "Tap here for forwarding options"
+                                }
+                                
+                                strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
+                                
+                                strongSelf.view.addSubview(snapshotView)
+                                
+                                if let (size, inset, interfaceState) = strongSelf.validLayout {
+                                    strongSelf.updateState(size: size, inset: inset, interfaceState: interfaceState)
+                                }
+                                
+                                strongSelf.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                    snapshotView?.removeFromSuperview()
+                                })
+                            }
+                            
+                            let _ = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+                        }
+                    }
+                })
             }
         }))
     }
@@ -272,21 +304,21 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.messageDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    override func animateIn() {
+    override public func animateIn() {
         self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
     }
     
-    override func animateOut() {
+    override public func animateOut() {
         self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    override public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.updateThemeAndStrings(theme: theme, strings: strings, force: false)
     }
         
@@ -314,11 +346,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: constrainedSize.width, height: 45.0)
     }
     
-    override func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
+    override public func updateState(size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = (size, inset, interfaceState)
         
         let bounds = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: 45.0))
@@ -361,7 +393,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    @objc func closePressed() {
+    @objc private func closePressed() {
         if let dismiss = self.dismiss {
             dismiss()
         }

@@ -104,6 +104,7 @@ import PeerReportScreen
 import PeerSelectionController
 import SaveToCameraRoll
 import ChatMessageDateAndStatusNode
+import ReplyAccessoryPanelNode
 
 public enum ChatControllerPeekActions {
     case standard

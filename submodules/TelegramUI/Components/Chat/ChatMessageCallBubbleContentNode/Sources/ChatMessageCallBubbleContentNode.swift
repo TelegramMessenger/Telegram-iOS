@@ -19,13 +19,13 @@ private let incomingRedIcon = generateTintedImage(image: UIImage(bundleImageName
 private let outgoingGreenIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/CallOutgoingArrow"), color: UIColor(rgb: 0x36c033))
 private let outgoingRedIcon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/CallOutgoingArrow"), color: UIColor(rgb: 0xff4747))
 
-class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     private let titleNode: TextNode
     private let labelNode: TextNode
     private let iconNode: ASImageNode
     private let buttonNode: HighlightableButtonNode
     
-    required init() {
+    required public init() {
         self.titleNode = TextNode()
         self.labelNode = TextNode()
         
@@ -57,22 +57,22 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.addTarget(self, action: #selector(self.callButtonPressed), forControlEvents: .touchUpInside)
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         self.callButtonPressed()
         return true
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.accessibilityElementsHidden = true
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
@@ -236,19 +236,19 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    @objc func callButtonPressed() {
+    @objc private func callButtonPressed() {
         if let item = self.item {
             var isVideo = false
             for media in item.message.media {
@@ -260,7 +260,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
             return .ignore
         } else if self.bounds.contains(point), let item = self.item {
