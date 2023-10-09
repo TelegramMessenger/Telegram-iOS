@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramStringFormatting
 import ChatPresentationInterfaceState
 import TelegramPresentationData
+import ChatInputPanelNode
 
 final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
     private let textNode: ImmediateTextNode

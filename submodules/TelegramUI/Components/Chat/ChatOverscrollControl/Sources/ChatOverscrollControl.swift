@@ -984,7 +984,7 @@ final class OverscrollContentsComponent: Component {
     }
 }
 
-final class ChatOverscrollControl: CombinedComponent {
+public final class ChatOverscrollControl: CombinedComponent {
     let backgroundColor: UIColor
     let foregroundColor: UIColor
     let peer: EnginePeer?
@@ -997,7 +997,7 @@ final class ChatOverscrollControl: CombinedComponent {
     let absoluteSize: CGSize
     let wallpaperNode: WallpaperBackgroundNode?
 
-    init(
+    public init(
         backgroundColor: UIColor,
         foregroundColor: UIColor,
         peer: EnginePeer?,
@@ -1023,7 +1023,7 @@ final class ChatOverscrollControl: CombinedComponent {
         self.wallpaperNode = wallpaperNode
     }
 
-    static func ==(lhs: ChatOverscrollControl, rhs: ChatOverscrollControl) -> Bool {
+    public static func ==(lhs: ChatOverscrollControl, rhs: ChatOverscrollControl) -> Bool {
         if !lhs.backgroundColor.isEqual(rhs.backgroundColor) {
             return false
         }
@@ -1060,7 +1060,7 @@ final class ChatOverscrollControl: CombinedComponent {
         return true
     }
 
-    static var body: Body {
+    public static var body: Body {
         let contents = Child(OverscrollContentsComponent.self)
 
         return { context in
@@ -1093,12 +1093,12 @@ final class ChatOverscrollControl: CombinedComponent {
     }
 }
 
-final class ChatInputPanelOverscrollNode: ASDisplayNode {
-    let text: (String, [(Int, NSRange)])
-    let priority: Int
+public final class ChatInputPanelOverscrollNode: ASDisplayNode {
+    public let text: (String, [(Int, NSRange)])
+    public let priority: Int
     private let titleNode: ImmediateTextNode
 
-    init(text: (String, [(Int, NSRange)]), color: UIColor, priority: Int) {
+    public init(text: (String, [(Int, NSRange)]), color: UIColor, priority: Int) {
         self.text = text
         self.priority = priority
         self.titleNode = ImmediateTextNode()
@@ -1113,7 +1113,7 @@ final class ChatInputPanelOverscrollNode: ASDisplayNode {
         self.addSubnode(self.titleNode)
     }
 
-    func update(size: CGSize) {
+    public func update(size: CGSize) {
         let titleSize = self.titleNode.updateLayout(size)
         self.titleNode.frame = titleSize.centered(in: CGRect(origin: CGPoint(), size: size))
     }

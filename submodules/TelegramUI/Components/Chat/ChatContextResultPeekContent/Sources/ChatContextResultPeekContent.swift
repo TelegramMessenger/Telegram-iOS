@@ -12,34 +12,34 @@ import ContextUI
 import SoftwareVideo
 import MultiplexedVideoNode
 
-final class ChatContextResultPeekContent: PeekControllerContent {
-    let account: Account
-    let contextResult: ChatContextResult
-    let menu: [ContextMenuItem]
+public final class ChatContextResultPeekContent: PeekControllerContent {
+    public let account: Account
+    public let contextResult: ChatContextResult
+    public let menu: [ContextMenuItem]
     
-    init(account: Account, contextResult: ChatContextResult, menu: [ContextMenuItem]) {
+    public init(account: Account, contextResult: ChatContextResult, menu: [ContextMenuItem]) {
         self.account = account
         self.contextResult = contextResult
         self.menu = menu
     }
     
-    func presentation() -> PeekControllerContentPresentation {
+    public func presentation() -> PeekControllerContentPresentation {
         return .contained
     }
     
-    func menuActivation() -> PeerControllerMenuActivation {
+    public func menuActivation() -> PeerControllerMenuActivation {
         return .drag
     }
     
-    func menuItems() -> [ContextMenuItem] {
+    public func menuItems() -> [ContextMenuItem] {
         return self.menu
     }
     
-    func node() -> PeekControllerContentNode & ASDisplayNode {
+    public func node() -> PeekControllerContentNode & ASDisplayNode {
         return ChatContextResultPeekNode(account: self.account, contextResult: self.contextResult)
     }
     
-    func topAccessoryNode() -> ASDisplayNode? {
+    public func topAccessoryNode() -> ASDisplayNode? {
         let arrowNode = ASImageNode()
         if let image = UIImage(bundleImageName: "Peek/Arrow") {
             arrowNode.image = image
@@ -48,11 +48,11 @@ final class ChatContextResultPeekContent: PeekControllerContent {
         return arrowNode
     }
     
-    func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
+    public func fullScreenAccessoryNode(blurView: UIVisualEffectView) -> (PeekControllerAccessoryNode & ASDisplayNode)? {
         return nil
     }
     
-    func isEqual(to: PeekControllerContent) -> Bool {
+    public func isEqual(to: PeekControllerContent) -> Bool {
         if let to = to as? ChatContextResultPeekContent {
             return self.contextResult == to.contextResult
         } else {

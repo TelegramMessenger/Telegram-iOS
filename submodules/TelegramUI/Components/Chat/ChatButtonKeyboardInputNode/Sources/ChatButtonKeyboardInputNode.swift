@@ -197,7 +197,7 @@ private final class ChatButtonKeyboardInputButtonNode: HighlightTrackingButtonNo
     }
 }
 
-final class ChatButtonKeyboardInputNode: ChatInputNode {
+public final class ChatButtonKeyboardInputNode: ChatInputNode {
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
 
@@ -212,7 +212,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     
     private var theme: PresentationTheme?
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    public init(context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         
@@ -236,7 +236,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         self.addSubnode(self.separatorNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -245,7 +245,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
     }
     
     private var absoluteRect: (CGRect, CGSize)?
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
         self.absoluteRect = (rect, containerSize)
 
         if let backgroundNode = self.backgroundNode {
@@ -263,7 +263,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, layoutMetrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
+    override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, layoutMetrics: LayoutMetrics, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: UIScreenPixel)))
         
         if self.backgroundNode == nil {
@@ -370,7 +370,7 @@ final class ChatButtonKeyboardInputNode: ChatInputNode {
         }
     }
     
-    @objc func buttonPressed(_ button: ASButtonNode) {
+    @objc private func buttonPressed(_ button: ASButtonNode) {
         if let button = button as? ChatButtonKeyboardInputButtonNode, let markupButton = button.button {
             var dismissIfOnce = false
             switch markupButton.action {

@@ -10,6 +10,7 @@ import AccountContext
 import SwiftSignalKit
 import ChatPresentationInterfaceState
 import ChatControllerInteraction
+import ChatInputContextPanelNode
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action

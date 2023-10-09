@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import LocalizedPeerData
 import ChatPresentationInterfaceState
+import ChatInputPanelNode
 
 final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode

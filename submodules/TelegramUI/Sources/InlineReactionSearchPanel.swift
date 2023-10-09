@@ -15,6 +15,7 @@ import ChatPresentationInterfaceState
 import PremiumUI
 import UndoUI
 import ChatControllerInteraction
+import ChatInputContextPanelNode
 
 private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollViewDelegate {
     private final class DisplayItem {

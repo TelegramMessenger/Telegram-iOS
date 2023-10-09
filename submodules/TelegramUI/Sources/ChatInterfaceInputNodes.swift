@@ -8,6 +8,8 @@ import ChatPresentationInterfaceState
 import ChatControllerInteraction
 import ChatInputNode
 import ChatEntityKeyboardInputNode
+import ChatInputPanelNode
+import ChatButtonKeyboardInputNode
 
 func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
     if let inputPanelNode = inputPanelNode, !(inputPanelNode is ChatTextInputPanelNode) {

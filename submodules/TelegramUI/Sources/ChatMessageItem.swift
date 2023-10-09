@@ -205,8 +205,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     let rhsHeader: ChatMessageDateHeader?
     if let lhs = lhs as? ChatMessageItem {
         lhsHeader = lhs.dateHeader
-    } else if let _ = lhs as? ChatHoleItem {
-        lhsHeader = nil
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
     } else if let lhs = lhs as? ChatReplyCountItem {
@@ -217,9 +215,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     if let rhs = rhs {
         if let rhs = rhs as? ChatMessageItem {
             rhsHeader = rhs.dateHeader
-        } else if let _ = rhs as? ChatHoleItem {
-            //rhsHeader = rhs.header
-            rhsHeader = nil
         } else if let rhs = rhs as? ChatUnreadItem {
             rhsHeader = rhs.header
         } else if let rhs = rhs as? ChatReplyCountItem {
@@ -564,8 +559,6 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             if bottom.header.id != self.dateHeader.id {
                 dateAtBottom = true
             }
-        } else if let _ = bottom as? ChatHoleItem {
-            dateAtBottom = true
         } else {
             dateAtBottom = true
         }

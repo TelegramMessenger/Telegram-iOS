@@ -16,6 +16,7 @@ import ChatPresentationInterfaceState
 import PremiumUI
 import UndoUI
 import ChatControllerInteraction
+import ChatInputContextPanelNode
 
 final class HorizontalStickersChatContextPanelInteraction {
     var previewedStickerItem: TelegramMediaFile?

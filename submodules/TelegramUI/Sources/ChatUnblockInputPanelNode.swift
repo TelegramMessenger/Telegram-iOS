@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import ChatInputPanelNode
 
 final class ChatUnblockInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode

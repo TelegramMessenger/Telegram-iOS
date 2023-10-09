@@ -20,8 +20,8 @@ private final class AudioWaveformNodeParameters: NSObject {
     }
 }
 
-final class AudioWaveformNode: ASDisplayNode {
-    enum Gravity {
+public final class AudioWaveformNode: ASDisplayNode {
+    public enum Gravity {
         case bottom
         case center
     }
@@ -30,7 +30,7 @@ final class AudioWaveformNode: ASDisplayNode {
     private var color: UIColor?
     private var gravity: Gravity?
     
-    var progress: CGFloat? {
+    public var progress: CGFloat? {
         didSet {
             if self.progress != oldValue {
                 self.setNeedsDisplay()
@@ -38,13 +38,13 @@ final class AudioWaveformNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    override public init() {
         super.init()
         
         self.isOpaque = false
     }
     
-    override var frame: CGRect {
+    override public var frame: CGRect {
         get {
             return super.frame
         } set(value) {
@@ -57,7 +57,7 @@ final class AudioWaveformNode: ASDisplayNode {
         }
     }
     
-    func setup(color: UIColor, gravity: Gravity, waveform: AudioWaveform?) {
+    public func setup(color: UIColor, gravity: Gravity, waveform: AudioWaveform?) {
         if self.color == nil || !self.color!.isEqual(color) || self.waveform != waveform || self.gravity != gravity {
             self.color = color
             self.gravity = gravity
@@ -66,7 +66,7 @@ final class AudioWaveformNode: ASDisplayNode {
         }
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return AudioWaveformNodeParameters(waveform: self.waveform, color: self.color, gravity: self.gravity, progress: self.progress)
     }
     
