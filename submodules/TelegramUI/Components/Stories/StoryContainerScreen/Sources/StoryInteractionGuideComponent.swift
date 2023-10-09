@@ -66,7 +66,10 @@ final class StoryInteractionGuideComponent: Component {
             }
         }
         
-        func animateIn(transitionIn: StoryContainerScreen.TransitionIn) {
+        var didAnimateOut = false
+        
+        func animateIn() {
+            self.didAnimateOut = false
             UIView.animate(withDuration: 0.2) {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             }
@@ -75,6 +78,10 @@ final class StoryInteractionGuideComponent: Component {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            guard !self.didAnimateOut else {
+                return
+            }
+            self.didAnimateOut = true
             self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 completion()
             })
@@ -87,6 +94,7 @@ final class StoryInteractionGuideComponent: Component {
             
             let sideInset: CGFloat = 48.0
             
+//TODO:localize
             let titleSize = self.titleLabel.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Watching Stories", font: Font.semibold(20.0), textColor: .white, paragraphAlignment: .center)))),

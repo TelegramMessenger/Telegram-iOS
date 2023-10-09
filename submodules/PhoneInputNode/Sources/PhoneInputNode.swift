@@ -93,6 +93,15 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    public var codeNumberAndFullNumber: (String, String, String) {
+        let full = self.number
+        return (
+            cleanPhoneNumber(self.countryCodeField.textField.text ?? ""),
+            cleanPhoneNumber(self.numberField.textField.text ?? ""),
+            full
+        )
+    }
+    
     public var countryCodeText: String {
         get {
             return self.countryCodeField.textField.text ?? ""

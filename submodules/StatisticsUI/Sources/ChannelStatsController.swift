@@ -800,7 +800,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     if let boostStatus {
         boostData = .single(boostStatus)
     } else {
-        boostData = context.engine.peers.getChannelBoostStatus(peerId: peerId)
+        boostData = .single(nil) |> then(context.engine.peers.getChannelBoostStatus(peerId: peerId))
     }
     let boostersContext = ChannelBoostersContext(account: context.account, peerId: peerId)
     
