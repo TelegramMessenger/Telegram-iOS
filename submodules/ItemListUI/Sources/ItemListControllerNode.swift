@@ -389,7 +389,7 @@ open class ItemListControllerNode: ASDisplayNode {
                         }
                     case .unknown, .none:
                         if let headerItemNode = strongSelf.headerItemNode {
-                            headerItemNode.updateContentOffset(0.0, transition: .immediate)
+                            headerItemNode.updateContentOffset(1000.0, transition: .immediate)
                             strongSelf.navigationBar.updateBackgroundAlpha(0.0, transition: .immediate)
                         } else {
                             strongSelf.navigationBar.updateBackgroundAlpha(1.0, transition: .immediate)

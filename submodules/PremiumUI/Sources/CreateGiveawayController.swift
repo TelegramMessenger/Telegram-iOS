@@ -27,14 +27,16 @@ private final class CreateGiveawayControllerArguments {
     let openPeersSelection: () -> Void
     let openChannelsSelection: () -> Void
     let openPremiumIntro: () -> Void
+    let scrollToDate: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void, scrollToDate: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.dismissInput = dismissInput
         self.openPeersSelection = openPeersSelection
         self.openChannelsSelection = openChannelsSelection
         self.openPremiumIntro = openPremiumIntro
+        self.scrollToDate = scrollToDate
     }
 }
 
@@ -49,7 +51,7 @@ private enum CreateGiveawaySection: Int32 {
 }
 
 private enum CreateGiveawayEntryTag: ItemListItemTag {
-    case usage
+    case date
 
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreateGiveawayEntryTag, self == other {
@@ -409,10 +411,19 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             }
             return ItemListDisclosureItem(presentationData: presentationData, title: "Ends", label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                 arguments.dismissInput()
+                var focus = false
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.pickingTimeLimit = !state.pickingTimeLimit
+                    if updatedState.pickingTimeLimit {
+                        focus = true
+                    }
                     return updatedState
+                }
+                if focus {
+                    Queue.mainQueue().after(0.1) {
+                        arguments.scrollToDate()
+                    }
                 }
             })
         case let .timeCustomPicker(_, dateTimeFormat, date):
@@ -422,7 +433,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                     updatedState.time = date
                     return updatedState
                 })
-            })
+            }, tag: CreateGiveawayEntryTag.date)
         case let .timeInfo(_, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .durationHeader(_, text):
@@ -626,6 +637,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     var openPremiumIntroImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
+    var scrollToDateImpl: (() -> Void)?
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     
@@ -639,6 +651,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         openChannelsSelectionImpl?()
     }, openPremiumIntro: {
         openPremiumIntroImpl?()
+    }, scrollToDate: {
+        scrollToDateImpl?()
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -867,9 +881,6 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     }
                 })
             } else {
-                let alertController = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Premium_Purchase_ErrorUnknown, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                presentControllerImpl?(alertController)
-                
                 updateState { state in
                     var updatedState = state
                     updatedState.updating = false
@@ -903,6 +914,15 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     }
                 }
             )
+            controller.dismissed = {
+                updateState { state in
+                    var updatedState = state
+                    if updatedState.peers.isEmpty {
+                        updatedState.mode = .giveaway
+                    }
+                    return updatedState
+                }
+            }
             pushControllerImpl?(controller)
         })
     }
@@ -935,6 +955,28 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     openPremiumIntroImpl = {
         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller)
+    }
+    
+    scrollToDateImpl = { [weak controller] in
+        controller?.afterLayout({
+            guard let controller = controller else {
+                return
+            }
+            
+            var resultItemNode: ListViewItemNode?
+            let _ = controller.frameForItemNode({ listItemNode in
+                if let itemNode = listItemNode as? ItemListItemNode {
+                    if let tag = itemNode.tag as? CreateGiveawayEntryTag, tag == .date {
+                        resultItemNode = listItemNode
+                        return true
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                controller.ensureItemNodeVisible(resultItemNode, overflow: 120.0, atTop: true)
+            }
+        })
     }
     
     return controller

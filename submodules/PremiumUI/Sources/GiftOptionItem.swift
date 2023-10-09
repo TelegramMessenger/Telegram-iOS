@@ -260,7 +260,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             
             let titleAttributedString = NSAttributedString(string: item.title, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
             let statusAttributedString = NSAttributedString(string: item.subtitle ?? "", font: statusFont, textColor: item.subtitleActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
-            let badgeAttributedString = NSAttributedString(string: item.badge ?? "", font: Font.with(size: 14.0, design: .round, weight: .semibold), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+            let badgeAttributedString = NSAttributedString(string: item.badge ?? "", font: Font.with(size: 13.0, design: .round, weight: .semibold), textColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
             
             let labelColor: UIColor
             let labelFont: UIFont
@@ -450,7 +450,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                     var badgeOffset: CGFloat = 0.0
                     if badgeLayout.size.width > 0.0 {
                         let badgeFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset + 2.0, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: badgeLayout.size)
-                        let badgeBackgroundFrame = badgeFrame.insetBy(dx: -2.0, dy: -2.0)
+                        let badgeBackgroundFrame = badgeFrame.insetBy(dx: -3.0, dy: -2.0)
                         
                         let badgeBackgroundNode: ASImageNode
                         if let current = strongSelf.badgeBackgroundNode {
@@ -491,7 +491,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.containerNode.addSubnode(iconNode)
                             
                             strongSelf.labelBackgroundNode = backgroundNode
-                            strongSelf.labelIconNode = backgroundNode
+                            strongSelf.labelIconNode = iconNode
                         }
                         
                         if let icon = iconNode.image {
