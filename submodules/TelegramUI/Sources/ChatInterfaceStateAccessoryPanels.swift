@@ -17,10 +17,10 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     }
     
     switch chatPresentationInterfaceState.subject {
-        case .pinnedMessages, .forwardedMessages:
-            return nil
-        default:
-            break
+    case .pinnedMessages, .messageOptions:
+        return nil
+    default:
+        break
     }
     
     if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {

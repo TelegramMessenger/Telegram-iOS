@@ -18,7 +18,7 @@ public enum ChatMessageItemContent: Sequence {
     case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)])
     
     func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
-        if let subject = associatedData?.subject, case .forwardedMessages = subject {
+        if let subject = associatedData?.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
             return false
         }
         switch self {
@@ -420,7 +420,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         self.avatarHeader = avatarHeader
         
         var headers: [ListViewItemHeader] = [self.dateHeader]
-        if case .forwardedMessages = associatedData.subject {
+        if case .messageOptions = associatedData.subject {
             headers = []
         }
         if let avatarHeader = self.avatarHeader {

@@ -378,7 +378,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             let textBlockQuoteFont = Font.regular(fontSize)
             
             var incoming = message.effectivelyIncoming(context.account.peerId)
-            if case .forwardedMessages = associatedData.subject {
+            if let subject = associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
                 incoming = false
             }
             

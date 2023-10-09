@@ -528,10 +528,23 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
+    public struct MessageOptionsInfo: Equatable {
+        public enum Kind {
+            case forward
+            case reply
+        }
+        
+        public let kind: Kind
+        
+        public init(kind: Kind) {
+            self.kind = kind
+        }
+    }
+    
     case message(id: MessageSubject, highlight: Bool, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
-    case forwardedMessages(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], options: Signal<ForwardOptions, NoError>)
+    case messageOptions(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], info: MessageOptionsInfo, options: Signal<ForwardOptions, NoError>)
     
     public static func ==(lhs: ChatControllerSubject, rhs: ChatControllerSubject) -> Bool {
         switch lhs {
@@ -553,8 +566,8 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
-        case let .forwardedMessages(lhsPeerIds, lhsIds, _):
-            if case let .forwardedMessages(rhsPeerIds, rhsIds, _) = rhs, lhsPeerIds == rhsPeerIds, lhsIds == rhsIds {
+        case let .messageOptions(lhsPeerIds, lhsIds, lhsInfo, _):
+            if case let .messageOptions(rhsPeerIds, rhsIds, rhsInfo, _) = rhs, lhsPeerIds == rhsPeerIds, lhsIds == rhsIds, lhsInfo == rhsInfo {
                 return true
             } else {
                 return false

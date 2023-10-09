@@ -369,7 +369,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             let chatController = strongSelf.context.sharedContext.makeChatController(
                 context: strongSelf.context,
                 chatLocation: .peer(id: strongSelf.context.account.peerId),
-                subject: .forwardedMessages(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], options: forwardOptions),
+                subject: .messageOptions(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: ChatControllerSubject.MessageOptionsInfo(kind: .forward), options: forwardOptions),
                 botStart: nil,
                 mode: .standard(previewing: true)
             )
@@ -543,6 +543,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }
             contextController.immediateItemsTransitionAnimation = true
             strongSelf.controller?.presentInGlobalOverlay(contextController)
+        }, presentReplyOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {

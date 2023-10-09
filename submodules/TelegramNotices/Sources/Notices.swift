@@ -181,6 +181,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case storyStealthModeReplyCount = 47
     case viewOnceTooltip = 48
     case displayStoryUnmuteTooltip = 49
+    case chatReplyOptionsTip = 50
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -353,6 +354,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func chatForwardOptionsTip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatForwardOptionsTip.key)
+    }
+    
+    static func chatReplyOptionsTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.chatReplyOptionsTip.key)
     }
     
     static func interactiveEmojiSyncTip() -> NoticeEntryKey {
@@ -1239,6 +1244,33 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.chatForwardOptionsTip(), entry)
+            }
+            
+            return Int(previousValue)
+        }
+    }
+    
+    public static func getChatReplyOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatReplyOptionsTip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementChatReplyOptionsTip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int = 1) -> Signal<Int, NoError> {
+        return accountManager.transaction { transaction -> Int in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.chatReplyOptionsTip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            let previousValue = currentValue
+            currentValue += Int32(count)
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.chatReplyOptionsTip(), entry)
             }
             
             return Int(previousValue)

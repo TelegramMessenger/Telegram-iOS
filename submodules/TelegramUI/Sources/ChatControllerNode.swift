@@ -30,6 +30,7 @@ import ForwardAccessoryPanelNode
 import ChatOverscrollControl
 import ChatInputPanelNode
 import ChatInputContextPanelNode
+import TextSelectionNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -392,7 +393,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputContextOverTextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         var source: ChatHistoryListSource
-        if case let .forwardedMessages(_, messageIds, options) = subject {
+        if case let .messageOptions(_, messageIds, info, options) = subject {
             let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), options)
             |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
                 var messages = messages
@@ -412,28 +413,30 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     var attributes = message.attributes
                     attributes = attributes.filter({ attribute in
-                        if attribute is EditedMessageAttribute {
-                            return false
-                        }
-                        if let attribute = attribute as? ReplyMessageAttribute {
-                            if !forwardedMessageIds.contains(attribute.messageId) || hideNames {
+                        if case .forward = info.kind {
+                            if attribute is EditedMessageAttribute {
                                 return false
                             }
-                        }
-                        if attribute is ReplyMarkupMessageAttribute {
-                            return false
-                        }
-                        if attribute is ReplyThreadMessageAttribute {
-                            return false
-                        }
-                        if attribute is ViewCountMessageAttribute{
-                            return false
-                        }
-                        if attribute is ForwardCountMessageAttribute {
-                            return false
-                        }
-                        if attribute is ReactionsMessageAttribute {
-                            return false
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                if !forwardedMessageIds.contains(attribute.messageId) || hideNames {
+                                    return false
+                                }
+                            }
+                            if attribute is ReplyMarkupMessageAttribute {
+                                return false
+                            }
+                            if attribute is ReplyThreadMessageAttribute {
+                                return false
+                            }
+                            if attribute is ViewCountMessageAttribute{
+                                return false
+                            }
+                            if attribute is ForwardCountMessageAttribute {
+                                return false
+                            }
+                            if attribute is ReactionsMessageAttribute {
+                                return false
+                            }
                         }
                         return true
                     })
@@ -2965,6 +2968,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
+            if let subject = self.controller?.subject, case let .messageOptions(_, _, info, _) = subject, case .reply =  info.kind {
+                if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node {
+                    if node is TextSelectionNode {
+                        return result
+                    }
+                }
+            }
+            
             if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node, node is ChatMessageSelectionNode || node is GridMessageSelectionNode {
                 return result
             }

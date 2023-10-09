@@ -778,6 +778,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState($0.forwardOptionsState) }) })
             }
         }, presentForwardOptions: { _ in
+        }, presentReplyOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {

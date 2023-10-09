@@ -96,7 +96,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            if case .forwardedMessages = item.associatedData.subject {
+            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
                 incoming = false
             }
             

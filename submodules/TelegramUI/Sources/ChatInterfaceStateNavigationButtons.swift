@@ -29,7 +29,7 @@ struct ChatNavigationButton: Equatable {
 
 func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
-        if case .forwardedMessages = presentationInterfaceState.subject {
+        if case .messageOptions = presentationInterfaceState.subject {
             return nil
         }
         if let _ = presentationInterfaceState.reportReason {
@@ -78,7 +78,7 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
 
 func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?, chatInfoNavigationButton: ChatNavigationButton?, moreInfoNavigationButton: ChatNavigationButton?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
-        if case .forwardedMessages = presentationInterfaceState.subject {
+        if case .messageOptions = presentationInterfaceState.subject {
             return nil
         }
         if let currentButton = currentButton, currentButton.action == .cancelMessageSelection {
@@ -107,7 +107,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
         }
     }
     
-    if case .forwardedMessages = presentationInterfaceState.subject {
+    if case .messageOptions = presentationInterfaceState.subject {
         return nil
     }
     

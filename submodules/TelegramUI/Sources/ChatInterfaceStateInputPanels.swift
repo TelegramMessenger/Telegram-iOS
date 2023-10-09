@@ -16,7 +16,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         return (nil, nil)
     }
     
-    if case .forwardedMessages = chatPresentationInterfaceState.subject {
+    if case .messageOptions = chatPresentationInterfaceState.subject {
         return (nil, nil)
     }
     

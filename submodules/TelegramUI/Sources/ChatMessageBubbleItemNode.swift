@@ -1122,6 +1122,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         self.replyRecognizer = replyRecognizer
         self.view.addGestureRecognizer(replyRecognizer)
+        
+        if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
+            self.tapRecognizer?.isEnabled = false
+            self.replyRecognizer?.isEnabled = false
+        }
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
@@ -1233,7 +1238,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         do {
             let peerId = chatLocationPeerId
             
-            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
                 displayAuthorInfo = false
             } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if let forwardInfo = item.content.firstMessage.forwardInfo {
@@ -1412,7 +1417,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
-        if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+        if let subject = item.associatedData.subject, case .messageOptions = subject {
             needsShareButton = false
         }
                 
@@ -1904,7 +1909,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -2697,7 +2702,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         if case let .System(duration, _) = animation {
             legacyTransition = .animated(duration: duration, curve: .spring)
             
-            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            if let subject = item.associatedData.subject, case .messageOptions = subject {
                 useDisplayLinkAnimations = true
             }
         }
@@ -3525,6 +3530,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
         }
         
+        if let subject = item.associatedData.subject, case .messageOptions = subject {
+            strongSelf.tapRecognizer?.isEnabled = false
+            strongSelf.replyRecognizer?.isEnabled = false
+            strongSelf.mainContainerNode.isGestureEnabled = false
+            for contentContainer in strongSelf.contentContainers {
+                contentContainer.containerNode.isGestureEnabled = false
+            }
+        }
+        
         strongSelf.updateSearchTextHighlightState()
         
         if let (_, f) = strongSelf.awaitingAppliedReaction {
@@ -3532,7 +3546,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             f()
         }
-
     }
     
     override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {

@@ -17,6 +17,7 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 import AccessoryPanelNode
+import TelegramNotices
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -286,7 +287,11 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        if self.theme !== theme {
+        self.updateThemeAndStrings(theme: theme, strings: strings, force: false)
+    }
+        
+    private func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, force: Bool) {
+        if self.theme !== theme || force {
             self.theme = theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
@@ -362,9 +367,26 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         }
     }
     
-    @objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
+    private var previousTapTimestamp: Double?
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if let previousTapTimestamp = self.previousTapTimestamp, previousTapTimestamp + 1.0 > timestamp {
+                return
+            }
+            self.previousTapTimestamp = CFAbsoluteTimeGetCurrent()
+            self.interfaceInteraction?.presentReplyOptions(self)
+            Queue.mainQueue().after(1.5) {
+                self.updateThemeAndStrings(theme: self.theme, strings: self.strings, force: true)
+            }
+            
+            let _ = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: self.context.sharedContext.accountManager, count: 3).start()
+        }
+    }
+    
+    /*@objc func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.interfaceInteraction?.navigateToMessage(self.messageId, false, true, .generic)
         }
-    }
+    }*/
 }

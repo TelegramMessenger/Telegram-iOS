@@ -80,6 +80,7 @@ public final class ChatPanelInterfaceInteraction {
     public let forwardMessages: ([Message]) -> Void
     public let updateForwardOptionsState: ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void
     public let presentForwardOptions: (ASDisplayNode) -> Void
+    public let presentReplyOptions: (ASDisplayNode) -> Void
     public let shareSelectedMessages: () -> Void
     public let updateTextInputStateAndMode: (@escaping (ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void
     public let updateInputModeAndDismissedButtonKeyboardMessageId: ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void
@@ -184,6 +185,7 @@ public final class ChatPanelInterfaceInteraction {
         forwardMessages: @escaping ([Message]) -> Void,
         updateForwardOptionsState: @escaping ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void,
         presentForwardOptions: @escaping (ASDisplayNode) -> Void,
+        presentReplyOptions: @escaping (ASDisplayNode) -> Void,
         shareSelectedMessages: @escaping () -> Void,
         updateTextInputStateAndMode: @escaping ((ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void,
         updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void,
@@ -287,6 +289,7 @@ public final class ChatPanelInterfaceInteraction {
         self.forwardMessages = forwardMessages
         self.updateForwardOptionsState = updateForwardOptionsState
         self.presentForwardOptions = presentForwardOptions
+        self.presentReplyOptions = presentReplyOptions
         self.shareSelectedMessages = shareSelectedMessages
         self.updateTextInputStateAndMode = updateTextInputStateAndMode
         self.updateInputModeAndDismissedButtonKeyboardMessageId = updateInputModeAndDismissedButtonKeyboardMessageId
@@ -398,6 +401,7 @@ public final class ChatPanelInterfaceInteraction {
         }, forwardMessages: { _ in
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
+        }, presentReplyOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: updateTextInputStateAndMode, updateInputModeAndDismissedButtonKeyboardMessageId: updateInputModeAndDismissedButtonKeyboardMessageId, openStickers: {
         }, editMessage: {

@@ -10102,3 +10102,5 @@ Sorry for the inconvenience.";
 
 "GiftLink.LinkSharedToChat" = "Gift link forwarded to **%@**";
 "GiftLink.LinkSharedToSavedMessages" = "Gift link forwarded to **Saved Messages**";
+
+"ChatContextMenu.TextSelectionTip2" = "Hold on a word, then move cursor to select more| text to copy or quote.";

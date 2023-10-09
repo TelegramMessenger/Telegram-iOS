@@ -140,7 +140,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let message = item.message
                 
                 let incoming: Bool
-                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
                     incoming = false
                 } else {
                     incoming = item.message.effectivelyIncoming(item.context.account.peerId)
@@ -181,7 +181,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                if let subject = item.associatedData.subject, case .messageOptions = subject {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -344,7 +344,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textFont = item.presentationData.messageFont
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentControlColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message, adjustQuoteFontSize: true)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -562,6 +562,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             } else {
                                 strongSelf.statusNode.pressed = nil
+                            }
+                            
+                            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
+                                strongSelf.updateIsExtractedToContextPreview(true)
                             }
                         }
                     })

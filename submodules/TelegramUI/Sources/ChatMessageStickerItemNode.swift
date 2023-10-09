@@ -528,7 +528,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            if let subject = item.associatedData.subject, case .messageOptions = subject {
                 needsShareButton = false
             }
             

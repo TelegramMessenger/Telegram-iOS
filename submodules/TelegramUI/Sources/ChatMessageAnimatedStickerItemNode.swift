@@ -1065,7 +1065,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+            if let subject = item.associatedData.subject, case .messageOptions = subject {
                 needsShareButton = false
             }
             
@@ -1438,7 +1438,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration, _) = animation {
-                        if let subject = item.associatedData.subject, case .forwardedMessages = subject {
+                        if let subject = item.associatedData.subject, case .messageOptions = subject {
                             transition = .animated(duration: duration, curve: .linear)
                         } else {
                             transition = .animated(duration: duration, curve: .spring)

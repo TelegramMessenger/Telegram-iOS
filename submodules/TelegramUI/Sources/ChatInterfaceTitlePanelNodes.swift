@@ -18,7 +18,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     
     var inhibitTitlePanelDisplay = false
     switch chatPresentationInterfaceState.subject {
-    case .forwardedMessages:
+    case .messageOptions:
         return nil
     case .scheduledMessages, .pinnedMessages:
         inhibitTitlePanelDisplay = true

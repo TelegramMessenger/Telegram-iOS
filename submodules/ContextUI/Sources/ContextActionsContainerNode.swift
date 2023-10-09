@@ -393,7 +393,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         var icon: UIImage?
         switch tip {
         case .textSelection:
-            var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip
+            var rawText = self.presentationData.strings.ChatContextMenu_TextSelectionTip2
             if let range = rawText.range(of: "|") {
                 rawText.removeSubrange(range)
                 self.text = rawText
