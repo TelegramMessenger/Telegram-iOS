@@ -445,37 +445,42 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     var messageText = message.text
                     var messageMedia = message.media
                     var hasDice = false
-                    if hideNames {
-                        for media in message.media {
-                            if options.hideCaptions {
-                                if media is TelegramMediaImage || media is TelegramMediaFile {
-                                    messageText = ""
-                                    break
+                    
+                    if case .forward = info.kind {
+                        if hideNames {
+                            for media in message.media {
+                                if options.hideCaptions {
+                                    if media is TelegramMediaImage || media is TelegramMediaFile {
+                                        messageText = ""
+                                        break
+                                    }
+                                }
+                                if let poll = media as? TelegramMediaPoll {
+                                    var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
+                                    updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
+                                    messageMedia = updatedMedia
+                                }
+                                if let _ = media as? TelegramMediaDice {
+                                    hasDice = true
                                 }
                             }
-                            if let poll = media as? TelegramMediaPoll {
-                                var updatedMedia = message.media.filter { !($0 is TelegramMediaPoll) }
-                                updatedMedia.append(TelegramMediaPoll(pollId: poll.pollId, publicity: poll.publicity, kind: poll.kind, text: poll.text, options: poll.options, correctAnswers: poll.correctAnswers, results: TelegramMediaPollResults(voters: nil, totalVoters: nil, recentVoters: [], solution: nil), isClosed: false, deadlineTimeout: nil))
-                                messageMedia = updatedMedia
-                            }
-                            if let _ = media as? TelegramMediaDice {
-                                hasDice = true
-                            }
                         }
+                        
+                        var forwardInfo: MessageForwardInfo?
+                        if let existingForwardInfo = message.forwardInfo {
+                            forwardInfo = MessageForwardInfo(author: existingForwardInfo.author, source: existingForwardInfo.source, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                        }
+                        else {
+                            forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
+                        }
+                        if hideNames && !hasDice {
+                            forwardInfo = nil
+                        }
+                        
+                        return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(Int32(context.account.network.context.globalTime())).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
+                    } else {
+                        return message
                     }
-                    
-                    var forwardInfo: MessageForwardInfo?
-                    if let existingForwardInfo = message.forwardInfo {
-                        forwardInfo = MessageForwardInfo(author: existingForwardInfo.author, source: existingForwardInfo.source, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
-                    }
-                    else {
-                        forwardInfo = MessageForwardInfo(author: message.author, source: nil, sourceMessageId: nil, date: 0, authorSignature: nil, psaType: nil, flags: [])
-                    }
-                    if hideNames && !hasDice {
-                        forwardInfo = nil
-                    }
-                    
-                    return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(Int32(context.account.network.context.globalTime())).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
                 }
                 
                 return (messages, Int32(messages.count), false)
@@ -889,6 +894,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let inputNode = self.inputNode as? ChatEntityKeyboardInputNode {
             inputNode.simulateUpdateLayout(isVisible: isInFocus)
         }
+    }
+    
+    func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        var height = self.historyNode.scroller.contentSize.height
+        height += 3.0
+        height = min(height, layout.size.height)
+        return CGSize(width: layout.size.width, height: height)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, CGFloat, ContainedViewLayoutTransition) -> Void) {

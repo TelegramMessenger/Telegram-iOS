@@ -34,6 +34,8 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     public var centerHorizontally = false
     public var dismissed: (() -> Void)?
     
+    public var dismissOnTap: ((UIView, CGPoint) -> Bool)?
+    
     public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
@@ -55,6 +57,11 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
             self?.contextMenuNode.animateOut(bounce: (self?.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: {
                 self?.presentingViewController?.dismiss(animated: false)
             })
+        }, dismissOnTap: { [weak self] view, point in
+            guard let self, let dismissOnTap = self.dismissOnTap else {
+                return false
+            }
+            return dismissOnTap(view, point)
         }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback, blurred: self.blurred)
         self.displayNodeDidLoad()
     }

@@ -235,12 +235,17 @@ public final class TextSelectionNode: ASDisplayNode {
     public private(set) var recognizer: TextSelectionGestureRecognizer?
     private var displayLinkAnimator: DisplayLinkAnimator?
     
+    public var enableCopy: Bool = true
     public var enableLookup: Bool = true
     public var enableQuote: Bool = false
+    public var enableTranslate: Bool = true
+    public var enableShare: Bool = true
     
     public var didRecognizeTap: Bool {
         return self.recognizer?.didRecognizeTap ?? false
     }
+    
+    private weak var contextMenu: ContextMenuController?
     
     public init(theme: TextSelectionTheme, strings: PresentationStrings, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: @escaping () -> ASDisplayNode?, externalKnobSurface: UIView? = nil, performAction: @escaping (NSAttributedString, TextSelectionAction) -> Void) {
         self.theme = theme
@@ -438,6 +443,24 @@ public final class TextSelectionNode: ASDisplayNode {
         self.displayLinkAnimator = displayLinkAnimator
     }
     
+    public func setSelection(range: NSRange, displayMenu: Bool) {
+        self.currentRange = (range.lowerBound, range.upperBound)
+        self.updateSelection(range: range, animateIn: true)
+        self.updateIsActive(true)
+        
+        if displayMenu {
+            self.displayMenu()
+        }
+    }
+    
+    public func getSelection() -> NSRange? {
+        guard let currentRange = self.currentRange else {
+            return nil
+        }
+        let range = NSRange(location: min(currentRange.0, currentRange.1), length: max(currentRange.0, currentRange.1) - min(currentRange.0, currentRange.1))
+        return range
+    }
+    
     private func updateSelection(range: NSRange?, animateIn: Bool) {
         self.updateRange?(range)
         
@@ -570,10 +593,12 @@ public final class TextSelectionNode: ASDisplayNode {
         }
         
         var actions: [ContextMenuAction] = []
-        actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
-            self?.performAction(string, .copy)
-            self?.cancelSelection()
-        }))
+        if self.enableCopy {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
+                self?.performAction(string, .copy)
+                self?.cancelSelection()
+            }))
+        }
         if self.enableQuote {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuQuote, accessibilityLabel: self.strings.Conversation_ContextMenuQuote), action: { [weak self] in
                 self?.performAction(string, .quote(range: range.lowerBound ..< range.upperBound))
@@ -586,10 +611,12 @@ public final class TextSelectionNode: ASDisplayNode {
             }))
         }
         if #available(iOS 15.0, *) {
-            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
-                self?.performAction(string, .translate)
-                self?.cancelSelection()
-            }))
+            if self.enableTranslate {
+                actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuTranslate, accessibilityLabel: self.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
+                    self?.performAction(string, .translate)
+                    self?.cancelSelection()
+                }))
+            }
         }
 //        if isSpeakSelectionEnabled() {
 //            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuSpeak, accessibilityLabel: self.strings.Conversation_ContextMenuSpeak), action: { [weak self] in
@@ -597,16 +624,41 @@ public final class TextSelectionNode: ASDisplayNode {
 //                self?.dismissSelection()
 //            }))
 //        }
-        actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
-            self?.performAction(string, .share)
-            self?.cancelSelection()
-        }))
         
-        self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+        let realFullRange = NSRange(location: 0, length: attributedString.length)
+        if range != realFullRange {
+            //TODO:localize
+            actions.append(ContextMenuAction(content: .text(title: "Select All", accessibilityLabel: "Select All"), action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.contextMenu?.dismiss()
+                self.setSelection(range: realFullRange, displayMenu: true)
+            }))
+        } else if self.enableShare {
+            actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuShare, accessibilityLabel: self.strings.Conversation_ContextMenuShare), action: { [weak self] in
+                self?.performAction(string, .share)
+                self?.cancelSelection()
+            }))
+        }
+        
+        let contextMenu = ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false)
+        contextMenu.dismissOnTap = { [weak self] view, point in
+            guard let self else {
+                return true
+            }
+            if self.knobAtPoint(view.convert(point, to: self.view)) == nil {
+                //self.cancelSelection()
+                return true
+            }
+            return true
+        }
+        self.contextMenu = contextMenu
+        self.present(contextMenu, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
             guard let strongSelf = self, let rootNode = strongSelf.rootNode() else {
                 return nil
             }
-            return (strongSelf, completeRect, rootNode, rootNode.bounds)
+            return (strongSelf, completeRect, rootNode, rootNode.bounds.insetBy(dx: 0.0, dy: -100.0))
         }, bounce: false))
     }
     

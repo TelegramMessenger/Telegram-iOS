@@ -509,7 +509,13 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             
             let nodeLayout = node.asyncLayout()
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
-            let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
+            
+            var disableDate = self.disableDate
+            if let subject = self.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
+                disableDate = true
+            }
+            
+            let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !disableDate)
             
             node.contentSize = layout.contentSize
             node.insets = layout.insets

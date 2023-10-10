@@ -21,6 +21,7 @@ import TelegramNotices
 
 public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
+    public let chatPeerId: EnginePeer.Id
     public let messageId: MessageId
     public let quote: EngineMessageReplyQuote?
     
@@ -39,9 +40,12 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     public var theme: PresentationTheme
     public var strings: PresentationStrings
     
+    private var textIsOptions: Bool = false
+    
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
-    public init(context: AccountContext, messageId: MessageId, quote: EngineMessageReplyQuote?, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+    public init(context: AccountContext, chatPeerId: EnginePeer.Id, messageId: MessageId, quote: EngineMessageReplyQuote?, theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, animationCache: AnimationCache?, animationRenderer: MultiAnimationRenderer?) {
+        self.chatPeerId = chatPeerId
         self.messageId = messageId
         self.quote = quote
         
@@ -145,7 +149,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     isMedia = false
                 }
 
-                let textFont = Font.regular(14.0)
+                let textFont = Font.regular(15.0)
                 let messageText: NSAttributedString
                 if isText, let message = message {
                     let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
@@ -231,14 +235,23 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     }
                 }
                 
+                var titleText: String
                 if let quote = strongSelf.quote {
                     //TODO:localize
-                    strongSelf.titleNode.attributedText = NSAttributedString(string: "Reply to quote by \(authorName)", font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    titleText = "Reply to quote by \(authorName)"
                     strongSelf.textNode.attributedText = NSAttributedString(string: quote.text, font: textFont, textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
                 } else {
-                    strongSelf.titleNode.attributedText = NSAttributedString(string: strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string, font: Font.medium(14.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                    titleText = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
                     strongSelf.textNode.attributedText = messageText
                 }
+                
+                if strongSelf.messageId.peerId != strongSelf.chatPeerId {
+                    if let peer = message?.peers[strongSelf.messageId.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
+                        titleText += " in \(peer.debugDisplayTitle)"
+                    }
+                }
+                
+                strongSelf.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
                                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
@@ -277,6 +290,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                                 } else {
                                     text = "Tap here for forwarding options"
                                 }
+                                strongSelf.textIsOptions = true
                                 
                                 strongSelf.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor)
                                 
@@ -336,7 +350,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             }
             
             if let text = self.textNode.attributedText?.string {
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.theme.chat.inputPanel.primaryTextColor)
+                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.textIsOptions ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
             }
             self.textNode.spoilerColor = self.theme.chat.inputPanel.secondaryTextColor
             

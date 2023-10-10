@@ -316,7 +316,7 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
                 context: context,
                 chatLocation: .replyThread(result.message),
                 chatLocationContextHolder: result.contextHolder,
-                subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) },
+                subject: messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) },
                 activateInput: actualActivateInput,
                 keepStack: keepStack
             )

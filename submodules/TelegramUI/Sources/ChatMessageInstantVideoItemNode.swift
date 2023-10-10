@@ -444,6 +444,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
             
             var replyMessage: Message?
+            var replyForward: QuotedReplyMessageAttribute?
             var replyQuote: EngineMessageReplyQuote?
             var replyStory: StoryId?
             for attribute in item.message.attributes {
@@ -488,6 +489,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
                     replyQuote = replyAttribute.quote
+                } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                    replyForward = attribute
                 } else if let attribute = attribute as? ReplyStoryAttribute {
                     replyStory = attribute.storyId
                 } else if let _ = attribute as? InlineBotMessageAttribute {
@@ -496,13 +499,14 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 }
             }
             
-            if replyMessage != nil || replyStory != nil {
+            if replyMessage != nil || replyForward != nil || replyStory != nil {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
+                    replyForward: replyForward,
                     quote: replyQuote,
                     story: replyStory,
                     parentMessage: item.message,

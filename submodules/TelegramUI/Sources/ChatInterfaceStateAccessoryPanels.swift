@@ -73,10 +73,12 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             replyPanelNode.interfaceInteraction = interfaceInteraction
             replyPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return replyPanelNode
-        } else {
-            let panelNode = ReplyAccessoryPanelNode(context: context, messageId: replyMessageSubject.messageId, quote: replyMessageSubject.quote, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
+        } else if let peerId = chatPresentationInterfaceState.chatLocation.peerId {
+            let panelNode = ReplyAccessoryPanelNode(context: context, chatPeerId: peerId, messageId: replyMessageSubject.messageId, quote: replyMessageSubject.quote, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, nameDisplayOrder: chatPresentationInterfaceState.nameDisplayOrder, dateTimeFormat: chatPresentationInterfaceState.dateTimeFormat, animationCache: chatControllerInteraction?.presentationContext.animationCache, animationRenderer: chatControllerInteraction?.presentationContext.animationRenderer)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
+        } else {
+            return nil
         }
     } else {
         return nil

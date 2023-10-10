@@ -130,6 +130,7 @@ private final class ContextMenuContentScrollNode: ASDisplayNode {
 final class ContextMenuNode: ASDisplayNode {
     private let actions: [ContextMenuAction]
     private let dismiss: () -> Void
+    private let dismissOnTap: (UIView, CGPoint) -> Bool
     
     private let containerNode: ContextMenuContainerNode
     private let scrollNode: ContextMenuContentScrollNode
@@ -145,9 +146,10 @@ final class ContextMenuNode: ASDisplayNode {
     
     private let feedback: HapticFeedback?
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, catchTapsOutside: Bool, hasHapticFeedback: Bool = false, blurred: Bool = false) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool = false, blurred: Bool = false) {
         self.actions = actions
         self.dismiss = dismiss
+        self.dismissOnTap = dismissOnTap
         self.catchTapsOutside = catchTapsOutside
         
         self.containerNode = ContextMenuContainerNode(blurred: blurred)
@@ -259,6 +261,14 @@ final class ContextMenuNode: ASDisplayNode {
             }
             if event.type == .touches || eventIsPresses {
                 if !self.containerNode.frame.contains(point) {
+                    if self.dismissOnTap(self.view, point) {
+                        self.dismiss()
+                        if self.catchTapsOutside {
+                            return self.view
+                        } else {
+                            return nil
+                        }
+                    }
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
                         self.dismiss()

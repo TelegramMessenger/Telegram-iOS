@@ -67,7 +67,7 @@ public final class HashtagSearchController: TelegramBaseController {
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer) |> deliverOnMainQueue).start(next: { actualPeer in
                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: message.id.peerId == actualPeer.id ? .message(id: .id(message.id), highlight: true, timecode: nil) : nil, keepStack: .always))
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: message.id.peerId == actualPeer.id ? .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) : nil, keepStack: .always))
                     }
                 }))
                 strongSelf.controllerNode.listNode.clearHighlightAnimated(true)

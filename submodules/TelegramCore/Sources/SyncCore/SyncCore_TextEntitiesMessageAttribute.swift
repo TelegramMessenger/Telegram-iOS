@@ -1,3 +1,4 @@
+import Foundation
 import Postbox
 
 public enum MessageTextEntityType: Equatable {
@@ -314,4 +315,23 @@ public class TextEntitiesMessageAttribute: MessageAttribute, Equatable {
     public static func ==(lhs: TextEntitiesMessageAttribute, rhs: TextEntitiesMessageAttribute) -> Bool {
         return lhs.entities == rhs.entities
     }
+}
+
+public func messageTextEntitiesInRange(entities: [MessageTextEntity], range: NSRange, onlyQuoteable: Bool) -> [MessageTextEntity] {
+    let range: Range<Int> = range.lowerBound ..< range.upperBound
+    var result: [MessageTextEntity] = []
+    loop: for entity in entities {
+        if onlyQuoteable {
+            switch entity.type {
+            case .Bold, .Italic, .Strikethrough, .Underline, .Spoiler, .CustomEmoji:
+                break
+            default:
+                continue loop
+            }
+        }
+        if entity.range.overlaps(range) {
+            result.append(MessageTextEntity(range: entity.range.clamped(to: range), type: entity.type))
+        }
+    }
+    return result
 }

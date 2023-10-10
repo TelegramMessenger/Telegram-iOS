@@ -403,6 +403,18 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                 self.targetSelectionIndex = 1
             }
             icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
+        case .quoteSelection:
+            //TODO:localize
+            var rawText = "Hold on a word, then move cursor to select more| text to quote."
+            if let range = rawText.range(of: "|") {
+                rawText.removeSubrange(range)
+                self.text = rawText
+                self.targetSelectionIndex = NSRange(range, in: rawText).lowerBound
+            } else {
+                self.text = rawText
+                self.targetSelectionIndex = 1
+            }
+            icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
         case .messageViewsPrivacy:
             self.text = self.presentationData.strings.ChatContextMenu_MessageViewsPrivacyTip
             self.targetSelectionIndex = nil

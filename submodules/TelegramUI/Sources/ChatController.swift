@@ -105,6 +105,7 @@ import PeerSelectionController
 import SaveToCameraRoll
 import ChatMessageDateAndStatusNode
 import ReplyAccessoryPanelNode
+import TextSelectionNode
 
 public enum ChatControllerPeekActions {
     case standard
@@ -542,6 +543,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var avatarNode: ChatAvatarNavigationNode?
     var storyStats: PeerStoryStats?
+    
+    var performTextSelectionAction: ((Message?, Bool, NSAttributedString, TextSelectionAction) -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
@@ -3860,6 +3863,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
+            
+            if let performTextSelectionAction = strongSelf.performTextSelectionAction {
+                performTextSelectionAction(message, canCopy, text, action)
+                return
+            }
+            
             switch action {
             case .copy:
                 storeAttributedTextInPasteboard(text)
@@ -4575,7 +4584,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         var subject: ChatControllerSubject?
                         if let messageId = messageId {
-                            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+                            subject = .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)
                         }
                         navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                     }
@@ -5200,8 +5209,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     |> distinctUntilChanged
                 } else if case let .messageOptions(peerIds, messageIds, info, options) = subject {
-                    let _ = info
-                    
                     displayedCountSignal = self.presentationInterfaceStatePromise.get()
                     |> map { state -> Int? in
                         if let selectionState = state.interfaceState.selectionState {
@@ -5216,73 +5223,80 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> take(1)
                     
                     let presentationData = self.presentationData
-                    subtitleTextSignal = combineLatest(peers, options, displayedCountSignal)
-                    |> map { peersView, options, count in
-                        let peers = peersView.peers.values
-                        if !peers.isEmpty {
-                            if peers.count == 1, let peer = peers.first {
-                                if let peer = peer as? TelegramUser {
-                                    let displayName = EnginePeer(peer).compactDisplayTitle
-                                    if count == 1 {
-                                        if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardHidden(displayName).string
+                    
+                    switch info.kind {
+                    case .forward:
+                        subtitleTextSignal = combineLatest(peers, options, displayedCountSignal)
+                        |> map { peersView, options, count in
+                            let peers = peersView.peers.values
+                            if !peers.isEmpty {
+                                if peers.count == 1, let peer = peers.first {
+                                    if let peer = peer as? TelegramUser {
+                                        let displayName = EnginePeer(peer).compactDisplayTitle
+                                        if count == 1 {
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardHidden(displayName).string
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardVisible(displayName).string
+                                            }
                                         } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_UserMessageForwardVisible(displayName).string
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardHidden(displayName).string
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardVisible(displayName).string
+                                            }
+                                        }
+                                    } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                                        if count == 1 {
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardHidden
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardVisible
+                                            }
+                                        } else {
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardHidden
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardVisible
+                                            }
                                         }
                                     } else {
-                                        if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardHidden(displayName).string
+                                        if count == 1 {
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardHidden
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardVisible
+                                            }
                                         } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_UserMessagesForwardVisible(displayName).string
-                                        }
-                                    }
-                                } else if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                                    if count == 1 {
-                                        if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardHidden
-                                        } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessageForwardVisible
-                                        }
-                                    } else {
-                                        if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardHidden
-                                        } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_ChannelMessagesForwardVisible
+                                            if options.hideNames {
+                                                return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardHidden
+                                            } else {
+                                                return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardVisible
+                                            }
                                         }
                                     }
                                 } else {
                                     if count == 1 {
                                         if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardHidden
+                                            return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardHidden
                                         } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessageForwardVisible
+                                            return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardVisible
                                         }
                                     } else {
                                         if options.hideNames {
-                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardHidden
+                                            return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardHidden
                                         } else {
-                                            return presentationData.strings.Conversation_ForwardOptions_GroupMessagesForwardVisible
+                                            return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardVisible
                                         }
                                     }
                                 }
                             } else {
-                                if count == 1 {
-                                    if options.hideNames {
-                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardHidden
-                                    } else {
-                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessageForwardVisible
-                                    }
-                                } else {
-                                    if options.hideNames {
-                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardHidden
-                                    } else {
-                                        return presentationData.strings.Conversation_ForwardOptions_RecipientsMessagesForwardVisible
-                                    }
-                                }
+                                return nil
                             }
-                        } else {
-                            return nil
                         }
+                    case .reply:
+                        //TODO:localize
+                        subtitleTextSignal = .single("You can select a specific part to quote")
                     }
                 }
                 
@@ -5305,8 +5319,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let peer = peerViewMainPeer(peerView) {
-                            if case .messageOptions = presentationInterfaceState.subject {
-                                if displayedCount == 1 {
+                            if case let .messageOptions(_, _, info, _) = presentationInterfaceState.subject {
+                                if case let .reply(initialQuote) = info.kind {
+                                    //TODO:localize
+                                    if initialQuote != nil {
+                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Quote", subtitleText, false)
+                                    } else {
+                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Message", subtitleText, false)
+                                    }
+                                } else if displayedCount == 1 {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
                                 } else {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitle(Int32(displayedCount ?? 1)), subtitleText, false)
@@ -10508,7 +10529,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if let navigationController = strongSelf.effectiveNavigationController {
-                let subject: ChatControllerSubject? = sourceMessageId.flatMap { ChatControllerSubject.message(id: .id($0), highlight: true, timecode: nil) }
+                let subject: ChatControllerSubject? = sourceMessageId.flatMap { ChatControllerSubject.message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(replyThreadResult), subject: subject, keepStack: .always))
             }
         }, activatePinnedListPreview: { [weak self] node, gesture in
@@ -11900,6 +11921,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return
         }
         self.applyNavigationBarLayout(layout, navigationLayout: self.navigationLayout(layout: layout), additionalBackgroundHeight: self.additionalNavigationBarBackgroundHeight, transition: transition)
+    }
+    
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        switch self.presentationInterfaceState.mode {
+        case let .standard(previewing):
+            if previewing {
+                if let subject = self.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
+                    return self.chatDisplayNode.preferredContentSizeForLayout(layout)
+                }
+            }
+        default:
+            break
+        }
+        return nil
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -16412,7 +16447,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })))
                 }
 
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .timestamp(timestamp), highlight: false, timecode: nil), botStart: nil, mode: .standard(previewing: true))
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .message(id: .timestamp(timestamp), highlight: nil, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                 chatController.canReadHistory.set(false)
                 
                 strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
@@ -16545,9 +16580,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let subject: ChatControllerSubject?
                 if let atMessageId = atMessageId {
-                    subject = .message(id: .id(atMessageId), highlight: true, timecode: nil)
+                    subject = .message(id: .id(atMessageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)
                 } else if let index = result.scrollToLowerBoundMessage {
-                    subject = .message(id: .id(index.id), highlight: false, timecode: nil)
+                    subject = .message(id: .id(index.id), highlight: nil, timecode: nil)
                 } else {
                     subject = nil
                 }
@@ -16628,7 +16663,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         navigateToLocation = .peer(peer)
                     }
-                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always))
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
                 })
             } else if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
                 let _ = (self.context.engine.data.get(
@@ -16645,7 +16680,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                         }
                         
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always))
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
                     }
                 })
             } else if forceInCurrentChat {
@@ -16833,7 +16868,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     
                                     if let navigationController = strongSelf.effectiveNavigationController {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }))
                                     }
                                 })
                                 completion?()
@@ -16851,7 +16886,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         if let navigationController = self.effectiveNavigationController {
-                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }))
+                            self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }))
                         }
                         completion?()
                     })

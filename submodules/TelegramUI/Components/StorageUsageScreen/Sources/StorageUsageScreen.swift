@@ -2570,7 +2570,7 @@ final class StorageUsageScreenComponent: Component {
                             navigationController: navigationController,
                             context: component.context,
                             chatLocation: chatLocation,
-                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil),
                             keepStack: .always
                         ))
                     })
@@ -2673,7 +2673,7 @@ final class StorageUsageScreenComponent: Component {
                             navigationController: navigationController,
                             context: component.context,
                             chatLocation: chatLocation,
-                            subject: .message(id: .id(message.id), highlight: true, timecode: nil),
+                            subject: .message(id: .id(message.id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil),
                             keepStack: .always
                         ))
                     })

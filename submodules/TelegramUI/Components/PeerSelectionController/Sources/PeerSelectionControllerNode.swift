@@ -362,7 +362,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
             forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
             |> map { state -> ChatControllerSubject.ForwardOptions in
-                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
+                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false, replyOptions: nil)
             }
             |> distinctUntilChanged
             

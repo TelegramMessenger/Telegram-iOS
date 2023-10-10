@@ -1150,7 +1150,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if case let .channel(channel) = actualPeer, channel.flags.contains(.isForum), let threadId {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .never).startStandalone()
                             } else {
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), purposefulAction: {
                                     if deactivateOnAction {
                                         self?.deactivateSearch(animated: false)
                                     }
@@ -1399,7 +1399,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 } else {
                     var subject: ChatControllerSubject?
                     if case let .search(messageId) = source, let id = messageId {
-                        subject = .message(id: .id(id), highlight: false, timecode: nil)
+                        subject = .message(id: .id(id), highlight: nil, timecode: nil)
                     }
                     let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.id), subject: subject, botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)

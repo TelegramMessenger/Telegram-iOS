@@ -317,6 +317,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             if !ignoreHeaders {
                 var replyMessage: Message?
+                var replyForward: QuotedReplyMessageAttribute?
                 var replyQuote: EngineMessageReplyQuote?
                 var replyStory: StoryId?
                 
@@ -348,12 +349,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                         }
                         replyQuote = replyAttribute.quote
+                    } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                        replyForward = attribute
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyStory = attribute.storyId
                     }
                 }
                 
-                if replyMessage != nil || replyStory != nil {
+                if replyMessage != nil || replyForward != nil || replyStory != nil {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyMessage?.id {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
@@ -362,6 +365,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             context: item.context,
                             type: .standalone,
                             message: replyMessage,
+                            replyForward: replyForward,
                             quote: replyQuote,
                             story: replyStory,
                             parentMessage: item.message,

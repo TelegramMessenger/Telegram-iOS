@@ -371,7 +371,7 @@ final class StoryItemSetContainerSendMessage {
             animateInAsReplacement: false,
             action: { [weak view, weak self] action in
                 if case .undo = action, let messageId {
-                    view?.navigateToPeer(peer: peer, chat: true, subject: isScheduled ? .scheduledMessages : .message(id: .id(messageId), highlight: false, timecode: nil))
+                    view?.navigateToPeer(peer: peer, chat: true, subject: isScheduled ? .scheduledMessages : .message(id: .id(messageId), highlight: nil, timecode: nil))
                 }
                 self?.tooltipScreen = nil
                 view?.updateIsProgressPaused()
@@ -2721,7 +2721,7 @@ final class StoryItemSetContainerSendMessage {
                 return
             }
             if let navigationController = controller.navigationController as? NavigationController {
-                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
+                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: component.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil)))
             }
             completion?()
         })

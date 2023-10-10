@@ -517,21 +517,42 @@ public enum ChatControllerSubject: Equatable {
         case id(EngineMessage.Id)
         case timestamp(Int32)
     }
+    
+    public struct ReplyOptions: Equatable {
+        public var hasQuote: Bool
+        
+        public init(hasQuote: Bool) {
+            self.hasQuote = hasQuote
+        }
+    }
 
     public struct ForwardOptions: Equatable {
-        public let hideNames: Bool
-        public let hideCaptions: Bool
+        public var hideNames: Bool
+        public var hideCaptions: Bool
         
-        public init(hideNames: Bool, hideCaptions: Bool) {
+        public var replyOptions: ReplyOptions?
+        
+        public init(hideNames: Bool, hideCaptions: Bool, replyOptions: ReplyOptions?) {
             self.hideNames = hideNames
             self.hideCaptions = hideCaptions
+            self.replyOptions = replyOptions
         }
     }
     
     public struct MessageOptionsInfo: Equatable {
-        public enum Kind {
+        public struct ReplyQuote: Equatable {
+            public let messageId: EngineMessage.Id
+            public let text: String
+            
+            public init(messageId: EngineMessage.Id, text: String) {
+                self.messageId = messageId
+                self.text = text
+            }
+        }
+        
+        public enum Kind: Equatable {
             case forward
-            case reply
+            case reply(initialQuote: ReplyQuote?)
         }
         
         public let kind: Kind
@@ -541,7 +562,15 @@ public enum ChatControllerSubject: Equatable {
         }
     }
     
-    case message(id: MessageSubject, highlight: Bool, timecode: Double?)
+    public struct MessageHighlight: Equatable {
+        public var quote: String?
+        
+        public init(quote: String? = nil) {
+            self.quote = quote
+        }
+    }
+    
+    case message(id: MessageSubject, highlight: MessageHighlight?, timecode: Double?)
     case scheduledMessages
     case pinnedMessages(id: EngineMessage.Id?)
     case messageOptions(peerIds: [EnginePeer.Id], ids: [EngineMessage.Id], info: MessageOptionsInfo, options: Signal<ForwardOptions, NoError>)

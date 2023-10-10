@@ -369,7 +369,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
         }
         switch message {
             case let .message(_, attributes, _, _, replyToMessageId, _, _, _, _):
-                if let replyToMessageId = replyToMessageId, replyToMessageId.messageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
+                if let replyToMessageId = replyToMessageId, (replyToMessageId.messageId.peerId != peerId && peerId.namespace == Namespaces.Peer.SecretChat), let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
                     var canBeForwarded = true
                     if replyMessage.id.namespace != Namespaces.Message.Cloud {
                         canBeForwarded = false
@@ -503,12 +503,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         attributes.append(AutoremoveTimeoutMessageAttribute(timeout: peerAutoremoveTimeout, countdownBeginTime: nil))
                     }
                         
-                    if let replyToMessageId = replyToMessageId, replyToMessageId.messageId.peerId == peerId {
+                    if let replyToMessageId = replyToMessageId {
                         var threadMessageId: MessageId?
+                        var quote = replyToMessageId.quote
                         if let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
                             threadMessageId = replyMessage.effectiveReplyThreadMessageId
+                            if quote == nil, replyToMessageId.messageId.peerId != peerId {
+                                let nsText = replyMessage.text as NSString
+                                quote = EngineMessageReplyQuote(text: replyMessage.text, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true))
+                            }
                         }
-                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: replyToMessageId.quote))
+                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote))
                     }
                     if let replyToStoryId = replyToStoryId {
                         attributes.append(ReplyStoryAttribute(storyId: replyToStoryId))

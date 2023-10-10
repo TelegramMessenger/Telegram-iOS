@@ -546,8 +546,8 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
                 
                 boundingRect.origin.y += self.defaultTextContainerInset.top
                 
-                boundingRect.origin.x -= 9.0
-                boundingRect.size.width += 9.0
+                boundingRect.origin.x -= 4.0
+                boundingRect.size.width += 4.0
                 boundingRect.size.width += 18.0
                 boundingRect.size.width = min(boundingRect.size.width, self.bounds.width - 18.0)
                 

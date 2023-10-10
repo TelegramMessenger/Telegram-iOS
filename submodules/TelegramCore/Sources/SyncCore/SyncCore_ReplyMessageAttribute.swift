@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramApi
 
 public class ReplyMessageAttribute: MessageAttribute {
     public let messageId: MessageId
@@ -42,6 +43,57 @@ public class ReplyMessageAttribute: MessageAttribute {
             encoder.encodeCodable(quote, forKey: "qu")
         } else {
             encoder.encodeNil(forKey: "qu")
+        }
+    }
+}
+
+public class QuotedReplyMessageAttribute: MessageAttribute {
+    public let peerId: PeerId?
+    public let authorName: String?
+    public let quote: EngineMessageReplyQuote?
+    
+    public var associatedMessageIds: [MessageId] {
+        return []
+    }
+    
+    public init(peerId: PeerId?, authorName: String?, quote: EngineMessageReplyQuote?) {
+        self.peerId = peerId
+        self.authorName = authorName
+        self.quote = quote
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+        self.peerId = decoder.decodeOptionalInt64ForKey("p").flatMap(PeerId.init)
+        self.authorName = decoder.decodeOptionalStringForKey("a")
+        self.quote = decoder.decodeCodable(EngineMessageReplyQuote.self, forKey: "qu")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let peerId = self.peerId {
+            encoder.encodeInt64(peerId.toInt64(), forKey: "p")
+        } else {
+            encoder.encodeNil(forKey: "p")
+        }
+        
+        if let authorName = self.authorName {
+            encoder.encodeString(authorName, forKey: "a")
+        } else {
+            encoder.encodeNil(forKey: "a")
+        }
+        
+        if let quote = self.quote {
+            encoder.encodeCodable(quote, forKey: "qu")
+        } else {
+            encoder.encodeNil(forKey: "qu")
+        }
+    }
+}
+
+extension QuotedReplyMessageAttribute {
+    convenience init(apiHeader: Api.MessageFwdHeader, quote: EngineMessageReplyQuote?) {
+        switch apiHeader {
+        case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _):
+            self.init(peerId: fromId?.peerId, authorName: fromName, quote: quote)
         }
     }
 }

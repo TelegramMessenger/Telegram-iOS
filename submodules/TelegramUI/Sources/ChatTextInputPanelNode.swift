@@ -3732,7 +3732,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             ] as [UIAction])
             
             let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
-            actions.insert(formatMenu, at: 3)
+            actions.insert(formatMenu, at: 2)
         }
         return UIMenu(children: actions)
     }

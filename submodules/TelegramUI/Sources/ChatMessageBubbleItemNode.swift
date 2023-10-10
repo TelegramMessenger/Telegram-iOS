@@ -1525,6 +1525,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var inlineBotNameString: String?
         var replyMessage: Message?
+        var replyForward: QuotedReplyMessageAttribute?
         var replyQuote: EngineMessageReplyQuote?
         var replyStory: StoryId?
         var replyMarkup: ReplyMarkupMessageAttribute?
@@ -1543,6 +1544,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
                 replyQuote = attribute.quote
+            } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                replyForward = attribute
             } else if let attribute = attribute as? ReplyStoryAttribute {
                 replyStory = attribute.storyId
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
@@ -1778,7 +1781,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 hasForwardLikeContent = true
             }
             
-            if inlineBotNameString == nil && (ignoreForward || !hasForwardLikeContent) && replyMessage == nil && replyStory == nil {
+            if inlineBotNameString == nil && (ignoreForward || !hasForwardLikeContent) && replyMessage == nil && replyForward == nil && replyStory == nil {
                 if let first = contentPropertiesAndLayouts.first, first.1.hidesSimpleAuthorHeader && !ignoreNameHiding {
                     if let author = firstMessage.author as? TelegramChannel, case .group = author.info, author.id == firstMessage.id.peerId, !incoming {
                     } else {
@@ -1848,7 +1851,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if firstMessage.media.contains(where: { $0 is TelegramMediaStory }) {
                 displayHeader = true
             }
-            if replyMessage != nil || replyStory != nil {
+            if replyMessage != nil || replyForward != nil || replyStory != nil {
                 displayHeader = true
             }
             if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
@@ -2115,7 +2118,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
                         
-            var hasReply = replyMessage != nil || replyStory != nil
+            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
             if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -2147,7 +2150,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             
-            if !isInstantVideo, hasReply, (replyMessage != nil || replyStory != nil) {
+            if !isInstantVideo, hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
                 if headerSize.height.isZero {
                     headerSize.height += 10.0
                 } else {
@@ -2159,6 +2162,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     context: item.context,
                     type: .bubble(incoming: incoming),
                     message: replyMessage,
+                    replyForward: replyForward,
                     quote: replyQuote,
                     story: replyStory,
                     parentMessage: item.message,

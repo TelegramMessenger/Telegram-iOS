@@ -51,6 +51,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let context: AccountContext
         public let type: ChatMessageReplyInfoType
         public let message: Message?
+        public let replyForward: QuotedReplyMessageAttribute?
         public let quote: EngineMessageReplyQuote?
         public let story: StoryId?
         public let parentMessage: Message
@@ -65,6 +66,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             context: AccountContext,
             type: ChatMessageReplyInfoType,
             message: Message?,
+            replyForward: QuotedReplyMessageAttribute?,
             quote: EngineMessageReplyQuote?,
             story: StoryId?,
             parentMessage: Message,
@@ -78,6 +80,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             self.context = context
             self.type = type
             self.message = message
+            self.replyForward = replyForward
             self.quote = quote
             self.story = story
             self.parentMessage = parentMessage
@@ -150,10 +153,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 
+                if message.id.peerId != arguments.parentMessage.id.peerId {
+                    //TODO:localize
+                    if let peer = message.peers[message.id.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
+                        titleString += " in \(peer.debugDisplayTitle)"
+                    }
+                }
+                
                 let (textStringValue, isMediaValue, isTextValue) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
                 textString = textStringValue
                 isMedia = isMediaValue
                 isText = isTextValue
+            } else if let replyForward = arguments.replyForward {
+                titleString = replyForward.authorName ?? " "
+
+                //TODO:localize
+                textString = NSAttributedString(string: replyForward.quote?.text ?? "Message")
+                isMedia = false
+                isText = true
             } else if let story = arguments.story {
                 if let authorPeer = arguments.parentMessage.peers[story.peerId] {
                     titleString = EnginePeer(authorPeer).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
@@ -289,9 +306,26 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
+                    messageText = stringWithAppliedEntities(text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
                 } else {
                     messageText = NSAttributedString(string: text, font: textFont, textColor: textColor)
+                }
+            } else if let replyForward = arguments.replyForward, let quote = replyForward.quote {
+                let entities = quote.entities.filter { entity in
+                    if case .Strikethrough = entity.type {
+                        return true
+                    } else if case .Spoiler = entity.type {
+                        return true
+                    } else if case .CustomEmoji = entity.type {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+                if entities.count > 0 {
+                    messageText = stringWithAppliedEntities(quote.text, entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: nil)
+                } else {
+                    messageText = NSAttributedString(string: quote.text, font: textFont, textColor: textColor)
                 }
             } else {
                 messageText = NSAttributedString(string: textString.string, font: textFont, textColor: textColor)
@@ -356,13 +390,15 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let textInsets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
             
             var additionalTitleWidth: CGFloat = 0.0
+            var maxTitleNumberOfLines = 1
             var maxTextNumberOfLines = 1
             var adjustedConstrainedTextSize = contrainedTextSize
             var textCutout: TextNodeCutout?
             var textCutoutWidth: CGFloat = 0.0
-            if arguments.quote != nil {
+            if arguments.quote != nil || arguments.replyForward?.quote != nil {
                 additionalTitleWidth += 10.0
                 if case .bubble = arguments.type {
+                    maxTitleNumberOfLines = 2
                     maxTextNumberOfLines = 5
                     if imageTextInset != 0.0 {
                         adjustedConstrainedTextSize.width += imageTextInset
@@ -372,15 +408,20 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: maxTitleNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
             if isExpiredStory || isStory {
                 contrainedTextSize.width -= 26.0
+            }
+            
+            if titleLayout.numberOfLines > 1 {
+                textCutout = nil
             }
             
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: messageText, backgroundColor: nil, maximumNumberOfLines: maxTextNumberOfLines, truncationType: .end, constrainedSize: adjustedConstrainedTextSize, alignment: .natural, lineSpacing: 0.07, cutout: textCutout, insets: textInsets))
             
             let imageSide: CGFloat
-            imageSide = titleLayout.size.height + titleLayout.size.height - 14.0
+            let titleLineHeight: CGFloat = titleLayout.linesRects().first?.height ?? 12.0
+            imageSide = titleLineHeight * 2.0
             
             var applyImage: (() -> TransformImageNode)?
             if let imageDimensions = imageDimensions {
@@ -567,7 +608,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 node.backgroundView.tintColor = mainColor
                 node.backgroundView.frame = backgroundFrame
                 
-                if arguments.quote != nil {
+                if arguments.quote != nil || arguments.replyForward?.quote != nil {
                     let quoteIconView: UIImageView
                     if let current = node.quoteIconView {
                         quoteIconView = current

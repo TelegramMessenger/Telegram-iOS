@@ -1536,7 +1536,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     guard let peer = messages[0].peers[messages[0].id.peerId] else {
                         return
                     }
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messages[0].id), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), useExisting: true))
                 })
             })))
         }

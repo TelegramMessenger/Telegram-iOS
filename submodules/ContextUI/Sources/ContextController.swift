@@ -537,6 +537,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.contentReady.set(.single(true))
         case let .controller(source):
             self.contentReady.set(source.controller.ready.get())
+            //TODO:
+            //self.contentReady.set(.single(true))
         }
         
         self.initializeContent()
@@ -764,51 +766,64 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             )
             self.presentationNode = presentationNode
             self.addSubnode(presentationNode)
-            /*let takenViewInfo = source.takeView()
-            
-            if let takenViewInfo = takenViewInfo, let parentSupernode = takenViewInfo.contentContainingNode.supernode {
-                self.contentContainerNode.contentNode = .extracted(node: takenViewInfo.contentContainingNode, keepInPlace: source.keepInPlace)
-                if source.keepInPlace || takenViewInfo.maskView != nil {
-                    self.clippingNode.view.mask = takenViewInfo.maskView
-                    self.clippingNode.addSubnode(self.contentContainerNode)
-                } else {
-                    self.scrollNode.addSubnode(self.contentContainerNode)
-                }
-                let contentParentNode = takenViewInfo.contentContainingNode
-                takenViewInfo.contentContainingNode.layoutUpdated = { [weak contentParentNode, weak self] size in
-                    guard let strongSelf = self, let contentParentNode = contentParentNode, let parentSupernode = contentParentNode.supernode else {
-                        return
-                    }
-                    if strongSelf.isAnimatingOut {
-                        return
-                    }
-                    strongSelf.originalProjectedContentViewFrame = (convertFrame(contentParentNode.frame, from: parentSupernode.view, to: strongSelf.view), convertFrame(contentParentNode.contentRect, from: contentParentNode.view, to: strongSelf.view))
-                    if let validLayout = strongSelf.validLayout {
-                        strongSelf.updateLayout(layout: validLayout, transition: .animated(duration: 0.2 * animationDurationFactor, curve: .easeInOut), previousActionsContainerNode: nil)
-                    }
-                }
-                
-                self.contentAreaInScreenSpace = takenViewInfo.contentAreaInScreenSpace
-                self.contentContainerNode.addSubnode(takenViewInfo.contentContainingNode.contentNode)
-                takenViewInfo.contentContainingNode.isExtractedToContextPreview = true
-                takenViewInfo.contentContainingNode.isExtractedToContextPreviewUpdated?(true)
-                
-                self.originalProjectedContentViewFrame = (convertFrame(takenViewInfo.contentContainingNode.frame, from: parentSupernode.view, to: self.view), convertFrame(takenViewInfo.contentContainingNode.contentRect, from: takenViewInfo.contentContainingNode.view, to: self.view))
-            }*/
         case let .controller(source):
-            let transitionInfo = source.transitionInfo()
-            if let transitionInfo = transitionInfo, let (sourceView, sourceNodeRect) = transitionInfo.sourceNode() {
-                let contentParentNode = ContextControllerContentNode(sourceView: sourceView, controller: source.controller, tapped: { [weak self] in
-                    self?.attemptTransitionControllerIntoNavigation()
-                })
-                self.contentContainerNode.contentNode = .controller(contentParentNode)
-                self.scrollNode.addSubnode(self.contentContainerNode)
-                self.contentContainerNode.clipsToBounds = true
-                self.contentContainerNode.cornerRadius = 14.0
-                self.contentContainerNode.addSubnode(contentParentNode)
-                
-                let projectedFrame = convertFrame(sourceNodeRect, from: sourceView, to: self.view)
-                self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
+            if "".isEmpty {
+                let transitionInfo = source.transitionInfo()
+                if let transitionInfo = transitionInfo, let (sourceView, sourceNodeRect) = transitionInfo.sourceNode() {
+                    let contentParentNode = ContextControllerContentNode(sourceView: sourceView, controller: source.controller, tapped: { [weak self] in
+                        self?.attemptTransitionControllerIntoNavigation()
+                    })
+                    self.contentContainerNode.contentNode = .controller(contentParentNode)
+                    self.scrollNode.addSubnode(self.contentContainerNode)
+                    self.contentContainerNode.clipsToBounds = true
+                    self.contentContainerNode.cornerRadius = 14.0
+                    self.contentContainerNode.addSubnode(contentParentNode)
+                    
+                    let projectedFrame = convertFrame(sourceNodeRect, from: sourceView, to: self.view)
+                    self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
+                }
+            } else {
+                let presentationNode = ContextControllerExtractedPresentationNode(
+                    getController: { [weak self] in
+                        return self?.getController()
+                    },
+                    requestUpdate: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let validLayout = strongSelf.validLayout {
+                            strongSelf.updateLayout(
+                                layout: validLayout,
+                                transition: transition,
+                                previousActionsContainerNode: nil
+                            )
+                        }
+                    },
+                    requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let controller = strongSelf.getController() {
+                            controller.overlayWantsToBeBelowKeyboardUpdated(transition: transition)
+                        }
+                    },
+                    requestDismiss: { [weak self] result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.dismissedForCancel?()
+                        strongSelf.beginDismiss(result)
+                    },
+                    requestAnimateOut: { [weak self] result, completion in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.animateOut(result: result, completion: completion)
+                    },
+                    source: .controller(source)
+                )
+                self.presentationNode = presentationNode
+                self.addSubnode(presentationNode)
             }
         }
     }
@@ -2407,6 +2422,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
 
     public enum Tip: Equatable {
         case textSelection
+        case quoteSelection
         case messageViewsPrivacy
         case messageCopyProtection(isChannel: Bool)
         case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?, file: TelegramMediaFile?, action: (() -> Void)?)
@@ -2416,6 +2432,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
             switch lhs {
             case .textSelection:
                 if case .textSelection = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .quoteSelection:
+                if case .quoteSelection = rhs {
                     return true
                 } else {
                     return false

@@ -1237,6 +1237,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var replyMessage: Message?
+            var replyForward: QuotedReplyMessageAttribute?
             var replyQuote: EngineMessageReplyQuote?
             var replyStory: StoryId?
             for attribute in item.message.attributes {
@@ -1265,6 +1266,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
                     replyQuote = replyAttribute.quote
+                } else if let quoteReplyAttribute = attribute as? QuotedReplyMessageAttribute {
+                    replyForward = quoteReplyAttribute
                 } else if let attribute = attribute as? ReplyStoryAttribute {
                     replyStory = attribute.storyId
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
@@ -1272,7 +1275,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            var hasReply = replyMessage != nil || replyStory != nil
+            var hasReply = replyMessage != nil || replyForward != nil || replyStory != nil
             if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
                 if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
@@ -1292,13 +1295,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 ))
             }
             
-            if hasReply, (replyMessage != nil || replyStory != nil) {
+            if hasReply, (replyMessage != nil || replyForward != nil || replyStory != nil) {
                 replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                     presentationData: item.presentationData,
                     strings: item.presentationData.strings,
                     context: item.context,
                     type: .standalone,
                     message: replyMessage,
+                    replyForward: replyForward,
                     quote: replyQuote,
                     story: replyStory,
                     parentMessage: item.message,
