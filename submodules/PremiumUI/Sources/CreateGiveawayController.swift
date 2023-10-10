@@ -69,7 +69,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case awardUsers(PresentationTheme, String, String, Bool)
     
     case prepaidHeader(PresentationTheme, String)
-    case prepaid(PresentationTheme, String, String, Int32, Int32)
+    case prepaid(PresentationTheme, String, String, PrepaidGiveaway)
     
     case subscriptionsHeader(PresentationTheme, String, String)
     case subscriptions(PresentationTheme, Int32)
@@ -190,8 +190,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .prepaid(lhsTheme, lhsText, lhsSubtext, lhsBoosts, lhsMonths):
-            if case let .prepaid(rhsTheme, rhsText, rhsSubtext, rhsBoosts, rhsMonths) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSubtext == rhsSubtext, lhsBoosts == rhsBoosts, lhsMonths == rhsMonths {
+        case let .prepaid(lhsTheme, lhsText, lhsSubtext, lhsPrepaidGiveaway):
+            if case let .prepaid(rhsTheme, rhsText, rhsSubtext, rhsPrepaidGiveaway) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSubtext == rhsSubtext, lhsPrepaidGiveaway == rhsPrepaidGiveaway {
                 return true
             } else {
                 return false
@@ -342,10 +342,9 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             })
         case let .prepaidHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .prepaid(_, title, subtitle, boosts, months):
-            let _ = boosts
+        case let .prepaid(_, title, subtitle, prepaidGiveaway):
             let color: GiftOptionItem.Icon.Color
-            switch months {
+            switch prepaidGiveaway.months {
             case 3:
                 color = .green
             case 6:
@@ -355,7 +354,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             default:
                 color = .blue
             }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(boosts), sectionId: self.section, action: nil)
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(prepaidGiveaway.quantity), sectionId: self.section, action: nil)
         case let .subscriptionsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .subscriptions(_, value):
@@ -501,9 +500,9 @@ private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: Cre
             recipientsText = "select recipients"
         }
         entries.append(.awardUsers(presentationData.theme, "Award Specific Users", recipientsText, state.mode == .gift))
-    case let .prepaid(months, count):
+    case let .prepaid(prepaidGiveaway):
         entries.append(.prepaidHeader(presentationData.theme, "PREPAID GIVEAWAY"))
-        entries.append(.prepaid(presentationData.theme, "\(count) Telegram Premium", "\(months)-month subscriptions", count, months))
+        entries.append(.prepaid(presentationData.theme, "\(prepaidGiveaway.quantity) Telegram Premium", "\(prepaidGiveaway.months)-month subscriptions", prepaidGiveaway))
     }
     
     if case .giveaway = state.mode {
@@ -607,15 +606,15 @@ private struct CreateGiveawayControllerState: Equatable {
 
 public enum CreateGiveawaySubject {
     case generic
-    case prepaid(months: Int32, count: Int32)
+    case prepaid(PrepaidGiveaway)
 }
 
 public func createGiveawayController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, subject: CreateGiveawaySubject,  completion: (() -> Void)? = nil) -> ViewController {
     let actionsDisposable = DisposableSet()
     
     let initialSubscriptions: Int32
-    if case let .prepaid(_, count) = subject {
-        initialSubscriptions = count
+    if case let .prepaid(prepaidGiveaway) = subject {
+        initialSubscriptions = prepaidGiveaway.quantity
     } else {
         initialSubscriptions = 5
     }
@@ -793,7 +792,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let purpose: AppStoreTransactionPurpose
         switch state.mode {
         case .giveaway:
-            purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId}, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+            purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
         case .gift:
             purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
         }
@@ -804,57 +803,59 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             return updatedState
         }
         
-        let _ = (context.engine.payments.canPurchasePremium(purpose: purpose)
-        |> deliverOnMainQueue).startStandalone(next: { [weak controller] available in
-            if available, let inAppPurchaseManager = context.inAppPurchaseManager {
-                let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, quantity: selectedProduct.giftOption.storeQuantity, purpose: purpose)
-                |> deliverOnMainQueue).startStandalone(next: { [weak controller] status in
-                    if case .purchased = status {
-                        if let controller, let navigationController = controller.navigationController as? NavigationController {
-                            var controllers = navigationController.viewControllers
-                            var count = 0
-                            for c in controllers.reversed() {
-                                if c is PeerInfoScreen {
-                                    if case .giveaway = state.mode {
+        switch subject {
+        case .generic:
+            let _ = (context.engine.payments.canPurchasePremium(purpose: purpose)
+            |> deliverOnMainQueue).startStandalone(next: { [weak controller] available in
+                if available, let inAppPurchaseManager = context.inAppPurchaseManager {
+                    let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, quantity: selectedProduct.giftOption.storeQuantity, purpose: purpose)
+                    |> deliverOnMainQueue).startStandalone(next: { [weak controller] status in
+                        if case .purchased = status {
+                            if let controller, let navigationController = controller.navigationController as? NavigationController {
+                                var controllers = navigationController.viewControllers
+                                var count = 0
+                                for c in controllers.reversed() {
+                                    if c is PeerInfoScreen {
+                                        if case .giveaway = state.mode {
+                                            count += 1
+                                        }
+                                        break
+                                    } else {
                                         count += 1
                                     }
-                                    break
-                                } else {
-                                    count += 1
                                 }
-                            }
-                            controllers.removeLast(count)
-                            navigationController.setViewControllers(controllers, animated: true)
-                            
-                            let title: String
-                            let text: String
-                            switch state.mode {
-                            case .giveaway:
-                                title = "Giveaway Created"
-                                text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
-                            case .gift:
-                                title = "Premium Subscriptions Gifted"
-                                text = "Check your channel's [Statistics]() to see how gifts boosted your channel."
-                            }
-                            
-                            let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
-                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
-                                |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
-                                    guard let statsDatacenterId else {
-                                        return
-                                    }
-                                    let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
-                                    navigationController?.pushViewController(statsController)
+                                controllers.removeLast(count)
+                                navigationController.setViewControllers(controllers, animated: true)
+                                
+                                let title: String
+                                let text: String
+                                switch state.mode {
+                                case .giveaway:
+                                    title = "Giveaway Created"
+                                    text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
+                                case .gift:
+                                    title = "Premium Subscriptions Gifted"
+                                    text = "Check your channel's [Statistics]() to see how gifts boosted your channel."
+                                }
+                                
+                                let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
+                                        guard let statsDatacenterId else {
+                                            return
+                                        }
+                                        let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
+                                        navigationController?.pushViewController(statsController)
+                                    })
+                                }), elevatedLayout: false, action: { _ in
+                                    return true
                                 })
-                            }), elevatedLayout: false, action: { _ in
-                                return true
-                            })
-                            (controllers.last as? ViewController)?.present(tooltipController, in: .current)
+                                (controllers.last as? ViewController)?.present(tooltipController, in: .current)
+                            }
                         }
-                    }
-                }, error: { error in
-                    var errorText: String?
-                    switch error {
+                    }, error: { error in
+                        var errorText: String?
+                        switch error {
                         case .generic:
                             errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
                         case .network:
@@ -867,27 +868,66 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                             errorText = presentationData.strings.Premium_Purchase_ErrorUnknown
                         case .cancelled:
                             break
-                    }
-                    
-                    if let errorText = errorText {
-                        let alertController = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
-                        presentControllerImpl?(alertController)
-                    }
-                    
+                        }
+                        
+                        if let errorText = errorText {
+                            let alertController = textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})])
+                            presentControllerImpl?(alertController)
+                        }
+                        
+                        updateState { state in
+                            var updatedState = state
+                            updatedState.updating = false
+                            return updatedState
+                        }
+                    })
+                } else {
                     updateState { state in
                         var updatedState = state
                         updatedState.updating = false
                         return updatedState
                     }
-                })
-            } else {
-                updateState { state in
-                    var updatedState = state
-                    updatedState.updating = false
-                    return updatedState
                 }
-            }
-        })
+            })
+        case let .prepaid(prepaidGiveaway):
+            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
+            |> deliverOnMainQueue).startStandalone(completed: {
+                if let controller, let navigationController = controller.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    var count = 0
+                    for c in controllers.reversed() {
+                        if c is PeerInfoScreen {
+                            if case .giveaway = state.mode {
+                                count += 1
+                            }
+                            break
+                        } else {
+                            count += 1
+                        }
+                    }
+                    controllers.removeLast(count)
+                    navigationController.setViewControllers(controllers, animated: true)
+                    
+                    let title = "Giveaway Created"
+                    let text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
+                    
+                    let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
+                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
+                        |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
+                            guard let statsDatacenterId else {
+                                return
+                            }
+                            let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
+                            navigationController?.pushViewController(statsController)
+                        })
+                    }), elevatedLayout: false, action: { _ in
+                        return true
+                    })
+                    (controllers.last as? ViewController)?.present(tooltipController, in: .current)
+                }
+            })
+            break
+        }
     }
     
     openPeersSelectionImpl = {

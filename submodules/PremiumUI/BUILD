@@ -105,6 +105,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ItemListDatePickerItem:ItemListDatePickerItem",
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
     ],
     visibility = [
         "//visibility:public",
