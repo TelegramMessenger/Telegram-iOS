@@ -61,5 +61,9 @@ public extension TelegramEngine {
         public func premiumGiveawayInfo(peerId: EnginePeer.Id, messageId: EngineMessage.Id) -> Signal<PremiumGiveawayInfo?, NoError> {
             return _internal_getPremiumGiveawayInfo(account: self.account, peerId: peerId, messageId: messageId)
         }
+        
+        public func launchPrepaidGiveaway(peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
+            return _internal_launchPrepaidGiveaway(account: self.account, peerId: peerId, id: id, additionalPeerIds: additionalPeerIds, onlyNewSubscribers: onlyNewSubscribers, randomId: randomId, untilDate: untilDate)
+        }
     }
 }

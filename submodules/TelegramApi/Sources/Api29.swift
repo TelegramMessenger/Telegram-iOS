@@ -660,13 +660,13 @@ public extension Api.stories {
 }
 public extension Api.stories {
     enum BoostsStatus: TypeConstructorDescription {
-        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?, boostUrl: String)
+        case boostsStatus(flags: Int32, level: Int32, currentLevelBoosts: Int32, boosts: Int32, nextLevelBoosts: Int32?, premiumAudience: Api.StatsPercentValue?, boostUrl: String, prepaidGiveaways: [Api.PrepaidGiveaway]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl):
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl, let prepaidGiveaways):
                     if boxed {
-                        buffer.appendInt32(-440292772)
+                        buffer.appendInt32(1911715597)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(level, buffer: buffer, boxed: false)
@@ -675,14 +675,19 @@ public extension Api.stories {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {premiumAudience!.serialize(buffer, true)}
                     serializeString(boostUrl, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prepaidGiveaways!.count))
+                    for item in prepaidGiveaways! {
+                        item.serialize(buffer, true)
+                    }}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl):
-                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any), ("boostUrl", boostUrl as Any)])
+                case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let nextLevelBoosts, let premiumAudience, let boostUrl, let prepaidGiveaways):
+                return ("boostsStatus", [("flags", flags as Any), ("level", level as Any), ("currentLevelBoosts", currentLevelBoosts as Any), ("boosts", boosts as Any), ("nextLevelBoosts", nextLevelBoosts as Any), ("premiumAudience", premiumAudience as Any), ("boostUrl", boostUrl as Any), ("prepaidGiveaways", prepaidGiveaways as Any)])
     }
     }
     
@@ -703,6 +708,10 @@ public extension Api.stories {
             } }
             var _7: String?
             _7 = parseString(reader)
+            var _8: [Api.PrepaidGiveaway]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrepaidGiveaway.self)
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -710,8 +719,9 @@ public extension Api.stories {
             let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, nextLevelBoosts: _5, premiumAudience: _6, boostUrl: _7!)
+            let _c8 = (Int(_1!) & Int(1 << 3) == 0) || _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.stories.BoostsStatus.boostsStatus(flags: _1!, level: _2!, currentLevelBoosts: _3!, boosts: _4!, nextLevelBoosts: _5, premiumAudience: _6, boostUrl: _7!, prepaidGiveaways: _8)
             }
             else {
                 return nil

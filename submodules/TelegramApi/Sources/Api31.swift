@@ -7642,6 +7642,23 @@ public extension Api.functions.payments {
                 }
 }
 public extension Api.functions.payments {
+                static func launchPrepaidGiveaway(peer: Api.InputPeer, giveawayId: Int64, purpose: Api.InputStorePaymentPurpose) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1609928480)
+                    peer.serialize(buffer, true)
+                    serializeInt64(giveawayId, buffer: buffer, boxed: false)
+                    purpose.serialize(buffer, true)
+                    return (FunctionDescription(name: "payments.launchPrepaidGiveaway", parameters: [("peer", String(describing: peer)), ("giveawayId", String(describing: giveawayId)), ("purpose", String(describing: purpose))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.payments {
                 static func sendPaymentForm(flags: Int32, formId: Int64, invoice: Api.InputInvoice, requestedInfoId: String?, shippingOptionId: String?, credentials: Api.InputPaymentCredentials, tipAmount: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.payments.PaymentResult>) {
                     let buffer = Buffer()
                     buffer.appendInt32(755192367)
