@@ -34,9 +34,9 @@ private final class ChannelStatsControllerArguments {
     let openPeer: (EnginePeer) -> Void
     let expandBoosters: () -> Void
     let openGifts: () -> Void
-    let createPrepaidGiveaway: (Int32, Int32) -> Void
+    let createPrepaidGiveaway: (PrepaidGiveaway) -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (Int32, Int32) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
@@ -110,7 +110,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostOverview(PresentationTheme, ChannelBoostStatus)
     
     case boostPrepaidTitle(PresentationTheme, String)
-    case boostPrepaid(Int32, PresentationTheme, String, String, Int32, Int32)
+    case boostPrepaid(Int32, PresentationTheme, String, String, PrepaidGiveaway)
     case boostPrepaidInfo(PresentationTheme, String)
     
     case boostersTitle(PresentationTheme, String)
@@ -219,7 +219,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2002
             case .boostPrepaidTitle:
                 return 2003
-            case let .boostPrepaid(index, _, _, _, _, _):
+            case let .boostPrepaid(index, _, _, _, _):
                 return 2004 + index
             case .boostPrepaidInfo:
                 return 2100
@@ -404,8 +404,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .boostPrepaid(lhsIndex, lhsTheme, lhsTitle, lhsSubtitle, lhsMonths, lhsCount):
-                if case let .boostPrepaid(rhsIndex, rhsTheme, rhsTitle, rhsSubtitle, rhsMonths, rhsCount) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsMonths == rhsMonths, lhsCount == rhsCount {
+            case let .boostPrepaid(lhsIndex, lhsTheme, lhsTitle, lhsSubtitle, lhsPrepaidGiveaway):
+                if case let .boostPrepaid(rhsIndex, rhsTheme, rhsTitle, rhsSubtitle, rhsPrepaidGiveaway) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsSubtitle == rhsSubtitle, lhsPrepaidGiveaway == rhsPrepaidGiveaway {
                     return true
                 } else {
                     return false
@@ -561,9 +561,9 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addBoostsIcon(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.openGifts()
                 })
-            case let .boostPrepaid(_, _, title, subtitle, months, count):
+            case let .boostPrepaid(_, _, title, subtitle, prepaidGiveaway):
                 let color: GiftOptionItem.Icon.Color
-                switch months {
+                switch prepaidGiveaway.months {
                 case 3:
                     color = .green
                 case 6:
@@ -573,8 +573,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 default:
                     color = .blue
                 }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(count), sectionId: self.section, action: {
-                    arguments.createPrepaidGiveaway(months, count)
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(prepaidGiveaway.quantity), sectionId: self.section, action: {
+                    arguments.createPrepaidGiveaway(prepaidGiveaway)
                 })
         }
     }
@@ -701,10 +701,15 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostOverview(presentationData.theme, boostData))
             
 //TODO:localize
-            entries.append(.boostPrepaidTitle(presentationData.theme, "PREPAID GIVEAWAYS"))
-            entries.append(.boostPrepaid(0, presentationData.theme, "70 Telegram Premium", "3-month subscriptions", 3, 70))
-            entries.append(.boostPrepaid(1, presentationData.theme, "200 Telegram Premium", "6-month subscriptions", 6, 200))
-            entries.append(.boostPrepaidInfo(presentationData.theme, "Select a giveaway you already paid for to set it up."))
+            if !boostData.prepaidGiveaways.isEmpty {
+                entries.append(.boostPrepaidTitle(presentationData.theme, "PREPAID GIVEAWAYS"))
+                var i: Int32 = 0
+                for giveaway in boostData.prepaidGiveaways {
+                    entries.append(.boostPrepaid(i, presentationData.theme, "\(giveaway.quantity) Telegram Premium", "\(giveaway.months)-month subscriptions", giveaway))
+                    i += 1
+                }
+                entries.append(.boostPrepaidInfo(presentationData.theme, "Select a giveaway you already paid for to set it up."))
+            }
             
             let boostersTitle: String
             let boostersPlaceholder: String?
@@ -871,8 +876,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
         pushImpl?(controller)
     },
-    createPrepaidGiveaway: { months, count in
-        let controller = createGiveawayController(context: context, peerId: peerId, subject: .prepaid(months: months, count: count))
+    createPrepaidGiveaway: { prepaidGiveaway in
+        let controller = createGiveawayController(context: context, peerId: peerId, subject: .prepaid(prepaidGiveaway))
         pushImpl?(controller)
     })
     

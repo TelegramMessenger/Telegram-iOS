@@ -663,6 +663,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[629052971] = { return Api.PremiumGiftCodeOption.parse_premiumGiftCodeOption($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
     dict[1596792306] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
+    dict[-1303143084] = { return Api.PrepaidGiveaway.parse_prepaidGiveaway($0) }
     dict[-1534675103] = { return Api.PrivacyKey.parse_privacyKeyAbout($0) }
     dict[1124062251] = { return Api.PrivacyKey.parse_privacyKeyAddedByPhone($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
@@ -1187,7 +1188,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
     dict[-203604707] = { return Api.stories.BoostersList.parse_boostersList($0) }
-    dict[-440292772] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
+    dict[1911715597] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
     dict[-1021889145] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostOk($0) }
     dict[1898726997] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
@@ -1672,6 +1673,8 @@ public extension Api {
             case let _1 as Api.PremiumGiftOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumSubscriptionOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PrepaidGiveaway:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyKey:
                 _1.serialize(buffer, boxed)

@@ -927,6 +927,54 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PrepaidGiveaway: TypeConstructorDescription {
+        case prepaidGiveaway(id: Int64, months: Int32, quantity: Int32, date: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .prepaidGiveaway(let id, let months, let quantity, let date):
+                    if boxed {
+                        buffer.appendInt32(-1303143084)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt32(months, buffer: buffer, boxed: false)
+                    serializeInt32(quantity, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .prepaidGiveaway(let id, let months, let quantity, let date):
+                return ("prepaidGiveaway", [("id", id as Any), ("months", months as Any), ("quantity", quantity as Any), ("date", date as Any)])
+    }
+    }
+    
+        public static func parse_prepaidGiveaway(_ reader: BufferReader) -> PrepaidGiveaway? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.PrepaidGiveaway.prepaidGiveaway(id: _1!, months: _2!, quantity: _3!, date: _4!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PrivacyKey: TypeConstructorDescription {
         case privacyKeyAbout
         case privacyKeyAddedByPhone

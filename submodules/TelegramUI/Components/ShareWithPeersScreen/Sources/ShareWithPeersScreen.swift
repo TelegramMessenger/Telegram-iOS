@@ -1452,8 +1452,9 @@ final class ShareWithPeersScreenComponent: Component {
                                         }
                                     }
                                     
+                                    let index = self.selectedPeers.firstIndex(of: peer.id)
                                     let togglePeer = {
-                                        if let index = self.selectedPeers.firstIndex(of: peer.id) {
+                                        if let index {
                                             self.selectedPeers.remove(at: index)
                                             self.updateSelectedGroupPeers()
                                         } else {
@@ -1462,11 +1463,12 @@ final class ShareWithPeersScreenComponent: Component {
                                         update()
                                     }
                                     if peer.id.isGroupOrChannel {
-                                        if case .channels = component.stateContext.subject, self.selectedPeers.count >= 10 {
+                                        if case .channels = component.stateContext.subject, self.selectedPeers.count >= component.context.userLimits.maxGiveawayChannelsCount, index == nil {
+                                            self.hapticFeedback.error()
                                             return
                                         }
                                         if case .channels = component.stateContext.subject {
-                                            if case let .channel(channel) = peer, channel.addressName == nil, !self.selectedPeers.contains(peer.id) {
+                                            if case let .channel(channel) = peer, channel.addressName == nil, index == nil {
                                                 let alertController = textAlertController(
                                                     context: component.context,
                                                     forceTheme: environment.theme,
@@ -1488,7 +1490,8 @@ final class ShareWithPeersScreenComponent: Component {
                                             update()
                                         }
                                     } else {
-                                        if case .members = component.stateContext.subject, self.selectedPeers.count >= 10 {
+                                        if case .members = component.stateContext.subject, self.selectedPeers.count >= 10, index == nil {
+                                            self.hapticFeedback.error()
                                             return
                                         }
                                         togglePeer()
@@ -2359,7 +2362,7 @@ final class ShareWithPeersScreenComponent: Component {
             case .channels:
                 title = "Add Channels"
                 actionButtonTitle = "Save Channels"
-                subtitle = "select up to 10 channels"
+                subtitle = "select up to \(component.context.userLimits.maxGiveawayChannelsCount) channels"
             }
             
             let titleComponent: AnyComponent<Empty>
@@ -2982,6 +2985,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     }
     
     deinit {
+        if !self.isDismissed {
+            self.isDismissed = true
+            self.dismissed()
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

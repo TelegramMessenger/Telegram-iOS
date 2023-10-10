@@ -10,14 +10,16 @@ public final class ChannelBoostStatus: Equatable {
     public let nextLevelBoosts: Int?
     public let premiumAudience: StatsPercentValue?
     public let url: String
+    public let prepaidGiveaways: [PrepaidGiveaway]
     
-    public init(level: Int, boosts: Int, currentLevelBoosts: Int, nextLevelBoosts: Int?, premiumAudience: StatsPercentValue?, url: String) {
+    public init(level: Int, boosts: Int, currentLevelBoosts: Int, nextLevelBoosts: Int?, premiumAudience: StatsPercentValue?, url: String, prepaidGiveaways: [PrepaidGiveaway]) {
         self.level = level
         self.boosts = boosts
         self.currentLevelBoosts = currentLevelBoosts
         self.nextLevelBoosts = nextLevelBoosts
         self.premiumAudience = premiumAudience
         self.url = url
+        self.prepaidGiveaways = prepaidGiveaways
     }
     
     public static func ==(lhs: ChannelBoostStatus, rhs: ChannelBoostStatus) -> Bool {
@@ -37,6 +39,9 @@ public final class ChannelBoostStatus: Equatable {
             return false
         }
         if lhs.url != rhs.url {
+            return false
+        }
+        if lhs.prepaidGiveaways != rhs.prepaidGiveaways {
             return false
         }
         return true
@@ -62,8 +67,8 @@ func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal
             }
             
             switch result {
-            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience, url):
-                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }), url: url)
+            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience, url, prepaidGiveaways):
+                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }), url: url, prepaidGiveaways: prepaidGiveaways?.map({ PrepaidGiveaway(apiPrepaidGiveaway: $0) }) ?? [])
             }
         }
     }

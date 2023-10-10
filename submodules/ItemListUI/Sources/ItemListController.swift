@@ -580,8 +580,8 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
-    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
-        (self.displayNode as! ItemListControllerNode).listNode.ensureItemNodeVisible(itemNode, animated: animated, curve: curve)
+    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true, overflow: CGFloat = 0.0, atTop: Bool = false, curve: ListViewAnimationCurve = .Default(duration: 0.25)) {
+        (self.displayNode as! ItemListControllerNode).listNode.ensureItemNodeVisible(itemNode, animated: animated, overflow: overflow, atTop: atTop, curve: curve)
     }
     
     public func afterLayout(_ f: @escaping () -> Void) {

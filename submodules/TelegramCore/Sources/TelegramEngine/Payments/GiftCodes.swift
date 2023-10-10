@@ -74,6 +74,13 @@ public enum PremiumGiveawayInfo: Equatable {
     case finished(status: ResultStatus, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
 }
 
+public struct PrepaidGiveaway: Equatable {
+    public let id: Int64
+    public let months: Int32
+    public let quantity: Int32
+    public let date: Int32
+}
+
 func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, messageId: EngineMessage.Id) -> Signal<PremiumGiveawayInfo?, NoError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> mapToSignal { peer in
@@ -177,6 +184,46 @@ func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Ne
     }
 }
 
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
+    return account.postbox.transaction { transaction -> Signal<Never, NoError> in
+        var flags: Int32 = 0
+        if onlyNewSubscribers {
+            flags |= (1 << 0)
+        }
+        
+        var inputPeer: Api.InputPeer?
+        if let peer = transaction.getPeer(peerId), let apiPeer = apiInputPeer(peer) {
+            inputPeer = apiPeer
+        }
+        
+        var additionalPeers: [Api.InputPeer] = []
+        if !additionalPeerIds.isEmpty {
+            flags |= (1 << 1)
+            for peerId in additionalPeerIds {
+                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                    additionalPeers.append(inputPeer)
+                }
+            }
+        }
+        
+        guard let inputPeer = inputPeer else {
+            return .complete()
+        }
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapToSignal { updates -> Signal<Never, NoError> in
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
+            }
+            return .complete()
+        }
+    }
+    |> switchToLatest
+}
+
 extension PremiumGiftCodeOption {
     init(apiGiftCodeOption: Api.PremiumGiftCodeOption) {
         switch apiGiftCodeOption {
@@ -205,5 +252,17 @@ extension PremiumGiftCodeInfo {
 public extension PremiumGiftCodeInfo {
     var isUsed: Bool {
         return self.usedDate != nil
+    }
+}
+
+extension PrepaidGiveaway {
+    init(apiPrepaidGiveaway: Api.PrepaidGiveaway) {
+        switch apiPrepaidGiveaway {
+        case let .prepaidGiveaway(id, months, quantity, date):
+            self.id = id
+            self.months = months
+            self.quantity = quantity
+            self.date = date
+        }
     }
 }
