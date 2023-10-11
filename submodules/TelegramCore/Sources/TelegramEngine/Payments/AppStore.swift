@@ -77,7 +77,7 @@ private func apiInputStorePaymentPurpose(account: Account, purpose: AppStoreTran
                     }
                 }
             }
-            return .single(.inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
+            return .single(.inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: nil, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount))
         }
         |> switchToLatest
     }

@@ -400,7 +400,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 var messages = messages
                 let forwardedMessageIds = Set(messages.map { $0.id })
                 messages.sort(by: { lhsMessage, rhsMessage in
-                    return lhsMessage.timestamp > rhsMessage.timestamp
+                    return lhsMessage.id > rhsMessage.id
                 })
                 messages = messages.map { message in
                     var flags = message.flags
@@ -429,7 +429,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if attribute is ReplyThreadMessageAttribute {
                                 return false
                             }
-                            if attribute is ViewCountMessageAttribute{
+                            if attribute is ViewCountMessageAttribute {
                                 return false
                             }
                             if attribute is ForwardCountMessageAttribute {

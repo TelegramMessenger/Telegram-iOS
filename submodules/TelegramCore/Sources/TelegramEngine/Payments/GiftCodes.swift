@@ -209,7 +209,7 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: nil, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
