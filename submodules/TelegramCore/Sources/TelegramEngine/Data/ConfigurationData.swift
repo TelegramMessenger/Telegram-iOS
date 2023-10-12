@@ -57,6 +57,7 @@ public enum EngineConfiguration {
         public let maxStoriesMonthlyCount: Int32
         public let maxStoriesSuggestedReactions: Int32
         public let maxGiveawayChannelsCount: Int32
+        public let maxGiveawayCountriesCount: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -83,7 +84,8 @@ public enum EngineConfiguration {
             maxStoriesWeeklyCount: Int32,
             maxStoriesMonthlyCount: Int32,
             maxStoriesSuggestedReactions: Int32,
-            maxGiveawayChannelsCount: Int32
+            maxGiveawayChannelsCount: Int32,
+            maxGiveawayCountriesCount: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -106,6 +108,7 @@ public enum EngineConfiguration {
             self.maxStoriesMonthlyCount = maxStoriesMonthlyCount
             self.maxStoriesSuggestedReactions = maxStoriesSuggestedReactions
             self.maxGiveawayChannelsCount = maxGiveawayChannelsCount
+            self.maxGiveawayCountriesCount = maxGiveawayCountriesCount
         }
     }
 }
@@ -163,7 +166,8 @@ public extension EngineConfiguration.UserLimits {
             maxStoriesWeeklyCount: userLimitsConfiguration.maxStoriesWeeklyCount,
             maxStoriesMonthlyCount: userLimitsConfiguration.maxStoriesMonthlyCount,
             maxStoriesSuggestedReactions: userLimitsConfiguration.maxStoriesSuggestedReactions,
-            maxGiveawayChannelsCount: userLimitsConfiguration.maxGiveawayChannelsCount
+            maxGiveawayChannelsCount: userLimitsConfiguration.maxGiveawayChannelsCount,
+            maxGiveawayCountriesCount: userLimitsConfiguration.maxGiveawayCountriesCount
         )
     }
 }

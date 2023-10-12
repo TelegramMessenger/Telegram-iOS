@@ -92,6 +92,8 @@ private final class MuteMonitor {
 private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     var shouldBegin: ((UITouch) -> Bool)?
     var updateIsTracking: ((CGPoint?) -> Void)?
+    var updatePanMove: ((CGPoint, CGPoint) -> Void)?
+    var updatePanEnded: (() -> Void)?
     
     override var state: UIGestureRecognizer.State {
         didSet {
@@ -109,6 +111,8 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
     
     private var isTracking: Bool = false
     private var isValidated: Bool = false
+    
+    private var initialLocation: CGPoint?
     
     override func reset() {
         super.reset()
@@ -134,9 +138,32 @@ private final class StoryLongPressRecognizer: UILongPressGestureRecognizer {
             
             if !self.isTracking {
                 self.isTracking = true
-                self.updateIsTracking?(touches.first?.location(in: self.view))
+                self.initialLocation = touches.first?.location(in: self.view)
+                self.updateIsTracking?(initialLocation)
             }
         }
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        if self.isValidated {
+            super.touchesMoved(touches, with: event)
+            
+            if let location = touches.first?.location(in: self.view), let initialLocation = self.initialLocation {
+                self.updatePanMove?(initialLocation, CGPoint(x: location.x - initialLocation.x, y: location.y - initialLocation.y))
+            }
+        }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        
+        self.updatePanEnded?()
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.updatePanEnded?()
     }
 }
 
@@ -397,6 +424,9 @@ private final class StoryContainerScreenComponent: Component {
         private var isDisplayingInteractionGuide: Bool = false
         private var displayInteractionGuideDisposable: Disposable?
         
+        private var previousSeekTime: Double?
+        private var initialSeekTimestamp: Double?
+        
         override init(frame: CGRect) {
             self.backgroundLayer = SimpleLayer()
             self.backgroundLayer.backgroundColor = UIColor.black.cgColor
@@ -467,6 +497,48 @@ private final class StoryContainerScreenComponent: Component {
                         }
                     }
                 }
+            }
+            longPressRecognizer.updatePanMove = { [weak self] initialLocation, translation in
+                guard let self else {
+                    return
+                }
+                guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                    return
+                }
+                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View else {
+                    return
+                }
+                
+                let currentTime = CACurrentMediaTime()
+                if let previousTime = self.previousSeekTime, currentTime - previousTime < 0.1 {
+                    return
+                }
+                self.previousSeekTime = currentTime
+                
+                let initialSeekTimestamp: Double
+                if let current = self.initialSeekTimestamp {
+                    initialSeekTimestamp = current
+                } else {
+                    initialSeekTimestamp = visibleItemView.effectiveTimestamp
+                    self.initialSeekTimestamp = initialSeekTimestamp
+                }
+                
+                let timestamp: Double
+                if translation.x > 0.0 {
+                    let fraction = translation.x / (self.bounds.width - initialLocation.x)
+                    timestamp = initialSeekTimestamp + (visibleItemView.effectiveDuration - initialSeekTimestamp) * fraction * fraction
+                } else {
+                    let fraction = translation.x / initialLocation.x
+                    timestamp = initialSeekTimestamp + initialSeekTimestamp * fraction * fraction * -1.0
+                }
+                visibleItemView.seekTo(timestamp)
+            }
+            longPressRecognizer.updatePanEnded = { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.initialSeekTimestamp = nil
+                self.previousSeekTime = nil
             }
             longPressRecognizer.shouldBegin = { [weak self] touch in
                 guard let self else {

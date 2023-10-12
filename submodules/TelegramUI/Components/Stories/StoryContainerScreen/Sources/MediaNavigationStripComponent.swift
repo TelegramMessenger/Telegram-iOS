@@ -27,10 +27,12 @@ final class MediaNavigationStripComponent: Component {
     
     let index: Int
     let count: Int
+    let isSeeking: Bool
     
-    init(index: Int, count: Int) {
+    init(index: Int, count: Int, isSeeking: Bool) {
         self.index = index
         self.count = count
+        self.isSeeking = isSeeking
     }
 
     static func ==(lhs: MediaNavigationStripComponent, rhs: MediaNavigationStripComponent) -> Bool {
@@ -38,6 +40,9 @@ final class MediaNavigationStripComponent: Component {
             return false
         }
         if lhs.count != rhs.count {
+            return false
+        }
+        if lhs.isSeeking != rhs.isSeeking {
             return false
         }
         return true
@@ -155,12 +160,18 @@ final class MediaNavigationStripComponent: Component {
                 return
             }
             
+            guard !self.isTransitioning else {
+                return
+            }
+            
             let itemFrame = itemLayer.bounds
             transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: value * itemFrame.width, height: itemFrame.height)))
             itemLayer.updateIsBuffering(size: itemFrame.size, isBuffering: isBuffering)
         }
         
+        private var isTransitioning = false
         func update(component: MediaNavigationStripComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            let previousComponent = self.component
             self.component = component
             
             let environment = environment[EnvironmentType.self].value
@@ -168,6 +179,10 @@ final class MediaNavigationStripComponent: Component {
             let spacing: CGFloat = 3.0
             let itemHeight: CGFloat = 2.0
             let minItemWidth: CGFloat = 2.0
+            
+            var size = CGSize(width: availableSize.width, height: itemHeight)
+            
+            var didSetCompletion = false
             
             var validIndices: [Int] = []
             if component.count != 0 {
@@ -205,8 +220,12 @@ final class MediaNavigationStripComponent: Component {
                     if i >= component.count {
                         continue
                     }
-                    let itemFrame = CGRect(origin: CGPoint(x: -globalOffset + CGFloat(i) * (itemWidth + spacing), y: 0.0), size: CGSize(width: itemWidth, height: itemHeight))
-                    if itemFrame.maxY < 0.0 || itemFrame.minY >= availableSize.width {
+                    var itemFrame = CGRect(origin: CGPoint(x: -globalOffset + CGFloat(i) * (itemWidth + spacing), y: 0.0), size: CGSize(width: itemWidth, height: itemHeight))
+                    if component.isSeeking {
+                        itemFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: 6.0))
+                        size.height = itemFrame.height
+                    }
+                    if itemFrame.maxX < 0.0 || itemFrame.minX >= availableSize.width {
                         continue
                     }
                     
@@ -219,11 +238,21 @@ final class MediaNavigationStripComponent: Component {
                         itemLayer = ItemLayer()
                         self.layer.addSublayer(itemLayer)
                         self.visibleItems[i] = itemLayer
-                        itemLayer.cornerRadius = itemHeight * 0.5
                     }
                     
+
                     transition.setFrame(layer: itemLayer, frame: itemFrame)
-                    
+                    transition.setCornerRadius(layer: itemLayer, cornerRadius: itemFrame.height * 0.5)
+                    transition.setCornerRadius(layer: itemLayer.foregroundLayer, cornerRadius: itemFrame.height * 0.5, completion: transition.animation.isImmediate || didSetCompletion ? nil : { [weak self] _ in
+                        if let self {
+                            self.isTransitioning = false
+                        }
+                    })
+                    if !transition.animation.isImmediate && component.isSeeking != previousComponent?.isSeeking {
+                        self.isTransitioning = true
+                        didSetCompletion = true
+                    }
+                                        
                     itemLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.5).cgColor
                     itemLayer.foregroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 1.0).cgColor
                     
@@ -239,6 +268,9 @@ final class MediaNavigationStripComponent: Component {
                     }
                     
                     transition.setFrame(layer: itemLayer.foregroundLayer, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: itemProgress * itemFrame.width, height: itemFrame.height)))
+
+                    transition.setAlpha(layer: itemLayer, alpha: !component.isSeeking || i == component.index ? 1.0 : 0.0)
+                    
                     itemLayer.updateIsBuffering(size: itemFrame.size, isBuffering: itemIsBuffering)
                 }
             }

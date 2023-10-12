@@ -54,6 +54,7 @@ public final class CameraButton: Component {
     }
     
     public final class View: UIButton, ComponentTaggedView {
+        private let containerView = UIView()
         public var contentView: ComponentHostView<Empty>
         
         private var component: CameraButton?
@@ -75,12 +76,14 @@ public final class CameraButton: Component {
             } else {
                 scale = 1.0
             }
-            transition.setScale(view: self, scale: scale)
+            transition.setScale(view: self.containerView, scale: scale)
         }
         
         private var longTapGestureRecognizer: UILongPressGestureRecognizer?
     
         public override init(frame: CGRect) {
+            self.containerView.isUserInteractionEnabled = false
+            
             self.contentView = ComponentHostView<Empty>()
             self.contentView.isUserInteractionEnabled = false
             self.contentView.layer.allowsGroupOpacity = true
@@ -89,7 +92,8 @@ public final class CameraButton: Component {
             
             self.isExclusiveTouch = true
             
-            self.addSubview(self.contentView)
+            self.addSubview(self.containerView)
+            self.containerView.addSubview(self.contentView)
             
             self.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
             
@@ -145,12 +149,12 @@ public final class CameraButton: Component {
                 self.contentView = ComponentHostView<Empty>()
                 self.contentView.isUserInteractionEnabled = false
                 self.contentView.layer.allowsGroupOpacity = true
-                self.addSubview(self.contentView)
+                self.containerView.addSubview(self.contentView)
                 
                 if transition.animation.isImmediate {
                     previousContentView.removeFromSuperview()
                 } else {
-                    self.addSubview(previousContentView)
+                    self.containerView.addSubview(previousContentView)
                     previousContentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousContentView] _ in
                         previousContentView?.removeFromSuperview()
                     })
@@ -175,7 +179,11 @@ public final class CameraButton: Component {
             self.isEnabled = component.isEnabled
             self.longTapGestureRecognizer?.isEnabled = component.longTapAction != nil
             
-            self.contentView.frame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize)
+            self.contentView.bounds = CGRect(origin: .zero, size: contentSize)
+            self.contentView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            
+            self.containerView.bounds = CGRect(origin: .zero, size: size)
+            self.containerView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
             
             return size
         }

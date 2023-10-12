@@ -30,16 +30,27 @@ enum CameraMode: Equatable {
     case video
 }
 
-private struct CameraState: Equatable {
+struct CameraState: Equatable {
     enum Recording: Equatable {
         case none
         case holding
         case handsFree
     }
-    enum FlashTint {
+    enum FlashTint: Equatable {
         case white
         case yellow
         case blue
+        
+        var color: UIColor {
+            switch self {
+            case .white:
+                return .white
+            case .yellow:
+                return UIColor(rgb: 0xffed8c)
+            case .blue:
+                return UIColor(rgb: 0x8cdfff)
+            }
+        }
     }
     
     let mode: CameraMode
@@ -225,6 +236,8 @@ private final class CameraScreenComponent: CombinedComponent {
         var swipeHint: CaptureControlsComponent.SwipeHint = .none
         var isTransitioning = false
         
+        var displayingFlashTint = false
+        
         private let hapticFeedback = HapticFeedback()
         
         init(
@@ -395,7 +408,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 camera.setFlashMode(.on)
             }
         }
-        
+                
         func toggleFlashMode() {
             guard let controller = self.getController(), let camera = controller.camera else {
                 return
@@ -413,6 +426,27 @@ private final class CameraScreenComponent: CombinedComponent {
                 camera.setFlashMode(.off)
             }
             self.hapticFeedback.impact(.light)
+        }
+        
+        func updateFlashTint(_ tint: CameraState.FlashTint?) {
+            guard let controller = self.getController(), let camera = controller.camera else {
+                return
+            }
+            if let tint {
+                controller.updateCameraState({ $0.updatedFlashTint(tint) }, transition: .easeInOut(duration: 0.2))
+            } else {
+                camera.setFlashMode(.off)
+            }
+        }
+        
+        func presentFlashTint() {
+            guard let controller = self.getController(), let camera = controller.camera else {
+                return
+            }
+            camera.setFlashMode(.on)
+            
+            self.displayingFlashTint = true
+            self.updated(transition: .immediate)
         }
         
         private var lastFlipTimestamp: Double?
@@ -622,6 +656,7 @@ private final class CameraScreenComponent: CombinedComponent {
         let dualButton = Child(CameraButton.self)
         let modeControl = Child(ModeComponent.self)
         let hintLabel = Child(HintLabelComponent.self)
+        let flashTintControl = Child(FlashTintControlComponent.self)
         
         let timeBackground = Child(RoundedRectangle.self)
         let timeLabel = Child(MultilineTextComponent.self)
@@ -713,19 +748,11 @@ private final class CameraScreenComponent: CombinedComponent {
 //                )
             }
             
+            let displayFrontFlash = component.cameraState.recording != .none || component.cameraState.mode == .video || state.displayingFlashTint
             var controlsTintColor: UIColor = .white
-            if case .front = component.cameraState.position, case .on = component.cameraState.flashMode {
-                let flashTintColor: UIColor
-                switch component.cameraState.flashTint {
-                case .white:
-                    flashTintColor = .white
-                case .yellow:
-                    flashTintColor = UIColor(rgb: 0xffed8c)
-                case .blue:
-                    flashTintColor = UIColor(rgb: 0x8cdfff)
-                }
+            if case .front = component.cameraState.position, case .on = component.cameraState.flashMode, displayFrontFlash {
                 let frontFlash = frontFlash.update(
-                    component: Image(image: state.image(.flashImage), tintColor: flashTintColor),
+                    component: Image(image: state.image(.flashImage), tintColor: component.cameraState.flashTint.color),
                     availableSize: availableSize,
                     transition: .easeInOut(duration: 0.2)
                 )
@@ -849,6 +876,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 .position(captureControlsPosition)
             )
             
+            var flashButtonPosition: CGPoint?
             let topControlInset: CGFloat = 20.0
             if case .none = component.cameraState.recording, !state.isTransitioning {
                 let cancelButton = cancelButton.update(
@@ -928,13 +956,21 @@ private final class CameraScreenComponent: CombinedComponent {
                                 if let state {
                                     state.toggleFlashMode()
                                 }
+                            },
+                            longTapAction: { [weak state] in
+                                if let state {
+                                    state.presentFlashTint()
+                                }
                             }
                         ).tagged(flashButtonTag),
                         availableSize: CGSize(width: 40.0, height: 40.0),
                         transition: .immediate
                     )
+
+                    let position = CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0)
+                    flashButtonPosition = position
                     context.add(flashButton
-                        .position(CGPoint(x: isTablet ? availableSize.width - smallPanelWidth / 2.0 : availableSize.width - topControlInset - flashButton.size.width / 2.0 - 5.0, y: max(environment.statusBarHeight + 5.0, environment.safeInsets.top + topControlInset) + flashButton.size.height / 2.0))
+                        .position(position)
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
@@ -1111,6 +1147,28 @@ private final class CameraScreenComponent: CombinedComponent {
                     .clipsToBounds(true)
                     .position(modeControlPosition)
                     .appear(.default(alpha: true))
+                    .disappear(.default(alpha: true))
+                )
+            }
+            
+            if let flashButtonPosition, state.displayingFlashTint {
+                let flashTintControl = flashTintControl.update(
+                    component: FlashTintControlComponent(
+                        position: flashButtonPosition.offsetBy(dx: 0.0, dy: 27.0),
+                        tint: component.cameraState.flashTint,
+                        update: { [weak state] tint in
+                            state?.updateFlashTint(tint)
+                        },
+                        dismiss: { [weak state] in
+                            state?.displayingFlashTint = false
+                            state?.updated(transition: .easeInOut(duration: 0.2))
+                        }
+                    ),
+                    availableSize: availableSize,
+                    transition: context.transition
+                )
+                context.add(flashTintControl
+                    .position(CGPoint(x: availableSize.width / 2.0, y: availableSize.height / 2.0))
                     .disappear(.default(alpha: true))
                 )
             }
@@ -2446,6 +2504,12 @@ public class CameraScreen: ViewController {
             if isTablet && isFirstTime {
                 self.animateIn()
             }
+            
+            if self.cameraState.flashMode == .on && (self.cameraState.recording != .none || self.cameraState.mode == .video) {
+                self.controller?.statusBarStyle = .Black
+            } else {
+                self.controller?.statusBarStyle = .White
+            }
         }
     }
 
@@ -2743,13 +2807,12 @@ public class CameraScreen: ViewController {
         self.node.camera?.stopCapture(invalidate: true)
         self.isDismissed = true
         if animated {
+            self.ignoreStatusBar = true
             if let layout = self.validLayout, layout.metrics.isTablet {
-                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 self.node.animateOut(completion: {
                     self.dismiss(animated: false)
                 })
             } else {
-                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
                 if !interactive {
                     if let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(self.node.frame.width, transition: .immediate)
@@ -2810,16 +2873,41 @@ public class CameraScreen: ViewController {
         }
     }
     
+    private var statusBarStyle: StatusBarStyle = .White {
+        didSet {
+            if self.statusBarStyle != oldValue {
+                self.updateStatusBarAppearance()
+            }
+        }
+    }
+    private var ignoreStatusBar = false {
+        didSet {
+            if self.ignoreStatusBar != oldValue {
+                self.updateStatusBarAppearance()
+            }
+        }
+    }
+    
+    private func updateStatusBarAppearance() {
+        let effectiveStatusBarStyle: StatusBarStyle
+        if !self.ignoreStatusBar {
+            effectiveStatusBarStyle = self.statusBarStyle
+        } else {
+            effectiveStatusBarStyle = .Ignore
+        }
+        self.statusBar.updateStatusBarStyle(effectiveStatusBarStyle, animated: true)
+    }
+    
     public func completeWithTransitionProgress(_ transitionFraction: CGFloat, velocity: CGFloat, dismissing: Bool) {
         if let layout = self.validLayout, layout.metrics.isTablet {
             return
         }
         if dismissing {
             if transitionFraction < 0.7 || velocity < -1000.0 {
-                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
+                self.ignoreStatusBar = true
                 self.requestDismiss(animated: true, interactive: true)
             } else {
-                self.statusBar.updateStatusBarStyle(.White, animated: true)
+                self.ignoreStatusBar = false
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -2828,7 +2916,8 @@ public class CameraScreen: ViewController {
             }
         } else {
             if transitionFraction > 0.33 || velocity > 1000.0 {
-                self.statusBar.updateStatusBarStyle(.White, animated: true)
+                self.ignoreStatusBar = false
+                self.updateStatusBarAppearance()
                 self.updateTransitionProgress(1.0, transition: .animated(duration: 0.4, curve: .spring), completion: { [weak self] in
                     if let self, let navigationController = self.navigationController as? NavigationController {
                         navigationController.updateRootContainerTransitionOffset(0.0, transition: .immediate)
@@ -2837,7 +2926,8 @@ public class CameraScreen: ViewController {
                     }
                 })
             } else {
-                self.statusBar.updateStatusBarStyle(.Ignore, animated: true)
+                self.ignoreStatusBar = true
+                self.updateStatusBarAppearance()
                 self.requestDismiss(animated: true, interactive: true)
             }
         }
