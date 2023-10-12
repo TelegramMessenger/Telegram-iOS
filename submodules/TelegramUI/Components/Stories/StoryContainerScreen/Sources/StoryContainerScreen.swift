@@ -509,11 +509,14 @@ private final class StoryContainerScreenComponent: Component {
                     return
                 }
                 
+                var apply = true
                 let currentTime = CACurrentMediaTime()
                 if let previousTime = self.previousSeekTime, currentTime - previousTime < 0.1 {
-                    return
+                    apply = false
                 }
-                self.previousSeekTime = currentTime
+                if apply {
+                    self.previousSeekTime = currentTime
+                }
                 
                 let initialSeekTimestamp: Double
                 if let current = self.initialSeekTimestamp {
@@ -523,15 +526,16 @@ private final class StoryContainerScreenComponent: Component {
                     self.initialSeekTimestamp = initialSeekTimestamp
                 }
                 
+                let duration = visibleItemView.effectiveDuration
                 let timestamp: Double
                 if translation.x > 0.0 {
-                    let fraction = translation.x / (self.bounds.width - initialLocation.x)
-                    timestamp = initialSeekTimestamp + (visibleItemView.effectiveDuration - initialSeekTimestamp) * fraction * fraction
+                    let fraction = translation.x / (self.bounds.width / 2.0)
+                    timestamp = initialSeekTimestamp + duration * fraction
                 } else {
-                    let fraction = translation.x / initialLocation.x
-                    timestamp = initialSeekTimestamp + initialSeekTimestamp * fraction * fraction * -1.0
+                    let fraction = translation.x / (self.bounds.width / 2.0)
+                    timestamp = initialSeekTimestamp + duration * fraction
                 }
-                visibleItemView.seekTo(timestamp)
+                visibleItemView.seekTo(max(0.0, min(duration, timestamp)), apply: apply)
             }
             longPressRecognizer.updatePanEnded = { [weak self] in
                 guard let self else {

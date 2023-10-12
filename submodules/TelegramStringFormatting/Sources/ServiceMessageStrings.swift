@@ -899,7 +899,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                 }
             case .giftCode:
-                attributedString = NSAttributedString(string: "Gift Link", font: titleFont, textColor: primaryTextColor)
+                attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

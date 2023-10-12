@@ -4678,7 +4678,7 @@ public final class StoryItemSetContainerComponent: Component {
                     count = dayCounters.totalCount
                 }
                 
-                let isSeeking = component.isProgressPaused && component.hideUI
+                let isSeeking = component.isProgressPaused && component.hideUI && isVideo
                 
                 var navigationStripTransition = transition
                 if let previousComponent, (previousComponent.isProgressPaused && component.hideUI) != isSeeking {
@@ -4705,7 +4705,9 @@ public final class StoryItemSetContainerComponent: Component {
                         self.controlsNavigationClippingView.addSubview(navigationStripView)
                     }
                     transition.setFrame(view: navigationStripView, frame: CGRect(origin: CGPoint(x: navigationStripSideInset, y: navigationStripTopInset), size: CGSize(width: availableSize.width - navigationStripSideInset * 2.0, height: navigationStripSize.height)))
-                    transition.setAlpha(view: navigationStripView, alpha: self.isEditingStory ? 0.0 : 1.0)
+                    
+                    let hideUI = component.hideUI && !isVideo
+                    transition.setAlpha(view: navigationStripView, alpha: self.isEditingStory || hideUI ? 0.0 : 1.0)
                 }
                 
                 let seekLabelSize = self.seekLabel.update(

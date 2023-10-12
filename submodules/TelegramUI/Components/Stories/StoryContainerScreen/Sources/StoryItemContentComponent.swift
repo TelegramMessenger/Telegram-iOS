@@ -416,7 +416,7 @@ final class StoryItemContentComponent: Component {
             return effectiveDuration
         }
         
-        private func updateVideoPlaybackProgress() {
+        private func updateVideoPlaybackProgress(_ scrubbingTimestamp: Double? = nil) {
             guard let videoPlaybackStatus = self.videoPlaybackStatus else {
                 return
             }
@@ -497,6 +497,13 @@ final class StoryItemContentComponent: Component {
                 }
             }
             
+            if let scrubbingTimestamp {
+                currentProgress = CGFloat(scrubbingTimestamp / effectiveDuration)
+                if currentProgress.isNaN || !currentProgress.isFinite {
+                    currentProgress = 0.0
+                }
+            }
+            
             let clippedProgress = max(0.0, min(1.0, currentProgress))
             self.environment?.presentationProgressUpdated(clippedProgress, isBuffering, false)
         }
@@ -529,12 +536,14 @@ final class StoryItemContentComponent: Component {
             )
         }
         
-        func seekTo(_ timestamp: Double) {
+        func seekTo(_ timestamp: Double, apply: Bool) {
             guard let videoNode = self.videoNode else {
                 return
             }
-            videoNode.seek(timestamp)
-            self.updateVideoPlaybackProgress()
+            if apply {
+                videoNode.seek(timestamp)
+            }
+            self.updateVideoPlaybackProgress(timestamp)
         }
 
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
