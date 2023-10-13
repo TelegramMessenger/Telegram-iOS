@@ -6,6 +6,7 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
 import AppBundle
+import InstantVideoRadialStatusNode
 
 private let backgroundImage = UIImage(bundleImageName: "Chat/Message/OverlayInstantVideoShadow")?.precomposed()
 

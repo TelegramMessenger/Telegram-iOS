@@ -32,32 +32,11 @@ import ChatControllerInteraction
 import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
+import ChatMessageInteractiveInstantVideoNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
     let cancel: () -> Void
-}
-
-enum TranscribedText: Equatable {
-    case success(text: String, isPending: Bool)
-    case error(AudioTranscriptionMessageAttribute.TranscriptionError)
-}
-
-func transcribedText(message: Message) -> TranscribedText? {
-    for attribute in message.attributes {
-        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
-            if !attribute.text.isEmpty {
-                return .success(text: attribute.text, isPending: attribute.isPending)
-            } else {
-                if attribute.isPending {
-                    return nil
-                } else {
-                    return .error(attribute.error ?? .generic)
-                }
-            }
-        }
-    }
-    return nil
 }
 
 final class ChatMessageInteractiveFileNode: ASDisplayNode {

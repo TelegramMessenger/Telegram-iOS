@@ -46,10 +46,10 @@ private final class ChatInstantVideoMessageDurationNodeParameters: NSObject {
     }
 }
 
-final class ChatInstantVideoMessageDurationNode: ASImageNode {
+public final class ChatInstantVideoMessageDurationNode: ASImageNode {
     private var textColor: UIColor
     
-    var defaultDuration: Double? {
+    public var defaultDuration: Double? {
         didSet {
             if self.defaultDuration != oldValue {
                 self.updateTimestamp()
@@ -58,7 +58,7 @@ final class ChatInstantVideoMessageDurationNode: ASImageNode {
         }
     }
     
-    var isSeen: Bool = false {
+    public var isSeen: Bool = false {
         didSet {
             if self.isSeen != oldValue {
                 self.updateContents()
@@ -92,7 +92,7 @@ final class ChatInstantVideoMessageDurationNode: ASImageNode {
     private var statusDisposable: Disposable?
     private var statusValuePromise = Promise<MediaPlayerStatus?>()
     
-    var status: Signal<MediaPlayerStatus?, NoError>? {
+    public var status: Signal<MediaPlayerStatus?, NoError>? {
         didSet {
             if let status = self.status {
                 self.statusValuePromise.set(status)
@@ -102,10 +102,10 @@ final class ChatInstantVideoMessageDurationNode: ASImageNode {
         }
     }
 
-    var size: CGSize = CGSize()
-    var sizeUpdated: ((CGSize) -> Void)?
+    public var size: CGSize = CGSize()
+    public var sizeUpdated: ((CGSize) -> Void)?
     
-    init(textColor: UIColor) {
+    public init(textColor: UIColor) {
         self.textColor = textColor
         
         super.init()
@@ -127,7 +127,7 @@ final class ChatInstantVideoMessageDurationNode: ASImageNode {
         self.updateTimer?.invalidate()
     }
     
-    func updateTheme(textColor: UIColor) {
+    public func updateTheme(textColor: UIColor) {
         if !self.textColor.isEqual(textColor) {
             self.textColor = textColor
             self.updateContents()
@@ -149,7 +149,7 @@ final class ChatInstantVideoMessageDurationNode: ASImageNode {
         self.updateTimer = nil
     }
     
-    func updateTimestamp() {
+    public func updateTimestamp() {
         if let statusValue = self.statusValue, Double(0.0).isLess(than: statusValue.duration) {
             let timestampSeconds: Double
             if !statusValue.generationTimestamp.isZero {

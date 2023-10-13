@@ -18,6 +18,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageItemCommon
 import ChatMessageBubbleContentNode
 import ChatMessageReplyInfoNode
+import ChatMessageInteractiveInstantVideoNode
 
 private let nameFont = Font.medium(14.0)
 

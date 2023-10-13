@@ -40,7 +40,7 @@ private extension CGPoint {
     }
 }
 
-final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDelegate {
+public final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let color: UIColor
     private let hasSeek: Bool
     private let hapticFeedback = HapticFeedback()
@@ -88,7 +88,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
     private var statusDisposable: Disposable?
     private var statusValuePromise = Promise<MediaPlayerStatus?>()
     
-    var duration: Double? {
+    public var duration: Double? {
         if let statusValue = self.statusValue {
             return statusValue.duration
         } else {
@@ -96,7 +96,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         }
     }
     
-    var status: Signal<MediaPlayerStatus, NoError>? {
+    public var status: Signal<MediaPlayerStatus, NoError>? {
         didSet {
             if let status = self.status {
                 self.statusValuePromise.set(status |> map { $0 })
@@ -106,12 +106,12 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         }
     }
     
-    var tapGestureRecognizer: UITapGestureRecognizer?
-    var panGestureRecognizer: UIPanGestureRecognizer?
+    public var tapGestureRecognizer: UITapGestureRecognizer?
+    public var panGestureRecognizer: UIPanGestureRecognizer?
     
-    var seekTo: ((Double, Bool) -> Void)?
+    public var seekTo: ((Double, Bool) -> Void)?
     
-    init(color: UIColor, hasSeek: Bool) {
+    public init(color: UIColor, hasSeek: Bool) {
         self.color = color
         self.hasSeek = hasSeek
         
@@ -133,7 +133,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         self.statusDisposable?.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         guard self.hasSeek else {
@@ -149,11 +149,13 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         self.view.addGestureRecognizer(panGestureRecognizer)
     }
     
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    override public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if gestureRecognizer === self.tapGestureRecognizer || gestureRecognizer === self.panGestureRecognizer {
             let center = CGPoint(x: self.bounds.width / 2.0, y: self.bounds.height / 2.0)
             let location = gestureRecognizer.location(in: self.view)
-            let distanceFromCenter = location.distanceTo(center)
+            
+            let distanceFromCenter = sqrt(pow(location.x - center.x, 2.0) + pow(location.y - center.y, 2.0))
+            
             if distanceFromCenter < self.bounds.width * 0.2 {
                 return false
             }
@@ -256,11 +258,11 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
         }
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return InstantVideoRadialStatusNodeParameters(color: self.color, progress: self.effectiveProgress, dimProgress: self.effectiveDimProgress, playProgress: self.effectivePlayProgress, blinkProgress: self.effectiveBlinkProgress, hasSeek: self.hasSeek)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc public override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         let context = UIGraphicsGetCurrentContext()!
         
         if !isRasterizing {
@@ -286,7 +288,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode, UIGestureRecognizerDele
                     let colorSpace = CGColorSpaceCreateDeviceRGB()
                     let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
                     
-                    let center = bounds.center
+                    let center = CGPoint(x: bounds.midX, y: bounds.midY)
                     context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: bounds.width / 2.0, options: .drawsAfterEndLocation)
                 }
             }

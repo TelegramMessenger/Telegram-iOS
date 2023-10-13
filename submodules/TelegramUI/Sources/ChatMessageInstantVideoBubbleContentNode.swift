@@ -11,6 +11,21 @@ import AudioTranscriptionButtonComponent
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageInteractiveInstantVideoNode
+
+extension ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription {
+    convenience init(_ node: ChatMessageInteractiveFileNode) {
+        self.init(
+            node: node,
+            textClippingNode: node.textClippingNode,
+            dateAndStatusNode: node.dateAndStatusNode,
+            fetchingTextNode: node.fetchingTextNode,
+            waveformView: node.waveformView,
+            statusNode: node.statusNode,
+            audioTranscriptionButton: node.audioTranscriptionButton
+        )
+    }
+}
 
 class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     let interactiveFileNode: ChatMessageInteractiveFileNode
@@ -355,9 +370,9 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if currentExpanded != isExpanded {
                                 if isExpanded {
-                                    strongSelf.interactiveVideoNode.animateTo(strongSelf.interactiveFileNode, animator: animation.animator)
+                                    strongSelf.interactiveVideoNode.animateTo(ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription(strongSelf.interactiveFileNode), animator: animation.animator)
                                 } else {
-                                    strongSelf.interactiveVideoNode.animateFrom(strongSelf.interactiveFileNode, animator: animation.animator)
+                                    strongSelf.interactiveVideoNode.animateFrom(ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription(strongSelf.interactiveFileNode), animator: animation.animator)
                                 }
                             }
                         }

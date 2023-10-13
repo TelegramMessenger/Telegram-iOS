@@ -23,6 +23,7 @@ import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
 import ChatMessageBubbleContentNode
+import ChatMessageInteractiveInstantVideoNode
 
 private let buttonFont = Font.semibold(13.0)
 

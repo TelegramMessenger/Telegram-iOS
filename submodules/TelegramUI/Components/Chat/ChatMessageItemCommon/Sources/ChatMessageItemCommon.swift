@@ -200,3 +200,25 @@ public let chatMessagePeerIdColors: [UIColor] = [
     UIColor(rgb: 0x3ca5ec),
     UIColor(rgb: 0x3d72ed)
 ]
+
+public enum TranscribedText: Equatable {
+    case success(text: String, isPending: Bool)
+    case error(AudioTranscriptionMessageAttribute.TranscriptionError)
+}
+
+public func transcribedText(message: Message) -> TranscribedText? {
+    for attribute in message.attributes {
+        if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+            if !attribute.text.isEmpty {
+                return .success(text: attribute.text, isPending: attribute.isPending)
+            } else {
+                if attribute.isPending {
+                    return nil
+                } else {
+                    return .error(attribute.error ?? .generic)
+                }
+            }
+        }
+    }
+    return nil
+}
