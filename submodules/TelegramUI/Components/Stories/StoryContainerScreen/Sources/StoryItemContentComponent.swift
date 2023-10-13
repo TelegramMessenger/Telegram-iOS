@@ -397,7 +397,26 @@ final class StoryItemContentComponent: Component {
             }
         }
         
-        private func updateVideoPlaybackProgress() {
+        var effectiveTimestamp: Double {
+            guard let videoPlaybackStatus = self.videoPlaybackStatus else {
+                return 0.0
+            }
+            return videoPlaybackStatus.timestamp
+        }
+        
+        var effectiveDuration: Double {
+            let effectiveDuration: Double
+            if let videoPlaybackStatus, videoPlaybackStatus.duration > 0.0 {
+                effectiveDuration = videoPlaybackStatus.duration
+            } else if case let .file(file) = self.currentMessageMedia, let duration = file.duration {
+                effectiveDuration = Double(max(1, duration))
+            } else {
+                effectiveDuration = 1.0
+            }
+            return effectiveDuration
+        }
+        
+        private func updateVideoPlaybackProgress(_ scrubbingTimestamp: Double? = nil) {
             guard let videoPlaybackStatus = self.videoPlaybackStatus else {
                 return
             }
@@ -478,6 +497,13 @@ final class StoryItemContentComponent: Component {
                 }
             }
             
+            if let scrubbingTimestamp {
+                currentProgress = CGFloat(scrubbingTimestamp / effectiveDuration)
+                if currentProgress.isNaN || !currentProgress.isFinite {
+                    currentProgress = 0.0
+                }
+            }
+            
             let clippedProgress = max(0.0, min(1.0, currentProgress))
             self.environment?.presentationProgressUpdated(clippedProgress, isBuffering, false)
         }
@@ -510,6 +536,16 @@ final class StoryItemContentComponent: Component {
             )
         }
         
+        func seekTo(_ timestamp: Double, apply: Bool) {
+            guard let videoNode = self.videoNode else {
+                return
+            }
+            if apply {
+                videoNode.seek(timestamp)
+            }
+            self.updateVideoPlaybackProgress(timestamp)
+        }
+
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {
             let previousItem = self.component?.item
             

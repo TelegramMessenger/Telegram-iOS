@@ -600,7 +600,7 @@ public extension Api {
     indirect enum InputStorePaymentPurpose: TypeConstructorDescription {
         case inputStorePaymentGiftPremium(userId: Api.InputUser, currency: String, amount: Int64)
         case inputStorePaymentPremiumGiftCode(flags: Int32, users: [Api.InputUser], boostPeer: Api.InputPeer?, currency: String, amount: Int64)
-        case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
+        case inputStorePaymentPremiumGiveaway(flags: Int32, boostPeer: Api.InputPeer, additionalPeers: [Api.InputPeer]?, countriesIso2: [String]?, randomId: Int64, untilDate: Int32, currency: String, amount: Int64)
         case inputStorePaymentPremiumSubscription(flags: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -627,9 +627,9 @@ public extension Api {
                     serializeString(currency, buffer: buffer, boxed: false)
                     serializeInt64(amount, buffer: buffer, boxed: false)
                     break
-                case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let randomId, let untilDate, let currency, let amount):
+                case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let countriesIso2, let randomId, let untilDate, let currency, let amount):
                     if boxed {
-                        buffer.appendInt32(-381016791)
+                        buffer.appendInt32(2090038758)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     boostPeer.serialize(buffer, true)
@@ -637,6 +637,11 @@ public extension Api {
                     buffer.appendInt32(Int32(additionalPeers!.count))
                     for item in additionalPeers! {
                         item.serialize(buffer, true)
+                    }}
+                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(countriesIso2!.count))
+                    for item in countriesIso2! {
+                        serializeString(item, buffer: buffer, boxed: false)
                     }}
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     serializeInt32(untilDate, buffer: buffer, boxed: false)
@@ -658,8 +663,8 @@ public extension Api {
                 return ("inputStorePaymentGiftPremium", [("userId", userId as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumGiftCode(let flags, let users, let boostPeer, let currency, let amount):
                 return ("inputStorePaymentPremiumGiftCode", [("flags", flags as Any), ("users", users as Any), ("boostPeer", boostPeer as Any), ("currency", currency as Any), ("amount", amount as Any)])
-                case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let randomId, let untilDate, let currency, let amount):
-                return ("inputStorePaymentPremiumGiveaway", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("additionalPeers", additionalPeers as Any), ("randomId", randomId as Any), ("untilDate", untilDate as Any), ("currency", currency as Any), ("amount", amount as Any)])
+                case .inputStorePaymentPremiumGiveaway(let flags, let boostPeer, let additionalPeers, let countriesIso2, let randomId, let untilDate, let currency, let amount):
+                return ("inputStorePaymentPremiumGiveaway", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("additionalPeers", additionalPeers as Any), ("countriesIso2", countriesIso2 as Any), ("randomId", randomId as Any), ("untilDate", untilDate as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumSubscription(let flags):
                 return ("inputStorePaymentPremiumSubscription", [("flags", flags as Any)])
     }
@@ -722,23 +727,28 @@ public extension Api {
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
                 _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.InputPeer.self)
             } }
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            var _6: String?
-            _6 = parseString(reader)
-            var _7: Int64?
-            _7 = reader.readInt64()
+            var _4: [String]?
+            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            } }
+            var _5: Int64?
+            _5 = reader.readInt64()
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: String?
+            _7 = parseString(reader)
+            var _8: Int64?
+            _8 = reader.readInt64()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
-            let _c4 = _4 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             let _c5 = _5 != nil
             let _c6 = _6 != nil
             let _c7 = _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiveaway(flags: _1!, boostPeer: _2!, additionalPeers: _3, randomId: _4!, untilDate: _5!, currency: _6!, amount: _7!)
+            let _c8 = _8 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 {
+                return Api.InputStorePaymentPurpose.inputStorePaymentPremiumGiveaway(flags: _1!, boostPeer: _2!, additionalPeers: _3, countriesIso2: _4, randomId: _5!, untilDate: _6!, currency: _7!, amount: _8!)
             }
             else {
                 return nil

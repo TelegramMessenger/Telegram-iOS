@@ -41,7 +41,8 @@ public final class HStack<ChildEnvironment: Equatable>: CombinedComponent {
                 size.width += child.size.width
                 size.height = max(size.height, child.size.height)
             }
-
+            size.width += context.component.spacing * CGFloat(updatedChildren.count - 1)
+            
             var nextX = 0.0
             for child in updatedChildren {
                 context.add(child

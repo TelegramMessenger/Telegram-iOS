@@ -430,7 +430,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if attribute is ReplyThreadMessageAttribute {
                                 return false
                             }
-                            if attribute is ViewCountMessageAttribute{
+                            if attribute is ViewCountMessageAttribute {
                                 return false
                             }
                             if attribute is ForwardCountMessageAttribute {

@@ -80,6 +80,7 @@ swift_library(
         "//submodules/Utils/VolumeButtons",
         "//submodules/TelegramNotices",
         "//submodules/DeviceAccess",
+        "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
         
     ],
     visibility = [

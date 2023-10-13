@@ -72,6 +72,12 @@ final class AppIconsDemoComponent: Component {
                             image = UIImage(bundleImageName: "Premium/Icons/Black")
                         case "PremiumTurbo":
                             image = UIImage(bundleImageName: "Premium/Icons/Turbo")
+                        case "PremiumDuck":
+                            image = UIImage(bundleImageName: "Premium/Icons/Duck")
+                        case "PremiumCoffee":
+                            image = UIImage(bundleImageName: "Premium/Icons/Coffee")
+                        case "PremiumSteam":
+                            image = UIImage(bundleImageName: "Premium/Icons/Steam")
                         default:
                             image = nil
                     }

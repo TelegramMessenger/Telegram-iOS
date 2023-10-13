@@ -184,7 +184,7 @@ func _internal_applyPremiumGiftCode(account: Account, slug: String) -> Signal<Ne
     }
 }
 
-func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
+func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Signal<Never, NoError> in
         var flags: Int32 = 0
         if onlyNewSubscribers {
@@ -206,10 +206,14 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
             }
         }
         
+        if !countries.isEmpty {
+            flags |= (1 << 2)
+        }
+        
         guard let inputPeer = inputPeer else {
             return .complete()
         }
-        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
+        return account.network.request(Api.functions.payments.launchPrepaidGiveaway(peer: inputPeer, giveawayId: id, purpose: .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: inputPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: "", amount: 0)))
         |> map(Optional.init)
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)

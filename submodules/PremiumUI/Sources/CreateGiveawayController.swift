@@ -598,6 +598,7 @@ private struct CreateGiveawayControllerState: Equatable {
     var channels: [EnginePeer.Id]
     var peers: [EnginePeer.Id]
     var selectedMonths: Int32?
+    var countries: [String]
     var onlyNewEligible: Bool
     var time: Int32
     var pickingTimeLimit = false
@@ -620,7 +621,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     }
     
     let expiryTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) + 86400 * 5
-    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], onlyNewEligible: false, time: expiryTime)
+    let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], countries: [], onlyNewEligible: false, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -790,11 +791,14 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let (currency, amount) = selectedProduct.storeProduct.priceCurrencyAndAmount
         
         let purpose: AppStoreTransactionPurpose
+        let quantity: Int32
         switch state.mode {
         case .giveaway:
-            purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+            purpose = .giveaway(boostPeer: peerId, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time, currency: currency, amount: amount)
+            quantity = selectedProduct.giftOption.storeQuantity
         case .gift:
             purpose = .giftCode(peerIds: state.peers, boostPeer: peerId, currency: currency, amount: amount)
+            quantity = Int32(state.peers.count)
         }
                 
         updateState { state in
@@ -808,7 +812,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             let _ = (context.engine.payments.canPurchasePremium(purpose: purpose)
             |> deliverOnMainQueue).startStandalone(next: { [weak controller] available in
                 if available, let inAppPurchaseManager = context.inAppPurchaseManager {
-                    let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, quantity: selectedProduct.giftOption.storeQuantity, purpose: purpose)
+                    let _ = (inAppPurchaseManager.buyProduct(selectedProduct.storeProduct, quantity: quantity, purpose: purpose)
                     |> deliverOnMainQueue).startStandalone(next: { [weak controller] status in
                         if case .purchased = status {
                             if let controller, let navigationController = controller.navigationController as? NavigationController {
@@ -890,7 +894,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 }
             })
         case let .prepaid(prepaidGiveaway):
-            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
+            let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
             |> deliverOnMainQueue).startStandalone(completed: {
                 if let controller, let navigationController = controller.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers
