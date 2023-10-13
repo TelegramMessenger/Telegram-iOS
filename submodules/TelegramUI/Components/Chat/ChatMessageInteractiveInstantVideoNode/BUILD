@@ -8,6 +8,7 @@ swift_library(
     ]),
     copts = [
         "-warnings-as-errors",
+        #"-Xfrontend", "-debug-time-function-bodies"
     ],
     deps = [
         "//submodules/AsyncDisplayKit",

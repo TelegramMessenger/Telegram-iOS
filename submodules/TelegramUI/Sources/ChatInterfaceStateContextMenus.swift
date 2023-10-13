@@ -33,6 +33,7 @@ import SettingsUI
 import PremiumUI
 import TextNodeWithEntities
 import ChatControllerInteraction
+import ChatMessageItemCommon
 
 private struct MessageContextMenuData {
     let starStatus: Bool?

@@ -12,6 +12,7 @@ import TelegramPresentationData
 import SwiftSignalKit
 import ChatControllerInteraction
 import ChatMessageItemCommon
+import TextFormat
 
 func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams, presentationData: ChatPresentationData) -> ChatMessageItemLayoutConstants {
     var result: ChatMessageItemLayoutConstants

@@ -14,103 +14,7 @@ import ChatMessageBackground
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
-
-func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
-    if poll.isClosed {
-        return true
-    }/* else if let deadlineTimeout = poll.deadlineTimeout, message.id.namespace == Namespaces.Message.Cloud {
-        let startDate: Int32
-        if let forwardInfo = message.forwardInfo {
-            startDate = forwardInfo.date
-        } else {
-            startDate = message.timestamp
-        }
-        
-        let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-        if timestamp >= startDate + deadlineTimeout {
-            return true
-        } else {
-            return false
-        }
-    }*/ else {
-        return false
-    }
-}
-
-private struct PercentCounterItem: Comparable  {
-    var index: Int = 0
-    var percent: Int = 0
-    var remainder: Int = 0
-    
-    static func <(lhs: PercentCounterItem, rhs: PercentCounterItem) -> Bool {
-        if lhs.remainder > rhs.remainder {
-            return true
-        } else if lhs.remainder < rhs.remainder {
-            return false
-        }
-        return lhs.percent < rhs.percent
-    }
-    
-}
-
-private func adjustPercentCount(_ items: [PercentCounterItem], left: Int) -> [PercentCounterItem] {
-    var left = left
-    var items = items.sorted(by: <)
-    var i:Int = 0
-    while i != items.count {
-        let item = items[i]
-        var j = i + 1
-        loop: while j != items.count {
-            if items[j].percent != item.percent || items[j].remainder != item.remainder {
-                break loop
-            }
-            j += 1
-        }
-        if items[i].remainder == 0 {
-            break
-        }
-        let equal = j - i
-        if equal <= left {
-            left -= equal
-            while i != j {
-                items[i].percent += 1
-                i += 1
-            }
-        } else {
-            i = j
-        }
-    }
-    return items
-}
-
-func countNicePercent(votes: [Int], total: Int) -> [Int] {
-    var result:[Int] = []
-    var items:[PercentCounterItem] = []
-    for _ in votes {
-        result.append(0)
-        items.append(PercentCounterItem())
-    }
-    
-    let count = votes.count
-    
-    var left:Int = 100
-    for i in 0 ..< votes.count {
-        let votes = votes[i]
-        items[i].index = i
-        items[i].percent = Int((Float(votes) * 100) / Float(total))
-        items[i].remainder = (votes * 100) - (items[i].percent * total)
-        left -= items[i].percent
-    }
-    
-    if left > 0 && left <= count {
-        items = adjustPercentCount(items, left: left)
-    }
-    for item in items {
-        result[item.index] = item.percent
-    }
-    
-    return result
-}
+import PollBubbleTimerNode
 
 private final class ChatMessagePollOptionRadioNodeParameters: NSObject {
     let timestamp: Double
@@ -867,7 +771,7 @@ private final class SolutionButtonNode: HighlightableButtonNode {
     }
 }
 
-class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     private let textNode: TextNode
     private let typeNode: TextNode
     private var timerNode: PollBubbleTimerNode?
@@ -883,11 +787,11 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var poll: TelegramMediaPoll?
     
-    var solutionTipSourceNode: ASDisplayNode {
+    public var solutionTipSourceNode: ASDisplayNode {
         return self.solutionButtonNode
     }
     
-    required init() {
+    required public init() {
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.contentMode = .topLeft
@@ -978,7 +882,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -1008,7 +912,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeTypeLayout = TextNode.asyncLayout(self.typeNode)
         let makeVotersLayout = TextNode.asyncLayout(self.votersNode)
@@ -1681,22 +1585,22 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         self.avatarsNode.isUserInteractionEnabled = !self.buttonViewResultsTextNode.isHidden
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.statusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.statusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -1778,7 +1682,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    func updatePollTooltipMessageState(animated: Bool) {
+    public func updatePollTooltipMessageState(animated: Bool) {
         guard let item = self.item else {
             return
         }
@@ -1795,7 +1699,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionView(value: value)
         }
@@ -1849,7 +1753,7 @@ private let defaultBorderWidth: CGFloat = 1.0
 
 private let avatarFont = avatarPlaceholderFont(size: 8.0)
 
-final class MergedAvatarsNode: ASDisplayNode {
+public final class MergedAvatarsNode: ASDisplayNode {
     private var peers: [PeerAvatarReference] = []
     private var images: [PeerId: UIImage] = [:]
     private var disposables: [PeerId: Disposable] = [:]
@@ -1858,9 +1762,9 @@ final class MergedAvatarsNode: ASDisplayNode {
     private var imageSpacing: CGFloat = defaultMergedImageSpacing
     private var borderWidthValue: CGFloat = defaultBorderWidth
     
-    var pressed: (() -> Void)?
+    public var pressed: (() -> Void)?
     
-    override init() {
+    override public init() {
         self.buttonNode = HighlightTrackingButtonNode()
         
         super.init()
@@ -1881,11 +1785,11 @@ final class MergedAvatarsNode: ASDisplayNode {
         self.pressed?()
     }
     
-    func updateLayout(size: CGSize) {
+    public func updateLayout(size: CGSize) {
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool, imageSize: CGFloat, imageSpacing: CGFloat, borderWidth: CGFloat) {
+    public func update(context: AccountContext, peers: [Peer], synchronousLoad: Bool, imageSize: CGFloat, imageSpacing: CGFloat, borderWidth: CGFloat) {
         self.imageSize = imageSize
         self.imageSpacing = imageSpacing
         self.borderWidthValue = borderWidth
@@ -1949,11 +1853,11 @@ final class MergedAvatarsNode: ASDisplayNode {
         }
     }
     
-    override func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
+    override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol {
         return MergedAvatarsNodeArguments(peers: self.peers, images: self.images, imageSize: self.imageSize, imageSpacing: self.imageSpacing, borderWidth: self.borderWidthValue)
     }
     
-    @objc override class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
+    @objc override public class func draw(_ bounds: CGRect, withParameters parameters: Any?, isCancelled: () -> Bool, isRasterizing: Bool) {
         assertNotOnMainThread()
         
         let context = UIGraphicsGetCurrentContext()!

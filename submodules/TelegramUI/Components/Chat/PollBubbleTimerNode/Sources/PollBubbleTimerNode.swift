@@ -39,7 +39,7 @@ private struct ContentParticle {
     }
 }
 
-final class PollBubbleTimerNode: ASDisplayNode {
+public final class PollBubbleTimerNode: ASDisplayNode {
     private struct Params: Equatable {
         var regularColor: UIColor
         var proximityColor: UIColor
@@ -58,9 +58,9 @@ final class PollBubbleTimerNode: ASDisplayNode {
     
     private var currentParams: Params?
     
-    var reachedTimeout: (() -> Void)?
+    public var reachedTimeout: (() -> Void)?
     
-    override init() {
+    override public init() {
         var updateInHierarchy: ((Bool) -> Void)?
         self.hierarchyTrackingNode = HierarchyTrackingNode({ value in
             updateInHierarchy?(value)
@@ -89,7 +89,7 @@ final class PollBubbleTimerNode: ASDisplayNode {
         self.animator?.invalidate()
     }
     
-    func update(regularColor: UIColor, proximityColor: UIColor, timeout: Int32, deadlineTimestamp: Int32?) {
+    public func update(regularColor: UIColor, proximityColor: UIColor, timeout: Int32, deadlineTimestamp: Int32?) {
         let params = Params(
             regularColor: regularColor,
             proximityColor: proximityColor,

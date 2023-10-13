@@ -222,3 +222,11 @@ public func transcribedText(message: Message) -> TranscribedText? {
     }
     return nil
 }
+
+public func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
+    if poll.isClosed {
+        return true
+    } else {
+        return false
+    }
+}

@@ -324,8 +324,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let bubbleEdgeInset: CGFloat = 4.0
             let bubbleContentInsetsLeft: CGFloat = 6.0
-            let availableWidth = max(60.0, width - 210.0 - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0)
-            let availableContentWidth = width - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0
+            let availableWidth: CGFloat = max(60.0, width - 210.0 - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0)
+            let availableContentWidth: CGFloat = width - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0
             
             if !ignoreHeaders {
                 var replyMessage: Message?
@@ -430,7 +430,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         forwardAuthorSignature = forwardInfo.authorSignature
                     }
                 }
-                let availableWidth = max(60.0, availableContentWidth - 210.0 + 6.0)
+                let availableWidth: CGFloat = max(60.0, availableContentWidth - 210.0 + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             

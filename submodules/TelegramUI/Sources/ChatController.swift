@@ -106,6 +106,7 @@ import SaveToCameraRoll
 import ChatMessageDateAndStatusNode
 import ReplyAccessoryPanelNode
 import TextSelectionNode
+import ChatMessagePollBubbleContentNode
 
 public enum ChatControllerPeekActions {
     case standard
