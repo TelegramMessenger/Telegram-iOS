@@ -32,37 +32,36 @@ import ChatControllerInteraction
 import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
-import ChatMessageInteractiveInstantVideoNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
     let cancel: () -> Void
 }
 
-final class ChatMessageInteractiveFileNode: ASDisplayNode {
-    final class Arguments {
-        let context: AccountContext
-        let presentationData: ChatPresentationData
-        let message: Message
-        let topMessage: Message
-        let associatedData: ChatMessageItemAssociatedData
-        let chatLocation: ChatLocation
-        let attributes: ChatMessageEntryAttributes
-        let isPinned: Bool
-        let forcedIsEdited: Bool
-        let file: TelegramMediaFile
-        let automaticDownload: Bool
-        let incoming: Bool
-        let isRecentActions: Bool
-        let forcedResourceStatus: FileMediaResourceStatus?
-        let dateAndStatusType: ChatMessageDateAndStatusType?
-        let displayReactions: Bool
-        let messageSelection: Bool?
-        let layoutConstants: ChatMessageItemLayoutConstants
-        let constrainedSize: CGSize
-        let controllerInteraction: ChatControllerInteraction
+public final class ChatMessageInteractiveFileNode: ASDisplayNode {
+    public final class Arguments {
+        public let context: AccountContext
+        public let presentationData: ChatPresentationData
+        public let message: Message
+        public let topMessage: Message
+        public let associatedData: ChatMessageItemAssociatedData
+        public let chatLocation: ChatLocation
+        public let attributes: ChatMessageEntryAttributes
+        public let isPinned: Bool
+        public let forcedIsEdited: Bool
+        public let file: TelegramMediaFile
+        public let automaticDownload: Bool
+        public let incoming: Bool
+        public let isRecentActions: Bool
+        public let forcedResourceStatus: FileMediaResourceStatus?
+        public let dateAndStatusType: ChatMessageDateAndStatusType?
+        public let displayReactions: Bool
+        public let messageSelection: Bool?
+        public let layoutConstants: ChatMessageItemLayoutConstants
+        public let constrainedSize: CGSize
+        public let controllerInteraction: ChatControllerInteraction
         
-        init(
+        public init(
             context: AccountContext,
             presentationData: ChatPresentationData,
             message: Message,
@@ -112,31 +111,25 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let descriptionMeasuringNode: TextNode
-    let fetchingTextNode: ImmediateTextNode
-    let fetchingCompactTextNode: ImmediateTextNode
+    public let fetchingTextNode: ImmediateTextNode
+    public let fetchingCompactTextNode: ImmediateTextNode
     
-    var waveformView: ComponentHostView<Empty>?
+    public var waveformView: ComponentHostView<Empty>?
     
-    /*private let waveformNode: AudioWaveformNode
-    private let waveformForegroundNode: AudioWaveformNode
-    private var waveformShimmerNode: ShimmerEffectNode?
-    private var waveformMaskNode: AudioWaveformNode?
-    private var waveformScrubbingNode: MediaPlayerScrubbingNode?*/
-    
-    var audioTranscriptionButton: ComponentHostView<Empty>?
+    public var audioTranscriptionButton: ComponentHostView<Empty>?
     private var transcriptionPendingIndicator: ComponentHostView<Empty>?
-    let textNode: TextNode
-    let textClippingNode: ASDisplayNode
+    public let textNode: TextNode
+    public let textClippingNode: ASDisplayNode
     private var textSelectionNode: TextSelectionNode?
     
-    var updateIsTextSelectionActive: ((Bool) -> Void)?
+    public var updateIsTextSelectionActive: ((Bool) -> Void)?
     
-    let dateAndStatusNode: ChatMessageDateAndStatusNode
+    public let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let consumableContentNode: ASImageNode
     
     private var iconNode: TransformImageNode?
-    let statusContainerNode: ContextExtractedContentContainingNode
-    var statusNode: SemanticStatusNode?
+    public let statusContainerNode: ContextExtractedContentContainingNode
+    public var statusNode: SemanticStatusNode?
     private var playbackAudioLevelNode: VoiceBlobNode?
     private var streamingStatusNode: SemanticStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
@@ -164,7 +157,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var inputAudioLevel: CGFloat = 0.0
     private var currentAudioLevel: CGFloat = 0.0
     
-    var visibility: Bool = false {
+    public var visibility: Bool = false {
         didSet {
             guard self.visibility != oldValue else { return }
             
@@ -179,12 +172,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var actualFetchStatus: MediaResourceStatus?
     private let fetchDisposable = MetaDisposable()
     
-    var toggleSelection: (Bool) -> Void = { _ in }
-    var activateLocalContent: () -> Void = { }
-    var requestUpdateLayout: (Bool) -> Void = { _ in }
-    var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
+    public var toggleSelection: (Bool) -> Void = { _ in }
+    public var activateLocalContent: () -> Void = { }
+    public var requestUpdateLayout: (Bool) -> Void = { _ in }
+    public var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
-    var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    public var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
     
     private var context: AccountContext?
     private var message: Message?
@@ -195,10 +188,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     
-    var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
-    var forcedAudioTranscriptionText: TranscribedText?
+    public var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
+    public var forcedAudioTranscriptionText: TranscribedText?
     private var transcribeDisposable: Disposable?
-    var hasExpandedAudioTranscription: Bool {
+    public var hasExpandedAudioTranscription: Bool {
         if case .expanded = audioTranscriptionState {
             return true
         } else {
@@ -209,7 +202,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var hapticFeedback: HapticFeedback?
     
-    override init() {
+    override public init() {
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
@@ -272,13 +265,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.transcribeDisposable?.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.fileTap(_:)))
         self.view.addGestureRecognizer(tapRecognizer)
         self.tapRecognizer = tapRecognizer
     }
     
-    @objc func cacheProgressPressed() {
+    @objc private func cacheProgressPressed() {
         guard let resourceStatus = self.resourceStatus else {
             return
         }
@@ -296,7 +289,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    @objc func progressPressed() {
+    @objc private func progressPressed() {
         if let resourceStatus = self.resourceStatus {
             switch resourceStatus.mediaStatus {
             case let .fetchStatus(fetchStatus):
@@ -324,7 +317,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    @objc func fileTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func fileTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let streamingCacheStatusFrame = self.streamingCacheStatusFrame, streamingCacheStatusFrame.contains(recognizer.location(in: self.view)) {
                 self.cacheProgressPressed()
@@ -470,7 +463,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func asyncLayout() -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void))) {
+    public func asyncLayout() -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void))) {
         let currentFile = self.file
         
         let titleAsyncLayout = TextNode.asyncLayout(self.titleNode)
@@ -1714,7 +1707,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> ChatMessageInteractiveFileNode))) {
+    public static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> ChatMessageInteractiveFileNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { arguments in
@@ -1746,7 +1739,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+    public func willUpdateIsExtractedToContextPreview(_ value: Bool) {
         if !value {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
@@ -1759,7 +1752,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func updateIsExtractedToContextPreview(_ value: Bool) {
+    public func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
             if self.textSelectionNode == nil, self.textClippingNode.supernode != nil, let item = self.arguments, !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected(), let rootNode = item.controllerInteraction.chatControllerNode() {
                 let selectionColor: UIColor
@@ -1804,7 +1797,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let iconNode = self.iconNode, let file = self.file, file.isEqual(to: media) {
             return (iconNode, iconNode.bounds, { [weak iconNode] in
                 return (iconNode?.view.snapshotContentTree(unhide: true), nil)
@@ -1814,7 +1807,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
-    func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var isHidden = false
         if let file = self.file, let media = media {
             for m in media {
@@ -1843,7 +1836,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.playerUpdateTimer = nil
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.dateAndStatusNode.supernode != nil {
             if let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
                 return result
@@ -1862,27 +1855,23 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         return super.hitTest(point, with: event)
     }
     
-    func hasTapAction(at point: CGPoint) -> Bool {
+    public func hasTapAction(at point: CGPoint) -> Bool {
         if let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return true
         }
         return false
     }
     
-    func animateSent() {
+    public func animateSent() {
         if let view = self.waveformView?.componentView as? AudioWaveformComponent.View {
             view.animateIn()
         }
     }
-    
-    func animateTo(_ node: ChatMessageInteractiveInstantVideoNode) {
-        
-    }
 }
 
 
-final class FileMessageSelectionNode: ASDisplayNode {
-    enum NodeType {
+public final class FileMessageSelectionNode: ASDisplayNode {
+    public enum NodeType {
         case media
         case file
         case voice

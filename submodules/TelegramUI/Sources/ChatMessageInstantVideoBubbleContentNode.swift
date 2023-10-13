@@ -12,6 +12,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageInteractiveInstantVideoNode
+import ChatMessageInteractiveFileNode
 
 extension ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription {
     convenience init(_ node: ChatMessageInteractiveFileNode) {
