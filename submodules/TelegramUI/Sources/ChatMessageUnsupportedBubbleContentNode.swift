@@ -67,7 +67,7 @@ final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNod
                     var actionButtonSizeAndApply: ((CGSize, () -> ChatMessageAttachedContentButtonNode))?
                     let refinedButtonWidth = max(boundingWidth - insets.left - insets.right, buttonWidth)
                     
-                    let (size, apply) = continueActionButtonLayout(refinedButtonWidth)
+                    let (size, apply) = continueActionButtonLayout(refinedButtonWidth, 33.0)
                     actionButtonSizeAndApply = (size, apply)
                     let adjustedBoundingSize = CGSize(width: refinedButtonWidth + insets.left + insets.right, height: insets.bottom + size.height)
                     

@@ -1153,8 +1153,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.replyRecognizer = replyRecognizer
         self.view.addGestureRecognizer(replyRecognizer)
         
-        if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
-            //self.tapRecognizer?.isEnabled = false
+        if let item = self.item, let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+            if case .link = info {
+            } else {
+                self.tapRecognizer?.isEnabled = false
+            }
             self.replyRecognizer?.isEnabled = false
         }
     }
@@ -3578,8 +3581,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
         }
         
-        if let subject = item.associatedData.subject, case .messageOptions = subject {
-            //strongSelf.tapRecognizer?.isEnabled = false
+        if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+            if case .link = info {
+            } else {
+                strongSelf.tapRecognizer?.isEnabled = false
+            }
             strongSelf.replyRecognizer?.isEnabled = false
             strongSelf.mainContainerNode.isGestureEnabled = false
             for contentContainer in strongSelf.contentContainers {

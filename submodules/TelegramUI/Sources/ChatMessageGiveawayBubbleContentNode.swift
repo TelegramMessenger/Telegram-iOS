@@ -387,7 +387,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
                 return (contentWidth, { boundingWidth in
-                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
                     let buttonSpacing: CGFloat = 4.0
                     
                     let (channelButtonSize, channelButtonApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)

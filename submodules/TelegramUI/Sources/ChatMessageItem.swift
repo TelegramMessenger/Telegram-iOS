@@ -511,8 +511,13 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
             
             var disableDate = self.disableDate
-            if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
-                disableDate = true
+            if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                switch info {
+                case .reply, .link:
+                    disableDate = true
+                default:
+                    break
+                }
             }
             
             let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !disableDate)

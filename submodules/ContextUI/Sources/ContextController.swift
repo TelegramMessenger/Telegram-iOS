@@ -24,7 +24,7 @@ public protocol ContextControllerProtocol: ViewController {
     func dismiss(completion: (() -> Void)?)
     
     func getActionsMinHeight() -> ContextController.ActionsHeight?
-    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?)
+    func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, animated: Bool)
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition)
     func pushItems(items: Signal<ContextController.Items, NoError>)
     func popItems()
@@ -1326,9 +1326,9 @@ final class ContextControllerNode: ViewControllerTracingNode, UIScrollViewDelega
         }
     }
     
-    func setItemsSignal(items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition) {
+    func setItemsSignal(items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, previousActionsTransition: ContextController.PreviousActionsTransition, animated: Bool) {
         if let sourceContainer = self.sourceContainer {
-            sourceContainer.setItems(items: items, animated: false)
+            sourceContainer.setItems(items: items, animated: animated)
         } else {
             self.legacyItems = items
             self.itemsDisposable.set((items
@@ -2555,12 +2555,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
         return nil
     }
     
-    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?) {
+    public func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, animated: Bool) {
         //self.items = items
         
         if self.isNodeLoaded {
             self.immediateItemsTransitionAnimation = false
-            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale)
+            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: .scale, animated: animated)
         } else {
             assertionFailure()
         }
@@ -2570,7 +2570,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         //self.items = items
         
         if self.isNodeLoaded {
-            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition)
+            self.controllerNode.setItemsSignal(items: items, minHeight: minHeight, previousActionsTransition: previousActionsTransition, animated: true)
         } else {
             assertionFailure()
         }

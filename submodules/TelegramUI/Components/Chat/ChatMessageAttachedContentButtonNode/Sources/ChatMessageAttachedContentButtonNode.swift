@@ -6,7 +6,7 @@ import TelegramPresentationData
 import ChatPresentationInterfaceState
 import ShimmerEffect
 
-private let buttonFont = Font.semibold(13.0)
+private let buttonFont = Font.semibold(14.0)
 
 public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
     private let textNode: TextNode
@@ -107,7 +107,7 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
         })
     }
     
-    public static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage, _ highlightedImage: UIImage, _ iconImage: UIImage?, _ highlightedIconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor, _ inProgress: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
+    public static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage?, _ highlightedImage: UIImage?, _ iconImage: UIImage?, _ highlightedIconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor, _ inProgress: Bool) -> (CGFloat, (CGFloat, CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
         let previousRegularImage = current?.regularImage
         let previousHighlightedImage = current?.highlightedImage
         let previousRegularIconImage = current?.regularIconImage
@@ -169,9 +169,13 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
             
             let (_, highlightedTextApply) = makeHighlightedTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: buttonFont, textColor: highlightedTitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - labelInset * 2.0), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
             
-            return (textSize.size.width + labelInset * 2.0, { refinedWidth in
-                return (CGSize(width: refinedWidth, height: 33.0), {
+            return (textSize.size.width + labelInset * 2.0, { refinedWidth, refinedHeight in
+                let size = CGSize(width: refinedWidth, height: refinedHeight)
+                return (size, {
                     targetNode.accessibilityLabel = title
+                    
+                    //targetNode.borderColor = UIColor.red.cgColor
+                    //targetNode.borderWidth = 1.0
                     
                     targetNode.titleColor = titleColor
                     
@@ -203,15 +207,15 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
                     let _ = textApply()
                     let _ = highlightedTextApply()
                     
-                    let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: refinedWidth, height: 33.0))
-                    var textFrame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((34.0 - textSize.size.height) / 2.0)), size: textSize.size)
+                    let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: refinedWidth, height: size.height))
+                    var textFrame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((backgroundFrame.height - textSize.size.height) / 2.0)), size: textSize.size)
                     targetNode.backgroundNode.frame = backgroundFrame
                     if let image = targetNode.iconNode.image {
                         if cornerIcon {
                             targetNode.iconNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 5.0, y: 5.0), size: image.size)
                         } else {
                             textFrame.origin.x += floor(image.size.width / 2.0)
-                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 5.0, y: textFrame.minY + 2.0), size: image.size)
+                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 5.0, y: textFrame.minY + floorToScreenPixels((textFrame.height - image.size.height) * 0.5)), size: image.size)
                         }
                         if targetNode.iconNode.supernode == nil {
                             targetNode.addSubnode(targetNode.iconNode)

@@ -27,16 +27,17 @@ private func presentChatInputOptions(selfController: ChatControllerImpl, sourceN
     
     let replySelectionState = Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: nil))
     
+    if let source = chatReplyOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+        return getContextController?()
+    }, selectionState: replySelectionState) {
+        sources.append(source)
+    }
+    
     var forwardDismissedForCancel: (() -> Void)?
     if let (source, dismissedForCancel) = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
         return getContextController?()
     }) {
         forwardDismissedForCancel = dismissedForCancel
-        sources.append(source)
-    }
-    if let source = chatReplyOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
-        return getContextController?()
-    }, selectionState: replySelectionState) {
         sources.append(source)
     }
     
@@ -744,10 +745,9 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
             guard let selfController else {
                 return
             }
-            //selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
-            //selfController.controllerInteraction?.sendCurrentMessage(false)
             
-            let _ = selfController
+            selfController.chatDisplayNode.dismissUrlPreview()
+            
             let _ = chatController
             
             f(.default)

@@ -335,6 +335,8 @@ final class ContextSourceContainer: ASDisplayNode {
     
     private weak var controller: ContextController?
     
+    private let backgroundNode: NavigationBackgroundNode
+    
     var sources: [Source] = []
     var activeIndex: Int = 0
     
@@ -360,7 +362,11 @@ final class ContextSourceContainer: ASDisplayNode {
     init(controller: ContextController, configuration: ContextController.Configuration) {
         self.controller = controller
         
+        self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
+        
         super.init()
+        
+        self.addSubnode(self.backgroundNode)
         
         for i in 0 ..< configuration.sources.count {
             let source = configuration.sources[i]
@@ -443,6 +449,8 @@ final class ContextSourceContainer: ASDisplayNode {
     }
     
     func animateIn() {
+        self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
         if let activeSource = self.activeSource {
             activeSource.animateIn()
         }
@@ -452,6 +460,8 @@ final class ContextSourceContainer: ASDisplayNode {
     }
     
     func animateOut(result: ContextMenuActionResult, completion: @escaping () -> Void) {
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        
         if let tabSelectorView = self.tabSelector?.view {
             tabSelectorView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
@@ -543,6 +553,35 @@ final class ContextSourceContainer: ASDisplayNode {
         
         var childLayout = layout
         
+        if let activeSource = self.activeSource {
+            switch activeSource.source {
+            case .location, .reference:
+                self.backgroundNode.updateColor(
+                    color: .clear,
+                    enableBlur: false,
+                    forceKeepBlur: false,
+                    transition: .immediate
+                )
+            case .extracted:
+                self.backgroundNode.updateColor(
+                    color: presentationData.theme.contextMenu.dimColor,
+                    enableBlur: true,
+                    forceKeepBlur: true,
+                    transition: .immediate
+                )
+            case .controller:
+                self.backgroundNode.updateColor(
+                    color: presentationData.theme.contextMenu.dimColor,
+                    enableBlur: true,
+                    forceKeepBlur: true,
+                    transition: .immediate
+                )
+            }
+        }
+        
+        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
+        self.backgroundNode.update(size: layout.size, transition: transition)
+        
         if self.sources.count > 1 {
             let tabSelector: ComponentView<Empty>
             if let current = self.tabSelector {
@@ -561,6 +600,9 @@ final class ContextSourceContainer: ASDisplayNode {
                         foreground: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.8),
                         selection: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.1)
                     ),
+                    customLayout: TabSelectorComponent.CustomLayout(
+                        spacing: 9.0
+                    ),
                     items: mappedItems,
                     selectedId: self.activeSource?.id,
                     setSelectedId: { [weak self] id in
@@ -576,7 +618,7 @@ final class ContextSourceContainer: ASDisplayNode {
                 environment: {},
                 containerSize: CGSize(width: layout.size.width, height: 44.0)
             )
-            childLayout.intrinsicInsets.bottom += 44.0
+            childLayout.intrinsicInsets.bottom += 30.0
             
             if let tabSelectorView = tabSelector.view {
                 if tabSelectorView.superview == nil {

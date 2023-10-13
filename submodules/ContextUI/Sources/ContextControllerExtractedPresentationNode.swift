@@ -234,7 +234,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private let requestAnimateOut: (ContextMenuActionResult, @escaping () -> Void) -> Void
     private let source: ContentSource
     
-    private let backgroundNode: NavigationBackgroundNode
     private let dismissTapNode: ASDisplayNode
     private let dismissAccessibilityArea: AccessibilityAreaNode
     private let clippingNode: ASDisplayNode
@@ -282,8 +281,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.requestAnimateOut = requestAnimateOut
         self.source = source
         
-        self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: false)
-        
         self.dismissTapNode = ASDisplayNode()
         
         self.dismissAccessibilityArea = AccessibilityAreaNode()
@@ -330,7 +327,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.view.addSubview(self.scroller)
         self.scroller.isHidden = true
         
-        self.addSubnode(self.backgroundNode)
         self.addSubnode(self.clippingNode)
         self.clippingNode.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.dismissTapNode)
@@ -553,7 +549,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     ) {
         self.validLayout = layout
         
-        let contentActionsSpacing: CGFloat = 7.0
+        var contentActionsSpacing: CGFloat = 7.0
         let actionsEdgeInset: CGFloat
         let actionsSideInset: CGFloat
         let topInset: CGFloat = layout.insets(options: .statusBar).top + 8.0
@@ -571,36 +567,16 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         
         switch self.source {
         case .location, .reference:
-            self.backgroundNode.updateColor(
-                color: .clear,
-                enableBlur: false,
-                forceKeepBlur: false,
-                transition: .immediate
-            )
             actionsEdgeInset = 16.0
             actionsSideInset = 6.0
         case .extracted:
-            self.backgroundNode.updateColor(
-                color: presentationData.theme.contextMenu.dimColor,
-                enableBlur: true,
-                forceKeepBlur: true,
-                transition: .immediate
-            )
             actionsEdgeInset = 12.0
             actionsSideInset = 6.0
         case .controller:
-            self.backgroundNode.updateColor(
-                color: presentationData.theme.contextMenu.dimColor,
-                enableBlur: true,
-                forceKeepBlur: true,
-                transition: .immediate
-            )
             actionsEdgeInset = 12.0
             actionsSideInset = -2.0
+            contentActionsSpacing += 3.0
         }
-        
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
-        self.backgroundNode.update(size: layout.size, transition: transition)
         
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
         if self.scrollNode.frame != CGRect(origin: CGPoint(), size: layout.size) {
@@ -1085,8 +1061,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             self.scroller.contentOffset = CGPoint(x: 0.0, y: defaultScrollY)
             
-            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            
             let animationInContentYDistance: CGFloat
             let currentContentScreenFrame: CGRect
             if let contentNode = itemContentNode {
@@ -1472,8 +1446,6 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 removeOnCompletion: false,
                 additive: true
             )
-            
-            self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
             
             if let reactionContextNode = self.reactionContextNode {
                 reactionContextNode.animateOut(to: currentContentScreenFrame, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)

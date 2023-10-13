@@ -24,7 +24,7 @@ private let titleFont: UIFont = Font.semibold(15.0)
 public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     private var webPage: TelegramMediaWebpage?
     
-    private let contentNode: ChatMessageAttachedContentNode
+    private var contentNode: ChatMessageAttachedContentNode
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -83,6 +83,8 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     if let webpage = webPageContent {
                         if webpage.story != nil {
                             let _ = item.controllerInteraction.openMessage(item.message, .default)
+                        } else if webpage.instantPage != nil {
+                            strongSelf.contentNode.openMedia?(.default)
                         } else {
                             item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
                         }
@@ -351,10 +353,12 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
                 
-                if webpage.displayOptions.largeMedia == false {
-                    mediaAndFlags?.1.insert(.preferMediaInline)
-                } else {
-                    mediaAndFlags?.1.remove(.preferMediaInline)
+                if let largeMedia = webpage.displayOptions.largeMedia {
+                    if largeMedia {
+                        mediaAndFlags?.1.remove(.preferMediaInline)
+                    } else {
+                        mediaAndFlags?.1.insert(.preferMediaInline)
+                    }
                 }
             } else if let adAttribute = item.message.adAttribute {
                 title = nil

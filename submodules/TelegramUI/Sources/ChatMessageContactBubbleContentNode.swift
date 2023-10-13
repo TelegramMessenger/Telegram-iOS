@@ -284,7 +284,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 return (contentWidth, { boundingWidth in
                     let baseAvatarFrame = CGRect(origin: CGPoint(x: layoutConstants.text.bubbleInsets.right, y: layoutConstants.text.bubbleInsets.top), size: avatarSize)
                     
-                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
                     let buttonSpacing: CGFloat = 4.0
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)

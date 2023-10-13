@@ -2505,7 +2505,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     return
                 }
 
-                c.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuSpeedItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
             
             items.append(.separator)
@@ -2634,7 +2634,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     c.dismiss(completion: nil)
                     return
                 }
-                c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
+                c.setItems(strongSelf.contextMenuMainItems(dismiss: dismiss) |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
             })))
 
             let sliderValuePromise = ValuePromise<Double?>(nil)

@@ -6752,6 +6752,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 info.1.dispose()
             }
             self.urlPreviewQueryState?.1.dispose()
+            self.editingUrlPreviewQueryState?.1.dispose()
             self.audioRecorderDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.videoRecorderDisposable?.dispose()
@@ -9806,7 +9807,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     })
                                 })))
                                 
-                                contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil)
+                                contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
                             }
                             return
                         } else {
@@ -9825,7 +9826,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     })
                                 })))
                                 
-                                contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil)
+                                contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
                                 
                                 return
                             } else {
@@ -18058,7 +18059,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if canDisplayContextMenu, let contextController = contextController {
-            contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil)
+            contextController.setItems(.single(ContextController.Items(content: .list(contextItems))), minHeight: nil, animated: true)
         } else {
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in

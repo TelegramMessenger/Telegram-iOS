@@ -69,6 +69,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var textSelectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>?
     
+    private var linkPreviewOptionsDisposable: Disposable?
+    private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
@@ -126,6 +129,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
 
     required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.linkPreviewOptionsDisposable?.dispose()
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -566,27 +573,40 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.pressed = nil
                             }
                             
-                            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case let .reply(info) = info {
-                                if strongSelf.textSelectionNode == nil {
-                                    strongSelf.updateIsExtractedToContextPreview(true)
-                                    if let initialQuote = info.quote, item.message.id == initialQuote.messageId, let string = strongSelf.textNode.textNode.cachedLayout?.attributedString {
-                                        let nsString = string.string as NSString
-                                        let subRange = nsString.range(of: initialQuote.text)
-                                        if subRange.location != NSNotFound {
-                                            strongSelf.beginTextSelection(range: subRange, displayMenu: false)
+                            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                                if case let .reply(info) = info {
+                                    if strongSelf.textSelectionNode == nil {
+                                        strongSelf.updateIsExtractedToContextPreview(true)
+                                        if let initialQuote = info.quote, item.message.id == initialQuote.messageId, let string = strongSelf.textNode.textNode.cachedLayout?.attributedString {
+                                            let nsString = string.string as NSString
+                                            let subRange = nsString.range(of: initialQuote.text)
+                                            if subRange.location != NSNotFound {
+                                                strongSelf.beginTextSelection(range: subRange, displayMenu: false)
+                                            }
+                                        }
+                                        
+                                        if strongSelf.textSelectionState == nil {
+                                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                                let range = textSelectionNode.getSelection()
+                                                strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: range))
+                                            } else {
+                                                strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: nil))
+                                            }
+                                        }
+                                        if let textSelectionState = strongSelf.textSelectionState {
+                                            info.selectionState.set(textSelectionState.get())
                                         }
                                     }
-                                    
-                                    if strongSelf.textSelectionState == nil {
-                                        if let textSelectionNode = strongSelf.textSelectionNode {
-                                            let range = textSelectionNode.getSelection()
-                                            strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: range))
-                                        } else {
-                                            strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: nil))
-                                        }
-                                    }
-                                    if let textSelectionState = strongSelf.textSelectionState {
-                                        info.selectionState.set(textSelectionState.get())
+                                } else if case let .link(link) = info {
+                                    if strongSelf.linkPreviewOptionsDisposable == nil {
+                                        strongSelf.linkPreviewOptionsDisposable = (link.options
+                                        |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] options in
+                                            guard let strongSelf else {
+                                                return
+                                            }
+                                            
+                                            strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                        })
                                     }
                                 }
                             }
@@ -613,6 +633,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if case .tap = gesture {
+        } else {
+            if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
+                return .none
+            }
+        }
+        
         let textNodeFrame = self.textNode.textNode.frame
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
@@ -764,7 +791,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in 0 ..< rectsSet.count {
             let rects = rectsSet[i]
             let textHighlightNode: LinkHighlightingNode
-            if self.textHighlightingNodes.count < i {
+            if i < self.textHighlightingNodes.count {
                 textHighlightNode = self.textHighlightingNodes[i]
             } else {
                 textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.textHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.textHighlightColor)
@@ -777,6 +804,39 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in (rectsSet.count ..< self.textHighlightingNodes.count).reversed() {
             self.textHighlightingNodes[i].removeFromSupernode()
             self.textHighlightingNodes.remove(at: i)
+        }
+    }
+    
+    private func updateLinkPreviewTextHighlightState(text: String?) {
+        guard let item = self.item else {
+            return
+        }
+        var rectsSet: [[CGRect]] = []
+        if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
+            let nsString = string as NSString
+            let range = nsString.range(of: text)
+            if range.location != NSNotFound {
+                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
+                    rectsSet = [rects]
+                }
+            }
+        }
+        for i in 0 ..< rectsSet.count {
+            let rects = rectsSet[i]
+            let textHighlightNode: LinkHighlightingNode
+            if i < self.linkPreviewHighlightingNodes.count {
+                textHighlightNode = self.linkPreviewHighlightingNodes[i]
+            } else {
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
+                self.linkPreviewHighlightingNodes.append(textHighlightNode)
+                self.insertSubnode(textHighlightNode, belowSubnode: self.textNode.textNode)
+            }
+            textHighlightNode.frame = self.textNode.textNode.frame
+            textHighlightNode.updateRects(rects)
+        }
+        for i in (rectsSet.count ..< self.linkPreviewHighlightingNodes.count).reversed() {
+            self.linkPreviewHighlightingNodes[i].removeFromSupernode()
+            self.linkPreviewHighlightingNodes.remove(at: i)
         }
     }
     
