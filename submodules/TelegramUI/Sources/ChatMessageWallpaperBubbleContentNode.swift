@@ -20,6 +20,7 @@ import ComponentFlow
 import AudioTranscriptionPendingIndicatorComponent
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import WallpaperPreviewMedia
 
 class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?

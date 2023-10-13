@@ -28,22 +28,23 @@ import StoryContainerScreen
 import ChatMessageDateAndStatusNode
 import ChatHistoryEntry
 import ChatMessageItemCommon
+import WallpaperPreviewMedia
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
     let cancel: () -> Void
 }
 
-enum InteractiveMediaNodeSizeCalculation {
+public enum InteractiveMediaNodeSizeCalculation {
     case constrained(CGSize)
     case unconstrained
 }
 
-enum InteractiveMediaNodeContentMode {
+public enum InteractiveMediaNodeContentMode {
     case aspectFit
     case aspectFill
     
-    var bubbleVideoDecorationContentMode: ChatBubbleVideoDecorationContentMode {
+    public var bubbleVideoDecorationContentMode: ChatBubbleVideoDecorationContentMode {
         switch self {
         case .aspectFit:
             return .aspectFit
@@ -53,32 +54,52 @@ enum InteractiveMediaNodeContentMode {
     }
 }
 
-enum InteractiveMediaNodeActivateContent {
+public enum InteractiveMediaNodeActivateContent {
     case `default`
     case stream
     case automaticPlayback
 }
 
-enum InteractiveMediaNodeAutodownloadMode {
+public enum InteractiveMediaNodeAutodownloadMode {
     case none
     case prefetch
     case full
 }
 
-enum InteractiveMediaNodePlayWithSoundMode {
+public enum InteractiveMediaNodePlayWithSoundMode {
     case single
     case loop
 }
 
-struct ChatMessageDateAndStatus {
-    var type: ChatMessageDateAndStatusType
-    var edited: Bool
-    var viewCount: Int?
-    var dateReactions: [MessageReaction]
-    var dateReactionPeers: [(MessageReaction.Reaction, EnginePeer)]
-    var dateReplies: Int
-    var isPinned: Bool
-    var dateText: String
+public struct ChatMessageDateAndStatus {
+    public var type: ChatMessageDateAndStatusType
+    public var edited: Bool
+    public var viewCount: Int?
+    public var dateReactions: [MessageReaction]
+    public var dateReactionPeers: [(MessageReaction.Reaction, EnginePeer)]
+    public var dateReplies: Int
+    public var isPinned: Bool
+    public var dateText: String
+
+    public init(
+        type: ChatMessageDateAndStatusType,
+        edited: Bool,
+        viewCount: Int?,
+        dateReactions: [MessageReaction],
+        dateReactionPeers: [(MessageReaction.Reaction, EnginePeer)],
+        dateReplies: Int,
+        isPinned: Bool,
+        dateText: String
+    ) {
+        self.type = type
+        self.edited = edited
+        self.viewCount = viewCount
+        self.dateReactions = dateReactions
+        self.dateReactionPeers = dateReactionPeers
+        self.dateReplies = dateReplies
+        self.isPinned = isPinned
+        self.dateText = dateText
+    }
 }
 
 public func roundedRectCgPath(roundRect rect: CGRect, topLeftRadius: CGFloat = 0.0, topRightRadius: CGFloat = 0.0, bottomLeftRadius: CGFloat = 0.0, bottomRightRadius: CGFloat = 0.0) -> CGPath {
@@ -348,7 +369,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     }
 }
 
-final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitionNode {
+public final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitionNode {
     private let pinchContainerNode: PinchSourceContainerNode
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
@@ -360,11 +381,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private var videoContent: NativeVideoContent?
     private var animatedStickerNode: AnimatedStickerNode?
     private var statusNode: RadialStatusNode?
-    var videoNodeDecoration: ChatBubbleVideoDecoration?
-    var decoration: UniversalVideoDecoration? {
+    public var videoNodeDecoration: ChatBubbleVideoDecoration?
+    public var decoration: UniversalVideoDecoration? {
         return self.videoNodeDecoration
     }
-    let dateAndStatusNode: ChatMessageDateAndStatusNode
+    public let dateAndStatusNode: ChatMessageDateAndStatusNode
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     
     private var extendedMediaOverlayNode: ExtendedMediaOverlayNode?
@@ -377,7 +398,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private var sizeCalculation: InteractiveMediaNodeSizeCalculation?
     private var wideLayout: Bool?
     private var automaticDownload: InteractiveMediaNodeAutodownloadMode?
-    var automaticPlayback: Bool?
+    public var automaticPlayback: Bool?
     
     private let statusDisposable = MetaDisposable()
     private let fetchControls = Atomic<FetchControls?>(value: nil)
@@ -404,8 +425,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     
     private var secretTimer: SwiftSignalKit.Timer?
     
-    var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
-    var visibility: Bool = false {
+    public var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
+    public var visibility: Bool = false {
         didSet {
             self.updateVisibility()
         }
@@ -431,11 +452,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         self.visibilityPromise.set(visibility)
     }
     
-    var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
-    var activatePinch: ((PinchSourceContainerNode) -> Void)?
-    var updateMessageReaction: ((Message, ChatControllerInteractionReaction) -> Void)?
+    public var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
+    public var activatePinch: ((PinchSourceContainerNode) -> Void)?
+    public var updateMessageReaction: ((Message, ChatControllerInteractionReaction) -> Void)?
         
-    override init() {
+    override public init() {
         self.pinchContainerNode = PinchSourceContainerNode()
 
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -541,15 +562,15 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         self.secretTimer?.invalidate()
     }
     
-    func isAvailableForGalleryTransition() -> Bool {
+    public func isAvailableForGalleryTransition() -> Bool {
         return self.automaticPlayback ?? false
     }
     
-    func isAvailableForInstantPageTransition() -> Bool {
+    public func isAvailableForInstantPageTransition() -> Bool {
         return false
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:))))
@@ -615,7 +636,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             let point = recognizer.location(in: self.imageNode.view)
             if let _ = self.attributes?.updatingMedia {
@@ -660,7 +681,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
+    public func asyncLayout() -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData,  _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> Void))) {
         let currentMessage = self.message
         let currentMedia = self.media
         let imageLayout = self.imageNode.asyncLayout()
@@ -2200,7 +2221,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode))) {
+    public static func asyncLayout(_ node: ChatMessageInteractiveMediaNode?) -> (_ context: AccountContext, _ presentationData: ChatPresentationData, _ dateTimeFormat: PresentationDateTimeFormat, _ message: Message, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ media: Media, _ dateAndStatus: ChatMessageDateAndStatus?, _ automaticDownload: InteractiveMediaNodeAutodownloadMode, _ peerType: MediaAutoDownloadPeerType, _ peerId: EnginePeer.Id?, _ sizeCalculation: InteractiveMediaNodeSizeCalculation, _ layoutConstants: ChatMessageItemLayoutConstants, _ contentMode: InteractiveMediaNodeContentMode, _ presentationContext: ChatPresentationContext) -> (CGSize, CGFloat, (CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode))) {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { context, presentationData, dateTimeFormat, message, associatedData, attributes, media, dateAndStatus, automaticDownload, peerType, peerId, sizeCalculation, layoutConstants, contentMode, presentationContext in
@@ -2232,11 +2253,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func setOverlayColor(_ color: UIColor?, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, animated: Bool) {
         self.imageNode.setOverlayColor(color, animated: animated)
     }
     
-    func isReadyForInteractivePreview() -> Bool {
+    public func isReadyForInteractivePreview() -> Bool {
         if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
             return true
         } else {
@@ -2244,7 +2265,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func updateIsHidden(_ isHidden: Bool) {
+    public func updateIsHidden(_ isHidden: Bool) {
         if isHidden && !self.internallyVisible {
             self.internallyVisible = true
             self.updateVisibility()
@@ -2278,7 +2299,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         }
     }
     
-    func transitionNode(adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         var bounds: CGRect
         if let currentImageArguments = self.currentImageArguments {
             if adjustRect {
@@ -2336,7 +2357,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         })
     }
     
-    func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
+    public func playMediaWithSound() -> (action: (Double?) -> Void, soundEnabled: Bool, isVideoMessage: Bool, isUnread: Bool, badgeNode: ASDisplayNode?)? {
         var isAnimated = false
         if let file = self.media as? TelegramMediaFile, file.isAnimated {
             isAnimated = true

@@ -15,6 +15,8 @@ import GalleryData
 import TelegramPresentationData
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import WallpaperPreviewMedia
+import ChatMessageInteractiveMediaNode
 
 private let titleFont: UIFont = Font.semibold(15.0)
 

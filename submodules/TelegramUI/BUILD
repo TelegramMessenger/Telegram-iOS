@@ -365,6 +365,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/InstantVideoRadialStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveFileNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageFileBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode",
+        "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

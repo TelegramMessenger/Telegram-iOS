@@ -13,6 +13,7 @@ import ChatControllerInteraction
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageInteractiveMediaNode
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {

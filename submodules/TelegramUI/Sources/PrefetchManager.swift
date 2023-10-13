@@ -7,6 +7,7 @@ import PhotoResources
 import StickerResources
 import Emoji
 import UniversalMediaPlayer
+import ChatMessageInteractiveMediaNode
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()

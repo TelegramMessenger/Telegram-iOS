@@ -3,7 +3,7 @@ import UIKit
 import Postbox
 import TelegramCore
 
-enum WallpaperPreviewMediaContent: Equatable {
+public enum WallpaperPreviewMediaContent: Equatable {
     case file(file: TelegramMediaFile, colors: [UInt32], rotation: Int32?, intensity: Int32?, Bool, Bool)
     case image(representations: [TelegramMediaImageRepresentation])
     case color(UIColor)
@@ -11,23 +11,23 @@ enum WallpaperPreviewMediaContent: Equatable {
     case themeSettings(TelegramThemeSettings)
 }
 
-final class WallpaperPreviewMedia: Media {
-    var id: MediaId? {
+public final class WallpaperPreviewMedia: Media {
+    public var id: MediaId? {
         return nil
     }
-    let peerIds: [PeerId] = []
+    public let peerIds: [PeerId] = []
     
-    let content: WallpaperPreviewMediaContent
+    public let content: WallpaperPreviewMediaContent
     
-    init(content: WallpaperPreviewMediaContent) {
+    public init(content: WallpaperPreviewMediaContent) {
         self.content = content
     }
     
-    init(decoder: PostboxDecoder) {
+    public init(decoder: PostboxDecoder) {
         self.content = .color(.clear)
     }
     
-    func encode(_ encoder: PostboxEncoder) {
+    public func encode(_ encoder: PostboxEncoder) {
     }
     
     public func isEqual(to other: Media) -> Bool {
@@ -47,7 +47,13 @@ final class WallpaperPreviewMedia: Media {
     }
 }
 
-extension WallpaperPreviewMedia {
+private extension UIColor {
+    convenience init(rgb: UInt32) {
+        self.init(red: CGFloat((rgb >> 16) & 0xff) / 255.0, green: CGFloat((rgb >> 8) & 0xff) / 255.0, blue: CGFloat(rgb & 0xff) / 255.0, alpha: 1.0)
+    }
+}
+
+public extension WallpaperPreviewMedia {
     convenience init?(wallpaper: TelegramWallpaper) {
         switch wallpaper {
         case let .color(color):

@@ -25,6 +25,8 @@ import ChatMessageItemCommon
 import ChatMessageBubbleContentNode
 import ChatMessageInteractiveInstantVideoNode
 import ChatMessageInteractiveFileNode
+import ChatMessageInteractiveMediaNode
+import WallpaperPreviewMedia
 
 private let buttonFont = Font.semibold(13.0)
 

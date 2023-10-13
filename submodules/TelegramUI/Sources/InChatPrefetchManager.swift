@@ -6,6 +6,7 @@ import TelegramUIPreferences
 import AccountContext
 import PhotoResources
 import UniversalMediaPlayer
+import ChatMessageInteractiveMediaNode
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
