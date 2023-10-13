@@ -55,7 +55,7 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             if let cachedPage = cachedPage {
                 instantPage = InstantPage(apiPage: cachedPage)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, story: story, attributes: webpageAttributes, instantPage: instantPage)))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, story: story, attributes: webpageAttributes, instantPage: instantPage, displayOptions: .default)))
         case .webPageEmpty:
             return nil
     }

@@ -82,8 +82,18 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
+    override public func didLoad() {
+        super.didLoad()
+        
+        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+    }
+    
     override func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
-        if self.theme !== theme || self.strings !== strings {
+        self.updateThemeAndStrings(theme: theme, strings: strings, force: false)
+    }
+    
+    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, force: Bool) {
+        if self.theme !== theme || self.strings !== strings || force {
             self.strings = strings
            
             if self.theme !== theme {
@@ -207,6 +217,23 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     @objc func closePressed() {
         if let dismiss = self.dismiss {
             dismiss()
+        }
+    }
+    
+    private var previousTapTimestamp: Double?
+    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            let timestamp = CFAbsoluteTimeGetCurrent()
+            if let previousTapTimestamp = self.previousTapTimestamp, previousTapTimestamp + 1.0 > timestamp {
+                return
+            }
+            self.previousTapTimestamp = CFAbsoluteTimeGetCurrent()
+            self.interfaceInteraction?.presentLinkOptions(self)
+            Queue.mainQueue().after(1.5) {
+                self.updateThemeAndStrings(theme: self.theme, strings: self.strings, force: true)
+            }
+            
+            //let _ = ApplicationSpecificNotice.incrementChatReplyOptionsTip(accountManager: self.context.sharedContext.accountManager, count: 3).start()
         }
     }
 }

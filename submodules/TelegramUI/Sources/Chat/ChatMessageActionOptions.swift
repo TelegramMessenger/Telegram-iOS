@@ -12,10 +12,67 @@ import ContextUI
 import ChatInterfaceState
 import PresentationDataUtils
 import ChatMessageTextBubbleContentNode
+import TextFormat
 
-func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
-    guard let peerId = selfController.chatLocation.peerId else {
+private enum OptionsId: Hashable {
+    case reply
+    case forward
+    case link
+}
+
+private func presentChatInputOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, initialId: OptionsId) {
+    var getContextController: (() -> ContextController?)?
+    
+    var sources: [ContextController.Source] = []
+    
+    let replySelectionState = Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: nil))
+    
+    if let source = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+        return getContextController?()
+    }) {
+        sources.append(source)
+    }
+    if let source = chatReplyOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+        return getContextController?()
+    }, selectionState: replySelectionState) {
+        sources.append(source)
+    }
+    
+    if let source = chatLinkOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+        return getContextController?()
+    }, replySelectionState: replySelectionState) {
+        sources.append(source)
+    }
+    
+    if sources.isEmpty {
         return
+    }
+    
+    selfController.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+
+    selfController.canReadHistory.set(false)
+    
+    let contextController = ContextController(
+        presentationData: selfController.presentationData,
+        configuration: ContextController.Configuration(
+            sources: sources,
+            initialId: AnyHashable(initialId)
+        )
+    )
+    contextController.dismissed = { [weak selfController] in
+        selfController?.canReadHistory.set(true)
+    }
+    
+    getContextController = { [weak contextController] in
+        return contextController
+    }
+    
+    selfController.presentInGlobalOverlay(contextController)
+}
+
+private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?) -> ContextController.Source? {
+    guard let peerId = selfController.chatLocation.peerId else {
+        return nil
     }
     let presentationData = selfController.presentationData
     
@@ -25,11 +82,11 @@ func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: A
         if peerId.namespace == Namespaces.Peer.SecretChat {
             hideNames = true
         }
-        return ChatControllerSubject.ForwardOptions(hideNames: hideNames, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false, replyOptions: nil)
+        return ChatControllerSubject.ForwardOptions(hideNames: hideNames, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
     }
     |> distinctUntilChanged
     
-    let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: ChatControllerSubject.MessageOptionsInfo(kind: .forward), options: forwardOptions), botStart: nil, mode: .standard(previewing: true))
+    let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .forward(ChatControllerSubject.MessageOptionsInfo.Forward(options: forwardOptions))), botStart: nil, mode: .standard(previewing: true))
     chatController.canReadHistory.set(false)
     
     let messageIds = selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
@@ -201,15 +258,49 @@ func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: A
         return items
     }
     
+    //TODO:localize
+    return ContextController.Source(
+        id: AnyHashable(OptionsId.forward),
+        title: "Forward",
+        source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
+        items: items |> map { ContextController.Items(content: .list($0)) }
+    )
+}
+
+func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
+    if "".isEmpty {
+        presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .forward)
+        return
+    }
+    
+    var getContextController: (() -> ContextController?)?
+    
+    guard let source = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+        return getContextController?()
+    }) else {
+        return
+    }
     selfController.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
 
     selfController.canReadHistory.set(false)
     
-    let contextController = ContextController(presentationData: selfController.presentationData, source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items |> map { ContextController.Items(content: .list($0)) })
+    let contextController = ContextController(
+        presentationData: selfController.presentationData,
+        configuration: ContextController.Configuration(
+            sources: [source],
+            initialId: source.id
+        )
+    )
     contextController.dismissed = { [weak selfController] in
         selfController?.canReadHistory.set(true)
     }
-    contextController.dismissedForCancel = { [weak selfController, weak chatController] in
+    
+    getContextController = { [weak contextController] in
+        return contextController
+    }
+    
+    //TODO:loc
+    /*contextController.dismissedForCancel = { [weak selfController, weak chatController] in
         guard let selfController else {
             return
         }
@@ -218,8 +309,7 @@ func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: A
             forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
             selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
         }
-    }
-    contextController.immediateItemsTransitionAnimation = true
+    }*/
     selfController.presentInGlobalOverlay(contextController)
 }
 
@@ -228,12 +318,9 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         return .complete()
     }
     
-    let messageIds: [EngineMessage.Id] = [replySubject.messageId]
-    let messagesCount: Signal<Int, NoError> = .single(1)
-    
-    let items = combineLatest(selfController.context.account.postbox.messagesAtIds(messageIds), messagesCount)
+    let items = selfController.context.account.postbox.messagesAtIds([replySubject.messageId])
     |> deliverOnMainQueue
-    |> map { [weak selfController, weak chatController] messages, messagesCount -> [ContextMenuItem] in
+    |> map { [weak selfController, weak chatController] messages -> [ContextMenuItem] in
         guard let selfController, let chatController else {
             return []
         }
@@ -297,12 +384,8 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                             
                             subItems.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Common_Back, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
-                            }, iconPosition: .left, action: { [weak selfController, weak chatController] c, _ in
-                                guard let selfController, let chatController else {
-                                    return
-                                }
-                                c.setItems(generateChatReplyOptionItems(selfController: selfController, chatController: chatController), minHeight: nil, previousActionsTransition: .slide(forward: false))
-                                //c.popItems()
+                            }, iconPosition: .left, action: { c, _ in
+                                c.popItems()
                             })))
                             subItems.append(.separator)
                             
@@ -322,11 +405,12 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                                 f(.default)
                             })))
                             
-                            //c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
-                            
-                            let minHeight = c.getActionsMinHeight()
-                            c.immediateItemsTransitionAnimation = false
-                            c.setItems(.single(ContextController.Items(content: .list(subItems))), minHeight: minHeight, previousActionsTransition: .slide(forward: true))
+                            c.pushItems(items: .single(ContextController.Items(content: .list(subItems), dismissed: { [weak contentNode] in
+                                guard let contentNode else {
+                                    return
+                                }
+                                contentNode.cancelTextSelection()
+                            })))
                             
                             break
                         }
@@ -371,45 +455,29 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
     return items |> map { ContextController.Items(content: .list($0), tip: tip) }
 }
 
-func presentChatReplyOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
+private func chatReplyOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?, selectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>) -> ContextController.Source? {
     guard let peerId = selfController.chatLocation.peerId else {
-        return
+        return nil
     }
     guard let replySubject = selfController.presentationInterfaceState.interfaceState.replyMessageSubject else {
-        return
+        return nil
     }
     
-    let replyOptionsSubject = Promise<ChatControllerSubject.ForwardOptions>()
-    replyOptionsSubject.set(.single(ChatControllerSubject.ForwardOptions(hideNames: false, hideCaptions: false, replyOptions: ChatControllerSubject.ReplyOptions(hasQuote: replySubject.quote != nil))))
-    
-    //let presentationData = selfController.presentationData
-    
-    var replyQuote: ChatControllerSubject.MessageOptionsInfo.ReplyQuote?
+    var replyQuote: ChatControllerSubject.MessageOptionsInfo.Quote?
     if let quote = replySubject.quote {
-        replyQuote = ChatControllerSubject.MessageOptionsInfo.ReplyQuote(messageId: replySubject.messageId, text: quote.text)
+        replyQuote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: replySubject.messageId, text: quote.text)
     }
-    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [replySubject.messageId.peerId], ids: [replySubject.messageId], info: ChatControllerSubject.MessageOptionsInfo(kind: .reply(initialQuote: replyQuote)), options: replyOptionsSubject.get()), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
-        return
+    selectionState.set(.single(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: replyQuote)))
+    
+    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [replySubject.messageId.peerId], ids: [replySubject.messageId], info: .reply(ChatControllerSubject.MessageOptionsInfo.Reply(quote: replyQuote, selectionState: selectionState))), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
+        return nil
     }
     chatController.canReadHistory.set(false)
     
     let items = generateChatReplyOptionItems(selfController: selfController, chatController: chatController)
     
-    selfController.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
-
-    selfController.canReadHistory.set(false)
-    
-    let contextController = ContextController(presentationData: selfController.presentationData, source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)), items: items)
-    contextController.dismissed = { [weak selfController] in
-        selfController?.canReadHistory.set(true)
-    }
-    contextController.dismissedForCancel = {
-    }
-    contextController.immediateItemsTransitionAnimation = true
-    selfController.presentInGlobalOverlay(contextController)
-    
-    chatController.performTextSelectionAction = { [weak selfController, weak contextController] message, canCopy, text, action in
-        guard let selfController, let contextController else {
+    chatController.performTextSelectionAction = { [weak selfController] message, canCopy, text, action in
+        guard let selfController, let contextController = getContextController() else {
             return
         }
         
@@ -417,6 +485,18 @@ func presentChatReplyOptions(selfController: ChatControllerImpl, sourceNode: ASD
         
         selfController.controllerInteraction?.performTextSelectionAction(message, canCopy, text, action)
     }
+    
+    //TODO:localize
+    return ContextController.Source(
+        id: AnyHashable(OptionsId.reply),
+        title: "Reply",
+        source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
+        items: items
+    )
+}
+
+func presentChatReplyOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
+    presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .reply)
 }
 
 func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubject: ChatInterfaceState.ReplyMessageSubject) {
@@ -536,4 +616,206 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
         selfController.chatDisplayNode.dismissInput()
         selfController.effectiveNavigationController?.pushViewController(controller)
     })
+}
+
+private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?, replySelectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>) -> ContextController.Source? {
+    guard let peerId = selfController.chatLocation.peerId else {
+        return nil
+    }
+    guard let initialUrlPreview = selfController.presentationInterfaceState.urlPreview else {
+        return nil
+    }
+    
+    let linkOptions = combineLatest(queue: .mainQueue(),
+        selfController.presentationInterfaceStatePromise.get(),
+        replySelectionState.get()
+    )
+    |> map { state, replySelectionState -> ChatControllerSubject.LinkOptions in
+        let urlPreview = state.urlPreview ?? initialUrlPreview
+        
+        var webpageOptions: TelegramMediaWebpageDisplayOptions = .default
+        
+        if let (_, webpage) = state.urlPreview, case let .Loaded(content) = webpage.content {
+            webpageOptions = content.displayOptions
+        }
+        
+        return ChatControllerSubject.LinkOptions(
+            messageText: state.interfaceState.composeInputState.inputText.string,
+            messageEntities: generateChatInputTextEntities(state.interfaceState.composeInputState.inputText, generateLinks: true),
+            replyMessageId: state.interfaceState.replyMessageSubject?.messageId,
+            replyQuote: replySelectionState.quote?.text,
+            url: urlPreview.0,
+            webpage: urlPreview.1,
+            linkBelowText: webpageOptions.position != .aboveText,
+            largeMedia: webpageOptions.largeMedia != false
+        )
+    }
+    |> distinctUntilChanged
+    
+    guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [peerId], ids: selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .link(ChatControllerSubject.MessageOptionsInfo.Link(options: linkOptions))), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
+        return nil
+    }
+    chatController.canReadHistory.set(false)
+    
+    let items = linkOptions
+    |> deliverOnMainQueue
+    |> map { [weak selfController] linkOptions -> [ContextMenuItem] in
+        guard let selfController else {
+            return []
+        }
+        var items: [ContextMenuItem] = []
+        
+        if "".isEmpty {
+            //TODO:localize
+            
+            items.append(.action(ContextMenuActionItem(text: "Above the Message", icon: { theme in
+                if linkOptions.linkBelowText {
+                    return nil
+                } else {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }
+            }, action: { [weak selfController] _, f in
+                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    guard var urlPreview = state.urlPreview else {
+                        return state
+                    }
+                    if case let .Loaded(content) = urlPreview.1.content {
+                        var displayOptions = content.displayOptions
+                        displayOptions.position = .aboveText
+                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                    }
+                    return state.updatedUrlPreview(urlPreview)
+                })
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Below the Message", icon: { theme in
+                if !linkOptions.linkBelowText {
+                    return nil
+                } else {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }
+            }, action: { [weak selfController] _, f in
+                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    guard var urlPreview = state.urlPreview else {
+                        return state
+                    }
+                    if case let .Loaded(content) = urlPreview.1.content {
+                        var displayOptions = content.displayOptions
+                        displayOptions.position = .belowText
+                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                    }
+                    return state.updatedUrlPreview(urlPreview)
+                })
+            })))
+        }
+        
+        if "".isEmpty {
+            if !items.isEmpty {
+                items.append(.separator)
+            }
+            
+            //TODO:localize
+            
+            items.append(.action(ContextMenuActionItem(text: "Smaller Media", icon: { theme in
+                if linkOptions.largeMedia {
+                    return nil
+                } else {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }
+            }, action: { [weak selfController] _, f in
+                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    guard var urlPreview = state.urlPreview else {
+                        return state
+                    }
+                    if case let .Loaded(content) = urlPreview.1.content {
+                        var displayOptions = content.displayOptions
+                        displayOptions.largeMedia = false
+                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                    }
+                    return state.updatedUrlPreview(urlPreview)
+                })
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: "Larger Media", icon: { theme in
+                if !linkOptions.largeMedia {
+                    return nil
+                } else {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                }
+            }, action: { [weak selfController] _, f in
+                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
+                    guard var urlPreview = state.urlPreview else {
+                        return state
+                    }
+                    if case let .Loaded(content) = urlPreview.1.content {
+                        var displayOptions = content.displayOptions
+                        displayOptions.largeMedia = true
+                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                    }
+                    return state.updatedUrlPreview(urlPreview)
+                })
+            })))
+        }
+        
+        if !items.isEmpty {
+            items.append(.separator)
+        }
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Remove Link Preview", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController, weak chatController] c, f in
+            guard let selfController else {
+                return
+            }
+            //selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
+            //selfController.controllerInteraction?.sendCurrentMessage(false)
+            
+            let _ = selfController
+            let _ = chatController
+            
+            f(.default)
+        })))
+        
+        return items
+    }
+    
+    chatController.performOpenURL = { [weak selfController] message, url in
+        guard let selfController else {
+            return
+        }
+        
+        //TODO:
+        //func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+        if let (updatedUrlPreviewUrl, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewUrl {
+            let _ = (signal
+            |> deliverOnMainQueue).start(next: { [weak selfController] result in
+                guard let selfController else {
+                    return
+                }
+                
+                selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                    if let webpage = result(nil), var urlPreview = state.urlPreview {
+                        if case let .Loaded(content) = urlPreview.1.content, case let .Loaded(newContent) = webpage.content {
+                            urlPreview = (updatedUrlPreviewUrl, TelegramMediaWebpage(webpageId: webpage.webpageId, content: .Loaded(newContent.withDisplayOptions(content.displayOptions))))
+                        }
+                        
+                        return state.updatedUrlPreview(urlPreview)
+                    } else {
+                        return state
+                    }
+                })
+            })
+        }
+    }
+    
+    //TODO:localize
+    return ContextController.Source(
+        id: AnyHashable(OptionsId.link),
+        title: "Link",
+        source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
+        items: items |> map { ContextController.Items(content: .list($0)) }
+    )
+}
+
+func presentChatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
+    presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .link)
 }

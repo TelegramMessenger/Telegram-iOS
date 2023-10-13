@@ -273,7 +273,11 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                         }
                     }
                     
-                    result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    if content.displayOptions.position == .aboveText {
+                        result.insert((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)), at: 0)
+                    } else {
+                        result.append((message, ChatMessageWebpageBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                    }
                     needReactions = false
                 }
                 break inner
@@ -975,6 +979,27 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
+                if let item = strongSelf.item, let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                    if case .link = info {
+                        for contentNode in strongSelf.contentNodes {
+                            let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
+                            let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
+                            switch tapAction {
+                            case .none:
+                                break
+                            case .ignore:
+                                return .fail
+                            case .url:
+                                return .waitForSingleTap
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    
+                    return .fail
+                }
+                
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
@@ -1125,7 +1150,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.view.addGestureRecognizer(replyRecognizer)
         
         if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
-            self.tapRecognizer?.isEnabled = false
+            //self.tapRecognizer?.isEnabled = false
             self.replyRecognizer?.isEnabled = false
         }
     }
@@ -1239,7 +1264,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         do {
             let peerId = chatLocationPeerId
             
-            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 displayAuthorInfo = false
             } else if item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 if let forwardInfo = item.content.firstMessage.forwardInfo {
@@ -1913,7 +1938,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 let dateFormat: MessageTimestampStatusFormat
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                     dateFormat = .minimal
                 } else {
                     dateFormat = .regular
@@ -2212,6 +2237,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 removedContentNodeIndices = [i]
             } else {
                 removedContentNodeIndices!.append(i)
+            }
+        }
+        
+        var updatedContentNodeOrder = false
+        if currentContentClassesPropertiesAndLayouts.count == contentNodeMessagesAndClasses.count {
+            for i in 0 ..< currentContentClassesPropertiesAndLayouts.count {
+                let currentClass: AnyClass = currentContentClassesPropertiesAndLayouts[i].1
+                let contentItem = contentNodeMessagesAndClasses[i] as (message: Message, type: AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)
+                if currentClass != contentItem.type {
+                    updatedContentNodeOrder = true
+                    break
+                }
             }
         }
         
@@ -2617,6 +2654,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 replyInfoSizeApply: replyInfoSizeApply,
                 replyInfoOriginY: replyInfoOriginY,
                 removedContentNodeIndices: removedContentNodeIndices,
+                updatedContentNodeOrder: updatedContentNodeOrder,
                 addedContentNodes: addedContentNodes,
                 contentNodeMessagesAndClasses: contentNodeMessagesAndClasses,
                 contentNodeFramesPropertiesAndApply: contentNodeFramesPropertiesAndApply,
@@ -2667,6 +2705,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         replyInfoSizeApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode?),
         replyInfoOriginY: CGFloat,
         removedContentNodeIndices: [Int]?,
+        updatedContentNodeOrder: Bool,
         addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?,
         contentNodeMessagesAndClasses: [(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)],
         contentNodeFramesPropertiesAndApply: [(CGRect, ChatMessageBubbleContentProperties, Bool, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)],
@@ -3169,7 +3208,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.contentContainersWrapperNode.view.mask = nil
         }
         
-        if removedContentNodeIndices?.count ?? 0 != 0 || addedContentNodes?.count ?? 0 != 0 {
+        if removedContentNodeIndices?.count ?? 0 != 0 || addedContentNodes?.count ?? 0 != 0 || updatedContentNodeOrder {
             var updatedContentNodes = strongSelf.contentNodes
             
             if let removedContentNodeIndices = removedContentNodeIndices {
@@ -3536,7 +3575,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
         
         if let subject = item.associatedData.subject, case .messageOptions = subject {
-            strongSelf.tapRecognizer?.isEnabled = false
+            //strongSelf.tapRecognizer?.isEnabled = false
             strongSelf.replyRecognizer?.isEnabled = false
             strongSelf.mainContainerNode.isGestureEnabled = false
             for contentContainer in strongSelf.contentContainers {

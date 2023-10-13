@@ -44,6 +44,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     var tip: ContextController.Tip? { get }
     var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
     var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
+    var dismissed: (() -> Void)? { get }
 }
 
 protocol ContextControllerActionsListItemNode: ASDisplayNode {
@@ -836,17 +837,20 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
     let tipSignal: Signal<ContextController.Tip?, NoError>?
+    let dismissed: (() -> Void)?
     
     init(
         items: [ContextMenuItem],
         reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?,
-        tipSignal: Signal<ContextController.Tip?, NoError>?
+        tipSignal: Signal<ContextController.Tip?, NoError>?,
+        dismissed: (() -> Void)?
     ) {
         self.items = items
         self.reactionItems = reactionItems
         self.tip = tip
         self.tipSignal = tipSignal
+        self.dismissed = dismissed
     }
     
     func node(
@@ -928,17 +932,20 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
     let tipSignal: Signal<ContextController.Tip?, NoError>?
+    let dismissed: (() -> Void)?
     
     init(
         content: ContextControllerItemsContent,
         reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?,
-        tipSignal: Signal<ContextController.Tip?, NoError>?
+        tipSignal: Signal<ContextController.Tip?, NoError>?,
+        dismissed: (() -> Void)?
     ) {
         self.content = content
         self.reactionItems = reactionItems
         self.tip = tip
         self.tipSignal = tipSignal
+        self.dismissed = dismissed
     }
     
     func node(
@@ -963,11 +970,11 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> [C
     }
     switch items.content {
     case let .list(listItems):
-        return [ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
+        return [ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     case let .twoLists(listItems1, listItems2):
-        return [ContextControllerActionsListStackItem(items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil), ContextControllerActionsListStackItem(items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil)]
+        return [ContextControllerActionsListStackItem(items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: nil)]
     case let .custom(customContent):
-        return [ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)]
+        return [ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     }
 }
 
@@ -1083,6 +1090,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let tipSignal: Signal<ContextController.Tip?, NoError>?
         var tipNode: InnerTextSelectionTipContainerNode?
         let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
+        let itemDismissed: (() -> Void)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
         
@@ -1097,6 +1105,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: ContextController.Tip?,
             tipSignal: Signal<ContextController.Tip?, NoError>?,
             reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+            itemDismissed: (() -> Void)?,
             positionLock: CGFloat?
         ) {
             self.getController = getController
@@ -1113,6 +1122,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.dimNode.alpha = 0.0
             
             self.reactionItems = reactionItems
+            self.itemDismissed = itemDismissed
             self.positionLock = positionLock
             
             self.tip = tip
@@ -1339,6 +1349,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             tip: item.tip,
             tipSignal: item.tipSignal,
             reactionItems: item.reactionItems,
+            itemDismissed: item.dismissed,
             positionLock: positionLock
         )
         self.itemContainers.append(itemContainer)
@@ -1365,6 +1376,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             let itemContainer = self.itemContainers[self.itemContainers.count - 1]
             self.itemContainers.remove(at: self.itemContainers.count - 1)
             self.dismissingItemContainers.append((itemContainer, true))
+            
+            itemContainer.itemDismissed?()
         }
         
         self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1

@@ -347,6 +347,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             break
                     }
                 }
+                
+                if webpage.displayOptions.largeMedia == false {
+                    mediaAndFlags?.1.insert(.preferMediaInline)
+                } else {
+                    mediaAndFlags?.1.remove(.preferMediaInline)
+                }
             } else if let adAttribute = item.message.adAttribute {
                 title = nil
                 subtitle = nil

@@ -144,7 +144,7 @@ private func commitEntity(_ utf16: String.UTF16View, _ type: CurrentEntityType, 
     }
 }
 
-public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimatedEmojisInText: Int? = nil) -> [MessageTextEntity] {
+public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimatedEmojisInText: Int? = nil, generateLinks: Bool = false) -> [MessageTextEntity] {
     var entities: [MessageTextEntity] = []
 
     text.enumerateAttributes(in: NSRange(location: 0, length: text.length), options: [], using: { attributes, range, _ in
@@ -174,6 +174,13 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
             }
         }
     })
+    
+    for entity in generateTextEntities(text.string, enabledTypes: .allUrl) {
+        if case .Url = entity.type {
+            entities.append(entity)
+        }
+    }
+    
     return entities
 }
 

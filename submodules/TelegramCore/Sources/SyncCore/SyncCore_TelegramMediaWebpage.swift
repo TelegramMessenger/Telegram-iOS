@@ -69,6 +69,34 @@ public final class TelegraMediaWebpageThemeAttribute: PostboxCoding, Equatable {
     }
 }
 
+public struct TelegramMediaWebpageDisplayOptions: Codable, Equatable {
+    public enum CodingKeys: String, CodingKey {
+        case position = "p"
+        case largeMedia = "lm"
+    }
+    
+    public enum Position: Int32, Codable {
+        case aboveText = 0
+        case belowText = 1
+    }
+    
+    public var position: Position?
+    public var largeMedia: Bool?
+    
+    public static let `default` = TelegramMediaWebpageDisplayOptions(
+        position: nil,
+        largeMedia: nil
+    )
+    
+    public init(
+        position: Position?,
+        largeMedia: Bool?
+    ) {
+        self.position = position
+        self.largeMedia = largeMedia
+    }
+}
+
 public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let url: String
     public let displayUrl: String
@@ -89,7 +117,28 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     public let attributes: [TelegramMediaWebpageAttribute]
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: PixelDimensions?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, story: TelegramMediaStory?, attributes: [TelegramMediaWebpageAttribute], instantPage: InstantPage?) {
+    public let displayOptions: TelegramMediaWebpageDisplayOptions
+    
+    public init(
+        url: String,
+        displayUrl: String,
+        hash: Int32,
+        type: String?,
+        websiteName: String?,
+        title: String?,
+        text: String?,
+        embedUrl: String?,
+        embedType: String?,
+        embedSize: PixelDimensions?,
+        duration: Int?,
+        author: String?,
+        image: TelegramMediaImage?,
+        file: TelegramMediaFile?,
+        story: TelegramMediaStory?,
+        attributes: [TelegramMediaWebpageAttribute],
+        instantPage: InstantPage?,
+        displayOptions: TelegramMediaWebpageDisplayOptions
+    ) {
         self.url = url
         self.displayUrl = displayUrl
         self.hash = hash
@@ -107,6 +156,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.story = story
         self.attributes = attributes
         self.instantPage = instantPage
+        self.displayOptions = displayOptions
     }
     
     public init(decoder: PostboxDecoder) {
@@ -163,6 +213,8 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             self.instantPage = nil
         }
+        
+        self.displayOptions = decoder.decodeCodable(TelegramMediaWebpageDisplayOptions.self, forKey: "do") ?? TelegramMediaWebpageDisplayOptions.default
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -239,6 +291,31 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "ip")
         }
+        
+        encoder.encodeCodable(self.displayOptions, forKey: "do")
+    }
+    
+    public func withDisplayOptions(_ displayOptions: TelegramMediaWebpageDisplayOptions) -> TelegramMediaWebpageLoadedContent {
+        return TelegramMediaWebpageLoadedContent(
+            url: self.url,
+            displayUrl: self.displayUrl,
+            hash: self.hash,
+            type: self.type,
+            websiteName: self.websiteName,
+            title: self.title,
+            text: self.text,
+            embedUrl: self.embedUrl,
+            embedType: self.embedType,
+            embedSize: self.embedSize,
+            duration: self.duration,
+            author: self.author,
+            image: self.image,
+            file: self.file,
+            story: self.story,
+            attributes: self.attributes,
+            instantPage: self.instantPage,
+            displayOptions: displayOptions
+        )
     }
 }
 
@@ -293,6 +370,10 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
     }
     
     if lhs.instantPage != rhs.instantPage {
+        return false
+    }
+    
+    if lhs.displayOptions != rhs.displayOptions {
         return false
     }
     

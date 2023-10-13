@@ -311,6 +311,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
+        }, presentLinkOptions: { _ in
         }, shareSelectedMessages: {
             shareMessages()
         }, updateTextInputStateAndMode: { _ in

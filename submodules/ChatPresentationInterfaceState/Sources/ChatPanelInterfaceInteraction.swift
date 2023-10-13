@@ -81,6 +81,7 @@ public final class ChatPanelInterfaceInteraction {
     public let updateForwardOptionsState: ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void
     public let presentForwardOptions: (ASDisplayNode) -> Void
     public let presentReplyOptions: (ASDisplayNode) -> Void
+    public let presentLinkOptions: (ASDisplayNode) -> Void
     public let shareSelectedMessages: () -> Void
     public let updateTextInputStateAndMode: (@escaping (ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void
     public let updateInputModeAndDismissedButtonKeyboardMessageId: ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void
@@ -186,6 +187,7 @@ public final class ChatPanelInterfaceInteraction {
         updateForwardOptionsState: @escaping ((ChatInterfaceForwardOptionsState) -> ChatInterfaceForwardOptionsState) -> Void,
         presentForwardOptions: @escaping (ASDisplayNode) -> Void,
         presentReplyOptions: @escaping (ASDisplayNode) -> Void,
+        presentLinkOptions: @escaping (ASDisplayNode) -> Void,
         shareSelectedMessages: @escaping () -> Void,
         updateTextInputStateAndMode: @escaping ((ChatTextInputState, ChatInputMode) -> (ChatTextInputState, ChatInputMode)) -> Void,
         updateInputModeAndDismissedButtonKeyboardMessageId: @escaping ((ChatPresentationInterfaceState) -> (ChatInputMode, MessageId?)) -> Void,
@@ -290,6 +292,7 @@ public final class ChatPanelInterfaceInteraction {
         self.updateForwardOptionsState = updateForwardOptionsState
         self.presentForwardOptions = presentForwardOptions
         self.presentReplyOptions = presentReplyOptions
+        self.presentLinkOptions = presentLinkOptions
         self.shareSelectedMessages = shareSelectedMessages
         self.updateTextInputStateAndMode = updateTextInputStateAndMode
         self.updateInputModeAndDismissedButtonKeyboardMessageId = updateInputModeAndDismissedButtonKeyboardMessageId
@@ -402,6 +405,7 @@ public final class ChatPanelInterfaceInteraction {
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
+        }, presentLinkOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: updateTextInputStateAndMode, updateInputModeAndDismissedButtonKeyboardMessageId: updateInputModeAndDismissedButtonKeyboardMessageId, openStickers: {
         }, editMessage: {

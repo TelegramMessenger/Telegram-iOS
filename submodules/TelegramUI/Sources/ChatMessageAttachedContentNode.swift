@@ -271,7 +271,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
 }
 
 final class ChatMessageAttachedContentNode: ASDisplayNode {
-    private let lineNode: ASImageNode
+    private var backgroundView: UIImageView?
     private let topTitleNode: TextNode
     private let textNode: TextNodeWithEntities
     private let inlineImageNode: TransformImageNode
@@ -313,11 +313,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     }
     
     override init() {
-        self.lineNode = ASImageNode()
-        self.lineNode.isLayerBacked = true
-        self.lineNode.displaysAsynchronously = false
-        self.lineNode.displayWithoutProcessing = true
-        
         self.topTitleNode = TextNode()
         self.topTitleNode.isUserInteractionEnabled = false
         self.topTitleNode.displaysAsynchronously = false
@@ -339,7 +334,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.lineNode)
         self.addSubnode(self.topTitleNode)
         self.addSubnode(self.textNode.textNode)
         
@@ -350,6 +344,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         let topTitleAsyncLayout = TextNode.asyncLayout(self.topTitleNode)
         let textAsyncLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
+        let currentMediaIsInline = self.inlineImageNode.supernode != nil
         let imageLayout = self.inlineImageNode.asyncLayout()
         let statusLayout = self.statusNode.asyncLayout()
         let contentImageLayout = ChatMessageInteractiveMediaNode.asyncLayout(self.contentImageNode)
@@ -378,13 +373,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             let textBlockQuoteFont = Font.regular(fontSize)
             
             var incoming = message.effectivelyIncoming(context.account.peerId)
-            if let subject = associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+            if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 incoming = false
             }
             
             var horizontalInsets = UIEdgeInsets(top: 0.0, left: 10.0, bottom: 0.0, right: 10.0)
             if displayLine {
                 horizontalInsets.left += 12.0
+                horizontalInsets.right += 12.0
             }
             
             var titleBeforeMedia = false
@@ -698,7 +694,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     } else if let dimensions = largestImageRepresentation(image.representations)?.dimensions {
                         inlineImageDimensions = dimensions.cgSize
                         
-                        if image != currentImage {
+                        if image != currentImage || !currentMediaIsInline {
                             updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
                         }
                     }
@@ -742,10 +738,15 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             return (initialWidth, { constrainedSize, position in
                 var insets = UIEdgeInsets(top: 0.0, left: horizontalInsets.left, bottom: 5.0, right: horizontalInsets.right)
                 var lineInsets = insets
+                
+                //insets.top += 4.0
+                //insets.bottom += 4.0
+                
                 switch position {
                     case .linear(.None, _):
-                        insets.top += 8.0
-                        lineInsets.top += 8.0 + 8.0
+                        insets.top += 10.0
+                        insets.bottom += 8.0
+                        lineInsets.top += 10.0 + 8.0
                     default:
                         break
                 }
@@ -798,7 +799,38 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 textFrame = textFrame.offsetBy(dx: insets.left, dy: insets.top)
                 
-                let lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
+                let mainColor: UIColor
+                if !incoming {
+                    mainColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                } else {
+                    var authorNameColor: UIColor?
+                    let author = message.author
+                    if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
+                        authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
+                        if let rawAuthorNameColor = authorNameColor {
+                            var dimColors = false
+                            switch presentationData.theme.theme.name {
+                                case .builtin(.nightAccent), .builtin(.night):
+                                    dimColors = true
+                                default:
+                                    break
+                            }
+                            if dimColors {
+                                var hue: CGFloat = 0.0
+                                var saturation: CGFloat = 0.0
+                                var brightness: CGFloat = 0.0
+                                rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+                                authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+                            }
+                        }
+                    }
+                    
+                    if let authorNameColor {
+                        mainColor = authorNameColor
+                    } else {
+                        mainColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
+                    }
+                }
                 
                 var boundingSize = textFrame.size
                 var lineHeight = textLayout.rawTextSize.height
@@ -1020,9 +1052,22 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             strongSelf.media = mediaAndFlags?.0
                             strongSelf.theme = presentationData.theme
                             
-                            strongSelf.lineNode.image = lineImage
-                            animation.animator.updateFrame(layer: strongSelf.lineNode.layer, frame: CGRect(origin: CGPoint(x: 13.0, y: insets.top), size: CGSize(width: 2.0, height: adjustedLineHeight - insets.top - insets.bottom - 2.0)), completion: nil)
-                            strongSelf.lineNode.isHidden = !displayLine
+                            let backgroundView: UIImageView
+                            if let current = strongSelf.backgroundView {
+                                backgroundView = current
+                            } else {
+                                backgroundView = UIImageView()
+                                strongSelf.backgroundView = backgroundView
+                                strongSelf.view.insertSubview(backgroundView, at: 0)
+                            }
+                            
+                            if backgroundView.image == nil {
+                                backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme)
+                            }
+                            backgroundView.tintColor = mainColor
+                            
+                            animation.animator.updateFrame(layer: backgroundView.layer, frame: CGRect(origin: CGPoint(x: 11.0, y: insets.top), size: CGSize(width: adjustedBoundingSize.width - 1.0 - insets.right, height: adjustedLineHeight - insets.top - insets.bottom - 2.0)), completion: nil)
+                            backgroundView.isHidden = !displayLine
                             
                             strongSelf.textNode.textNode.displaysAsynchronously = !isPreview
                             

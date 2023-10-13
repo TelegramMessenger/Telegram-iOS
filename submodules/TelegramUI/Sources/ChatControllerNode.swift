@@ -394,27 +394,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.inputContextOverTextPanelContainer = ChatControllerTitlePanelNodeContainer()
         
         var source: ChatHistoryListSource
-        if case let .messageOptions(_, messageIds, info, options) = subject {
-            let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), options)
-            |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
-                var messages = messages
-                let forwardedMessageIds = Set(messages.map { $0.id })
-                messages.sort(by: { lhsMessage, rhsMessage in
-                    return lhsMessage.timestamp > rhsMessage.timestamp
-                })
-                messages = messages.map { message in
-                    var flags = message.flags
-                    flags.remove(.Incoming)
-                    flags.remove(.IsIncomingMask)
-                    
-                    var hideNames = options.hideNames
-                    if message.id.peerId == accountPeer.id && message.forwardInfo == nil {
-                        hideNames = true
-                    }
-                    
-                    var attributes = message.attributes
-                    attributes = attributes.filter({ attribute in
-                        if case .forward = info.kind {
+        if case let .messageOptions(_, messageIds, info) = subject {
+            switch info {
+            case let .forward(forward):
+                let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId), forward.options)
+                |> map { messages, accountPeer, options -> ([Message], Int32, Bool) in
+                    var messages = messages
+                    let forwardedMessageIds = Set(messages.map { $0.id })
+                    messages.sort(by: { lhsMessage, rhsMessage in
+                        return lhsMessage.timestamp > rhsMessage.timestamp
+                    })
+                    messages = messages.map { message in
+                        var flags = message.flags
+                        flags.remove(.Incoming)
+                        flags.remove(.IsIncomingMask)
+                        
+                        var hideNames = options.hideNames
+                        if message.id.peerId == accountPeer.id && message.forwardInfo == nil {
+                            hideNames = true
+                        }
+                        
+                        var attributes = message.attributes
+                        attributes = attributes.filter({ attribute in
                             if attribute is EditedMessageAttribute {
                                 return false
                             }
@@ -438,15 +439,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if attribute is ReactionsMessageAttribute {
                                 return false
                             }
-                        }
-                        return true
-                    })
-                    
-                    var messageText = message.text
-                    var messageMedia = message.media
-                    var hasDice = false
-                    
-                    if case .forward = info.kind {
+                            return true
+                        })
+                        
+                        var messageText = message.text
+                        var messageMedia = message.media
+                        var hasDice = false
+                        
                         if hideNames {
                             for media in message.media {
                                 if options.hideCaptions {
@@ -478,14 +477,112 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         
                         return message.withUpdatedFlags(flags).withUpdatedText(messageText).withUpdatedMedia(messageMedia).withUpdatedTimestamp(Int32(context.account.network.context.globalTime())).withUpdatedAttributes(attributes).withUpdatedAuthor(accountPeer).withUpdatedForwardInfo(forwardInfo)
-                    } else {
+                    }
+                    
+                    return (messages, Int32(messages.count), false)
+                }
+                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
+            case .reply:
+                let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId))
+                |> map { messages, accountPeer -> ([Message], Int32, Bool) in
+                    var messages = messages
+                    messages.sort(by: { lhsMessage, rhsMessage in
+                        return lhsMessage.timestamp > rhsMessage.timestamp
+                    })
+                    messages = messages.map { message in
                         return message
                     }
+                    
+                    return (messages, Int32(messages.count), false)
                 }
-                
-                return (messages, Int32(messages.count), false)
+                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
+            case let .link(link):
+                let messages = link.options
+                |> mapToSignal { options -> Signal<(ChatControllerSubject.LinkOptions, Peer, Message?), NoError> in
+                    if let replyMessageId = options.replyMessageId {
+                        return combineLatest(
+                            context.account.postbox.messagesAtIds([replyMessageId]),
+                            context.account.postbox.loadedPeerWithId(context.account.peerId)
+                        )
+                        |> map { messages, peer -> (ChatControllerSubject.LinkOptions, Peer, Message?) in
+                            return (options, peer, messages.first)
+                        }
+                    } else {
+                        return context.account.postbox.loadedPeerWithId(context.account.peerId)
+                        |> map { peer -> (ChatControllerSubject.LinkOptions, Peer, Message?) in
+                            return (options, peer, nil)
+                        }
+                    }
+                }
+                |> map { options, accountPeer, replyMessage -> ([Message], Int32, Bool) in
+                    var peers = SimpleDictionary<PeerId, Peer>()
+                    peers[accountPeer.id] = accountPeer
+                    
+                    var associatedMessages = SimpleDictionary<MessageId, Message>()
+                    
+                    var media: [Media] = []
+                    if case let .Loaded(content) = options.webpage.content {
+                        var displayOptions: TelegramMediaWebpageDisplayOptions = .default
+                        
+                        if options.linkBelowText {
+                            displayOptions.position = .belowText
+                        } else {
+                            displayOptions.position = .aboveText
+                        }
+                        
+                        if options.largeMedia {
+                            displayOptions.largeMedia = true
+                        } else {
+                            displayOptions.largeMedia = false
+                        }
+                        
+                        media.append(TelegramMediaWebpage(webpageId: options.webpage.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                    }
+                    
+                    var attributes: [MessageAttribute] = []
+                    attributes.append(TextEntitiesMessageAttribute(entities: options.messageEntities))
+                    
+                    if let replyMessage {
+                        associatedMessages[replyMessage.id] = replyMessage
+                        
+                        var mappedQuote: EngineMessageReplyQuote?
+                        if let quote = options.replyQuote {
+                            mappedQuote = EngineMessageReplyQuote(text: quote, entities: [])
+                        }
+                        
+                        attributes.append(ReplyMessageAttribute(messageId: replyMessage.id, threadMessageId: nil, quote: mappedQuote))
+                    }
+                    
+                    let message = Message(
+                        stableId: 1,
+                        stableVersion: 1,
+                        id: MessageId(peerId: accountPeer.id, namespace: 0, id: 1),
+                        globallyUniqueId: nil,
+                        groupingKey: nil,
+                        groupInfo: nil,
+                        threadId: nil,
+                        timestamp: Int32(Date().timeIntervalSince1970),
+                        flags: [],
+                        tags: [],
+                        globalTags: [],
+                        localTags: [],
+                        forwardInfo: nil,
+                        author: accountPeer,
+                        text: options.messageText,
+                        attributes: attributes,
+                        media: media,
+                        peers: peers,
+                        associatedMessages: associatedMessages,
+                        associatedMessageIds: [],
+                        associatedMedia: [:],
+                        associatedThreadInfo: nil,
+                        associatedStories: [:]
+                    )
+                    
+                    return ([message], 1, false)
+                }
+                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
             }
-            source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
         } else {
             source = .default
         }
@@ -2981,9 +3078,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
-            if let subject = self.controller?.subject, case let .messageOptions(_, _, info, _) = subject, case .reply =  info.kind {
+            if let subject = self.controller?.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
+                if let controller = self.controller {
+                    if let result = controller.presentationContext.hitTest(view: self.view, point: point, with: event) {
+                        return result
+                    }
+                }
+                
                 if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node {
                     if node is TextSelectionNode {
+                        return result
+                    }
+                }
+            } else if let subject = self.controller?.subject, case let .messageOptions(_, _, info) = subject, case .link = info {
+                if let controller = self.controller {
+                    if let result = controller.presentationContext.hitTest(view: self.view, point: point, with: event) {
+                        return result
+                    }
+                }
+                
+                if let result = self.historyNode.view.hitTest(self.view.convert(point, to: self.historyNode.view), with: event), let node = result.asyncdisplaykit_node {
+                    if let textNode = node as? TextAccessibilityOverlayNode {
+                        let _ = textNode
                         return result
                     }
                 }

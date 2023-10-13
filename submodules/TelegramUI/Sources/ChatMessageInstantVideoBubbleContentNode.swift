@@ -176,7 +176,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             }
             
             var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                 incoming = false
             }
             

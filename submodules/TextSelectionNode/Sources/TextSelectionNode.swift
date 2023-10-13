@@ -241,6 +241,8 @@ public final class TextSelectionNode: ASDisplayNode {
     public var enableTranslate: Bool = true
     public var enableShare: Bool = true
     
+    public var menuSkipCoordnateConversion: Bool = false
+    
     public var didRecognizeTap: Bool {
         return self.recognizer?.didRecognizeTap ?? false
     }
@@ -549,6 +551,9 @@ public final class TextSelectionNode: ASDisplayNode {
         self.currentRange = nil
         self.recognizer?.isSelecting = false
         self.updateSelection(range: nil, animateIn: false)
+        
+        self.contextMenu?.dismiss()
+        self.contextMenu = nil
     }
     
     public func cancelSelection() {
@@ -642,7 +647,9 @@ public final class TextSelectionNode: ASDisplayNode {
             }))
         }
         
-        let contextMenu = ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false)
+        self.contextMenu?.dismiss()
+        
+        let contextMenu = ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false, skipCoordnateConversion: self.menuSkipCoordnateConversion)
         contextMenu.dismissOnTap = { [weak self] view, point in
             guard let self else {
                 return true
@@ -658,7 +665,12 @@ public final class TextSelectionNode: ASDisplayNode {
             guard let strongSelf = self, let rootNode = strongSelf.rootNode() else {
                 return nil
             }
-            return (strongSelf, completeRect, rootNode, rootNode.bounds.insetBy(dx: 0.0, dy: -100.0))
+            
+            if strongSelf.menuSkipCoordnateConversion {
+                return (strongSelf, strongSelf.view.convert(completeRect, to: rootNode.view), rootNode, rootNode.bounds)
+            } else {
+                return (strongSelf, completeRect, rootNode, rootNode.bounds)
+            }
         }, bounce: false))
     }
     

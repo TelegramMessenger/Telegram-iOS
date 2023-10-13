@@ -18,7 +18,7 @@ public enum ChatMessageItemContent: Sequence {
     case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)])
     
     func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
-        if let subject = associatedData?.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+        if let subject = associatedData?.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
             return false
         }
         switch self {
@@ -511,7 +511,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
             
             var disableDate = self.disableDate
-            if let subject = self.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
+            if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                 disableDate = true
             }
             

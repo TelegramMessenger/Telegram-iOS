@@ -108,6 +108,8 @@ public final class Logger {
         setPostboxLogger({ s in
             Logger.shared.log("Postbox", s)
             Logger.shared.shortLog("Postbox", s)
+        }, sync: {
+            Logger.shared.sync()
         })
     }
     
@@ -126,6 +128,14 @@ public final class Logger {
     public init(rootPath: String, basePath: String) {
         self.rootPath = rootPath
         self.basePath = basePath
+    }
+    
+    public func sync() {
+        self.queue.sync {
+            if let (currentFile, _) = self.file {
+                let _ = currentFile.sync()
+            }
+        }
     }
     
     public func collectLogs(prefix: String? = nil) -> Signal<[(String, String)], NoError> {

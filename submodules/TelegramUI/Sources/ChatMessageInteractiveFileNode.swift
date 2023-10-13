@@ -1805,7 +1805,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
                 })
-                textSelectionNode.enableQuote = item.controllerInteraction.canSetupReply(item.message) == .reply
+                textSelectionNode.enableQuote = true
                 self.textSelectionNode = textSelectionNode
                 self.textClippingNode.addSubnode(textSelectionNode)
                 self.textClippingNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)

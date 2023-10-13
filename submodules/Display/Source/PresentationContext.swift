@@ -306,7 +306,7 @@ public final class PresentationContext {
         UIAccessibility.post(notification: UIAccessibility.Notification.screenChanged, argument: nil)
     }
     
-    func hitTest(view: UIView, point: CGPoint, with event: UIEvent?) -> UIView? {
+    public func hitTest(view: UIView, point: CGPoint, with event: UIEvent?) -> UIView? {
         for (controller, _) in self.controllers.reversed() {
             if controller.isViewLoaded {
                 if let result = controller.view.hitTest(view.convert(point, to: controller.view), with: event) {

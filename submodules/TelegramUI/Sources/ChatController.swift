@@ -545,6 +545,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var storyStats: PeerStoryStats?
     
     var performTextSelectionAction: ((Message?, Bool, NSAttributedString, TextSelectionAction) -> Void)?
+    var performOpenURL: ((Message?, String) -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
@@ -2756,7 +2757,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.chatDisplayNode.historyNode.adMessagesContext?.markAction(opaqueId: adAttribute.opaqueId)
                 }
                 
-                strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
+                if let performOpenURL = strongSelf.performOpenURL {
+                    performOpenURL(message, url)
+                } else {
+                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
+                }
             }
         }, shareCurrentLocation: { [weak self] in
             if let strongSelf = self {
@@ -3948,35 +3953,42 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     f()
                 }
             case let .quote(range):
-                if let currentContextController = strongSelf.currentContextController {
-                    currentContextController.dismiss(completion: {
-                    })
+                let completion: (ContainedViewLayoutTransition?) -> Void = { transition in
+                    guard let self else {
+                        return
+                    }
+                    if let currentContextController = self.currentContextController {
+                        self.currentContextController = nil
+                        
+                        if let transition {
+                            currentContextController.dismissWithCustomTransition(transition: transition)
+                        } else {
+                            currentContextController.dismiss(completion: {})
+                        }
+                    }
                 }
-                
-                let completion: (ContainedViewLayoutTransition) -> Void = { _ in }
-                if let messageId = message?.id {
+                if let messageId = message?.id, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                    var quoteData: EngineMessageReplyQuote?
+                    
+                    let quoteText = (message.text as NSString).substring(with: NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound))
+                    quoteData = EngineMessageReplyQuote(text: quoteText, entities: [])
+                    
+                    let replySubject = ChatInterfaceState.ReplyMessageSubject(
+                        messageId: message.id,
+                        quote: quoteData
+                    )
+                    
                     if canSendMessagesToChat(strongSelf.presentationInterfaceState) {
                         let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
-                            if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
-                                var quoteData: EngineMessageReplyQuote?
-                                
-                                let quoteText = (message.text as NSString).substring(with: NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound))
-                                quoteData = EngineMessageReplyQuote(text: quoteText, entities: [])
-                                
-                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(
-                                    messageId: message.id,
-                                    quote: quoteData
-                                )) }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
-                                strongSelf.updateItemNodesSearchTextHighlightStates()
-                                strongSelf.chatDisplayNode.ensureInputViewFocused()
-                            } else {
-                                completion(.immediate)
-                            }
+                            strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject) }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
+                            strongSelf.updateItemNodesSearchTextHighlightStates()
+                            strongSelf.chatDisplayNode.ensureInputViewFocused()
                         }, alertAction: {
-                            completion(.immediate)
+                            completion(nil)
                         }, delay: true)
                     } else {
-                        completion(.immediate)
+                        moveReplyMessageToAnotherChat(selfController: strongSelf, replySubject: replySubject)
+                        completion(nil)
                     }
                 } else {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil) }) }, completion: completion)
@@ -5008,6 +5020,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         //}
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
+        
+        if case .messageOptions = self.subject {
+            self.chatTitleView?.disableAnimations = true
+        }
+        
         self.navigationItem.titleView = self.chatTitleView
         self.chatTitleView?.longPressed = { [weak self] in
             if let strongSelf = self, let peerView = strongSelf.peerView, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with { $0 }) == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
@@ -5208,7 +5225,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return message?.totalCount
                     }
                     |> distinctUntilChanged
-                } else if case let .messageOptions(peerIds, messageIds, info, options) = subject {
+                } else if case let .messageOptions(peerIds, messageIds, info) = subject {
                     displayedCountSignal = self.presentationInterfaceStatePromise.get()
                     |> map { state -> Int? in
                         if let selectionState = state.interfaceState.selectionState {
@@ -5224,9 +5241,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let presentationData = self.presentationData
                     
-                    switch info.kind {
-                    case .forward:
-                        subtitleTextSignal = combineLatest(peers, options, displayedCountSignal)
+                    switch info {
+                    case let .forward(forward):
+                        subtitleTextSignal = combineLatest(peers, forward.options, displayedCountSignal)
                         |> map { peersView, options, count in
                             let peers = peersView.peers.values
                             if !peers.isEmpty {
@@ -5297,6 +5314,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     case .reply:
                         //TODO:localize
                         subtitleTextSignal = .single("You can select a specific part to quote")
+                    case .link:
+                        //TODO:localize
+                        subtitleTextSignal = .single("Tap on a link to generate its preview")
                     }
                 }
                 
@@ -5309,9 +5329,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     hasPeerInfo = .single(true)
                 }
+                
+                enum MessageOptionsTitleInfo {
+                    case reply(hasQuote: Bool)
+                }
+                let messageOptionsTitleInfo: Signal<MessageOptionsTitleInfo?, NoError>
+                if case let .messageOptions(_, _, info) = self.subject {
+                    switch info {
+                    case .forward, .link:
+                        messageOptionsTitleInfo = .single(nil)
+                    case let .reply(reply):
+                        messageOptionsTitleInfo = reply.selectionState.get()
+                        |> map { selectionState -> Bool in
+                            return selectionState.quote != nil
+                        }
+                        |> distinctUntilChanged
+                        |> map { hasQuote -> MessageOptionsTitleInfo in
+                            return .reply(hasQuote: hasQuote)
+                        }
+                    }
+                } else {
+                    messageOptionsTitleInfo = .single(nil)
+                }
                                   
-                self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, displayedCountSignal, subtitleTextSignal, self.presentationInterfaceStatePromise.get(), hasPeerInfo)
-                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, presentationInterfaceState, hasPeerInfo in
+                self.titleDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, displayedCountSignal, subtitleTextSignal, self.presentationInterfaceStatePromise.get(), hasPeerInfo, messageOptionsTitleInfo)
+                |> deliverOnMainQueue).startStrict(next: { [weak self] peerView, onlineMemberCount, displayedCount, subtitleText, presentationInterfaceState, hasPeerInfo, messageOptionsTitleInfo in
                     if let strongSelf = self {
                         var isScheduledMessages = false
                         if case .scheduledMessages = presentationInterfaceState.subject {
@@ -5319,14 +5361,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let peer = peerViewMainPeer(peerView) {
-                            if case let .messageOptions(_, _, info, _) = presentationInterfaceState.subject {
-                                if case let .reply(initialQuote) = info.kind {
+                            if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
+                                if case .reply = info {
                                     //TODO:localize
-                                    if initialQuote != nil {
+                                    if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
                                         strongSelf.chatTitleView?.titleContent = .custom("Reply to Quote", subtitleText, false)
                                     } else {
                                         strongSelf.chatTitleView?.titleContent = .custom("Reply to Message", subtitleText, false)
                                     }
+                                } else if case .link = info {
+                                    //TODO:localize
+                                    strongSelf.chatTitleView?.titleContent = .custom("Link Preview Settings", subtitleText, false)
                                 } else if displayedCount == 1 {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
                                 } else {
@@ -6661,7 +6706,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         })
         
-        if case let .messageOptions(_, messageIds, _, _) = self.subject, messageIds.count > 1 {
+        if case let .messageOptions(_, messageIds, _) = self.subject, messageIds.count > 1 {
             self.updateChatPresentationInterfaceState(interactive: false, { state in
                 return state.updatedInterfaceState({ $0.withUpdatedSelectedMessages(messageIds) })
             })
@@ -8852,6 +8897,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             presentChatReplyOptions(selfController: self, sourceNode: sourceNode)
+        }, presentLinkOptions: { [weak self] sourceNode in
+            guard let self else {
+                return
+            }
+            presentChatLinkOptions(selfController: self, sourceNode: sourceNode)
         }, shareSelectedMessages: { [weak self] in
             if let strongSelf = self, let selectedIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !selectedIds.isEmpty {
                 strongSelf.commitPurposefulAction()
@@ -11924,16 +11974,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
-        switch self.presentationInterfaceState.mode {
-        case let .standard(previewing):
-            if previewing {
-                if let subject = self.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
-                    return self.chatDisplayNode.preferredContentSizeForLayout(layout)
-                }
-            }
-        default:
-            break
-        }
         return nil
     }
     

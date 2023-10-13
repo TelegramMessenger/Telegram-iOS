@@ -158,6 +158,10 @@ final class MediaBoxFileContextV2Impl: MediaBoxFileContext {
             }
         }
         
+        deinit {
+            self.pendingFetch?.disposable.dispose()
+        }
+        
         func request(
             range: Range<Int64>,
             isFullRange: Bool,

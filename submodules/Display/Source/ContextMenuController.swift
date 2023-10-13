@@ -28,6 +28,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     private let catchTapsOutside: Bool
     private let hasHapticFeedback: Bool
     private let blurred: Bool
+    private let skipCoordnateConversion: Bool
     
     private var layout: ContainerViewLayout?
     
@@ -36,11 +37,12 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
     
     public var dismissOnTap: ((UIView, CGPoint) -> Bool)?
     
-    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false, skipCoordnateConversion: Bool = false) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
         self.hasHapticFeedback = hasHapticFeedback
         self.blurred = blurred
+        self.skipCoordnateConversion = skipCoordnateConversion
         
         super.init(navigationBarPresentationData: nil)
         
@@ -92,8 +94,13 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder, 
             self.layout = layout
             
             if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceNode, sourceRect, containerNode, containerRect) = presentationArguments.sourceNodeAndRect() {
-                self.contextMenuNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
-                self.contextMenuNode.containerRect = containerNode.view.convert(containerRect, to: nil)
+                if self.skipCoordnateConversion {
+                    self.contextMenuNode.sourceRect = sourceRect
+                    self.contextMenuNode.containerRect = containerRect
+                } else {
+                    self.contextMenuNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
+                    self.contextMenuNode.containerRect = containerNode.view.convert(containerRect, to: nil)
+                }
             } else {
                 self.contextMenuNode.sourceRect = nil
                 self.contextMenuNode.containerRect = nil
