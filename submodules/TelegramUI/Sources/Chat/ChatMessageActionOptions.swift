@@ -27,9 +27,11 @@ private func presentChatInputOptions(selfController: ChatControllerImpl, sourceN
     
     let replySelectionState = Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: nil))
     
-    if let source = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
+    var forwardDismissedForCancel: (() -> Void)?
+    if let (source, dismissedForCancel) = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
         return getContextController?()
     }) {
+        forwardDismissedForCancel = dismissedForCancel
         sources.append(source)
     }
     if let source = chatReplyOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
@@ -67,11 +69,18 @@ private func presentChatInputOptions(selfController: ChatControllerImpl, sourceN
         return contextController
     }
     
+    contextController.dismissedForCancel = {
+        forwardDismissedForCancel?()
+    }
+    
     selfController.presentInGlobalOverlay(contextController)
 }
 
-private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?) -> ContextController.Source? {
+private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?) -> (ContextController.Source, () -> Void)? {
     guard let peerId = selfController.chatLocation.peerId else {
+        return nil
+    }
+    guard let initialForwardMessageIds = selfController.presentationInterfaceState.interfaceState.forwardMessageIds, !initialForwardMessageIds.isEmpty else {
         return nil
     }
     let presentationData = selfController.presentationData
@@ -258,49 +267,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         return items
     }
     
-    //TODO:localize
-    return ContextController.Source(
-        id: AnyHashable(OptionsId.forward),
-        title: "Forward",
-        source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
-        items: items |> map { ContextController.Items(content: .list($0)) }
-    )
-}
-
-func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
-    if "".isEmpty {
-        presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .forward)
-        return
-    }
-    
-    var getContextController: (() -> ContextController?)?
-    
-    guard let source = chatForwardOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
-        return getContextController?()
-    }) else {
-        return
-    }
-    selfController.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
-
-    selfController.canReadHistory.set(false)
-    
-    let contextController = ContextController(
-        presentationData: selfController.presentationData,
-        configuration: ContextController.Configuration(
-            sources: [source],
-            initialId: source.id
-        )
-    )
-    contextController.dismissed = { [weak selfController] in
-        selfController?.canReadHistory.set(true)
-    }
-    
-    getContextController = { [weak contextController] in
-        return contextController
-    }
-    
-    //TODO:loc
-    /*contextController.dismissedForCancel = { [weak selfController, weak chatController] in
+    let dismissedForCancel: () -> Void = { [weak selfController, weak chatController] in
         guard let selfController else {
             return
         }
@@ -309,8 +276,19 @@ func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: A
             forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
             selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
         }
-    }*/
-    selfController.presentInGlobalOverlay(contextController)
+    }
+    
+    //TODO:localize
+    return (ContextController.Source(
+        id: AnyHashable(OptionsId.forward),
+        title: "Forward",
+        source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
+        items: items |> map { ContextController.Items(content: .list($0)) }
+    ), dismissedForCancel)
+}
+
+func presentChatForwardOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode) {
+    presentChatInputOptions(selfController: selfController, sourceNode: sourceNode, initialId: .forward)
 }
 
 private func generateChatReplyOptionItems(selfController: ChatControllerImpl, chatController: ChatControllerImpl) -> Signal<ContextController.Items, NoError> {

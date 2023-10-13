@@ -60,3 +60,21 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             return nil
     }
 }
+
+public class WebpagePreviewMessageAttribute: MessageAttribute, Equatable {
+    public let associatedPeerIds: [PeerId] = []
+    public let associatedMediaIds: [MediaId] = []
+    
+    public init() {
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    public static func ==(lhs: WebpagePreviewMessageAttribute, rhs: WebpagePreviewMessageAttribute) -> Bool {
+        return true
+    }
+}

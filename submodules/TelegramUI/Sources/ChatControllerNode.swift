@@ -402,7 +402,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     var messages = messages
                     let forwardedMessageIds = Set(messages.map { $0.id })
                     messages.sort(by: { lhsMessage, rhsMessage in
-                        return lhsMessage.timestamp > rhsMessage.timestamp
+                        return lhsMessage.index > rhsMessage.index
                     })
                     messages = messages.map { message in
                         var flags = message.flags
