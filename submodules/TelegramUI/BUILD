@@ -369,6 +369,7 @@ swift_library(
         "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
         "//submodules/TelegramUI/Components/Chat/ChatMessageAttachedContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageAttachedContentButtonNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWebpageBubbleContentNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],
