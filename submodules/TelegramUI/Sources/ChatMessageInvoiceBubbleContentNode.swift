@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import TelegramStringFormatting
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageAttachedContentNode
 
 private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)

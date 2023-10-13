@@ -17,6 +17,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import WallpaperPreviewMedia
 import ChatMessageInteractiveMediaNode
+import ChatMessageAttachedContentNode
 
 private let titleFont: UIFont = Font.semibold(15.0)
 

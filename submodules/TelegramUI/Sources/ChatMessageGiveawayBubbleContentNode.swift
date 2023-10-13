@@ -18,6 +18,7 @@ import AvatarNode
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageAttachedContentButtonNode
 
 private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)

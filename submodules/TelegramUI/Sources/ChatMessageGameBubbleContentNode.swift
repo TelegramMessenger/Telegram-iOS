@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageAttachedContentNode
 
 final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNode {
     private var game: TelegramMediaGame?

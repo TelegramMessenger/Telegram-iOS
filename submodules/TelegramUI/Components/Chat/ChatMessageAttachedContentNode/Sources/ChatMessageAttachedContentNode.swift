@@ -27,254 +27,31 @@ import ChatMessageInteractiveInstantVideoNode
 import ChatMessageInteractiveFileNode
 import ChatMessageInteractiveMediaNode
 import WallpaperPreviewMedia
+import ChatMessageAttachedContentButtonNode
 
-private let buttonFont = Font.semibold(13.0)
-
-enum ChatMessageAttachedContentActionIcon {
+public enum ChatMessageAttachedContentActionIcon {
     case instant
     case link
 }
 
-struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
-    var rawValue: Int32
+public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
+    public var rawValue: Int32
     
-    init(rawValue: Int32) {
+    public init(rawValue: Int32) {
         self.rawValue = rawValue
     }
     
-    init() {
+    public init() {
         self.rawValue = 0
     }
     
-    static let preferMediaInline = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 0)
-    static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
-    static let preferMediaAspectFilled = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 2)
-    static let titleBeforeMedia = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 3)
+    public static let preferMediaInline = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 0)
+    public static let preferMediaBeforeText = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 1)
+    public static let preferMediaAspectFilled = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 2)
+    public static let titleBeforeMedia = ChatMessageAttachedContentNodeMediaFlags(rawValue: 1 << 3)
 }
 
-final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
-    private let textNode: TextNode
-    private let iconNode: ASImageNode
-    private let highlightedTextNode: TextNode
-    private let backgroundNode: ASImageNode
-    private let shimmerEffectNode: ShimmerEffectForegroundNode
-    
-    private var regularImage: UIImage?
-    private var highlightedImage: UIImage?
-    private var regularIconImage: UIImage?
-    private var highlightedIconImage: UIImage?
-    
-    var pressed: (() -> Void)?
-  
-    private var titleColor: UIColor?
-    
-    init() {
-        self.textNode = TextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.highlightedTextNode = TextNode()
-        self.highlightedTextNode.isUserInteractionEnabled = false
-        
-        self.shimmerEffectNode = ShimmerEffectForegroundNode()
-        self.shimmerEffectNode.cornerRadius = 5.0
-        
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.displaysAsynchronously = false
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.isLayerBacked = true
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.displaysAsynchronously = false
-        
-        super.init()
-        
-        self.addSubnode(self.shimmerEffectNode)
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.highlightedTextNode)
-        self.highlightedTextNode.isHidden = true
-        
-        self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.backgroundNode.image = strongSelf.highlightedImage
-                    strongSelf.iconNode.image = strongSelf.highlightedIconImage
-                    strongSelf.textNode.isHidden = true
-                    strongSelf.highlightedTextNode.isHidden = false
-                    
-                    let scale = (strongSelf.bounds.width - 10.0) / strongSelf.bounds.width
-                    strongSelf.layer.animateScale(from: 1.0, to: scale, duration: 0.15, removeOnCompletion: false)
-                } else {
-                    if let presentationLayer = strongSelf.layer.presentation() {
-                        strongSelf.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
-                    }
-                    if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
-                        strongSelf.view.addSubview(snapshot)
-                        
-                        snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
-                            snapshot.removeFromSuperview()
-                        })
-                    }
-                    
-                    strongSelf.backgroundNode.image = strongSelf.regularImage
-                    strongSelf.iconNode.image = strongSelf.regularIconImage
-                    strongSelf.textNode.isHidden = false
-                    strongSelf.highlightedTextNode.isHidden = true
-                }
-            }
-        }
-        
-        self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc func buttonPressed() {
-        self.pressed?()
-    }
-    
-    func startShimmering() {
-        guard let titleColor = self.titleColor else {
-            return
-        }
-        self.shimmerEffectNode.isHidden = false
-        self.shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        
-        let backgroundFrame = self.backgroundNode.frame
-        self.shimmerEffectNode.frame = backgroundFrame
-        self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
-        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: titleColor.withAlphaComponent(0.3), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
-    }
-    
-    func stopShimmering() {
-        self.shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-            self?.shimmerEffectNode.isHidden = true
-        })
-    }
-    
-    static func asyncLayout(_ current: ChatMessageAttachedContentButtonNode?) -> (_ width: CGFloat, _ regularImage: UIImage, _ highlightedImage: UIImage, _ iconImage: UIImage?, _ highlightedIconImage: UIImage?, _ cornerIcon: Bool, _ title: String, _ titleColor: UIColor, _ highlightedTitleColor: UIColor, _ inProgress: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> ChatMessageAttachedContentButtonNode)) {
-        let previousRegularImage = current?.regularImage
-        let previousHighlightedImage = current?.highlightedImage
-        let previousRegularIconImage = current?.regularIconImage
-        let previousHighlightedIconImage = current?.highlightedIconImage
-        
-        let maybeMakeTextLayout = (current?.textNode).flatMap(TextNode.asyncLayout)
-        let maybeMakeHighlightedTextLayout = (current?.highlightedTextNode).flatMap(TextNode.asyncLayout)
-        
-        return { width, regularImage, highlightedImage, iconImage, highlightedIconImage, cornerIcon, title, titleColor, highlightedTitleColor, inProgress in
-            let targetNode: ChatMessageAttachedContentButtonNode
-            if let current = current {
-                targetNode = current
-            } else {
-                targetNode = ChatMessageAttachedContentButtonNode()
-            }
-            
-            let makeTextLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
-            if let maybeMakeTextLayout = maybeMakeTextLayout {
-                makeTextLayout = maybeMakeTextLayout
-            } else {
-                makeTextLayout = TextNode.asyncLayout(targetNode.textNode)
-            }
-            
-            let makeHighlightedTextLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode)
-            if let maybeMakeHighlightedTextLayout = maybeMakeHighlightedTextLayout {
-                makeHighlightedTextLayout = maybeMakeHighlightedTextLayout
-            } else {
-                makeHighlightedTextLayout = TextNode.asyncLayout(targetNode.highlightedTextNode)
-            }
-            
-            var updatedRegularImage: UIImage?
-            if regularImage !== previousRegularImage {
-                updatedRegularImage = regularImage
-            }
-            
-            var updatedHighlightedImage: UIImage?
-            if highlightedImage !== previousHighlightedImage {
-                updatedHighlightedImage = highlightedImage
-            }
-            
-            var updatedRegularIconImage: UIImage?
-            if iconImage !== previousRegularIconImage {
-                updatedRegularIconImage = iconImage
-            }
-            
-            var updatedHighlightedIconImage: UIImage?
-            if highlightedIconImage !== previousHighlightedIconImage {
-                updatedHighlightedIconImage = highlightedIconImage
-            }
-            
-            var iconWidth: CGFloat = 0.0
-            if let iconImage = iconImage {
-                iconWidth = iconImage.size.width + 5.0
-            }
-            
-            let labelInset: CGFloat = 8.0
-            
-            let (textSize, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: buttonFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - labelInset * 2.0 - iconWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (_, highlightedTextApply) = makeHighlightedTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: buttonFont, textColor: highlightedTitleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(1.0, width - labelInset * 2.0), height: CGFloat.greatestFiniteMagnitude), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
-            
-            return (textSize.size.width + labelInset * 2.0, { refinedWidth in
-                return (CGSize(width: refinedWidth, height: 33.0), {
-                    targetNode.accessibilityLabel = title
-                    
-                    targetNode.titleColor = titleColor
-                    
-                    if let updatedRegularImage = updatedRegularImage {
-                        targetNode.regularImage = updatedRegularImage
-                        if !targetNode.textNode.isHidden {
-                            targetNode.backgroundNode.image = updatedRegularImage
-                        }
-                    }
-                    if let updatedHighlightedImage = updatedHighlightedImage {
-                        targetNode.highlightedImage = updatedHighlightedImage
-                        if targetNode.textNode.isHidden {
-                            targetNode.backgroundNode.image = updatedHighlightedImage
-                        }
-                    }
-                    if let updatedRegularIconImage = updatedRegularIconImage {
-                        targetNode.regularIconImage = updatedRegularIconImage
-                        if !targetNode.textNode.isHidden {
-                            targetNode.iconNode.image = updatedRegularIconImage
-                        }
-                    }
-                    if let updatedHighlightedIconImage = updatedHighlightedIconImage {
-                        targetNode.highlightedIconImage = updatedHighlightedIconImage
-                        if targetNode.iconNode.isHidden {
-                            targetNode.iconNode.image = updatedHighlightedIconImage
-                        }
-                    }
-                    
-                    let _ = textApply()
-                    let _ = highlightedTextApply()
-                    
-                    let backgroundFrame = CGRect(origin: CGPoint(), size: CGSize(width: refinedWidth, height: 33.0))
-                    var textFrame = CGRect(origin: CGPoint(x: floor((refinedWidth - textSize.size.width) / 2.0), y: floor((34.0 - textSize.size.height) / 2.0)), size: textSize.size)
-                    targetNode.backgroundNode.frame = backgroundFrame
-                    if let image = targetNode.iconNode.image {
-                        if cornerIcon {
-                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 5.0, y: 5.0), size: image.size)
-                        } else {
-                            textFrame.origin.x += floor(image.size.width / 2.0)
-                            targetNode.iconNode.frame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 5.0, y: textFrame.minY + 2.0), size: image.size)
-                        }
-                        if targetNode.iconNode.supernode == nil {
-                            targetNode.addSubnode(targetNode.iconNode)
-                        }
-                    } else if targetNode.iconNode.supernode != nil {
-                        targetNode.iconNode.removeFromSupernode()
-                    }
-                    
-                    targetNode.textNode.frame = textFrame
-                    targetNode.highlightedTextNode.frame = targetNode.textNode.frame
-                    
-                    return targetNode
-                })
-            })
-        }
-    }
-}
-
-final class ChatMessageAttachedContentNode: ASDisplayNode {
+public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var backgroundView: UIImageView?
     private let topTitleNode: TextNode
     private let textNode: TextNodeWithEntities
@@ -284,7 +61,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var contentFileNode: ChatMessageInteractiveFileNode?
     private var buttonNode: ChatMessageAttachedContentButtonNode?
     
-    let statusNode: ChatMessageDateAndStatusNode
+    public let statusNode: ChatMessageDateAndStatusNode
     private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -293,11 +70,11 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var media: Media?
     private var theme: ChatPresentationThemeData?
     
-    var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
-    var activateAction: (() -> Void)?
-    var requestUpdateLayout: (() -> Void)?
+    public var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
+    public var activateAction: (() -> Void)?
+    public var requestUpdateLayout: (() -> Void)?
     
-    var visibility: ListViewItemNodeVisibility = .none {
+    public var visibility: ListViewItemNodeVisibility = .none {
         didSet {
             if oldValue != self.visibility {
                 self.contentImageNode?.visibility = self.visibility != .none
@@ -316,7 +93,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    override init() {
+    override public init() {
         self.topTitleNode = TextNode()
         self.topTitleNode.isUserInteractionEnabled = false
         self.topTitleNode.displaysAsynchronously = false
@@ -344,7 +121,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         self.addSubnode(self.statusNode)
     }
     
-    func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    public func asyncLayout() -> (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let topTitleAsyncLayout = TextNode.asyncLayout(self.topTitleNode)
         let textAsyncLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let currentImage = self.media as? TelegramMediaImage
@@ -1248,7 +1025,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         if let currentMedia = self.media {
             if let media = media {
                 var found = false
@@ -1271,7 +1048,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return false
     }
     
-    func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNode(media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let contentImageNode = self.contentImageNode, let image = self.media as? TelegramMediaImage, image.isEqual(to: media) {
             return (contentImageNode, contentImageNode.bounds, { [weak contentImageNode] in
                 return (contentImageNode?.view.snapshotContentTree(unhide: true), nil)
@@ -1288,14 +1065,14 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return nil
     }
     
-    func hasActionAtPoint(_ point: CGPoint) -> Bool {
+    public func hasActionAtPoint(_ point: CGPoint) -> Bool {
         if let buttonNode = self.buttonNode, buttonNode.frame.contains(point) {
             return true
         }
         return false
     }
     
-    func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.textNode.frame
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -1320,7 +1097,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    func updateTouchesAtPoint(_ point: CGPoint?) {
+    public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let context = self.context, let message = self.message, let theme = self.theme {
             var rects: [CGRect]?
             if let point = point {
@@ -1363,7 +1140,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         }
     }
     
-    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             if let result = self.statusNode.reactionView(value: value) {
                 return result
@@ -1381,7 +1158,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
         return nil
     }
     
-    func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    public func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.contentImageNode?.playMediaWithSound()
     }
 }

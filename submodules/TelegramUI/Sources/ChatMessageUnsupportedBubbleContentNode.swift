@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatMessageAttachedContentButtonNode
 
 final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleContentNode {
     private var buttonNode: ChatMessageAttachedContentButtonNode
