@@ -28,9 +28,9 @@ extension ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription {
     }
 }
 
-class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
-    let interactiveFileNode: ChatMessageInteractiveFileNode
-    let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
+public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
+    public let interactiveFileNode: ChatMessageInteractiveFileNode
+    public let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private let maskLayer = SimpleLayer()
     private let maskForeground = SimpleLayer()
@@ -42,7 +42,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     
-    var hasExpandedAudioTranscription: Bool {
+    public var hasExpandedAudioTranscription: Bool {
         if case .expanded = self.audioTranscriptionState {
             return true
         } else {
@@ -50,7 +50,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             var wasVisible = false
             if case .visible = oldValue {
@@ -79,7 +79,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         return isVisible
     }
     
-    required init() {
+    required public init() {
         self.interactiveFileNode = ChatMessageInteractiveFileNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
                 
@@ -164,18 +164,18 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
         return true
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
         
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveVideoLayout = self.interactiveVideoNode.asyncLayout()
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
@@ -383,35 +383,35 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    override public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         return false
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.interactiveVideoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.interactiveVideoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.interactiveVideoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+    override public func willUpdateIsExtractedToContextPreview(_ value: Bool) {
         self.interactiveFileNode.willUpdateIsExtractedToContextPreview(value)
     }
     
-    override func updateIsExtractedToContextPreview(_ value: Bool) {
+    override public func updateIsExtractedToContextPreview(_ value: Bool) {
         self.interactiveFileNode.updateIsExtractedToContextPreview(value)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if !self.interactiveFileNode.isHidden {
             if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
                 return .ignore
@@ -431,7 +431,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.isExpanded, let result = self.interactiveFileNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.view), with: event) {
             return result
         }
@@ -441,18 +441,18 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         return super.hitTest(point, with: event)
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.interactiveVideoNode.dateAndStatusNode.isHidden {
             return self.interactiveVideoNode.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }
     
-    override func targetForStoryTransition(id: StoryId) -> UIView? {
+    override public func targetForStoryTransition(id: StoryId) -> UIView? {
         return self.interactiveVideoNode.targetForStoryTransition(id: id)
     }
     
-    override var disablesClipping: Bool {
+    override public var disablesClipping: Bool {
         return true
     }
 }

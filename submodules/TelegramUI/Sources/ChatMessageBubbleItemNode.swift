@@ -51,6 +51,7 @@ import ChatMessageThreadInfoNode
 import ChatMessageActionButtonsNode
 import ChatSwipeToReplyRecognizer
 import ChatMessageReactionsFooterContentNode
+import ChatMessageInstantVideoBubbleContentNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
