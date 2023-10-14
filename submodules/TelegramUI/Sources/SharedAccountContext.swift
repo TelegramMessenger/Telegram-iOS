@@ -44,6 +44,7 @@ import PeerSelectionController
 import LegacyMessageInputPanel
 import StatisticsUI
 import ChatHistoryEntry
+import ChatMessageItem
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1561,7 +1562,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
-        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: nil, forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
+        return ChatMessageItemImpl(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: nil, forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {

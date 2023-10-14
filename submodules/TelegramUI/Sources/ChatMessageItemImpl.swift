@@ -12,74 +12,7 @@ import Emoji
 import PersistentStringHash
 import ChatControllerInteraction
 import ChatHistoryEntry
-
-public enum ChatMessageItemContent: Sequence {
-    case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes, location: MessageHistoryEntryLocation?)
-    case group(messages: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)])
-    
-    func effectivelyIncoming(_ accountPeerId: PeerId, associatedData: ChatMessageItemAssociatedData? = nil) -> Bool {
-        if let subject = associatedData?.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
-            return false
-        }
-        switch self {
-            case let .message(message, _, _, _, _):
-                return message.effectivelyIncoming(accountPeerId)
-            case let .group(messages):
-                return messages[0].0.effectivelyIncoming(accountPeerId)
-        }
-    }
-    
-    var index: MessageIndex {
-        switch self {
-            case let .message(message, _, _, _, _):
-                return message.index
-            case let .group(messages):
-                return messages[0].0.index
-        }
-    }
-    
-    var firstMessage: Message {
-        switch self {
-            case let .message(message, _, _, _, _):
-                return message
-            case let .group(messages):
-                return messages[0].0
-        }
-    }
-    
-    var firstMessageAttributes: ChatMessageEntryAttributes {
-        switch self {
-            case let .message(_, _, _, attributes, _):
-                return attributes
-            case let .group(messages):
-                return messages[0].3
-        }
-    }
-    
-    public func makeIterator() -> AnyIterator<(Message, ChatMessageEntryAttributes)> {
-        var index = 0
-        return AnyIterator { () -> (Message, ChatMessageEntryAttributes)? in
-            switch self {
-                case let .message(message, _, _, attributes, _):
-                    if index == 0 {
-                        index += 1
-                        return (message, attributes)
-                    } else {
-                        index += 1
-                        return nil
-                    }
-                case let .group(messages):
-                    if index < messages.count {
-                        let currentIndex = index
-                        index += 1
-                        return (messages[currentIndex].0, messages[currentIndex].3)
-                    } else {
-                        return nil
-                    }
-            }
-        }
-    }
-}
+import ChatMessageItem
 
 private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
     if let story = media as? TelegramMediaStory, story.isMention {
@@ -203,7 +136,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
 func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
     let lhsHeader: ChatMessageDateHeader?
     let rhsHeader: ChatMessageDateHeader?
-    if let lhs = lhs as? ChatMessageItem {
+    if let lhs = lhs as? ChatMessageItemImpl {
         lhsHeader = lhs.dateHeader
     } else if let lhs = lhs as? ChatUnreadItem {
         lhsHeader = lhs.header
@@ -213,7 +146,7 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
         lhsHeader = nil
     }
     if let rhs = rhs {
-        if let rhs = rhs as? ChatMessageItem {
+        if let rhs = rhs as? ChatMessageItemImpl {
             rhsHeader = rhs.dateHeader
         } else if let rhs = rhs as? ChatUnreadItem {
             rhsHeader = rhs.header
@@ -232,12 +165,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
     }
 }
 
-public enum ChatMessageItemAdditionalContent {
-    case eventLogPreviousMessage(Message)
-    case eventLogPreviousDescription(Message)
-    case eventLogPreviousLink(Message)
-}
-
 enum ChatMessageMerge: Int32 {
     case none = 0
     case fullyMerged = 1
@@ -252,23 +179,23 @@ enum ChatMessageMerge: Int32 {
     }
 }
 
-public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
-    let presentationData: ChatPresentationData
-    let context: AccountContext
-    let chatLocation: ChatLocation
-    let associatedData: ChatMessageItemAssociatedData
-    let controllerInteraction: ChatControllerInteraction
-    let content: ChatMessageItemContent
-    let disableDate: Bool
-    let effectiveAuthorId: PeerId?
-    let additionalContent: ChatMessageItemAdditionalContent?
+public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible {
+    public let presentationData: ChatPresentationData
+    public let context: AccountContext
+    public let chatLocation: ChatLocation
+    public let associatedData: ChatMessageItemAssociatedData
+    public let controllerInteraction: ChatControllerInteraction
+    public let content: ChatMessageItemContent
+    public let disableDate: Bool
+    public let effectiveAuthorId: PeerId?
+    public let additionalContent: ChatMessageItemAdditionalContent?
     
     let dateHeader: ChatMessageDateHeader
     let avatarHeader: ChatMessageAvatarHeader?
 
-    let headers: [ListViewItemHeader]
+    public let headers: [ListViewItemHeader]
     
-    var message: Message {
+    public var message: Message {
         switch self.content {
             case let .message(message, _, _, _, _):
                 return message
@@ -277,7 +204,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    var read: Bool {
+    public var read: Bool {
         switch self.content {
             case let .message(_, read, _, _, _):
                 return read
@@ -286,7 +213,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    var unsent: Bool {
+    public var unsent: Bool {
         switch self.content {
             case let .message(message, _, _, _, _):
                 return message.flags.contains(.Unsent)
@@ -295,7 +222,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    var sending: Bool {
+    public var sending: Bool {
         switch self.content {
             case let .message(message, _, _, _, _):
                 return message.flags.contains(.Sending)
@@ -304,7 +231,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         }
     }
     
-    var failed: Bool {
+    public var failed: Bool {
         switch self.content {
             case let .message(message, _, _, _, _):
                 return message.flags.contains(.Failed)
@@ -548,14 +475,14 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false
-        if let top = top as? ChatMessageItem {
+        if let top = top as? ChatMessageItemImpl {
             if top.dateHeader.id != self.dateHeader.id {
                 mergedBottom = .none
             } else {
                 mergedBottom = messagesShouldBeMerged(accountPeerId: self.context.account.peerId, message, top.message)
             }
         }
-        if let bottom = bottom as? ChatMessageItem {
+        if let bottom = bottom as? ChatMessageItemImpl {
             if bottom.dateHeader.id != self.dateHeader.id {
                 mergedTop = .none
                 dateAtBottom = true

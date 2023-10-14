@@ -13,8 +13,9 @@ import SwiftSignalKit
 import ChatControllerInteraction
 import ChatMessageItemCommon
 import TextFormat
+import ChatMessageItem
 
-func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams, presentationData: ChatPresentationData) -> ChatMessageItemLayoutConstants {
+public func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants, ChatMessageItemLayoutConstants), params: ListViewItemLayoutParams, presentationData: ChatPresentationData) -> ChatMessageItemLayoutConstants {
     var result: ChatMessageItemLayoutConstants
     if params.width > 680.0 {
         result = constants.1
@@ -35,7 +36,7 @@ func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants
     return result
 }
 
-enum ChatMessageItemBottomNeighbor {
+public enum ChatMessageItemBottomNeighbor {
     case none
     case merged(semi: Bool)
 }
@@ -60,30 +61,30 @@ private let fileSizeFormatter: ByteCountFormatter = {
     return formatter
 }()
 
-enum ChatMessageAccessibilityCustomActionType {
+public enum ChatMessageAccessibilityCustomActionType {
     case reply
     case options
 }
 
-final class ChatMessageAccessibilityCustomAction: UIAccessibilityCustomAction {
-    let action: ChatMessageAccessibilityCustomActionType
+public final class ChatMessageAccessibilityCustomAction: UIAccessibilityCustomAction {
+    public let action: ChatMessageAccessibilityCustomActionType
     
-    init(name: String, target: Any?, selector: Selector, action: ChatMessageAccessibilityCustomActionType) {
+    public init(name: String, target: Any?, selector: Selector, action: ChatMessageAccessibilityCustomActionType) {
         self.action = action
         
         super.init(name: name, target: target, selector: selector)
     }
 }
 
-final class ChatMessageAccessibilityData {
-    let label: String?
-    let value: String?
-    let hint: String?
-    let traits: UIAccessibilityTraits
-    let customActions: [ChatMessageAccessibilityCustomAction]?
-    let singleUrl: String?
+public final class ChatMessageAccessibilityData {
+    public let label: String?
+    public let value: String?
+    public let hint: String?
+    public let traits: UIAccessibilityTraits
+    public let customActions: [ChatMessageAccessibilityCustomAction]?
+    public let singleUrl: String?
     
-    init(item: ChatMessageItem, isSelected: Bool?) {
+    public init(item: ChatMessageItem, isSelected: Bool?) {
         var hint: String?
         var traits: UIAccessibilityTraits = []
         var singleUrl: String?
@@ -651,7 +652,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-        if let item = item as? ChatMessageItem {
+        if let item = item as? ChatMessageItemImpl {
             let doLayout = self.asyncLayout()
             let merged = item.mergedWithItems(top: previousItem, bottom: nextItem)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)

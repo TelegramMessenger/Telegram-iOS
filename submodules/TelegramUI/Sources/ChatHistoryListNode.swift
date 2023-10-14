@@ -26,6 +26,7 @@ import TranslateUI
 import ChatHistoryEntry
 import ChatOverscrollControl
 import ChatBotInfoItem
+import ChatMessageItem
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -226,7 +227,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -244,7 +245,7 @@ private func mappedInsertEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
                     case .list:
                         assertionFailure()
                         item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
@@ -271,7 +272,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                         let displayHeader: Bool
                         switch displayHeaders {
@@ -289,7 +290,7 @@ private func mappedUpdateEntries(context: AccountContext, chatLocation: ChatLoca
                 let item: ListViewItem
                 switch mode {
                     case .bubbles:
-                        item = ChatMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
+                        item = ChatMessageItemImpl(presentationData: presentationData, context: context, chatLocation: chatLocation, associatedData: associatedData, controllerInteraction: controllerInteraction, content: .group(messages: messages))
                     case .list:
                         assertionFailure()
                         item = ListMessageItem(presentationData: presentationData, context: context, chatLocation: chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: controllerInteraction), message: messages[0].0, selection: .none, displayHeader: false)
@@ -3559,7 +3560,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 let item: ListViewItem
                                 switch self.mode {
                                     case .bubbles:
-                                        item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
                                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {
@@ -3615,7 +3616,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 let item: ListViewItem
                                 switch self.mode {
                                     case .bubbles:
-                                        item = ChatMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
+                                        item = ChatMessageItemImpl(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, associatedData: associatedData, controllerInteraction: self.controllerInteraction, content: .message(message: message, read: read, selection: selection, attributes: attributes, location: location))
                                     case let .list(_, _, _, displayHeaders, hintLinks, isGlobalSearch):
                                         let displayHeader: Bool
                                         switch displayHeaders {
