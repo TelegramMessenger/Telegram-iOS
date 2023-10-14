@@ -1,0 +1,45 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "ChatMessageInstantVideoItemNode",
+    module_name = "ChatMessageInstantVideoItemNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/AsyncDisplayKit",
+        "//submodules/Display",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/Postbox",
+        "//submodules/TelegramCore",
+        "//submodules/TelegramPresentationData",
+        "//submodules/TelegramUIPreferences",
+        "//submodules/TextFormat",
+        "//submodules/AccountContext",
+        "//submodules/LocalizedPeerData",
+        "//submodules/ContextUI",
+        "//submodules/Markdown",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageForwardInfoNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveInstantVideoNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItem",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageItemView",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageSwipeToReplyNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageSelectionNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageDeliveryFailedNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageShareButton",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageActionButtonsNode",
+        "//submodules/TelegramUI/Components/Chat/ChatSwipeToReplyRecognizer",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageReactionsFooterContentNode",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

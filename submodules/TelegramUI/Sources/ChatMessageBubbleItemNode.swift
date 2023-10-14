@@ -840,7 +840,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
     
-    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, delay: Double, transition: ContainedViewLayoutTransition) {
+    func animateFromLoadingPlaceholder(delay: Double, transition: ContainedViewLayoutTransition) {
         guard let item = self.item else {
             return
         }

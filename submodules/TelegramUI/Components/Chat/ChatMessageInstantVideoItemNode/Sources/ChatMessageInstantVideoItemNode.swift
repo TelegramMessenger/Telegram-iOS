@@ -34,48 +34,48 @@ private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
-class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerDelegate {
-    let contextSourceNode: ContextExtractedContentContainingNode
-    let containerNode: ContextControllerSourceNode
-    let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
+public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerDelegate {
+    public let contextSourceNode: ContextExtractedContentContainingNode
+    public let containerNode: ContextControllerSourceNode
+    public let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
-    var selectionNode: ChatMessageSelectionNode?
-    var deliveryFailedNode: ChatMessageDeliveryFailedNode?
-    var shareButtonNode: ChatMessageShareButton?
+    public var selectionNode: ChatMessageSelectionNode?
+    public var deliveryFailedNode: ChatMessageDeliveryFailedNode?
+    public var shareButtonNode: ChatMessageShareButton?
     
-    var swipeToReplyNode: ChatMessageSwipeToReplyNode?
-    var swipeToReplyFeedback: HapticFeedback?
+    public var swipeToReplyNode: ChatMessageSwipeToReplyNode?
+    public var swipeToReplyFeedback: HapticFeedback?
     
-    var appliedParams: ListViewItemLayoutParams?
-    var appliedItem: ChatMessageItem?
-    var appliedForwardInfo: (Peer?, String?)?
-    var appliedHasAvatar = false
-    var appliedCurrentlyPlaying: Bool?
-    var appliedAutomaticDownload = false
-    var avatarOffset: CGFloat?
+    public var appliedParams: ListViewItemLayoutParams?
+    public var appliedItem: ChatMessageItem?
+    public var appliedForwardInfo: (Peer?, String?)?
+    public var appliedHasAvatar = false
+    public var appliedCurrentlyPlaying: Bool?
+    public var appliedAutomaticDownload = false
+    public var avatarOffset: CGFloat?
     
-    var animatingHeight: Bool {
+    public var animatingHeight: Bool {
         return self.apparentHeightTransition != nil
     }
 
-    var viaBotNode: TextNode?
-    var replyInfoNode: ChatMessageReplyInfoNode?
-    var replyBackgroundNode: NavigationBackgroundNode?
-    var forwardInfoNode: ChatMessageForwardInfoNode?
+    public var viaBotNode: TextNode?
+    public var replyInfoNode: ChatMessageReplyInfoNode?
+    public var replyBackgroundNode: NavigationBackgroundNode?
+    public var forwardInfoNode: ChatMessageForwardInfoNode?
     
-    var actionButtonsNode: ChatMessageActionButtonsNode?
-    var reactionButtonsNode: ChatMessageReactionButtonsNode?
+    public var actionButtonsNode: ChatMessageActionButtonsNode?
+    public var reactionButtonsNode: ChatMessageReactionButtonsNode?
     
-    let messageAccessibilityArea: AccessibilityAreaNode
+    public let messageAccessibilityArea: AccessibilityAreaNode
     
-    var currentSwipeToReplyTranslation: CGFloat = 0.0
+    public var currentSwipeToReplyTranslation: CGFloat = 0.0
     
-    var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    public var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
-    var currentSwipeAction: ChatControllerInteractionSwipeAction?
+    public var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
             let isVisible = self.visibility != .none
@@ -89,7 +89,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     
     fileprivate var wasPlaying = false
     
-    required init() {
+    required public init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
@@ -182,11 +182,11 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -245,7 +245,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         self.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
-    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+    override public func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
         super.updateAccessibilityData(accessibilityData)
         
         self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
@@ -276,7 +276,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         let layoutConstants = self.layoutConstants
         
         let makeVideoLayout = self.interactiveVideoNode.asyncLayout()
@@ -927,7 +927,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+    @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
         case .ended:
             if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
@@ -1005,7 +1005,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         return nil
     }
     
-    @objc func shareButtonPressed() {
+    @objc private func shareButtonPressed() {
         if let item = self.item {
             if case .pinnedMessages = item.associatedData.subject {
                 item.controllerInteraction.navigateToMessageStandalone(item.content.firstMessage.id)
@@ -1037,7 +1037,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     }
         
     private var playedSwipeToReplyHaptic = false
-    @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
+    @objc private func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
         var leftOffset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
@@ -1159,7 +1159,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view
         }
@@ -1169,7 +1169,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         return super.hitTest(point, with: event)
     }
     
-    override func updateSelectionState(animated: Bool) {
+    override public func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
             return
         }
@@ -1238,29 +1238,29 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
 
-    override func cancelInsertionAnimations() {
+    override public func cancelInsertionAnimations() {
         self.layer.removeAllAnimations()
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
 
-    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, delay: Double, transition: ContainedViewLayoutTransition) {
+    public func animateFromLoadingPlaceholder(delay: Double, transition: ContainedViewLayoutTransition) {
         guard let item = self.item else {
             return
         }
@@ -1270,24 +1270,24 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
     }
     
-    func animateFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
+    public func animateFromSnapshot(snapshotView: UIView, transition: CombinedTransition) {
         snapshotView.frame = self.interactiveVideoNode.view.convert(snapshotView.frame, from: self.contextSourceNode.contentNode.view)
         self.interactiveVideoNode.animateFromSnapshot(snapshotView: snapshotView, transition: transition)
     }
 
-    override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    override public func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveVideoNode.playMediaWithSound()
     }
     
-    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
+    override public func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     
-    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    override public func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
         
-    override func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
+    override public func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
         
         guard let item = self.appliedItem, let params = self.appliedParams, progress > 0.0, let (initialHeight, targetHeight) = self.apparentHeightTransition, !targetHeight.isZero && !initialHeight.isZero else {
@@ -1425,7 +1425,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func openMessageContextMenu() {
+    override public func openMessageContextMenu() {
         guard let item = self.item else {
             return
         }
@@ -1433,7 +1433,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
     }
     
     private var absoluteRect: (CGRect, CGSize)?
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         
         var rect = rect
@@ -1464,13 +1464,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let reactionButtonsNode = self.reactionButtonsNode {
             reactionButtonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
-    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
+    override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }
@@ -1480,7 +1480,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         return nil
     }
     
-    override func targetForStoryTransition(id: StoryId) -> UIView? {
+    override public func targetForStoryTransition(id: StoryId) -> UIView? {
         guard let item = self.item else {
             return nil
         }
@@ -1496,7 +1496,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         return nil
     }
     
-    override func contentFrame() -> CGRect {
+    override public func contentFrame() -> CGRect {
         return self.interactiveVideoNode.frame
     }
 }

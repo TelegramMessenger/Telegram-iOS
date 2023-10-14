@@ -381,6 +381,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageActionButtonsNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageReactionsFooterContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatSwipeToReplyRecognizer",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageInstantVideoItemNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],
