@@ -57,7 +57,8 @@ extension Api.MessageMedia {
                     return collectPreCachedResources(for: document)
                 }
                 return nil
-            case let .messageMediaWebPage(webPage):
+            case let .messageMediaWebPage(flags, webPage):
+                let _ = flags
                 var result: [(MediaResource, Data)]?
                 switch webPage {
                     case let .webPage(_, _, _, _, _, _, _, _, _, photo, _, _, _, _, _, _, document, _, _):

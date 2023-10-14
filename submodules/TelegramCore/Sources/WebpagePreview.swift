@@ -47,7 +47,8 @@ public func webpagePreviewWithProgress(account: Account, url: String, webpageId:
                             }
                         }
                         switch result {
-                            case let .messageMediaWebPage(webpage):
+                            case let .messageMediaWebPage(flags, webpage):
+                                let _ = flags
                                 if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
                                     if case .Loaded = media.content {
                                         return .single(.result(media))

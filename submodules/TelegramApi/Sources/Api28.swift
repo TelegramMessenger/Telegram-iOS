@@ -656,24 +656,27 @@ public extension Api.payments {
 }
 public extension Api.payments {
     enum GiveawayInfo: TypeConstructorDescription {
-        case giveawayInfo(flags: Int32, joinedTooEarlyDate: Int32?, adminDisallowedChatId: Int64?)
-        case giveawayInfoResults(flags: Int32, giftCodeSlug: String?, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
+        case giveawayInfo(flags: Int32, startDate: Int32, joinedTooEarlyDate: Int32?, adminDisallowedChatId: Int64?, disallowedCountry: String?)
+        case giveawayInfoResults(flags: Int32, startDate: Int32, giftCodeSlug: String?, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .giveawayInfo(let flags, let joinedTooEarlyDate, let adminDisallowedChatId):
+                case .giveawayInfo(let flags, let startDate, let joinedTooEarlyDate, let adminDisallowedChatId, let disallowedCountry):
                     if boxed {
-                        buffer.appendInt32(2054937690)
+                        buffer.appendInt32(1130879648)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(startDate, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(joinedTooEarlyDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt64(adminDisallowedChatId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeString(disallowedCountry!, buffer: buffer, boxed: false)}
                     break
-                case .giveawayInfoResults(let flags, let giftCodeSlug, let finishDate, let winnersCount, let activatedCount):
+                case .giveawayInfoResults(let flags, let startDate, let giftCodeSlug, let finishDate, let winnersCount, let activatedCount):
                     if boxed {
-                        buffer.appendInt32(952312868)
+                        buffer.appendInt32(13456752)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(startDate, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(giftCodeSlug!, buffer: buffer, boxed: false)}
                     serializeInt32(finishDate, buffer: buffer, boxed: false)
                     serializeInt32(winnersCount, buffer: buffer, boxed: false)
@@ -684,10 +687,10 @@ public extension Api.payments {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .giveawayInfo(let flags, let joinedTooEarlyDate, let adminDisallowedChatId):
-                return ("giveawayInfo", [("flags", flags as Any), ("joinedTooEarlyDate", joinedTooEarlyDate as Any), ("adminDisallowedChatId", adminDisallowedChatId as Any)])
-                case .giveawayInfoResults(let flags, let giftCodeSlug, let finishDate, let winnersCount, let activatedCount):
-                return ("giveawayInfoResults", [("flags", flags as Any), ("giftCodeSlug", giftCodeSlug as Any), ("finishDate", finishDate as Any), ("winnersCount", winnersCount as Any), ("activatedCount", activatedCount as Any)])
+                case .giveawayInfo(let flags, let startDate, let joinedTooEarlyDate, let adminDisallowedChatId, let disallowedCountry):
+                return ("giveawayInfo", [("flags", flags as Any), ("startDate", startDate as Any), ("joinedTooEarlyDate", joinedTooEarlyDate as Any), ("adminDisallowedChatId", adminDisallowedChatId as Any), ("disallowedCountry", disallowedCountry as Any)])
+                case .giveawayInfoResults(let flags, let startDate, let giftCodeSlug, let finishDate, let winnersCount, let activatedCount):
+                return ("giveawayInfoResults", [("flags", flags as Any), ("startDate", startDate as Any), ("giftCodeSlug", giftCodeSlug as Any), ("finishDate", finishDate as Any), ("winnersCount", winnersCount as Any), ("activatedCount", activatedCount as Any)])
     }
     }
     
@@ -695,14 +698,20 @@ public extension Api.payments {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_2 = reader.readInt32() }
-            var _3: Int64?
-            if Int(_1!) & Int(1 << 2) != 0 {_3 = reader.readInt64() }
+            _2 = reader.readInt32()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt32() }
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt64() }
+            var _5: String?
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = parseString(reader) }
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 1) == 0) || _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 2) == 0) || _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.payments.GiveawayInfo.giveawayInfo(flags: _1!, joinedTooEarlyDate: _2, adminDisallowedChatId: _3)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.payments.GiveawayInfo.giveawayInfo(flags: _1!, startDate: _2!, joinedTooEarlyDate: _3, adminDisallowedChatId: _4, disallowedCountry: _5)
             }
             else {
                 return nil
@@ -711,21 +720,24 @@ public extension Api.payments {
         public static func parse_giveawayInfoResults(_ reader: BufferReader) -> GiveawayInfo? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
-            var _3: Int32?
-            _3 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
             _5 = reader.readInt32()
+            var _6: Int32?
+            _6 = reader.readInt32()
             let _c1 = _1 != nil
-            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
-            let _c3 = _3 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.payments.GiveawayInfo.giveawayInfoResults(flags: _1!, giftCodeSlug: _2, finishDate: _3!, winnersCount: _4!, activatedCount: _5!)
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.payments.GiveawayInfo.giveawayInfoResults(flags: _1!, startDate: _2!, giftCodeSlug: _3, finishDate: _4!, winnersCount: _5!, activatedCount: _6!)
             }
             else {
                 return nil

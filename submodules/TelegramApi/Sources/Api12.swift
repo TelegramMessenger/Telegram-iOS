@@ -611,6 +611,7 @@ public extension Api {
         case messageActionGeoProximityReached(fromId: Api.Peer, toId: Api.Peer, distance: Int32)
         case messageActionGiftCode(flags: Int32, boostPeer: Api.Peer?, months: Int32, slug: String)
         case messageActionGiftPremium(flags: Int32, currency: String, amount: Int64, months: Int32, cryptoCurrency: String?, cryptoAmount: Int64?)
+        case messageActionGiveawayLaunch
         case messageActionGroupCall(flags: Int32, call: Api.InputGroupCall, duration: Int32?)
         case messageActionGroupCallScheduled(call: Api.InputGroupCall, scheduleDate: Int32)
         case messageActionHistoryClear
@@ -771,6 +772,12 @@ public extension Api {
                     serializeInt32(months, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(cryptoCurrency!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(cryptoAmount!, buffer: buffer, boxed: false)}
+                    break
+                case .messageActionGiveawayLaunch:
+                    if boxed {
+                        buffer.appendInt32(858499565)
+                    }
+                    
                     break
                 case .messageActionGroupCall(let flags, let call, let duration):
                     if boxed {
@@ -981,6 +988,8 @@ public extension Api {
                 return ("messageActionGiftCode", [("flags", flags as Any), ("boostPeer", boostPeer as Any), ("months", months as Any), ("slug", slug as Any)])
                 case .messageActionGiftPremium(let flags, let currency, let amount, let months, let cryptoCurrency, let cryptoAmount):
                 return ("messageActionGiftPremium", [("flags", flags as Any), ("currency", currency as Any), ("amount", amount as Any), ("months", months as Any), ("cryptoCurrency", cryptoCurrency as Any), ("cryptoAmount", cryptoAmount as Any)])
+                case .messageActionGiveawayLaunch:
+                return ("messageActionGiveawayLaunch", [])
                 case .messageActionGroupCall(let flags, let call, let duration):
                 return ("messageActionGroupCall", [("flags", flags as Any), ("call", call as Any), ("duration", duration as Any)])
                 case .messageActionGroupCallScheduled(let call, let scheduleDate):
@@ -1261,6 +1270,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_messageActionGiveawayLaunch(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionGiveawayLaunch
         }
         public static func parse_messageActionGroupCall(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?

@@ -95,7 +95,7 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
         |> map { result -> PremiumGiveawayInfo? in
             if let result {
                 switch result {
-                case let .giveawayInfo(flags, joinedTooEarlyDate, adminDisallowedChatId):
+                case let .giveawayInfo(flags, _, joinedTooEarlyDate, adminDisallowedChatId, _):
                     if (flags & (1 << 3)) != 0 {
                         return .ongoing(status: .almostOver)
                     } else if (flags & (1 << 0)) != 0 {
@@ -107,7 +107,7 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     } else {
                         return .ongoing(status: .notQualified)
                     }
-                case let .giveawayInfoResults(flags, giftCodeSlug, finishDate, winnersCount, activatedCount):
+                case let .giveawayInfoResults(flags, _, giftCodeSlug, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
                     if let giftCodeSlug = giftCodeSlug {
                         status = .won(slug: giftCodeSlug)

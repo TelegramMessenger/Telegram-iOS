@@ -217,7 +217,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
             }
             
             switch action {
-            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionSetSameChatWallPaper:
+            case .messageActionChannelCreate, .messageActionChatDeletePhoto, .messageActionChatEditPhoto, .messageActionChatEditTitle, .messageActionEmpty, .messageActionPinMessage, .messageActionHistoryClear, .messageActionGameScore, .messageActionPaymentSent, .messageActionPaymentSentMe, .messageActionPhoneCall, .messageActionScreenshotTaken, .messageActionCustomAction, .messageActionBotAllowed, .messageActionSecureValuesSent, .messageActionSecureValuesSentMe, .messageActionContactSignUp, .messageActionGroupCall, .messageActionSetMessagesTTL, .messageActionGroupCallScheduled, .messageActionSetChatTheme, .messageActionChatJoinedByRequest, .messageActionWebViewDataSent, .messageActionWebViewDataSentMe, .messageActionGiftPremium, .messageActionTopicCreate, .messageActionTopicEdit, .messageActionSuggestProfilePhoto, .messageActionSetChatWallPaper, .messageActionSetSameChatWallPaper, .messageActionGiveawayLaunch:
                     break
                 case let .messageActionChannelMigrateFrom(_, chatId):
                     result.append(PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId)))
@@ -261,7 +261,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                 let peerId: PeerId = chatPeerId.peerId
                 
                 switch replyTo {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
                     let _ = replyHeader
                     let _ = replyToTopId
                     let _ = quoteText
@@ -282,7 +282,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
         case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
                     let _ = replyHeader
                     let _ = replyToTopId
                     let _ = quoteText
@@ -334,7 +334,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
             } else {
                 return (TelegramMediaExpiredContent(data: .file), nil, nil, nil)
             }
-        case let .messageMediaWebPage(webpage):
+        case let .messageMediaWebPage(_, webpage):
             if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage, url: nil) {
                 return (mediaWebpage, nil, nil, nil)
             }
@@ -567,7 +567,7 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
                         let isForumTopic = (flags & (1 << 3)) != 0
                         
                         var quote: EngineMessageReplyQuote?
@@ -841,7 +841,7 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
                         var quote: EngineMessageReplyQuote?
                         if let quoteText = quoteText {
                             quote = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []))

@@ -989,7 +989,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if previousState.pts >= pts {
                     } else if previousState.pts + ptsCount == pts {
                         switch apiWebpage {
-                            case let .webPageEmpty(id):
+                            case let .webPageEmpty(flags, id, url):
+                                let _ = flags
+                                let _ = url
                                 updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                             default:
                                 if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
@@ -1204,7 +1206,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 }
             case let .updateWebPage(apiWebpage, _, _):
                 switch apiWebpage {
-                    case let .webPageEmpty(id):
+                    case let .webPageEmpty(flags, id, url):
+                        let _ = flags
+                        let _ = url
                         updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                     default:
                         if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
@@ -1523,11 +1527,12 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 switch draft {
                     case .draftMessageEmpty:
                         inputState = nil
-                    case let .draftMessage(_, replyToMsgHeader, message, entities, date):
+                    case let .draftMessage(_, replyToMsgHeader, message, entities, media, date):
+                        let _ = media
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyToTopId, quoteText, quoteEntities):
+                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
                                 let _ = replyHeader
                                 let _ = replyToTopId
                                 
@@ -2959,7 +2964,9 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                         updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)
                     case let .updateChannelWebPage(_, apiWebpage, _, _):
                         switch apiWebpage {
-                        case let .webPageEmpty(id):
+                        case let .webPageEmpty(flags, id, url):
+                            let _ = flags
+                            let _ = url
                             updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                         default:
                             if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {

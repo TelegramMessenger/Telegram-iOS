@@ -1369,9 +1369,9 @@ public extension Api {
 public extension Api {
     enum WebPage: TypeConstructorDescription {
         case webPage(flags: Int32, id: Int64, url: String, displayUrl: String, hash: Int32, type: String?, siteName: String?, title: String?, description: String?, photo: Api.Photo?, embedUrl: String?, embedType: String?, embedWidth: Int32?, embedHeight: Int32?, duration: Int32?, author: String?, document: Api.Document?, cachedPage: Api.Page?, attributes: [Api.WebPageAttribute]?)
-        case webPageEmpty(id: Int64)
+        case webPageEmpty(flags: Int32, id: Int64, url: String?)
         case webPageNotModified(flags: Int32, cachedPageViews: Int32?)
-        case webPagePending(id: Int64, date: Int32)
+        case webPagePending(flags: Int32, id: Int64, url: String?, date: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1403,11 +1403,13 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     break
-                case .webPageEmpty(let id):
+                case .webPageEmpty(let flags, let id, let url):
                     if boxed {
-                        buffer.appendInt32(-350980120)
+                        buffer.appendInt32(555358088)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     break
                 case .webPageNotModified(let flags, let cachedPageViews):
                     if boxed {
@@ -1416,11 +1418,13 @@ public extension Api {
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(cachedPageViews!, buffer: buffer, boxed: false)}
                     break
-                case .webPagePending(let id, let date):
+                case .webPagePending(let flags, let id, let url, let date):
                     if boxed {
-                        buffer.appendInt32(-981018084)
+                        buffer.appendInt32(-1328464313)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
     }
@@ -1430,12 +1434,12 @@ public extension Api {
         switch self {
                 case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
                 return ("webPage", [("flags", flags as Any), ("id", id as Any), ("url", url as Any), ("displayUrl", displayUrl as Any), ("hash", hash as Any), ("type", type as Any), ("siteName", siteName as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("embedUrl", embedUrl as Any), ("embedType", embedType as Any), ("embedWidth", embedWidth as Any), ("embedHeight", embedHeight as Any), ("duration", duration as Any), ("author", author as Any), ("document", document as Any), ("cachedPage", cachedPage as Any), ("attributes", attributes as Any)])
-                case .webPageEmpty(let id):
-                return ("webPageEmpty", [("id", id as Any)])
+                case .webPageEmpty(let flags, let id, let url):
+                return ("webPageEmpty", [("flags", flags as Any), ("id", id as Any), ("url", url as Any)])
                 case .webPageNotModified(let flags, let cachedPageViews):
                 return ("webPageNotModified", [("flags", flags as Any), ("cachedPageViews", cachedPageViews as Any)])
-                case .webPagePending(let id, let date):
-                return ("webPagePending", [("id", id as Any), ("date", date as Any)])
+                case .webPagePending(let flags, let id, let url, let date):
+                return ("webPagePending", [("flags", flags as Any), ("id", id as Any), ("url", url as Any), ("date", date as Any)])
     }
     }
     
@@ -1513,11 +1517,17 @@ public extension Api {
             }
         }
         public static func parse_webPageEmpty(_ reader: BufferReader) -> WebPage? {
-            var _1: Int64?
-            _1 = reader.readInt64()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.WebPage.webPageEmpty(id: _1!)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.WebPage.webPageEmpty(flags: _1!, id: _2!, url: _3)
             }
             else {
                 return nil
@@ -1538,14 +1548,20 @@ public extension Api {
             }
         }
         public static func parse_webPagePending(_ reader: BufferReader) -> WebPage? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int32?
-            _2 = reader.readInt32()
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = parseString(reader) }
+            var _4: Int32?
+            _4 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.WebPage.webPagePending(id: _1!, date: _2!)
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.WebPage.webPagePending(flags: _1!, id: _2!, url: _3, date: _4!)
             }
             else {
                 return nil

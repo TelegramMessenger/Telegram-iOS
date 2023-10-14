@@ -1,13 +1,13 @@
 public extension Api {
-    enum DraftMessage: TypeConstructorDescription {
-        case draftMessage(flags: Int32, replyTo: Api.MessageReplyHeader?, message: String, entities: [Api.MessageEntity]?, date: Int32)
+    indirect enum DraftMessage: TypeConstructorDescription {
+        case draftMessage(flags: Int32, replyTo: Api.MessageReplyHeader?, message: String, entities: [Api.MessageEntity]?, media: Api.MessageMedia?, date: Int32)
         case draftMessageEmpty(flags: Int32, date: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .draftMessage(let flags, let replyTo, let message, let entities, let date):
+                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date):
                     if boxed {
-                        buffer.appendInt32(-1783606645)
+                        buffer.appendInt32(-620277848)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {replyTo!.serialize(buffer, true)}
@@ -17,6 +17,7 @@ public extension Api {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 5) != 0 {media!.serialize(buffer, true)}
                     serializeInt32(date, buffer: buffer, boxed: false)
                     break
                 case .draftMessageEmpty(let flags, let date):
@@ -31,8 +32,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .draftMessage(let flags, let replyTo, let message, let entities, let date):
-                return ("draftMessage", [("flags", flags as Any), ("replyTo", replyTo as Any), ("message", message as Any), ("entities", entities as Any), ("date", date as Any)])
+                case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date):
+                return ("draftMessage", [("flags", flags as Any), ("replyTo", replyTo as Any), ("message", message as Any), ("entities", entities as Any), ("media", media as Any), ("date", date as Any)])
                 case .draftMessageEmpty(let flags, let date):
                 return ("draftMessageEmpty", [("flags", flags as Any), ("date", date as Any)])
     }
@@ -51,15 +52,20 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
-            var _5: Int32?
-            _5 = reader.readInt32()
+            var _5: Api.MessageMedia?
+            if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+            } }
+            var _6: Int32?
+            _6 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 4) == 0) || _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, date: _5!)
+            let _c5 = (Int(_1!) & Int(1 << 5) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.DraftMessage.draftMessage(flags: _1!, replyTo: _2, message: _3!, entities: _4, media: _5, date: _6!)
             }
             else {
                 return nil
