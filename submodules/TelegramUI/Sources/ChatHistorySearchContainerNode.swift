@@ -12,6 +12,7 @@ import SearchUI
 import TelegramUIPreferences
 import ListMessageItem
 import ChatControllerInteraction
+import ChatMessageItemView
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)

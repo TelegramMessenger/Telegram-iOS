@@ -28,6 +28,7 @@ import ContextUI
 import Pasteboard
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
+import ChatMessageItemView
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]

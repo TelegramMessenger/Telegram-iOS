@@ -5,6 +5,7 @@ import ContextUI
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import ChatMessageItemView
  
 final class ChatMessageContextLocationContentSource: ContextLocationContentSource {
     private let controller: ViewController

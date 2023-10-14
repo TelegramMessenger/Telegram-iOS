@@ -42,6 +42,7 @@ import ChatMessageFileBubbleContentNode
 import ChatMessageWebpageBubbleContentNode
 import ChatMessagePollBubbleContentNode
 import ChatMessageItem
+import ChatMessageItemView
 
 enum InternalBubbleTapAction {
     case action(() -> Void)

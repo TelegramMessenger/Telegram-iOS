@@ -15,6 +15,7 @@ import HierarchyTrackingLayer
 import WallpaperBackgroundNode
 import ChatControllerInteraction
 import AvatarVideoNode
+import ChatMessageItem
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -416,11 +417,11 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, storyStats: self.storyStats, synchronousLoad: synchronousLoad)
+        return ChatMessageAvatarHeaderNodeImpl(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, storyStats: self.storyStats, synchronousLoad: synchronousLoad)
     }
 
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
-        guard let node = node as? ChatMessageAvatarHeaderNode else {
+        guard let node = node as? ChatMessageAvatarHeaderNodeImpl else {
             return
         }
         node.updatePresentationData(self.presentationData, context: self.context)
@@ -432,7 +433,7 @@ private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 private let maxVideoLoopCount = 3
 
-final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
+final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction

@@ -13,6 +13,7 @@ import ChatInterfaceState
 import PresentationDataUtils
 import ChatMessageTextBubbleContentNode
 import TextFormat
+import ChatMessageItemView
 
 private enum OptionsId: Hashable {
     case reply

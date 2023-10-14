@@ -614,14 +614,14 @@ public final class ChatMessageAccessibilityData {
     }
 }
 
-public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
-    let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
+open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
+    public let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
     
-    var item: ChatMessageItem?
-    var accessibilityData: ChatMessageAccessibilityData?
-    var safeInsets = UIEdgeInsets()
+    open var item: ChatMessageItem?
+    open var accessibilityData: ChatMessageAccessibilityData?
+    open var safeInsets = UIEdgeInsets()
     
-    var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
+    open var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -636,23 +636,23 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         fatalError("init(coder:) has not been implemented")
     }
     
-    override public func reuse() {
+    override open func reuse() {
         super.reuse()
         
         self.item = nil
         self.frame = CGRect()
     }
     
-    func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
+    open func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         self.item = item
     }
     
-    func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+    open func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
         self.accessibilityData = accessibilityData
     }
     
-    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
-        if let item = item as? ChatMessageItemImpl {
+    override open func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+        if let item = item as? ChatMessageItem {
             let doLayout = self.asyncLayout()
             let merged = item.mergedWithItems(top: previousItem, bottom: nextItem)
             let (layout, apply) = doLayout(item, params, merged.top, merged.bottom, merged.dateAtBottom)
@@ -662,10 +662,10 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func cancelInsertionAnimations() {
+    open func cancelInsertionAnimations() {
     }
     
-    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override open func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         if short {
             //self.layer.animateBoundsOriginYAdditive(from: -self.bounds.size.height, to: 0.0, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
         } else {
@@ -674,7 +674,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    open func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         return { _, _, _, _, _ in
             return (ListViewItemNodeLayout(contentSize: CGSize(width: 32.0, height: 32.0), insets: UIEdgeInsets()), { _, _, _ in
                 
@@ -682,24 +682,24 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    open func transitionNode(id: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         return nil
     }
     
-    func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
+    open func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return nil
     }
     
-    func updateHiddenMedia() {
+    open func updateHiddenMedia() {
     }
     
-    func updateSelectionState(animated: Bool) {
+    open func updateSelectionState(animated: Bool) {
     }
     
-    func updateSearchTextHighlightState() {
+    open func updateSearchTextHighlightState() {
     }
     
-    func updateHighlightedState(animated: Bool) {
+    open func updateHighlightedState(animated: Bool) {
         var isHighlightedInOverlay = false
         if let item = self.item, let contextHighlightedState = item.controllerInteraction.contextHighlightedState {
             switch item.content {
@@ -719,17 +719,17 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         self.isHighlightedInOverlay = isHighlightedInOverlay
     }
     
-    func updateAutomaticMediaDownloadSettings() {
+    open func updateAutomaticMediaDownloadSettings() {
     }
     
-    func updateStickerSettings(forceStopAnimations: Bool) {
+    open func updateStickerSettings(forceStopAnimations: Bool) {
     }
     
-    func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
+    open func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return nil
     }
     
-    override public func headers() -> [ListViewItemHeader]? {
+    override open func headers() -> [ListViewItemHeader]? {
         if let item = self.item {
             return item.headers
         } else {
@@ -737,7 +737,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func performMessageButtonAction(button: ReplyMarkupButton) {
+    open func performMessageButtonAction(button: ReplyMarkupButton) {
         if let item = self.item {
             switch button.action {
                 case .text:
@@ -800,7 +800,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func presentMessageButtonContextMenu(button: ReplyMarkupButton) {
+    open func presentMessageButtonContextMenu(button: ReplyMarkupButton) {
         if let item = self.item {
             switch button.action {
                 case let .url(url):
@@ -811,24 +811,24 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func openMessageContextMenu() {
+    open func openMessageContextMenu() {
     }
     
-    public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
+    open func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         return nil
     }
     
-    public func targetForStoryTransition(id: StoryId) -> UIView? {
+    open func targetForStoryTransition(id: StoryId) -> UIView? {
         return nil
     }
     
-    func getStatusNode() -> ASDisplayNode? {
+    open func getStatusNode() -> ASDisplayNode? {
         return nil
     }
 
     private var attachedAvatarNodeOffset: CGFloat = 0.0
 
-    override public func attachedHeaderNodesUpdated() {
+    override open func attachedHeaderNodesUpdated() {
         if !self.attachedAvatarNodeOffset.isZero {
             self.updateAttachedAvatarNodeOffset(offset: self.attachedAvatarNodeOffset, transition: .immediate)
         } else {
@@ -840,7 +840,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
 
-    func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    open func updateAttachedAvatarNodeOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.attachedAvatarNodeOffset = offset
         for headerNode in self.attachedHeaderNodes {
             if let headerNode = headerNode as? ChatMessageAvatarHeaderNode {
@@ -849,10 +849,10 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
         }
     }
     
-    func unreadMessageRangeUpdated() {
+    open func unreadMessageRangeUpdated() {
     }
     
-    public func contentFrame() -> CGRect {
+    open func contentFrame() -> CGRect {
         return self.bounds
     }
 }

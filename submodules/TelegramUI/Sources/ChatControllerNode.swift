@@ -32,6 +32,7 @@ import ChatInputPanelNode
 import ChatInputContextPanelNode
 import TextSelectionNode
 import ReplyAccessoryPanelNode
+import ChatMessageItemView
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

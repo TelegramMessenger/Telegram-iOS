@@ -10,6 +10,8 @@ import WallpaperBackgroundNode
 import ShimmerEffect
 import ChatPresentationInterfaceState
 import AccountContext
+import ChatMessageItem
+import ChatMessageItemView
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode

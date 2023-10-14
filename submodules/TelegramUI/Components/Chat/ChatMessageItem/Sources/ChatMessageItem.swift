@@ -84,6 +84,25 @@ public enum ChatMessageItemAdditionalContent {
     case eventLogPreviousLink(Message)
 }
 
+public enum ChatMessageMerge: Int32 {
+    case none = 0
+    case fullyMerged = 1
+    case semanticallyMerged = 2
+    
+    public var merged: Bool {
+        if case .none = self {
+            return false
+        } else {
+            return true
+        }
+    }
+}
+
+public protocol ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
+    func updateSelectionState(animated: Bool)
+    func updateSublayerTransformOffset(layer: CALayer, offset: CGPoint)
+}
+
 public protocol ChatMessageItem: ListViewItem {
     var presentationData: ChatPresentationData { get }
     var context: AccountContext { get }
@@ -102,4 +121,6 @@ public protocol ChatMessageItem: ListViewItem {
     var unsent: Bool { get }
     var sending: Bool { get }
     var failed: Bool { get }
+    
+    func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool)
 }

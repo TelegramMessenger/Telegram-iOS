@@ -13,6 +13,7 @@ import PersistentStringHash
 import ChatControllerInteraction
 import ChatHistoryEntry
 import ChatMessageItem
+import ChatMessageItemView
 
 private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
     if let story = media as? TelegramMediaStory, story.isMention {
@@ -162,20 +163,6 @@ func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -
         return lhsHeader.id == rhsHeader.id
     } else {
         return false
-    }
-}
-
-enum ChatMessageMerge: Int32 {
-    case none = 0
-    case fullyMerged = 1
-    case semanticallyMerged = 2
-    
-    var merged: Bool {
-        if case .none = self {
-            return false
-        } else {
-            return true
-        }
     }
 }
 
@@ -471,7 +458,7 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
         }
     }
     
-    final func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
+    public func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool) {
         var mergedTop: ChatMessageMerge = .none
         var mergedBottom: ChatMessageMerge = .none
         var dateAtBottom = false

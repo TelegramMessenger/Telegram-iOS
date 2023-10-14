@@ -107,6 +107,8 @@ import ChatMessageDateAndStatusNode
 import ReplyAccessoryPanelNode
 import TextSelectionNode
 import ChatMessagePollBubbleContentNode
+import ChatMessageItem
+import ChatMessageItemView
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1349,7 +1351,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openPeer: { [weak self] peer, navigation, fromMessage, source in
             var expandAvatar = false
             if case let .groupParticipant(storyStats, avatarHeaderNode) = source {
-                if let storyStats, storyStats.totalCount != 0, let avatarHeaderNode = avatarHeaderNode as? ChatMessageAvatarHeaderNode {
+                if let storyStats, storyStats.totalCount != 0, let avatarHeaderNode = avatarHeaderNode as? ChatMessageAvatarHeaderNodeImpl {
                     self?.openStories(peerId: peer.id, avatarHeaderNode: avatarHeaderNode, avatarNode: nil)
                     return
                 } else {
@@ -17400,7 +17402,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    func openStories(peerId: EnginePeer.Id, avatarHeaderNode: ChatMessageAvatarHeaderNode?, avatarNode: AvatarNode?) {
+    func openStories(peerId: EnginePeer.Id, avatarHeaderNode: ChatMessageAvatarHeaderNodeImpl?, avatarNode: AvatarNode?) {
         if let avatarNode = avatarHeaderNode?.avatarNode ?? avatarNode {
             StoryContainerScreen.openPeerStories(context: self.context, peerId: peerId, parentController: self, avatarNode: avatarNode)
         }
