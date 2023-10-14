@@ -14,6 +14,7 @@ import FeaturedStickersScreen
 import ChatTextInputMediaRecordingButton
 import ReplyAccessoryPanelNode
 import ChatMessageItemView
+import ChatMessageStickerItemNode
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {
@@ -418,9 +419,27 @@ public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransiti
                         itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
                     }
                 } else if let itemNode = self.itemNode as? ChatMessageStickerItemNode {
-                    itemNode.animateContentFromTextInputField(textInput: textInput, transition: combinedTransition)
+                    itemNode.animateContentFromTextInputField(
+                        textInput: ChatMessageStickerItemNode.AnimationTransitionTextInput(
+                            backgroundView: textInput.backgroundView,
+                            contentView: textInput.contentView,
+                            sourceRect: textInput.sourceRect,
+                            scrollOffset: textInput.scrollOffset
+                        ),
+                        transition: combinedTransition
+                    )
                     if let sourceReplyPanel = sourceReplyPanel {
-                        itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
+                        itemNode.animateReplyPanel(
+                            sourceReplyPanel: ChatMessageStickerItemNode.AnimationTransitionReplyPanel(
+                                titleNode: sourceReplyPanel.titleNode,
+                                textNode: sourceReplyPanel.textNode,
+                                lineNode: sourceReplyPanel.lineNode,
+                                imageNode: sourceReplyPanel.imageNode,
+                                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+                            ),
+                            transition: combinedTransition
+                        )
                     }
                 }
             case let .stickerMediaInput(stickerMediaInput, replyPanel):
@@ -470,9 +489,28 @@ public final class ChatMessageTransitionNode: ASDisplayNode, ChatMessageTransiti
                         itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
                     }
                 } else if let itemNode = self.itemNode as? ChatMessageStickerItemNode {
-                    itemNode.animateContentFromStickerGridItem(stickerSource: stickerSource, transition: combinedTransition)
+                    itemNode.animateContentFromStickerGridItem(
+                        stickerSource: ChatMessageStickerItemNode.AnimationTransitionSticker(
+                            imageNode: stickerSource.imageNode,
+                            animationNode: stickerSource.animationNode,
+                            placeholderNode: stickerSource.placeholderNode,
+                            imageLayer: stickerSource.imageLayer,
+                            relativeSourceRect: stickerSource.relativeSourceRect
+                        ),
+                        transition: combinedTransition
+                    )
                     if let sourceReplyPanel = sourceReplyPanel {
-                        itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
+                        itemNode.animateReplyPanel(
+                            sourceReplyPanel: ChatMessageStickerItemNode.AnimationTransitionReplyPanel(
+                                titleNode: sourceReplyPanel.titleNode,
+                                textNode: sourceReplyPanel.textNode,
+                                lineNode: sourceReplyPanel.lineNode,
+                                imageNode: sourceReplyPanel.imageNode,
+                                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+                            ),
+                            transition: combinedTransition
+                        )
                     }
                 }
 

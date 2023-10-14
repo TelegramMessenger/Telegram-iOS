@@ -43,12 +43,14 @@ import ChatMessageWebpageBubbleContentNode
 import ChatMessagePollBubbleContentNode
 import ChatMessageItem
 import ChatMessageItemView
-
-enum InternalBubbleTapAction {
-    case action(() -> Void)
-    case optionalAction(() -> Void)
-    case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
-}
+import ChatMessageSwipeToReplyNode
+import ChatMessageSelectionNode
+import ChatMessageDeliveryFailedNode
+import ChatMessageShareButton
+import ChatMessageThreadInfoNode
+import ChatMessageActionButtonsNode
+import ChatSwipeToReplyRecognizer
+import ChatMessageReactionsFooterContentNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -65,50 +67,6 @@ private final class ChatMessageBubbleClippingNode: ASDisplayNode {
             return result
         }
     }
-}
-
-func hasCommentButton(item: ChatMessageItem) -> Bool {
-    let firstMessage = item.content.firstMessage
-    
-    var hasDiscussion = false
-    if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
-        hasDiscussion = true
-    }
-    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
-        hasDiscussion = false
-    }
-
-    if firstMessage.adAttribute != nil {
-        hasDiscussion = false
-    }
-    
-    if hasDiscussion {
-        var canComment = false
-        if case .pinnedMessages = item.associatedData.subject {
-            canComment = false
-        } else if firstMessage.id.namespace == Namespaces.Message.Local {
-            canComment = true
-        } else {
-            for attribute in firstMessage.attributes {
-                if let attribute = attribute as? ReplyThreadMessageAttribute, let commentsPeerId = attribute.commentsPeerId {
-                    switch item.associatedData.channelDiscussionGroup {
-                    case .unknown:
-                        canComment = true
-                    case let .known(groupId):
-                        canComment = groupId == commentsPeerId
-                    }
-                    break
-                }
-            }
-        }
-        
-        if canComment {
-            return true
-        }
-    } else if firstMessage.id.peerId.isReplies {
-        return true
-    }
-    return false
 }
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([(Message, AnyClass, ChatMessageEntryAttributes, BubbleItemAttributes)], Bool, Bool) {

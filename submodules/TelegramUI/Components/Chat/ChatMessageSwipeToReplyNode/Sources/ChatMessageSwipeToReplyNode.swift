@@ -8,8 +8,8 @@ import ChatControllerInteraction
 
 private let size = CGSize(width: 33.0, height: 33.0)
 
-final class ChatMessageSwipeToReplyNode: ASDisplayNode {
-    enum Action {
+public final class ChatMessageSwipeToReplyNode: ASDisplayNode {
+    public enum Action {
         case reply
         case like
         case unlike
@@ -27,7 +27,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    init(fillColor: UIColor, enableBlur: Bool, foregroundColor: UIColor, backgroundNode: WallpaperBackgroundNode?, action: ChatMessageSwipeToReplyNode.Action) {
+    public init(fillColor: UIColor, enableBlur: Bool, foregroundColor: UIColor, backgroundNode: WallpaperBackgroundNode?, action: ChatMessageSwipeToReplyNode.Action) {
         self.backgroundNode = NavigationBackgroundNode(color: fillColor, enableBlur: enableBlur)
         self.backgroundNode.isUserInteractionEnabled = false
 
@@ -138,7 +138,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         if let backgroundContent = self.backgroundContent {
@@ -149,7 +149,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     }
     
     private var animatedWave = false
-    func updateProgress(_ progress: CGFloat) {
+    public func updateProgress(_ progress: CGFloat) {
         let progress = max(0.0, min(1.0, progress))
         var foregroundProgress = min(1.0, progress * 1.2)
         var scaleProgress = 0.65 + foregroundProgress * 0.35
@@ -175,7 +175,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         }
     }
     
-    func playSuccessAnimation() {
+    public func playSuccessAnimation() {
         guard !self.animatedWave else {
             return
         }
@@ -214,7 +214,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         self.fillLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
     }
     
-    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
@@ -225,7 +225,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     }
 }
 
-extension ChatMessageSwipeToReplyNode.Action {
+public extension ChatMessageSwipeToReplyNode.Action {
     init(_ action: ChatControllerInteractionSwipeAction?) {
         if let action = action {
             switch action {

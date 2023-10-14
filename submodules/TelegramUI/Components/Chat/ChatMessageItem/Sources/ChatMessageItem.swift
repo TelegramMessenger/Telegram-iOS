@@ -9,6 +9,7 @@ import AccountContext
 import ChatHistoryEntry
 import ChatControllerInteraction
 import TelegramPresentationData
+import ChatMessageItemCommon
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes, location: MessageHistoryEntryLocation?)
@@ -123,4 +124,48 @@ public protocol ChatMessageItem: ListViewItem {
     var failed: Bool { get }
     
     func mergedWithItems(top: ListViewItem?, bottom: ListViewItem?) -> (top: ChatMessageMerge, bottom: ChatMessageMerge, dateAtBottom: Bool)
+}
+
+public func hasCommentButton(item: ChatMessageItem) -> Bool {
+    let firstMessage = item.content.firstMessage
+    
+    var hasDiscussion = false
+    if let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+        hasDiscussion = true
+    }
+    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.effectiveTopId == firstMessage.id {
+        hasDiscussion = false
+    }
+
+    if firstMessage.adAttribute != nil {
+        hasDiscussion = false
+    }
+    
+    if hasDiscussion {
+        var canComment = false
+        if case .pinnedMessages = item.associatedData.subject {
+            canComment = false
+        } else if firstMessage.id.namespace == Namespaces.Message.Local {
+            canComment = true
+        } else {
+            for attribute in firstMessage.attributes {
+                if let attribute = attribute as? ReplyThreadMessageAttribute, let commentsPeerId = attribute.commentsPeerId {
+                    switch item.associatedData.channelDiscussionGroup {
+                    case .unknown:
+                        canComment = true
+                    case let .known(groupId):
+                        canComment = groupId == commentsPeerId
+                    }
+                    break
+                }
+            }
+        }
+        
+        if canComment {
+            return true
+        }
+    } else if firstMessage.id.peerId.isReplies {
+        return true
+    }
+    return false
 }

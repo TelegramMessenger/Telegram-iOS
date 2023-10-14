@@ -109,6 +109,7 @@ import TextSelectionNode
 import ChatMessagePollBubbleContentNode
 import ChatMessageItem
 import ChatMessageItemView
+import ChatMessageItemCommon
 
 public enum ChatControllerPeekActions {
     case standard
@@ -19521,31 +19522,6 @@ extension Peer {
         
         return false
     }
-}
-
-func canAddMessageReactions(message: Message) -> Bool {
-    if message.id.namespace != Namespaces.Message.Cloud {
-        return false
-    }
-    if let peer = message.peers[message.id.peerId] {
-        if let _ = peer as? TelegramSecretChat {
-            return false
-        }
-    } else {
-        return false
-    }
-    for media in message.media {
-        if let _ = media as? TelegramMediaAction {
-            return false
-        } else if let story = media as? TelegramMediaStory {
-            if story.isMention {
-                return false
-            }
-        } else if let _ = media as? TelegramMediaExpiredContent {
-            return false
-        }
-    }
-    return true
 }
 
 enum AllowedReactions {

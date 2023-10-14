@@ -614,6 +614,12 @@ public final class ChatMessageAccessibilityData {
     }
 }
 
+public enum InternalBubbleTapAction {
+    case action(() -> Void)
+    case optionalAction(() -> Void)
+    case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
+}
+
 open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
     public let layoutConstants = (ChatMessageItemLayoutConstants.compact, ChatMessageItemLayoutConstants.regular)
     

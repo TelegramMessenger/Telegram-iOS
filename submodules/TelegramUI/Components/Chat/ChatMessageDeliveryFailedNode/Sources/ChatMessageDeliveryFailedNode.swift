@@ -4,11 +4,11 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
-final class ChatMessageDeliveryFailedNode: ASImageNode {
+public final class ChatMessageDeliveryFailedNode: ASImageNode {
     private let tapped: () -> Void
     private var theme: PresentationTheme?
     
-    init(tapped: @escaping () -> Void) {
+    public init(tapped: @escaping () -> Void) {
         self.tapped = tapped
         
         super.init()
@@ -18,7 +18,7 @@ final class ChatMessageDeliveryFailedNode: ASImageNode {
         self.isUserInteractionEnabled = true
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
@@ -29,7 +29,7 @@ final class ChatMessageDeliveryFailedNode: ASImageNode {
         }
     }
     
-    func updateLayout(theme: PresentationTheme) -> CGSize {
+    public func updateLayout(theme: PresentationTheme) -> CGSize {
         if self.theme !== theme {
             self.theme = theme
             self.image = PresentationResourcesChat.chatBubbleDeliveryFailedIcon(theme)

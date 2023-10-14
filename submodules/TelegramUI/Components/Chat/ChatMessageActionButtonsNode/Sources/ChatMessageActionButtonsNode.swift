@@ -343,7 +343,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     
                     let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.size.width) / 2.0), y: floor((42.0 - titleSize.size.height) / 2.0) + 1.0), size: titleSize.size)
                     titleNode.layer.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                    animation.animator.updatePosition(layer: titleNode.layer, position: titleFrame.center, completion: nil)
+                    animation.animator.updatePosition(layer: titleNode.layer, position: CGPoint(x: titleFrame.midX, y: titleFrame.midY), completion: nil)
                     
                     if let buttonView = node.buttonView {
                         buttonView.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
@@ -366,17 +366,17 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     }
 }
 
-final class ChatMessageActionButtonsNode: ASDisplayNode {
+public final class ChatMessageActionButtonsNode: ASDisplayNode {
     private var buttonNodes: [ChatMessageActionButtonNode] = []
     
     private var buttonPressedWrapper: ((ReplyMarkupButton) -> Void)?
     private var buttonLongTappedWrapper: ((ReplyMarkupButton) -> Void)?
-    var buttonPressed: ((ReplyMarkupButton) -> Void)?
-    var buttonLongTapped: ((ReplyMarkupButton) -> Void)?
+    public var buttonPressed: ((ReplyMarkupButton) -> Void)?
+    public var buttonLongTapped: ((ReplyMarkupButton) -> Void)?
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    override init() {
+    override public init() {
         super.init()
         
         self.buttonPressedWrapper = { [weak self] button in
@@ -392,7 +392,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         
         for button in buttonNodes {
@@ -403,7 +403,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)) {
+    public class func asyncLayout(_ maybeNode: ChatMessageActionButtonsNode?) -> (_ context: AccountContext, _ theme: ChatPresentationThemeData, _ chatBubbleCorners: PresentationChatBubbleCorners, _ strings: PresentationStrings, _ backgroundNode: WallpaperBackgroundNode?, _ replyMarkup: ReplyMarkupMessageAttribute, _ message: Message, _ constrainedWidth: CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)) {
         let currentButtonLayouts = maybeNode?.buttonNodes.map { ChatMessageActionButtonNode.asyncLayout($0) } ?? []
         
         return { context, theme, chatBubbleCorners, strings, backgroundNode, replyMarkup, message, constrainedWidth in

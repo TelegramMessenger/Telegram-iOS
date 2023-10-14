@@ -29,12 +29,6 @@ import ChatBotInfoItem
 import ChatMessageItem
 import ChatMessageItemView
 
-extension ChatReplyThreadMessage {
-    var effectiveTopId: MessageId {
-        return self.channelMessageId ?? self.messageId
-    }
-}
-
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
     var upperBound: MessageIndex

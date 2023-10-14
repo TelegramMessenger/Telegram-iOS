@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ChatMessageItemCommon",
-    module_name = "ChatMessageItemCommon",
+    name = "ChatMessageSwipeToReplyNode",
+    module_name = "ChatMessageSwipeToReplyNode",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -11,12 +11,12 @@ swift_library(
     ],
     deps = [
         "//submodules/Display",
-        "//submodules/Postbox",
-        "//submodules/TelegramCore",
-        "//submodules/Emoji",
+        "//submodules/AsyncDisplayKit",
+        "//submodules/AppBundle",
+        "//submodules/WallpaperBackgroundNode",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",
     ],
 )
-

@@ -21,6 +21,13 @@ import ChatMessageReplyInfoNode
 import ChatMessageInteractiveInstantVideoNode
 import ChatMessageItem
 import ChatMessageItemView
+import ChatMessageSwipeToReplyNode
+import ChatMessageSelectionNode
+import ChatMessageDeliveryFailedNode
+import ChatMessageShareButton
+import ChatMessageActionButtonsNode
+import ChatSwipeToReplyRecognizer
+import ChatMessageReactionsFooterContentNode
 
 private let nameFont = Font.medium(14.0)
 

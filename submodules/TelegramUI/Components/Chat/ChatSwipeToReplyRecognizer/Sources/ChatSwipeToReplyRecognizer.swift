@@ -1,26 +1,26 @@
 import Foundation
 import UIKit
 
-class ChatSwipeToReplyRecognizer: UIPanGestureRecognizer {
-    var validatedGesture = false
-    var firstLocation: CGPoint = CGPoint()
-    var allowBothDirections: Bool = true
+public class ChatSwipeToReplyRecognizer: UIPanGestureRecognizer {
+    public var validatedGesture = false
+    public var firstLocation: CGPoint = CGPoint()
+    public var allowBothDirections: Bool = true
     
-    var shouldBegin: (() -> Bool)?
+    public var shouldBegin: (() -> Bool)?
     
-    override init(target: Any?, action: Selector?) {
+    override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
         
         self.maximumNumberOfTouches = 1
     }
     
-    override func reset() {
+    override public func reset() {
         super.reset()
         
         self.validatedGesture = false
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
         
         if let shouldBegin = self.shouldBegin, !shouldBegin() {
@@ -31,7 +31,7 @@ class ChatSwipeToReplyRecognizer: UIPanGestureRecognizer {
         }
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
         let location = touches.first!.location(in: self.view)
         let translation = CGPoint(x: location.x - firstLocation.x, y: location.y - firstLocation.y)
         

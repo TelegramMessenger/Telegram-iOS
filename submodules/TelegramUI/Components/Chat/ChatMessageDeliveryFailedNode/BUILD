@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ChatMessageItemCommon",
-    module_name = "ChatMessageItemCommon",
+    name = "ChatMessageDeliveryFailedNode",
+    module_name = "ChatMessageDeliveryFailedNode",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,13 +10,11 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/AsyncDisplayKit",
         "//submodules/Display",
-        "//submodules/Postbox",
-        "//submodules/TelegramCore",
-        "//submodules/Emoji",
+        "//submodules/TelegramPresentationData",
     ],
     visibility = [
         "//visibility:public",
     ],
 )
-

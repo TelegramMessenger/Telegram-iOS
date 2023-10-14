@@ -16,14 +16,14 @@ import ChatControllerInteraction
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 
-final class MessageReactionButtonsNode: ASDisplayNode {
-    enum DisplayType {
+public final class MessageReactionButtonsNode: ASDisplayNode {
+    public enum DisplayType {
         case incoming
         case outgoing
         case freeform
     }
     
-    enum DisplayAlignment {
+    public enum DisplayAlignment {
         case left
         case right
     }
@@ -33,10 +33,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     private var backgroundMaskView: UIView?
     private var backgroundMaskButtons: [MessageReaction.Reaction: UIView] = [:]
     
-    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
-    override init() {
+    override public init() {
         self.container = ReactionButtonsAsyncLayoutContainer()
         
         super.init()
@@ -46,10 +46,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         
     }
     
-    func update() {
+    public func update() {
     }
     
-    func prepareUpdate(
+    public func prepareUpdate(
         context: AccountContext,
         presentationData: ChatPresentationData,
         presentationContext: ChatPresentationContext,
@@ -387,7 +387,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     
     private var absoluteRect: (CGRect, CGSize)?
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
         self.absoluteRect = (rect, containerSize)
         
         if let bubbleBackgroundNode = self.bubbleBackgroundNode {
@@ -395,7 +395,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         }
     }
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
         self.absoluteRect = (rect, containerSize)
         
         if let bubbleBackgroundNode = self.bubbleBackgroundNode {
@@ -403,19 +403,19 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         }
     }
     
-    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let bubbleBackgroundNode = self.bubbleBackgroundNode {
             bubbleBackgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
     
-    func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+    public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
         if let bubbleBackgroundNode = self.bubbleBackgroundNode {
             bubbleBackgroundNode.offsetSpring(value: value, duration: duration, damping: damping)
         }
     }
     
-    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         for (key, button) in self.container.buttons {
             if key == value {
                 return button.view.iconView
@@ -424,19 +424,19 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         return nil
     }
     
-    func animateIn(animation: ListViewItemUpdateAnimation) {
+    public func animateIn(animation: ListViewItemUpdateAnimation) {
         for (_, button) in self.container.buttons {
             animation.animator.animateScale(layer: button.view.layer, from: 0.01, to: 1.0, completion: nil)
         }
     }
     
-    func animateOut(animation: ListViewItemUpdateAnimation) {
+    public func animateOut(animation: ListViewItemUpdateAnimation) {
         for (_, button) in self.container.buttons {
             animation.animator.updateScale(layer: button.view.layer, scale: 0.01, completion: nil)
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         for (_, button) in self.container.buttons {
             if button.view.frame.contains(point) {
                 if let result = button.view.hitTest(self.view.convert(point, to: button.view), with: event) {
@@ -449,10 +449,10 @@ final class MessageReactionButtonsNode: ASDisplayNode {
     }
 }
 
-final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode {
+public final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode {
     private let buttonsNode: MessageReactionButtonsNode
     
-    required init() {
+    required public init() {
         self.buttonsNode = MessageReactionButtonsNode()
         
         super.init()
@@ -476,11 +476,11 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
         }
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let buttonsNode = self.buttonsNode
         
         return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
@@ -529,25 +529,25 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         self.buttonsNode.animateOut(animation: ListViewItemUpdateAnimation.System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .spring, interactive: false)))
     }
     
-    override func animateInsertionIntoBubble(_ duration: Double) {
+    override public func animateInsertionIntoBubble(_ duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
         self.layer.animatePosition(from: CGPoint(x: 0.0, y: -self.bounds.height / 2.0), to: CGPoint(), duration: duration, removeOnCompletion: true, additive: true)
     }
     
-    override func animateRemovalFromBubble(_ duration: Double, completion: @escaping () -> Void) {
+    override public func animateRemovalFromBubble(_ duration: Double, completion: @escaping () -> Void) {
         self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -self.bounds.height / 2.0), duration: duration, removeOnCompletion: false, additive: true)
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
             completion()
@@ -555,38 +555,38 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
         self.buttonsNode.animateOut(animation: ListViewItemUpdateAnimation.System(duration: 0.25, transition: ControlledTransition(duration: 0.25, curve: .spring, interactive: false)))
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if let result = self.buttonsNode.hitTest(self.view.convert(point, to: self.buttonsNode.view), with: nil), result !== self.buttonsNode.view {
             return .ignore
         }
         return .none
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.buttonsNode.hitTest(self.view.convert(point, to: self.buttonsNode.view), with: event), result !== self.buttonsNode.view {
             return result
         }
         return nil
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.buttonsNode.reactionTargetView(value: value)
     }
 }
 
-final class ChatMessageReactionButtonsNode: ASDisplayNode {
-    final class Arguments {
-        let context: AccountContext
-        let presentationData: ChatPresentationData
-        let presentationContext: ChatPresentationContext
-        let availableReactions: AvailableReactions?
-        let reactions: ReactionsMessageAttribute
-        let message: Message
-        let accountPeer: EnginePeer?
-        let isIncoming: Bool
-        let constrainedWidth: CGFloat
+public final class ChatMessageReactionButtonsNode: ASDisplayNode {
+    public final class Arguments {
+        public let context: AccountContext
+        public let presentationData: ChatPresentationData
+        public let presentationContext: ChatPresentationContext
+        public let availableReactions: AvailableReactions?
+        public let reactions: ReactionsMessageAttribute
+        public let message: Message
+        public let accountPeer: EnginePeer?
+        public let isIncoming: Bool
+        public let constrainedWidth: CGFloat
         
-        init(
+        public init(
             context: AccountContext,
             presentationData: ChatPresentationData,
             presentationContext: ChatPresentationContext,
@@ -611,10 +611,10 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
     
     private let buttonsNode: MessageReactionButtonsNode
     
-    var reactionSelected: ((MessageReaction.Reaction) -> Void)?
-    var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
+    public var reactionSelected: ((MessageReaction.Reaction) -> Void)?
+    public var openReactionPreview: ((ContextGesture?, ContextExtractedContentContainingView, MessageReaction.Reaction) -> Void)?
     
-    override init() {
+    override public init() {
         self.buttonsNode = MessageReactionButtonsNode()
         
         super.init()
@@ -630,7 +630,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageReactionButtonsNode?) -> (_ arguments: ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)) {
+    public class func asyncLayout(_ maybeNode: ChatMessageReactionButtonsNode?) -> (_ arguments: ChatMessageReactionButtonsNode.Arguments) -> (minWidth: CGFloat, layout: (CGFloat) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)) {
         return { arguments in
             let node = maybeNode ?? ChatMessageReactionButtonsNode()
             
@@ -660,12 +660,12 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
         }
     }
     
-    func animateIn(animation: ListViewItemUpdateAnimation) {
+    public func animateIn(animation: ListViewItemUpdateAnimation) {
         self.buttonsNode.animateIn(animation: animation)
         self.buttonsNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    func animateOut(animation: ListViewItemUpdateAnimation, completion: @escaping () -> Void) {
+    public func animateOut(animation: ListViewItemUpdateAnimation, completion: @escaping () -> Void) {
         self.buttonsNode.animateOut(animation: animation)
         animation.animator.updateAlpha(layer: self.buttonsNode.layer, alpha: 0.0, completion: { _ in
             completion()
@@ -673,30 +673,30 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
         animation.animator.updateFrame(layer: self.buttonsNode.layer, frame: self.buttonsNode.layer.frame.offsetBy(dx: 0.0, dy: -self.buttonsNode.layer.bounds.height / 2.0), completion: nil)
     }
     
-    func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         return self.buttonsNode.reactionTargetView(value: value)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let result = self.buttonsNode.hitTest(self.view.convert(point, to: self.buttonsNode.view), with: event), result !== self.buttonsNode.view {
             return result
         }
         return nil
     }
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
         self.buttonsNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition) {
         self.buttonsNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
-    func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    public func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         self.buttonsNode.offset(value: value, animationCurve: animationCurve, duration: duration)
     }
     
-    func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+    public func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
         self.buttonsNode.offsetSpring(value: value, duration: duration, damping: damping)
     }
 }

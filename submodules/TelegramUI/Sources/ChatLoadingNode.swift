@@ -12,6 +12,7 @@ import ChatPresentationInterfaceState
 import AccountContext
 import ChatMessageItem
 import ChatMessageItemView
+import ChatMessageStickerItemNode
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
@@ -95,7 +96,7 @@ final class ChatLoadingPlaceholderMessageContainer {
         if let bubbleItemNode = listItemNode as? ChatMessageBubbleItemNode {
             bubbleItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
         } else if let stickerItemNode = listItemNode as? ChatMessageStickerItemNode {
-            stickerItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
+            stickerItemNode.animateFromLoadingPlaceholder(delay: delay, transition: transition)
         } else if let stickerItemNode = listItemNode as? ChatMessageAnimatedStickerItemNode {
             stickerItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
         } else if let videoItemNode = listItemNode as? ChatMessageInstantVideoItemNode {

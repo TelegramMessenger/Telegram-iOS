@@ -3,6 +3,7 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
+import Emoji
 
 public struct ChatMessageItemWidthFill {
     public var compactInset: CGFloat
@@ -229,4 +230,69 @@ public func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -
     } else {
         return false
     }
+}
+
+public extension ChatReplyThreadMessage {
+    var effectiveTopId: MessageId {
+        return self.channelMessageId ?? self.messageId
+    }
+}
+
+public func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
+    if !message.text.isEmpty && message.text.containsOnlyEmoji {
+        if !(message.textEntitiesAttribute?.entities.isEmpty ?? true) {
+            return false
+        }
+        return true
+    } else {
+        return false
+    }
+}
+
+public func messageIsElligibleForLargeCustomEmoji(_ message: Message) -> Bool {
+    let text = message.text.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: " ", with: "")
+    guard !text.isEmpty && text.containsOnlyEmoji else {
+        return false
+    }
+    let entities = message.textEntitiesAttribute?.entities ?? []
+    guard entities.count > 0 else {
+        return false
+    }
+    for entity in entities {
+        if case let .CustomEmoji(_, fileId) = entity.type {
+            if let _ = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    return true
+}
+
+public func canAddMessageReactions(message: Message) -> Bool {
+    if message.id.namespace != Namespaces.Message.Cloud {
+        return false
+    }
+    if let peer = message.peers[message.id.peerId] {
+        if let _ = peer as? TelegramSecretChat {
+            return false
+        }
+    } else {
+        return false
+    }
+    for media in message.media {
+        if let _ = media as? TelegramMediaAction {
+            return false
+        } else if let story = media as? TelegramMediaStory {
+            if story.isMention {
+                return false
+            }
+        } else if let _ = media as? TelegramMediaExpiredContent {
+            return false
+        }
+    }
+    return true
 }

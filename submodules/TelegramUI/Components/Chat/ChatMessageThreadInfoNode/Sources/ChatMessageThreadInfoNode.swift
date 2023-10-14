@@ -172,25 +172,25 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
     }))
 }
 
-enum ChatMessageThreadInfoType {
+public enum ChatMessageThreadInfoType {
     case bubble(incoming: Bool)
     case standalone
 }
 
-class ChatMessageThreadInfoNode: ASDisplayNode {
-    class Arguments {
-        let presentationData: ChatPresentationData
-        let strings: PresentationStrings
-        let context: AccountContext
-        let controllerInteraction: ChatControllerInteraction
-        let type: ChatMessageThreadInfoType
-        let threadId: Int64
-        let parentMessage: Message
-        let constrainedSize: CGSize
-        let animationCache: AnimationCache?
-        let animationRenderer: MultiAnimationRenderer?
+public class ChatMessageThreadInfoNode: ASDisplayNode {
+    public class Arguments {
+        public let presentationData: ChatPresentationData
+        public let strings: PresentationStrings
+        public let context: AccountContext
+        public let controllerInteraction: ChatControllerInteraction
+        public let type: ChatMessageThreadInfoType
+        public let threadId: Int64
+        public let parentMessage: Message
+        public let constrainedSize: CGSize
+        public let animationCache: AnimationCache?
+        public let animationRenderer: MultiAnimationRenderer?
         
-        init(
+        public init(
             presentationData: ChatPresentationData,
             strings: PresentationStrings,
             context: AccountContext,
@@ -215,7 +215,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
         }
     }
     
-    var visibility: Bool = false {
+    public var visibility: Bool = false {
         didSet {
             if self.visibility != oldValue {
                 self.textNode?.visibilityRect = self.visibility ? CGRect.infinite : nil
@@ -249,7 +249,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    override init() {
+    override public init() {
         self.contentNode = HighlightTrackingButtonNode()
         
         self.contentBackgroundNode = ASImageNode()
@@ -298,7 +298,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
         self.pressed()
     }
     
-    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
@@ -308,7 +308,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
         }
     }
     
-    class func asyncLayout(_ maybeNode: ChatMessageThreadInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode) {
+    public class func asyncLayout(_ maybeNode: ChatMessageThreadInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode) {
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
     
         return { arguments in
