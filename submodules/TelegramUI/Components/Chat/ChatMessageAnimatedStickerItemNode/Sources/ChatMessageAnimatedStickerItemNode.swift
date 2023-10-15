@@ -43,12 +43,15 @@ import ChatMessageThreadInfoNode
 import ChatMessageActionButtonsNode
 import ChatSwipeToReplyRecognizer
 import ChatMessageReactionsFooterContentNode
+import ManagedDiceAnimationNode
+import MessageHaptics
+import ChatMessageTransitionNode
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
-protocol GenericAnimatedStickerNode: ASDisplayNode {
+public protocol GenericAnimatedStickerNode: ASDisplayNode {
     func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool)
 
     var currentFrameIndex: Int { get }
@@ -56,29 +59,32 @@ protocol GenericAnimatedStickerNode: ASDisplayNode {
 }
 
 extension DefaultAnimatedStickerNodeImpl: GenericAnimatedStickerNode {
-    func setFrameIndex(_ frameIndex: Int) {
+    public func setFrameIndex(_ frameIndex: Int) {
         self.stop()
         self.play(fromIndex: frameIndex)
     }
 }
 
 extension SlotMachineAnimationNode: GenericAnimatedStickerNode {
-    var currentFrameIndex: Int {
+    public var currentFrameIndex: Int {
         return 0
     }
 
-    func setFrameIndex(_ frameIndex: Int) {
+    public func setFrameIndex(_ frameIndex: Int) {
     }
 }
 
-class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
-    let contextSourceNode: ContextExtractedContentContainingNode
+extension ManagedDiceAnimationNode: GenericAnimatedStickerNode {
+}
+
+public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
+    public let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
-    let imageNode: TransformImageNode
+    public let imageNode: TransformImageNode
     private var enableSynchronousImageApply: Bool = false
     private var backgroundNode: WallpaperBubbleBackgroundNode?
-    private(set) var placeholderNode: StickerShimmerEffectNode
-    private(set) var animationNode: GenericAnimatedStickerNode?
+    public private(set) var placeholderNode: StickerShimmerEffectNode
+    public private(set) var animationNode: GenericAnimatedStickerNode?
     private var animationSize: CGSize?
     private var didSetUpAnimationNode = false
     private var isPlaying = false
@@ -86,7 +92,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private let textNode: TextNodeWithEntities
     
     private var additionalAnimationNodes: [ChatMessageTransitionNode.DecorationItemNode] = []
-    private var overlayMeshAnimationNode: ChatMessageTransitionNode.DecorationItemNode?
     private var enqueuedAdditionalAnimations: [(Int, Double)] = []
     private var additionalAnimationsCommitTimer: SwiftSignalKit.Timer?
   
@@ -97,10 +102,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
     private var shareButtonNode: ChatMessageShareButton?
     
-    var telegramFile: TelegramMediaFile?
-    var emojiFile: TelegramMediaFile?
-    var telegramDice: TelegramMediaDice?
-    var emojiString: String?
+    public var telegramFile: TelegramMediaFile?
+    public var emojiFile: TelegramMediaFile?
+    public var telegramDice: TelegramMediaDice?
+    public var emojiString: String?
     private let disposable = MetaDisposable()
     private let disposables = DisposableSet()
 
@@ -136,7 +141,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var wasPending: Bool = false
     private var didChangeFromPendingToSent: Bool = false
     
-    required init() {
+    required public init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
@@ -233,7 +238,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.additionalAnimationsCommitTimer?.invalidate()
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -248,7 +253,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
@@ -325,7 +330,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.view.addGestureRecognizer(replyRecognizer)
     }
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
             let isVisible = self.visibility != .none
@@ -425,7 +430,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
+    override public func setupItem(_ item: ChatMessageItem, synchronousLoad: Bool) {
         super.setupItem(item, synchronousLoad: synchronousLoad)
         
         if item.message.id.namespace == Namespaces.Message.Local || item.message.id.namespace == Namespaces.Message.ScheduledLocal {
@@ -587,13 +592,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         let isPlaying = self.visibilityStatus == true && !self.forceStopAnimations
         if !isPlaying {
             self.removeAdditionalAnimations()
-            
-            if let overlayMeshAnimationNode = self.overlayMeshAnimationNode {
-                self.overlayMeshAnimationNode = nil
-                if let transitionNode = item.controllerInteraction.getMessageTransitionNode() as? ChatMessageTransitionNode {
-                    transitionNode.remove(decorationNode: overlayMeshAnimationNode)
-                }
-            }
         }
         if let animationNode = self.animationNode as? AnimatedStickerNode {
             if self.isPlaying != isPlaying || (isPlaying && !self.didSetUpAnimationNode) {
@@ -663,13 +661,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func updateStickerSettings(forceStopAnimations: Bool) {
+    override public func updateStickerSettings(forceStopAnimations: Bool) {
         self.forceStopAnimations = forceStopAnimations
         self.updateVisibility()
     }
     
     private var absoluteRect: (CGRect, CGSize)?
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         if !self.contextSourceNode.isExtractedToContextPreview {
             var rect = rect
@@ -723,7 +721,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let backgroundNode = self.backgroundNode {
             backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
@@ -733,7 +731,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
+    override public func updateAccessibilityData(_ accessibilityData: ChatMessageAccessibilityData) {
         super.updateAccessibilityData(accessibilityData)
         
         self.messageAccessibilityArea.accessibilityLabel = accessibilityData.label
@@ -764,7 +762,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
         
-    override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
+    override public func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
         var displaySize = CGSize(width: 180.0, height: 180.0)
         let telegramFile = self.telegramFile
         let emojiFile = self.emojiFile
@@ -1761,7 +1759,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         item.controllerInteraction.commitEmojiInteraction(item.message.id, item.message.text.strippedEmoji, EmojiInteraction(animations: animations), file)
     }
     
-    func playEmojiInteraction(_ interaction: EmojiInteraction) {
+    public func playEmojiInteraction(_ interaction: EmojiInteraction) {
         guard interaction.animations.count <= 7 else {
             return
         }
@@ -1807,7 +1805,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    func playAdditionalEmojiAnimation(index: Int) {
+    public func playAdditionalEmojiAnimation(index: Int) {
         guard let item = self.item else {
             return
         }
@@ -1846,7 +1844,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.playEffectAnimation(resource: effect.resource, isStickerEffect: true)
     }
     
-    func playEffectAnimation(resource: MediaResource, isStickerEffect: Bool = false) {
+    public func playEffectAnimation(resource: MediaResource, isStickerEffect: Bool = false) {
         guard let item = self.item else {
             return
         }
@@ -2282,7 +2280,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     }
     
     private var playedSwipeToReplyHaptic = false
-    @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
+    @objc private func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
         var leftOffset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
@@ -2406,7 +2404,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view
         }
@@ -2421,7 +2419,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return super.hitTest(point, with: event)
     }
     
-    override func updateSelectionState(animated: Bool) {
+    override public func updateSelectionState(animated: Bool) {
         guard let item = self.item else {
             return
         }
@@ -2503,7 +2501,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func updateHighlightedState(animated: Bool) {
+    override public func updateHighlightedState(animated: Bool) {
         super.updateHighlightedState(animated: animated)
         
         if let item = self.item {
@@ -2528,11 +2526,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
 
-    override func cancelInsertionAnimations() {
+    override public func cancelInsertionAnimations() {
         self.layer.removeAllAnimations()
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -2550,27 +2548,41 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         super.animateRemoved(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
+    override public func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     
-    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+    override public func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
+    
+    public final class AnimationTransitionTextInput {
+        public let backgroundView: UIView
+        public let contentView: UIView
+        public let sourceRect: CGRect
+        public let scrollOffset: CGFloat
 
-    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
+        public init(backgroundView: UIView, contentView: UIView, sourceRect: CGRect, scrollOffset: CGFloat) {
+            self.backgroundView = backgroundView
+            self.contentView = contentView
+            self.sourceRect = sourceRect
+            self.scrollOffset = scrollOffset
+        }
+    }
+
+    public func animateContentFromTextInputField(textInput: AnimationTransitionTextInput, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -2629,8 +2641,56 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
 
         self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: self.dateAndStatusNode.alpha, duration: 0.15, delay: 0.16)
     }
+    
+    public final class AnimationTransitionSticker {
+        public let imageNode: TransformImageNode?
+        public let animationNode: ASDisplayNode?
+        public let placeholderNode: ASDisplayNode?
+        public let imageLayer: CALayer?
+        public let relativeSourceRect: CGRect
+        
+        var sourceFrame: CGRect {
+            if let imageNode = self.imageNode {
+                return imageNode.frame
+            } else if let imageLayer = self.imageLayer {
+                return imageLayer.bounds
+            } else {
+                return CGRect(origin: CGPoint(), size: relativeSourceRect.size)
+            }
+        }
+        
+        var sourceLayer: CALayer? {
+            if let imageNode = self.imageNode {
+                return imageNode.layer
+            } else if let imageLayer = self.imageLayer {
+                return imageLayer
+            } else {
+                return nil
+            }
+        }
+        
+        func snapshotContentTree() -> UIView? {
+            if let animationNode = self.animationNode {
+                return animationNode.view.snapshotContentTree()
+            } else if let imageNode = self.imageNode {
+                return imageNode.view.snapshotContentTree()
+            } else if let sourceLayer = self.imageLayer {
+                return sourceLayer.snapshotContentTreeAsView()
+            } else {
+                return nil
+            }
+        }
+        
+        public init(imageNode: TransformImageNode?, animationNode: ASDisplayNode?, placeholderNode: ASDisplayNode?, imageLayer: CALayer?, relativeSourceRect: CGRect) {
+            self.imageNode = imageNode
+            self.animationNode = animationNode
+            self.placeholderNode = placeholderNode
+            self.imageLayer = imageLayer
+            self.relativeSourceRect = relativeSourceRect
+        }
+    }
 
-    func animateContentFromStickerGridItem(stickerSource: ChatMessageTransitionNode.Sticker, transition: CombinedTransition) {
+    public func animateContentFromStickerGridItem(stickerSource: AnimationTransitionSticker, transition: CombinedTransition) {
         guard let _ = self.item else {
             return
         }
@@ -2716,8 +2776,26 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             placeholderNode.layer.animateAlpha(from: 0.0, to: placeholderNode.alpha, duration: 0.4)
         }
     }
+    
+    public final class AnimationTransitionReplyPanel {
+        public let titleNode: ASDisplayNode
+        public let textNode: ASDisplayNode
+        public let lineNode: ASDisplayNode
+        public let imageNode: ASDisplayNode
+        public let relativeSourceRect: CGRect
+        public let relativeTargetRect: CGRect
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
+        public init(titleNode: ASDisplayNode, textNode: ASDisplayNode, lineNode: ASDisplayNode, imageNode: ASDisplayNode, relativeSourceRect: CGRect, relativeTargetRect: CGRect) {
+            self.titleNode = titleNode
+            self.textNode = textNode
+            self.lineNode = lineNode
+            self.imageNode = imageNode
+            self.relativeSourceRect = relativeSourceRect
+            self.relativeTargetRect = relativeTargetRect
+        }
+    }
+
+    public func animateReplyPanel(sourceReplyPanel: AnimationTransitionReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.contextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
 
@@ -2737,7 +2815,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    func animateFromLoadingPlaceholder(delay: Double, transition: ContainedViewLayoutTransition) {
+    public func animateFromLoadingPlaceholder(delay: Double, transition: ContainedViewLayoutTransition) {
         guard let item = self.item else {
             return
         }
@@ -2747,14 +2825,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
     }
     
-    override func openMessageContextMenu() {
+    override public func openMessageContextMenu() {
         guard let item = self.item else {
             return
         }
         item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
-    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
+    override public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }
@@ -2764,7 +2842,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return nil
     }
     
-    override func targetForStoryTransition(id: StoryId) -> UIView? {
+    override public func targetForStoryTransition(id: StoryId) -> UIView? {
         guard let item = self.item else {
             return nil
         }
@@ -2780,17 +2858,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         return nil
     }
     
-    override func unreadMessageRangeUpdated() {
+    override public func unreadMessageRangeUpdated() {
         self.updateVisibility()
     }
     
-    override func contentFrame() -> CGRect {
+    override public func contentFrame() -> CGRect {
         return self.imageNode.frame
     }
 }
 
-struct AnimatedEmojiSoundsConfiguration {
-    static var defaultValue: AnimatedEmojiSoundsConfiguration {
+public struct AnimatedEmojiSoundsConfiguration {
+    public static var defaultValue: AnimatedEmojiSoundsConfiguration {
         return AnimatedEmojiSoundsConfiguration(sounds: [:])
     }
     
@@ -2800,7 +2878,7 @@ struct AnimatedEmojiSoundsConfiguration {
         self.sounds = sounds
     }
     
-    static func with(appConfiguration: AppConfiguration, account: Account) -> AnimatedEmojiSoundsConfiguration {
+    public static func with(appConfiguration: AppConfiguration, account: Account) -> AnimatedEmojiSoundsConfiguration {
         if let data = appConfiguration.data, let values = data["emojies_sounds"] as? [String: Any] {
             var sounds: [String: TelegramMediaFile] = [:]
             for (key, value) in values {

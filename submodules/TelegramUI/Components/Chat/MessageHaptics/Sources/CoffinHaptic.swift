@@ -2,13 +2,14 @@ import Foundation
 import Display
 import SwiftSignalKit
 
-private let impactTime: Double = 0.6
+private let firstImpactTime: Double = 0.4
+private let secondImpactTime: Double = 0.6
 
-final class PeachHaptic: EmojiHaptic {
+public final class CoffinHaptic: EmojiHaptic {
     private var hapticFeedback = HapticFeedback()
     private var timer: SwiftSignalKit.Timer?
     private var time: Double = 0.0
-    var enabled: Bool = false {
+    public var enabled: Bool = false {
         didSet {
             if !self.enabled {
                 self.reset()
@@ -16,8 +17,11 @@ final class PeachHaptic: EmojiHaptic {
         }
     }
     
-    var active: Bool {
+    public var active: Bool {
         return self.timer != nil
+    }
+
+    public init() {
     }
     
     private func reset() {
@@ -30,15 +34,15 @@ final class PeachHaptic: EmojiHaptic {
     
     private func beat(time: Double) {
         let epsilon = 0.1
-        if fabs(impactTime - time) < epsilon {
+        if fabs(firstImpactTime - time) < epsilon || fabs(secondImpactTime - time) < epsilon {
             self.hapticFeedback.impact(.heavy)
         }
     }
     
-    func start(time: Double) {
+    public func start(time: Double) {
         self.hapticFeedback.prepareImpact()
         
-        if time > impactTime {
+        if time > firstImpactTime {
             return
         }
 
@@ -58,7 +62,7 @@ final class PeachHaptic: EmojiHaptic {
                 strongSelf.time += 0.2
                 strongSelf.beat(time: strongSelf.time)
                 
-                if strongSelf.time > impactTime {
+                if strongSelf.time > secondImpactTime {
                     strongSelf.reset()
                     strongSelf.time = 0.0
                     strongSelf.timer?.invalidate()

@@ -34,6 +34,8 @@ import TextSelectionNode
 import ReplyAccessoryPanelNode
 import ChatMessageItemView
 import ChatMessageSelectionNode
+import ManagedDiceAnimationNode
+import ChatMessageTransitionNode
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -267,7 +269,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var dropDimNode: ASDisplayNode?
 
-    let messageTransitionNode: ChatMessageTransitionNode
+    let messageTransitionNode: ChatMessageTransitionNodeImpl
 
     private let presentationContextMarker = ASDisplayNode()
     
@@ -589,7 +591,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             source = .default
         }
 
-        var getMessageTransitionNode: (() -> ChatMessageTransitionNode?)?
+        var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
         self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
             return getMessageTransitionNode?()
         })
@@ -605,7 +607,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         var getContentAreaInScreenSpaceImpl: (() -> CGRect)?
         var onTransitionEventImpl: ((ContainedViewLayoutTransition) -> Void)?
-        self.messageTransitionNode = ChatMessageTransitionNode(listNode: self.historyNode, getContentAreaInScreenSpace: {
+        self.messageTransitionNode = ChatMessageTransitionNodeImpl(listNode: self.historyNode, getContentAreaInScreenSpace: {
             return getContentAreaInScreenSpaceImpl?() ?? CGRect()
         }, onTransitionEvent: { transition in
             onTransitionEventImpl?(transition)
@@ -3472,7 +3474,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         if self.shouldAnimateMessageTransition, let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode, let textInput = inputPanelNode.makeSnapshotForTransition() {
                             usedCorrelationId = correlationId
-                            let source: ChatMessageTransitionNode.Source = .textInput(textInput: textInput, replyPanel: replyPanel)
+                            let source: ChatMessageTransitionNodeImpl.Source = .textInput(textInput: textInput, replyPanel: replyPanel)
                             self.messageTransitionNode.add(correlationId: correlationId, source: source, initiated: {
                             })
                         }

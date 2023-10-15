@@ -8,7 +8,7 @@ import AccountContext
 import StickerResources
 import ManagedAnimationNode
 
-enum ManagedDiceAnimationState: Equatable {
+public enum ManagedDiceAnimationState: Equatable {
     case rolling
     case value(Int32, Bool)
 }
@@ -86,7 +86,7 @@ private struct InteractiveEmojiSuccessParameters {
 }
 
 public struct InteractiveEmojiConfiguration {
-    static var defaultValue: InteractiveEmojiConfiguration {
+    public static var defaultValue: InteractiveEmojiConfiguration {
         return InteractiveEmojiConfiguration(emojis: [], successParameters: [:])
     }
     
@@ -98,7 +98,7 @@ public struct InteractiveEmojiConfiguration {
         self.successParameters = successParameters
     }
     
-    static func with(appConfiguration: AppConfiguration) -> InteractiveEmojiConfiguration {
+    public static func with(appConfiguration: AppConfiguration) -> InteractiveEmojiConfiguration {
         if let data = appConfiguration.data, let emojis = data["emojies_send_dice"] as? [String] {
             var successParameters: [String: InteractiveEmojiSuccessParameters] = [:]
             if let success = data["emojies_send_dice_success"] as? [String: [String: Double]] {
@@ -115,7 +115,7 @@ public struct InteractiveEmojiConfiguration {
     }
 }
 
-final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStickerNode {
+public final class ManagedDiceAnimationNode: ManagedAnimationNode {
     private let context: AccountContext
     private let emoji: String
     
@@ -125,9 +125,9 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
     private let configuration = Promise<InteractiveEmojiConfiguration?>()
     private let emojis = Promise<[TelegramMediaFile]>()
     
-    var success: (() -> Void)?
+    public var success: (() -> Void)?
     
-    init(context: AccountContext, emoji: String) {
+    public init(context: AccountContext, emoji: String) {
         self.context = context
         self.emoji = emoji
         
@@ -157,7 +157,7 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         self.disposable.dispose()
     }
     
-    func setState(_ diceState: ManagedDiceAnimationState) {
+    public func setState(_ diceState: ManagedDiceAnimationState) {
         let previousState = self.diceState
         self.diceState = diceState
         
@@ -203,13 +203,13 @@ final class ManagedDiceAnimationNode: ManagedAnimationNode, GenericAnimatedStick
         }
     }
     
-    func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
+    public func setOverlayColor(_ color: UIColor?, replace: Bool, animated: Bool) {
     }
 
-    func setFrameIndex(_ frameIndex: Int) {
+    public func setFrameIndex(_ frameIndex: Int) {
     }
 
-    var currentFrameIndex: Int {
+    public var currentFrameIndex: Int {
         return 0
     }
 }

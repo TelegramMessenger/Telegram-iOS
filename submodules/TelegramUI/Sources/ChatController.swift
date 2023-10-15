@@ -110,6 +110,7 @@ import ChatMessagePollBubbleContentNode
 import ChatMessageItem
 import ChatMessageItemView
 import ChatMessageItemCommon
+import ChatMessageAnimatedStickerItemNode
 
 public enum ChatControllerPeekActions {
     case standard
@@ -8089,9 +8090,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         isScheduledMessages = false
                     }
-                    let duration: Double = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.animationDuration : 0.18
-                    let curve: ContainedViewLayoutTransitionCurve = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.verticalAnimationCurve : .easeInOut
-                    let controlPoints: (Float, Float, Float, Float) = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNode.verticalAnimationControlPoints : (0.5, 0.33, 0.0, 0.0)
+                    let duration: Double = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.animationDuration : 0.18
+                    let curve: ContainedViewLayoutTransitionCurve = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationCurve : .easeInOut
+                    let controlPoints: (Float, Float, Float, Float) = strongSelf.chatDisplayNode.messageTransitionNode.hasScheduledTransitions ? ChatMessageTransitionNodeImpl.verticalAnimationControlPoints : (0.5, 0.33, 0.0, 0.0)
 
                     let shouldUseFastMessageSendAnimation = strongSelf.chatDisplayNode.shouldUseFastMessageSendAnimation
                     
@@ -15533,15 +15534,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                         
                 if addedTransitions.count > 1 {
-                    var transitions: [(Int64, ChatMessageTransitionNode.Source, () -> Void)] = []
+                    var transitions: [(Int64, ChatMessageTransitionNodeImpl.Source, () -> Void)] = []
                     for (correlationId, uniqueIds, initiated) in addedTransitions {
-                        var source: ChatMessageTransitionNode.Source?
+                        var source: ChatMessageTransitionNodeImpl.Source?
                         if uniqueIds.count > 1 {
-                            source = .groupedMediaInput(ChatMessageTransitionNode.Source.GroupedMediaInput(extractSnapshots: {
+                            source = .groupedMediaInput(ChatMessageTransitionNodeImpl.Source.GroupedMediaInput(extractSnapshots: {
                                 return uniqueIds.compactMap({ getAnimatedTransitionSource?($0) })
                             }))
                         } else if let uniqueId = uniqueIds.first {
-                            source = .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
+                            source = .mediaInput(ChatMessageTransitionNodeImpl.Source.MediaInput(extractSnapshot: {
                                 return getAnimatedTransitionSource?(uniqueId)
                             }))
                         }
@@ -15551,13 +15552,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     strongSelf.chatDisplayNode.messageTransitionNode.add(grouped: transitions)
                 } else if let (correlationId, uniqueIds, initiated) = addedTransitions.first {
-                    var source: ChatMessageTransitionNode.Source?
+                    var source: ChatMessageTransitionNodeImpl.Source?
                     if uniqueIds.count > 1 {
-                        source = .groupedMediaInput(ChatMessageTransitionNode.Source.GroupedMediaInput(extractSnapshots: {
+                        source = .groupedMediaInput(ChatMessageTransitionNodeImpl.Source.GroupedMediaInput(extractSnapshots: {
                             return uniqueIds.compactMap({ getAnimatedTransitionSource?($0) })
                         }))
                     } else if let uniqueId = uniqueIds.first {
-                        source = .mediaInput(ChatMessageTransitionNode.Source.MediaInput(extractSnapshot: {
+                        source = .mediaInput(ChatMessageTransitionNodeImpl.Source.MediaInput(extractSnapshot: {
                             return getAnimatedTransitionSource?(uniqueId)
                         }))
                     }
@@ -15825,7 +15826,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                         if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let extractedView = videoController.extractVideoSnapshot() {
                             usedCorrelationId = true
-                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNode.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController] in
+                            strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source:  .videoMessage(ChatMessageTransitionNodeImpl.Source.VideoMessage(view: extractedView)), initiated: { [weak videoController] in
                                 videoController?.hideVideoSnapshot()
                                 guard let strongSelf = self else {
                                     return
@@ -15937,7 +15938,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                                 if strongSelf.chatDisplayNode.shouldAnimateMessageTransition, let textInputPanelNode = strongSelf.chatDisplayNode.textInputPanelNode, let micButton = textInputPanelNode.micButton {
                                     usedCorrelationId = true
-                                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNode.Source.AudioMicInput(micButton: micButton)), initiated: {
+                                    strongSelf.chatDisplayNode.messageTransitionNode.add(correlationId: correlationId, source: .audioMicInput(ChatMessageTransitionNodeImpl.Source.AudioMicInput(micButton: micButton)), initiated: {
                                         guard let strongSelf = self else {
                                             return
                                         }

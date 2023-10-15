@@ -2,18 +2,18 @@ import Foundation
 import Display
 import SwiftSignalKit
 
-protocol EmojiHaptic {
+public protocol EmojiHaptic {
     var enabled: Bool { get set }
     var active: Bool { get }
     
     func start(time: Double)
 }
 
-final class HeartbeatHaptic: EmojiHaptic {
+public final class HeartbeatHaptic: EmojiHaptic {
     private var hapticFeedback = HapticFeedback()
     private var timer: SwiftSignalKit.Timer?
     private var time: Double = 0.0
-    var enabled: Bool = false {
+    public var enabled: Bool = false {
         didSet {
             if !self.enabled {
                 self.reset()
@@ -21,8 +21,11 @@ final class HeartbeatHaptic: EmojiHaptic {
         }
     }
     
-    var active: Bool {
+    public var active: Bool {
         return self.timer != nil
+    }
+
+    public init() {
     }
     
     private func reset() {
@@ -42,7 +45,7 @@ final class HeartbeatHaptic: EmojiHaptic {
         }
     }
     
-    func start(time: Double) {
+    public func start(time: Double) {
         self.hapticFeedback.prepareImpact()
         
         if time > 2.0 {

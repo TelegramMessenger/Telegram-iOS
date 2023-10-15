@@ -28,6 +28,7 @@ import ChatOverscrollControl
 import ChatBotInfoItem
 import ChatMessageItem
 import ChatMessageItemView
+import ChatMessageTransitionNode
 
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
@@ -662,7 +663,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var toLang: String?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNode? = { nil }) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl? = { nil }) {
         var tagMask = tagMask
         if case .pinnedMessages = subject {
             tagMask = .pinned
@@ -1015,7 +1016,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private func beginChatHistoryTransitions(
         selectedMessages: Signal<Set<MessageId>?, NoError>,
-        messageTransitionNode: @escaping () -> ChatMessageTransitionNode?
+        messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?
     ) {
         let context = self.context
         let chatLocation = self.chatLocation

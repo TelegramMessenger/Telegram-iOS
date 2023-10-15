@@ -851,7 +851,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
     }
 
-    func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
+    func animateContentFromTextInputField(textInput: ChatMessageTransitionNodeImpl.Source.TextInput, transition: CombinedTransition) {
         let widthDifference = self.backgroundNode.frame.width - textInput.backgroundView.frame.width
         let heightDifference = self.backgroundNode.frame.height - textInput.backgroundView.frame.height
 
@@ -884,7 +884,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
 
-    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNode.ReplyPanel, transition: CombinedTransition) {
+    func animateReplyPanel(sourceReplyPanel: ChatMessageTransitionNodeImpl.ReplyPanel, transition: CombinedTransition) {
         if let replyInfoNode = self.replyInfoNode {
             let localRect = self.mainContextSourceNode.contentNode.view.convert(sourceReplyPanel.relativeSourceRect, to: replyInfoNode.view)
             let mappedPanel = ChatMessageReplyInfoNode.TransitionReplyPanel(
