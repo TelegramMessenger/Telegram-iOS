@@ -24,7 +24,7 @@ import AvatarNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 
-class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let subtitleNode: TextNode
@@ -38,7 +38,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
     
     private let fetchDisposable = MetaDisposable()
             
-    required init() {
+    required public init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
@@ -86,7 +86,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -94,7 +94,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         self.fetchDisposable.dispose()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId {
             return (self.imageNode, self.imageNode.bounds, { [weak self] in
                 guard let strongSelf = self else {
@@ -109,7 +109,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    override public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
         var currentMedia: Media?
         if let item = item {
@@ -139,7 +139,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         let _ = item.controllerInteraction.openMessage(item.message, .default)
     }
                 
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
@@ -348,7 +348,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         
         if let mediaBackgroundContent = self.mediaBackgroundContent {
@@ -359,7 +359,7 @@ class ChatMessageStoryMentionContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.mediaBackgroundNode.frame.contains(point) {
             return .openMessage
         } else {

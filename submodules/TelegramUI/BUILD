@@ -395,6 +395,12 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageGameBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageInvoiceBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageMapBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageMediaBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageProfilePhotoSuggestionContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageRestrictedBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageStoryMentionContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageUnsupportedBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageWallpaperBubbleContentNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],
