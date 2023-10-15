@@ -36,6 +36,8 @@ import ChatMessageItemView
 import ChatMessageSelectionNode
 import ManagedDiceAnimationNode
 import ChatMessageTransitionNode
+import ChatLoadingNode
+import ChatRecentActionsController
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

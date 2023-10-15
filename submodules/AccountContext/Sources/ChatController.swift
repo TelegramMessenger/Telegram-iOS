@@ -769,6 +769,32 @@ public protocol PeerInfoScreen: ViewController {
     var peerId: PeerId { get }
 }
 
+public extension Peer {
+    func canSetupAutoremoveTimeout(accountPeerId: EnginePeer.Id) -> Bool {
+        if let _ = self as? TelegramSecretChat {
+            return false
+        } else if let group = self as? TelegramGroup {
+            if case .creator = group.role {
+                return true
+            } else if case let .admin(rights, _) = group.role {
+                if rights.rights.contains(.canDeleteMessages) {
+                    return true
+                }
+            }
+        } else if let user = self as? TelegramUser {
+            if user.id != accountPeerId && user.botInfo == nil {
+                return true
+            }
+        } else if let channel = self as? TelegramChannel {
+            if channel.hasPermission(.deleteAllMessages) {
+                return true
+            }
+        }
+        
+        return false
+    }
+}
+
 public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }

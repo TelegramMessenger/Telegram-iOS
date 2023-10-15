@@ -137,7 +137,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     return .none
 }
 
-func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
+public func chatItemsHaveCommonDateHeader(_ lhs: ListViewItem, _ rhs: ListViewItem?)  -> Bool{
     let lhsHeader: ChatMessageDateHeader?
     let rhsHeader: ChatMessageDateHeader?
     if let lhs = lhs as? ChatMessageItemImpl {

@@ -2790,7 +2790,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if let foundGalleryMessage = foundGalleryMessage {
-                openChatInstantPage(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { _ in
         }, openTheme: { _ in

@@ -10,8 +10,9 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import ChatPresentationInterfaceState
+import ChatNavigationButton
 
-final class ChatRecentActionsController: TelegramBaseController {
+public final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
         return self.displayNode as! ChatRecentActionsControllerNode
     }
@@ -21,7 +22,7 @@ final class ChatRecentActionsController: TelegramBaseController {
     private let initialAdminPeerId: PeerId?
     private var presentationData: PresentationData
     private var presentationDataPromise = Promise<PresentationData>()
-    override var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
+    override public var updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>) {
         return (self.presentationData, self.presentationDataPromise.get())
     }
     private var presentationDataDisposable: Disposable?
@@ -32,7 +33,7 @@ final class ChatRecentActionsController: TelegramBaseController {
     
     private let titleView: ChatRecentActionsTitleView
     
-    init(context: AccountContext, peer: Peer, adminPeerId: PeerId?) {
+    public init(context: AccountContext, peer: Peer, adminPeerId: PeerId?) {
         self.context = context
         self.peer = peer
         self.initialAdminPeerId = adminPeerId
@@ -219,7 +220,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         })
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -240,7 +241,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         self.controllerNode.updatePresentationData(self.presentationData)
     }
     
-    override func loadDisplayNode() {
+    override public func loadDisplayNode() {
         self.displayNode = ChatRecentActionsControllerNode(context: self.context, controller: self, peer: self.peer, presentationData: self.presentationData, interaction: self.interaction, pushController: { [weak self] c in
             (self?.navigationController as? NavigationController)?.pushViewController(c)
         }, presentController: { [weak self] c, t, a in
@@ -267,7 +268,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
-    @objc func activateSearch() {
+    @objc private func activateSearch() {
         if let navigationBar = self.navigationBar {
             if !(navigationBar.contentNode is ChatRecentActionsSearchNavigationContentNode) {
                 let searchNavigationNode = ChatRecentActionsSearchNavigationContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, cancel: { [weak self] in

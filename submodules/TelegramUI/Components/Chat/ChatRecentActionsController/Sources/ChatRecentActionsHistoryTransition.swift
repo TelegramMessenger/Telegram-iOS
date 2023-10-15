@@ -8,6 +8,7 @@ import MergeLists
 import AccountContext
 import ChatControllerInteraction
 import ChatHistoryEntry
+import ChatMessageItemImpl
 
 enum ChatRecentActionsEntryContentIndex: Int32 {
     case header = 0

@@ -21,7 +21,6 @@ final class ChatMessageContextLocationContentSource: ContextLocationContentSourc
     }
 }
 
-
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = false

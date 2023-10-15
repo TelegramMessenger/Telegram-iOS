@@ -12,15 +12,15 @@ import ChatMessageItemCommon
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
-class ChatReplyCountItem: ListViewItem {
-    let index: MessageIndex
-    let isComments: Bool
-    let count: Int
-    let presentationData: ChatPresentationData
-    let header: ChatMessageDateHeader
-    let controllerInteraction: ChatControllerInteraction
+public class ChatReplyCountItem: ListViewItem {
+    public let index: MessageIndex
+    public let isComments: Bool
+    public let count: Int
+    public let presentationData: ChatPresentationData
+    public let header: ChatMessageDateHeader
+    public let controllerInteraction: ChatControllerInteraction
     
-    init(index: MessageIndex, isComments: Bool, count: Int, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
+    public init(index: MessageIndex, isComments: Bool, count: Int, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction) {
         self.index = index
         self.isComments = isComments
         self.count = count
@@ -29,7 +29,7 @@ class ChatReplyCountItem: ListViewItem {
         self.controllerInteraction = controllerInteraction
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatReplyCountItemNode()
             Queue.mainQueue().async {
@@ -63,8 +63,8 @@ class ChatReplyCountItem: ListViewItem {
     }
 }
 
-class ChatReplyCountItemNode: ListViewItemNode {
-    var item: ChatReplyCountItem?
+public class ChatReplyCountItemNode: ListViewItemNode {
+    public var item: ChatReplyCountItem?
     private let labelNode: TextNode
     private var backgroundNode: WallpaperBubbleBackgroundNode?
     private let backgroundColorNode: ASDisplayNode
@@ -75,7 +75,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
 
     private var absoluteRect: (CGRect, CGSize)?
     
-    init() {
+    public init() {
         self.labelNode = TextNode()
         self.labelNode.isUserInteractionEnabled = false
 
@@ -91,17 +91,17 @@ class ChatReplyCountItemNode: ListViewItemNode {
         self.canBeUsedAsScrollToItemAnchor = false
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
             if let item = item as? ChatReplyCountItem {
             let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
             let (layout, apply) = self.asyncLayout()(item, params, dateAtBottom)
@@ -111,7 +111,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatReplyCountItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ChatReplyCountItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         
         let layoutConstants = self.layoutConstants
@@ -192,7 +192,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
         }
     }
 
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         var rect = rect
         rect.origin.y = containerSize.height - rect.maxY + self.insets.top
         
@@ -207,7 +207,7 @@ class ChatReplyCountItemNode: ListViewItemNode {
         }
     }
 
-    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let backgroundNode = self.backgroundNode {
             backgroundNode.offset(value: CGPoint(x: value.x, y: -value.y), animationCurve: animationCurve, duration: duration)
         }

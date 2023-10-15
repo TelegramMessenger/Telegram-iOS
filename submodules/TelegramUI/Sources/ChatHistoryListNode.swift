@@ -27,6 +27,7 @@ import ChatHistoryEntry
 import ChatOverscrollControl
 import ChatBotInfoItem
 import ChatMessageItem
+import ChatMessageItemImpl
 import ChatMessageItemView
 import ChatMessageTransitionNode
 

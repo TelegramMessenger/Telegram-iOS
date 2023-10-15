@@ -29,6 +29,7 @@ import Pasteboard
 import ChatControllerInteraction
 import ChatPresentationInterfaceState
 import ChatMessageItemView
+import ChatLoadingNode
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -279,11 +280,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { [weak self] message in
             if let strongSelf = self{
-                openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
+                strongSelf.context.sharedContext.openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
                     self?.pushController(c)
                 })
             }
@@ -1185,5 +1186,19 @@ final class ChatRecentActionsMessageContextExtractedContentSource: ContextExtrac
             }
         }
         return result
+    }
+}
+
+final class ChatMessageContextLocationContentSource: ContextLocationContentSource {
+    private let controller: ViewController
+    private let location: CGPoint
+    
+    init(controller: ViewController, location: CGPoint) {
+        self.controller = controller
+        self.location = location
+    }
+    
+    func transitionInfo() -> ContextControllerLocationViewInfo? {
+        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

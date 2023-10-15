@@ -108,10 +108,12 @@ import ReplyAccessoryPanelNode
 import TextSelectionNode
 import ChatMessagePollBubbleContentNode
 import ChatMessageItem
+import ChatMessageItemImpl
 import ChatMessageItemView
 import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
+import ChatNavigationButton
 
 public enum ChatControllerPeekActions {
     case standard
@@ -2862,7 +2864,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.effectiveNavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                     strongSelf.chatDisplayNode.dismissInput()
-                    openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                    strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
                     
                     if case .overlay = strongSelf.presentationInterfaceState.mode {
                         strongSelf.chatDisplayNode.dismissAsOverlay()
@@ -2873,7 +2875,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                     strongSelf.chatDisplayNode.dismissInput()
-                    openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
+                    strongSelf.context.sharedContext.openChatWallpaper(context: strongSelf.context, message: message, present: { [weak self] c, a in
                         self?.push(c)
                     })
                 })
@@ -19496,33 +19498,6 @@ final class ChatControllerContextReferenceContentSource: ContextReferenceContent
     
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
         return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds.inset(by: self.insets), insets: self.contentInsets)
-    }
-}
-
-
-extension Peer {
-    func canSetupAutoremoveTimeout(accountPeerId: PeerId) -> Bool {
-        if let _ = self as? TelegramSecretChat {
-            return false
-        } else if let group = self as? TelegramGroup {
-            if case .creator = group.role {
-                return true
-            } else if case let .admin(rights, _) = group.role {
-                if rights.rights.contains(.canDeleteMessages) {
-                    return true
-                }
-            }
-        } else if let user = self as? TelegramUser {
-            if user.id != accountPeerId && user.botInfo == nil {
-                return true
-            }
-        } else if let channel = self as? TelegramChannel {
-            if channel.hasPermission(.deleteAllMessages) {
-                return true
-            }
-        }
-        
-        return false
     }
 }
 

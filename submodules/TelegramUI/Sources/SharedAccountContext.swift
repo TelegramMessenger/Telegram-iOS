@@ -45,6 +45,8 @@ import LegacyMessageInputPanel
 import StatisticsUI
 import ChatHistoryEntry
 import ChatMessageItem
+import ChatMessageItemImpl
+import ChatRecentActionsController
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1599,6 +1601,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             present(legacyController)
         })
+    }
+    
+    public func openChatInstantPage(context: AccountContext, message: Message, sourcePeerType: MediaAutoDownloadPeerType?, navigationController: NavigationController) {
+        openChatInstantPageImpl(context: context, message: message, sourcePeerType: sourcePeerType, navigationController: navigationController)
+    }
+    
+    public func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+        openChatWallpaperImpl(context: context, message: message, present: present)
     }
     
     public func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController {

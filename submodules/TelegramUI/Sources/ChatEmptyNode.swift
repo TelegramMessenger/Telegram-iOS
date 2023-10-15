@@ -14,6 +14,7 @@ import ChatPresentationInterfaceState
 import WallpaperBackgroundNode
 import ComponentFlow
 import EmojiStatusComponent
+import ChatLoadingNode
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, subject: ChatEmptyNode.Subject, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize

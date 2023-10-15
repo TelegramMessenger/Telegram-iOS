@@ -10,7 +10,7 @@ import ChatPresentationInterfaceState
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
 
-final class ChatRecentActionsEmptyNode: ASDisplayNode {
+public final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var chatWallpaper: TelegramWallpaper
         
@@ -28,7 +28,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private var title: String = ""
     private var text: String = ""
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, chatBubbleCorners: PresentationChatBubbleCorners) {
+    public init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, chatBubbleCorners: PresentationChatBubbleCorners) {
         self.theme = theme
         self.chatWallpaper = chatWallpaper
         
@@ -59,7 +59,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(presentationData: ChatPresentationData, backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(presentationData: ChatPresentationData, backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
         self.wallpaperBackgroundNode = backgroundNode
         self.layoutParams = (size, presentationData)
         
@@ -119,7 +119,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         }
     }
     
-    func setup(title: String, text: String) {
+    public func setup(title: String, text: String) {
         if self.title != title || self.text != text {
             self.title = title
             self.text = text

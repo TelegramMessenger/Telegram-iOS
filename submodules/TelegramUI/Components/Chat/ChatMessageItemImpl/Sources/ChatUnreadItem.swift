@@ -12,20 +12,20 @@ import ChatMessageItemCommon
 
 private let titleFont = UIFont.systemFont(ofSize: 13.0)
 
-class ChatUnreadItem: ListViewItem {
-    let index: MessageIndex
-    let presentationData: ChatPresentationData
-    let controllerInteraction: ChatControllerInteraction
-    let header: ChatMessageDateHeader
+public class ChatUnreadItem: ListViewItem {
+    public let index: MessageIndex
+    public let presentationData: ChatPresentationData
+    public let controllerInteraction: ChatControllerInteraction
+    public let header: ChatMessageDateHeader
     
-    init(index: MessageIndex, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, context: AccountContext) {
+    public init(index: MessageIndex, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction, context: AccountContext) {
         self.index = index
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.header = ChatMessageDateHeader(timestamp: index.timestamp, scheduled: false, presentationData: presentationData, controllerInteraction: controllerInteraction, context: context)
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatUnreadItemNode()
             
@@ -67,12 +67,12 @@ class ChatUnreadItem: ListViewItem {
     }
 }
 
-class ChatUnreadItemNode: ListViewItemNode {
-    var item: ChatUnreadItem?
-    let backgroundNode: ASImageNode
-    let labelNode: TextNode
+public class ChatUnreadItemNode: ListViewItemNode {
+    public var item: ChatUnreadItem?
+    public let backgroundNode: ASImageNode
+    public let labelNode: TextNode
     
-    let activateArea: AccessibilityAreaNode
+    public let activateArea: AccessibilityAreaNode
     
     private var wallpaperBackgroundNode: WallpaperBackgroundNode?
     private var backgroundContent: WallpaperBubbleBackgroundNode?
@@ -83,7 +83,7 @@ class ChatUnreadItemNode: ListViewItemNode {
     
     private let layoutConstants = ChatMessageItemLayoutConstants.default
     
-    init() {
+    public init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.displayWithoutProcessing = true
@@ -108,17 +108,17 @@ class ChatUnreadItemNode: ListViewItemNode {
         self.canBeUsedAsScrollToItemAnchor = false
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         super.animateInsertion(currentTimestamp, duration: duration, short: short)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+    override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
         if let item = item as? ChatUnreadItem {
             let dateAtBottom = !chatItemsHaveCommonDateHeader(item, nextItem)
             let (layout, apply) = self.asyncLayout()(item, params, dateAtBottom)
@@ -128,7 +128,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         }
     }
     
-    func asyncLayout() -> (_ item: ChatUnreadItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ChatUnreadItem, _ params: ListViewItemLayoutParams, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
         let labelLayout = TextNode.asyncLayout(self.labelNode)
         let layoutConstants = self.layoutConstants
         let currentTheme = self.theme
@@ -187,7 +187,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         }
     }
     
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         super.updateAbsoluteRect(rect, within: containerSize)
         
         self.absolutePosition = (rect, containerSize)

@@ -16,13 +16,14 @@ import ChatMessageStickerItemNode
 import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
+import ChatMessageItemImpl
 
-final class ChatLoadingNode: ASDisplayNode {
+public final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
     private let activityIndicator: ActivityIndicator
     private let offset: CGPoint
     
-    init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
+    public init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners) {
         self.backgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: theme, wallpaper: chatWallpaper), enableBlur: context.sharedContext.energyUsageSettings.fullTranslucency && dateFillNeedsBlur(theme: theme, wallpaper: chatWallpaper))
         
         let serviceColor = serviceMessageColorComponents(theme: theme, wallpaper: chatWallpaper)
@@ -39,7 +40,7 @@ final class ChatLoadingNode: ASDisplayNode {
         self.addSubnode(self.activityIndicator)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
         let displayRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
 
         let backgroundSize: CGFloat = 30.0
@@ -50,7 +51,7 @@ final class ChatLoadingNode: ASDisplayNode {
         transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: displayRect.minX + floor((displayRect.width - activitySize.width) / 2.0) + self.offset.x, y: displayRect.minY + floor((displayRect.height - activitySize.height) / 2.0) + self.offset.y), size: activitySize))
     }
     
-    var progressFrame: CGRect {
+    public var progressFrame: CGRect {
         return self.backgroundNode.frame
     }
 }
@@ -59,22 +60,22 @@ private let avatarSize = CGSize(width: 38.0, height: 38.0)
 private let avatarImage = generateFilledCircleImage(diameter: avatarSize.width, color: .white)
 private let avatarBorderImage = generateCircleImage(diameter: avatarSize.width, lineWidth: 1.0 - UIScreenPixel, color: .white)
 
-final class ChatLoadingPlaceholderMessageContainer {
-    var avatarNode: ASImageNode?
-    var avatarBorderNode: ASImageNode?
+public final class ChatLoadingPlaceholderMessageContainer {
+    public var avatarNode: ASImageNode?
+    public var avatarBorderNode: ASImageNode?
     
-    let bubbleNode: ASImageNode
-    let bubbleBorderNode: ASImageNode
+    public let bubbleNode: ASImageNode
+    public let bubbleBorderNode: ASImageNode
     
-    var parentView: UIView? {
+    public var parentView: UIView? {
         return self.bubbleNode.supernode?.view
     }
     
-    var frame: CGRect {
+    public var frame: CGRect {
         return self.bubbleNode.frame
     }
         
-    init(bubbleImage: UIImage?, bubbleBorderImage: UIImage?) {
+    public init(bubbleImage: UIImage?, bubbleBorderImage: UIImage?) {
         self.bubbleNode = ASImageNode()
         self.bubbleNode.displaysAsynchronously = false
         self.bubbleNode.image = bubbleImage
@@ -84,12 +85,12 @@ final class ChatLoadingPlaceholderMessageContainer {
         self.bubbleBorderNode.image = bubbleBorderImage
     }
     
-    func setup(maskNode: ASDisplayNode, borderMaskNode: ASDisplayNode) {
+    public func setup(maskNode: ASDisplayNode, borderMaskNode: ASDisplayNode) {
         maskNode.addSubnode(self.bubbleNode)
         borderMaskNode.addSubnode(self.bubbleBorderNode)
     }
     
-    func animateWith(_ listItemNode: ListViewItemNode, delay: Double, transition: ContainedViewLayoutTransition) {
+    public func animateWith(_ listItemNode: ListViewItemNode, delay: Double, transition: ContainedViewLayoutTransition) {
         listItemNode.allowsGroupOpacity = true
         listItemNode.alpha = 1.0
         listItemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay, completion: { _ in
@@ -107,7 +108,7 @@ final class ChatLoadingPlaceholderMessageContainer {
         }
     }
         
-    func update(size: CGSize, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
         var avatarOffset: CGFloat = 0.0
         
         if hasAvatar && self.avatarNode == nil {
@@ -139,7 +140,7 @@ final class ChatLoadingPlaceholderMessageContainer {
     }
 }
 
-final class ChatLoadingPlaceholderNode: ASDisplayNode {
+public final class ChatLoadingPlaceholderNode: ASDisplayNode {
     private weak var backgroundNode: WallpaperBackgroundNode?
     
     private let context: AccountContext
@@ -161,7 +162,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var validLayout: (CGSize, UIEdgeInsets, LayoutMetrics)?
     
-    init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
+    public init(context: AccountContext, theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
         self.context = context
         self.backgroundNode = backgroundNode
         
@@ -207,7 +208,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.containerNode.view.mask = self.maskNode.view
@@ -223,10 +224,8 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     }
     
     private var bottomInset: (Int, CGFloat)?
-    func setup(_ historyNode: ChatHistoryNode, updating: Bool = false) {
-        guard let listNode = historyNode as? ListView else {
-            return
-        }
+    public func setup(_ historyNode: ListView, updating: Bool = false) {
+        let listNode = historyNode
         
         var listItemNodes: [ASDisplayNode] = []
         var count = 0
@@ -291,10 +290,11 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     }
         
     private var didAnimateOut = false
-    func animateOut(_ historyNode: ChatHistoryNode, completion: @escaping () -> Void = {}) {
-        guard let listNode = historyNode as? ListView, let (size, _, _) = self.validLayout else {
+    public func animateOut(_ historyNode: ListView, completion: @escaping () -> Void = {}) {
+        guard let (size, _, _) = self.validLayout else {
             return
         }
+        let listNode = historyNode
         self.didAnimateOut = true
         self.backgroundNode?.updateIsLooping(false)
         
@@ -378,7 +378,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    func addContentOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func addContentOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.maskNode.bounds = self.maskNode.bounds.offsetBy(dx: 0.0, dy: -offset)
         self.borderMaskNode.bounds = self.borderMaskNode.bounds.offsetBy(dx: 0.0, dy: -offset)
         transition.animateOffsetAdditive(node: self.maskNode, offset: offset)
@@ -388,7 +388,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
@@ -398,14 +398,14 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    enum ChatType: Equatable {
+    public enum ChatType: Equatable {
         case generic
         case user
         case group
         case channel
     }
     private var chatType: ChatType = .channel
-    func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
+    public func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
         var chatType: ChatType = .channel
         if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
             if peer is TelegramUser {
@@ -429,7 +429,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, insets, metrics)
         
         let bounds = CGRect(origin: .zero, size: size)

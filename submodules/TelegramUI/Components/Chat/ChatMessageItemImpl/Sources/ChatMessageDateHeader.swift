@@ -27,18 +27,18 @@ private let timezoneOffset: Int32 = {
 
 private let granularity: Int32 = 60 * 60 * 24
 
-final class ChatMessageDateHeader: ListViewItemHeader {
+public final class ChatMessageDateHeader: ListViewItemHeader {
     private let timestamp: Int32
     private let roundedTimestamp: Int32
     private let scheduled: Bool
     
-    let id: ListViewItemNode.HeaderId
-    let presentationData: ChatPresentationData
-    let controllerInteraction: ChatControllerInteraction?
-    let context: AccountContext
-    let action: ((Int32, Bool) -> Void)?
+    public let id: ListViewItemNode.HeaderId
+    public let presentationData: ChatPresentationData
+    public let controllerInteraction: ChatControllerInteraction?
+    public let context: AccountContext
+    public let action: ((Int32, Bool) -> Void)?
     
-    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    public init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
         self.presentationData = presentationData
@@ -49,10 +49,10 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         self.id = ListViewItemNode.HeaderId(space: 0, id: Int64(self.roundedTimestamp))
     }
     
-    let stickDirection: ListViewItemHeaderStickDirection = .bottom
-    let stickOverInsets: Bool = true
+    public let stickDirection: ListViewItemHeaderStickDirection = .bottom
+    public let stickOverInsets: Bool = true
     
-    let height: CGFloat = 34.0
+    public let height: CGFloat = 34.0
 
     public func combinesWith(other: ListViewItemHeader) -> Bool {
         if let other = other as? ChatMessageDateHeader, other.id == self.id {
@@ -62,11 +62,11 @@ final class ChatMessageDateHeader: ListViewItemHeader {
         }
     }
     
-    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
     }
     
-    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+    public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
         guard let node = node as? ChatMessageDateHeaderNode, let next = next as? ChatMessageDateHeader else {
             return
         }
@@ -115,10 +115,10 @@ private func dateHeaderTimestampId(timestamp: Int32) -> Int32 {
     }
 }
 
-final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
-    let labelNode: TextNode
-    let backgroundNode: NavigationBackgroundNode
-    let stickBackgroundNode: ASImageNode
+public final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
+    public let labelNode: TextNode
+    public let backgroundNode: NavigationBackgroundNode
+    public let stickBackgroundNode: ASImageNode
     
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     
@@ -134,7 +134,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    public init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.context = context
@@ -220,13 +220,13 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.labelNode.frame = CGRect(origin: CGPoint(), size: size.size)
     }
 
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+    public func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
         let previousPresentationData = self.presentationData
         self.presentationData = presentationData
         
@@ -252,11 +252,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.setNeedsLayout()
     }
     
-    func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
+    public func updateBackgroundColor(color: UIColor, enableBlur: Bool) {
         self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
     }
     
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
@@ -266,7 +266,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let chatDateSize: CGFloat = 20.0
         let chatDateInset: CGFloat = 6.0
         
@@ -294,7 +294,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
         if !self.stickDistanceFactor.isEqual(to: factor) {
             self.stickBackgroundNode.alpha = factor
             
@@ -312,7 +312,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    override func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
+    override public func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
         self.flashingOnScrolling = isFlashingOnScrolling
         self.updateFlashing(animated: animated)
     }
@@ -336,7 +336,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
         }
@@ -349,35 +349,35 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         return nil
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+    override public func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
     }
     
-    @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.action?(self.localTimestamp, self.stickDistanceFactor < 0.5)
         }
     }
 }
 
-final class ChatMessageAvatarHeader: ListViewItemHeader {
-    struct Id: Hashable {
-        var peerId: PeerId
-        var timestampId: Int32
+public final class ChatMessageAvatarHeader: ListViewItemHeader {
+    public struct Id: Hashable {
+        public var peerId: PeerId
+        public var timestampId: Int32
     }
 
-    let id: ListViewItemNode.HeaderId
-    let peerId: PeerId
-    let peer: Peer?
-    let messageReference: MessageReference?
-    let adMessageId: EngineMessage.Id?
-    let effectiveTimestamp: Int32
-    let presentationData: ChatPresentationData
-    let context: AccountContext
-    let controllerInteraction: ChatControllerInteraction
-    let storyStats: PeerStoryStats?
+    public let id: ListViewItemNode.HeaderId
+    public let peerId: PeerId
+    public let peer: Peer?
+    public let messageReference: MessageReference?
+    public let adMessageId: EngineMessage.Id?
+    public let effectiveTimestamp: Int32
+    public let presentationData: ChatPresentationData
+    public let context: AccountContext
+    public let controllerInteraction: ChatControllerInteraction
+    public let storyStats: PeerStoryStats?
 
-    init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?) {
+    public init(timestamp: Int32, peerId: PeerId, peer: Peer?, messageReference: MessageReference?, message: Message, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -400,10 +400,10 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
         self.storyStats = storyStats
     }
     
-    let stickDirection: ListViewItemHeaderStickDirection = .top
-    let stickOverInsets: Bool = false
+    public let stickDirection: ListViewItemHeaderStickDirection = .top
+    public let stickOverInsets: Bool = false
 
-    let height: CGFloat = 38.0
+    public let height: CGFloat = 38.0
 
     public func combinesWith(other: ListViewItemHeader) -> Bool {
         if let other = other as? ChatMessageAvatarHeader, other.id == self.id {
@@ -416,11 +416,11 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
         }
     }
 
-    func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
+    public func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
         return ChatMessageAvatarHeaderNodeImpl(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, storyStats: self.storyStats, synchronousLoad: synchronousLoad)
     }
 
-    func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
+    public func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
         guard let node = node as? ChatMessageAvatarHeaderNodeImpl else {
             return
         }
@@ -433,7 +433,7 @@ private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 private let maxVideoLoopCount = 3
 
-final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
+public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction
@@ -445,7 +445,7 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
     private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
-    let avatarNode: AvatarNode
+    public let avatarNode: AvatarNode
     private var avatarVideoNode: AvatarVideoNode?
         
     private var cachedDataDisposable = MetaDisposable()
@@ -466,7 +466,7 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         }
     }
     
-    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
+    public init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, storyStats: PeerStoryStats?, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
@@ -513,13 +513,13 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         self.cachedDataDisposable.dispose()
     }
 
-    func setCustomLetters(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, letters: [String], emptyColor: UIColor) {
+    public func setCustomLetters(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, letters: [String], emptyColor: UIColor) {
         self.containerNode.isGestureEnabled = false
 
         self.avatarNode.setCustomLetters(letters, icon: !letters.isEmpty ? nil : .phone)
     }
 
-    func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
+    public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {
         self.containerNode.isGestureEnabled = peer.smallProfileImage != nil
 
         var overrideImage: AvatarNodeImageOverride?
@@ -608,7 +608,7 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         }
     }
     
-    func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
+    public func updateStoryStats(storyStats: PeerStoryStats?, theme: PresentationTheme, force: Bool) {
         /*if storyStats != nil {
             var backgroundContent: WallpaperBubbleBackgroundNode?
             if let current = self.backgroundContent {
@@ -657,42 +657,42 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         }*/
     }
 
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
 
         self.avatarNode.view.addGestureRecognizer(ListViewTapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
 
-    func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
+    public func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
         if self.presentationData !== presentationData {
             self.presentationData = presentationData
             self.setNeedsLayout()
         }
     }
 
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    override public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         self.containerNode.frame = CGRect(origin: CGPoint(x: leftInset + 3.0, y: 0.0), size: CGSize(width: 38.0, height: 38.0))
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 38.0, height: 38.0))
     }
 
-    override func animateRemoved(duration: Double) {
+    override public func animateRemoved(duration: Double) {
         self.alpha = 0.0
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
         self.avatarNode.layer.animateScale(from: 1.0, to: 0.2, duration: duration, removeOnCompletion: false)
     }
 
-    override func animateAdded(duration: Double) {
+    override public func animateAdded(duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: self.alpha, duration: 0.2)
         self.avatarNode.layer.animateScale(from: 0.2, to: 1.0, duration: 0.2)
     }
 
-    override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
     }
 
-    override func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
+    override public func updateFlashingOnScrolling(_ isFlashingOnScrolling: Bool, animated: Bool) {
     }
 
-    func updateSelectionState(animated: Bool) {
+    public func updateSelectionState(animated: Bool) {
         let offset: CGFloat = self.controllerInteraction.selectionState != nil ? 42.0 : 0.0
 
         let previousSubnodeTransform = self.subnodeTransform
@@ -702,7 +702,7 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         }
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
             return nil
         }
@@ -710,11 +710,11 @@ final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         return result
     }
 
-    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+    override public func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         super.touchesCancelled(touches, with: event)
     }
 
-    @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
+    @objc private func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)

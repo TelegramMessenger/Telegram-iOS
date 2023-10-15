@@ -6,26 +6,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ChatPresentationInterfaceState
-
-enum ChatNavigationButtonAction: Equatable {
-    case openChatInfo(expandAvatar: Bool)
-    case clearHistory
-    case clearCache
-    case cancelMessageSelection
-    case search
-    case dismiss
-    case toggleInfoPanel
-    case spacer
-}
-
-struct ChatNavigationButton: Equatable {
-    let action: ChatNavigationButtonAction
-    let buttonItem: UIBarButtonItem
-    
-    static func ==(lhs: ChatNavigationButton, rhs: ChatNavigationButton) -> Bool {
-        return lhs.action == rhs.action && lhs.buttonItem === rhs.buttonItem
-    }
-}
+import ChatNavigationButton
 
 func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
