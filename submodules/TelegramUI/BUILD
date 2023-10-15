@@ -386,6 +386,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageAnimatedStickerItemNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageTransitionNode",
         "//submodules/TelegramUI/Components/Chat/ManagedDiceAnimationNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageCommentFooterContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageActionBubbleContentNode",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

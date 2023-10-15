@@ -12,7 +12,7 @@ import AnimatedAvatarSetNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 
-final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
+public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let separatorNode: ASDisplayNode
     private let countNode: AnimatedCountLabelNode
     private let alternativeCountNode: AnimatedCountLabelNode
@@ -24,7 +24,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
     private let unreadIconNode: ASImageNode
     private var statusNode: RadialStatusNode?
     
-    required init() {
+    required public init() {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isUserInteractionEnabled = false
         
@@ -83,7 +83,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -98,7 +98,7 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeCountLayout = self.countNode.asyncLayout()
         let makeAlternativeCountLayout = self.alternativeCountNode.asyncLayout()
         
@@ -392,30 +392,30 @@ final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
     }
     
-    override func animateInsertionIntoBubble(_ duration: Double) {
+    override public func animateInsertionIntoBubble(_ duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
             return .ignore
         }
         return .none
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.buttonNode.isUserInteractionEnabled && self.buttonNode.frame.contains(point) {
             return self.buttonNode.view
         }

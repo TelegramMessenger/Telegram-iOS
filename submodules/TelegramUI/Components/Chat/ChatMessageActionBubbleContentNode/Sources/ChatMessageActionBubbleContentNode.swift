@@ -26,13 +26,13 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
 }
 
-class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
-    let labelNode: TextNodeWithEntities
+public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
+    public let labelNode: TextNodeWithEntities
     private var dustNode: InvisibleInkDustNode?
-    var backgroundNode: WallpaperBubbleBackgroundNode?
-    var backgroundColorNode: ASDisplayNode
-    let backgroundMaskNode: ASImageNode
-    var linkHighlightingNode: LinkHighlightingNode?
+    public var backgroundNode: WallpaperBubbleBackgroundNode?
+    public var backgroundColorNode: ASDisplayNode
+    public let backgroundMaskNode: ASImageNode
+    public var linkHighlightingNode: LinkHighlightingNode?
     
     private let mediaBackgroundNode: ASImageNode
     fileprivate var imageNode: TransformImageNode?
@@ -46,7 +46,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     private var cachedMaskBackgroundImage: (CGPoint, UIImage, [CGRect])?
     private var absoluteRect: (CGRect, CGSize)?
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
                 switch self.visibility {
@@ -64,7 +64,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    required init() {
+    required public init() {
         self.labelNode = TextNodeWithEntities()
         self.labelNode.textNode.isUserInteractionEnabled = false
         self.labelNode.textNode.displaysAsynchronously = false
@@ -81,7 +81,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.labelNode.textNode)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -89,11 +89,11 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         self.fetchDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
     }
     
-    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if let imageNode = self.imageNode, self.item?.message.id == messageId {
             return (imageNode, imageNode.bounds, { [weak self] in
                 guard let strongSelf = self, let imageNode = strongSelf.imageNode else {
@@ -122,7 +122,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    override public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
         var currentMedia: Media?
         if let item = item {
@@ -152,7 +152,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeLabelLayout = TextNodeWithEntities.asyncLayout(self.labelNode)
 
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
@@ -433,7 +433,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
 
         if let backgroundNode = self.backgroundNode {
@@ -444,19 +444,19 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    override func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
+    override public func applyAbsoluteOffset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double) {
         if let backgroundNode = self.backgroundNode {
             backgroundNode.offset(value: value, animationCurve: animationCurve, duration: duration)
         }
     }
 
-    override func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
+    override public func applyAbsoluteOffsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
         if let backgroundNode = self.backgroundNode {
             backgroundNode.offsetSpring(value: value, duration: duration, damping: damping)
         }
     }
     
-    override func updateTouchesAtPoint(_ point: CGPoint?) {
+    override public func updateTouchesAtPoint(_ point: CGPoint?) {
         if let item = self.item {
             var rects: [(CGRect, CGRect)]?
             let textNodeFrame = self.labelNode.textNode.frame
@@ -509,7 +509,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
 
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.labelNode.textNode.frame
         if let (index, attributes) = self.labelNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)), gesture == .tap {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
