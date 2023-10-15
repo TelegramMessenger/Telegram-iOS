@@ -14,7 +14,6 @@ import Markdown
 import ShimmerEffect
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
-import AvatarNode
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
@@ -24,7 +23,7 @@ private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)
 
-class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     
     private let placeholderNode: StickerShimmerEffectNode
@@ -47,7 +46,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     private let buttonNode: ChatMessageAttachedContentButtonNode
     private let channelButton: PeerButtonNode
     
-    override var visibility: ListViewItemNodeVisibility {
+    override public var visibility: ListViewItemNodeVisibility {
         didSet {
             let wasVisible = oldValue != .none
             let isVisible = self.visibility != .none
@@ -68,7 +67,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var setupTimestamp: Double?
     
-    required init() {
+    required public init() {
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
@@ -126,16 +125,16 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         self.buttonPressed()
         return true
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
 //        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.contactTap(_:)))
@@ -153,7 +152,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makePrizeTitleLayout = TextNode.asyncLayout(self.prizeTitleNode)
         let makePrizeTextLayout = TextNode.asyncLayout(self.prizeTextNode)
@@ -503,25 +502,25 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     private var absoluteRect: (CGRect, CGSize)?
-    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
         
         self.placeholderNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize)
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
             return .openMessage
         }
@@ -531,7 +530,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         return .none
     }
     
-    @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
                 let _ = item.controllerInteraction.openMessage(item.message, .default)
@@ -545,14 +544,14 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.dateAndStatusNode.supernode != nil, let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
             return result
         }

@@ -68,6 +68,7 @@ import ChatMessageStoryMentionContentNode
 import ChatMessageUnsupportedBubbleContentNode
 import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
+import ChatMessageGiveawayBubbleContentNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
