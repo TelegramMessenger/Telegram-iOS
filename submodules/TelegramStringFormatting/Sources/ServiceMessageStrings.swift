@@ -900,6 +900,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .giftCode:
                 attributedString = NSAttributedString(string: strings.Notification_GiftLink, font: titleFont, textColor: primaryTextColor)
+            case .giveawayLaunched:
+                let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
+                attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
             case .unknown:
                 attributedString = nil
             }
@@ -921,10 +924,6 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             } else {
                 resultTitleString = strings.Conversation_StoryExpiredMentionTextOutgoing(compactPeerName)
             }
-            attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
-        } else if let _ = media as? TelegramMediaGiveaway {
-            let compactAuthorName = message.author?.compactDisplayTitle ?? ""
-            let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
             attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
         }
     }

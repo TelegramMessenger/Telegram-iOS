@@ -10,6 +10,9 @@ import ForwardAccessoryPanelNode
 import ReplyAccessoryPanelNode
 
 func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: AccessoryPanelNode?, chatControllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> AccessoryPanelNode? {
+    if case .standard(previewing: true) = chatPresentationInterfaceState.mode {
+        return nil
+    }
     if let _ = chatPresentationInterfaceState.interfaceState.selectionState {
         return nil
     }

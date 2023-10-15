@@ -21,7 +21,8 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
     switch webpage {
         case .webPageNotModified:
             return nil
-        case let .webPagePending(id, date):
+        case let .webPagePending(flags, id, url, date):
+            let _ = flags
             return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date, url))
         case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, cachedPage, attributes):
             var embedSize: PixelDimensions?
@@ -55,8 +56,26 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             if let cachedPage = cachedPage {
                 instantPage = InstantPage(apiPage: cachedPage)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, story: story, attributes: webpageAttributes, instantPage: instantPage)))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, story: story, attributes: webpageAttributes, instantPage: instantPage, displayOptions: .default)))
         case .webPageEmpty:
             return nil
+    }
+}
+
+public class WebpagePreviewMessageAttribute: MessageAttribute, Equatable {
+    public let associatedPeerIds: [PeerId] = []
+    public let associatedMediaIds: [MediaId] = []
+    
+    public init() {
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+    }
+    
+    public static func ==(lhs: WebpagePreviewMessageAttribute, rhs: WebpagePreviewMessageAttribute) -> Bool {
+        return true
     }
 }

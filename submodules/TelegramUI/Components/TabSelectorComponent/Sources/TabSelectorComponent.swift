@@ -18,6 +18,14 @@ public final class TabSelectorComponent: Component {
         }
     }
     
+    public struct CustomLayout: Equatable {
+        public var spacing: CGFloat
+        
+        public init(spacing: CGFloat) {
+            self.spacing = spacing
+        }
+    }
+    
     public struct Item: Equatable {
         public var id: AnyHashable
         public var title: String
@@ -32,17 +40,20 @@ public final class TabSelectorComponent: Component {
     }
 
     public let colors: Colors
+    public let customLayout: CustomLayout?
     public let items: [Item]
     public let selectedId: AnyHashable?
     public let setSelectedId: (AnyHashable) -> Void
     
     public init(
         colors: Colors,
+        customLayout: CustomLayout? = nil,
         items: [Item],
         selectedId: AnyHashable?,
         setSelectedId: @escaping (AnyHashable) -> Void
     ) {
         self.colors = colors
+        self.customLayout = customLayout
         self.items = items
         self.selectedId = selectedId
         self.setSelectedId = setSelectedId
@@ -50,6 +61,9 @@ public final class TabSelectorComponent: Component {
     
     public static func ==(lhs: TabSelectorComponent, rhs: TabSelectorComponent) -> Bool {
         if lhs.colors != rhs.colors {
+            return false
+        }
+        if lhs.customLayout != rhs.customLayout {
             return false
         }
         if lhs.items != rhs.items {
@@ -96,7 +110,14 @@ public final class TabSelectorComponent: Component {
             
             let baseHeight: CGFloat = 28.0
             let innerInset: CGFloat = 12.0
-            let spacing: CGFloat = 2.0
+            let spacing: CGFloat = component.customLayout?.spacing ?? 2.0
+            
+            let itemFont: UIFont
+            if component.customLayout != nil {
+                itemFont = Font.medium(14.0)
+            } else {
+                itemFont = Font.semibold(14.0)
+            }
             
             if self.selectionView.image == nil {
                 self.selectionView.image = generateStretchableFilledCircleImage(diameter: baseHeight, color: component.colors.selection)
@@ -123,7 +144,7 @@ public final class TabSelectorComponent: Component {
                 let itemSize = itemView.title.update(
                     transition: .immediate,
                     component: AnyComponent(PlainButtonComponent(
-                        content: AnyComponent(Text(text: item.title, font: Font.semibold(14.0), color: component.colors.foreground)),
+                        content: AnyComponent(Text(text: item.title, font: itemFont, color: component.colors.foreground)),
                         effectAlignment: .center,
                         minSize: nil,
                         action: { [weak self] in

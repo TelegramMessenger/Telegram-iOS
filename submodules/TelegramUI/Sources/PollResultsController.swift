@@ -7,6 +7,7 @@ import ItemListUI
 import Display
 import ItemListPeerItem
 import ItemListPeerActionItem
+import TextFormat
 
 private let collapsedResultCount: Int = 10
 private let collapsedInitialLimit: Int = 10
@@ -425,4 +426,3 @@ public func pollResultsController(context: AccountContext, messageId: EngineMess
     
     return controller
 }
-

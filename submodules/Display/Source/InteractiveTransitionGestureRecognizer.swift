@@ -140,7 +140,7 @@ public class InteractiveTransitionGestureRecognizer: UIPanGestureRecognizer {
     
     override public func translation(in view: UIView?) -> CGPoint {
         let result = super.translation(in: view)
-        return result.offsetBy(dx: self.ignoreOffset.x, dy: self.ignoreOffset.y)
+        return result//.offsetBy(dx: self.ignoreOffset.x, dy: self.ignoreOffset.y)
     }
     
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {

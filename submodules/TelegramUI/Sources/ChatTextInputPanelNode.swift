@@ -4219,7 +4219,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         return nil
     }
 
-    func makeSnapshotForTransition() -> ChatMessageTransitionNode.Source.TextInput? {
+    func makeSnapshotForTransition() -> ChatMessageTransitionNodeImpl.Source.TextInput? {
         guard let backgroundImage = self.transparentTextInputBackgroundImage else {
             return nil
         }
@@ -4242,7 +4242,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
 
         contentView.frame = textInputNode.frame
 
-        return ChatMessageTransitionNode.Source.TextInput(
+        return ChatMessageTransitionNodeImpl.Source.TextInput(
             backgroundView: backgroundView,
             contentView: contentView,
             sourceRect: self.view.convert(self.bounds, to: nil),

@@ -87,7 +87,7 @@ public func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Mess
         }
     }
     
-    if let subject = associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+    if let subject = associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
         authorTitle = nil
     }
     

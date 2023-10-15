@@ -362,14 +362,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
             forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
             |> map { state -> ChatControllerSubject.ForwardOptions in
-                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false, replyOptions: nil)
+                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
             }
             |> distinctUntilChanged
             
             let chatController = strongSelf.context.sharedContext.makeChatController(
                 context: strongSelf.context,
                 chatLocation: .peer(id: strongSelf.context.account.peerId),
-                subject: .messageOptions(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: ChatControllerSubject.MessageOptionsInfo(kind: .forward), options: forwardOptions),
+                subject: .messageOptions(peerIds: peerIds, ids: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds ?? [], info: .forward(ChatControllerSubject.MessageOptionsInfo.Forward(options: forwardOptions))),
                 botStart: nil,
                 mode: .standard(previewing: true)
             )
@@ -544,6 +544,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             contextController.immediateItemsTransitionAnimation = true
             strongSelf.controller?.presentInGlobalOverlay(contextController)
         }, presentReplyOptions: { _ in
+        }, presentLinkOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {

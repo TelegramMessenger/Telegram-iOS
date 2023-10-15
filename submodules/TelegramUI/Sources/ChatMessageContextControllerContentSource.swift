@@ -5,6 +5,7 @@ import ContextUI
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import ChatMessageItemView
  
 final class ChatMessageContextLocationContentSource: ContextLocationContentSource {
     private let controller: ViewController
@@ -19,7 +20,6 @@ final class ChatMessageContextLocationContentSource: ContextLocationContentSourc
         return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }
-
 
 final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
     let keepInPlace: Bool = false

@@ -748,7 +748,7 @@ public extension Api {
         case messageMediaStory(flags: Int32, peer: Api.Peer, id: Int32, story: Api.StoryItem?)
         case messageMediaUnsupported
         case messageMediaVenue(geo: Api.GeoPoint, title: String, address: String, provider: String, venueId: String, venueType: String)
-        case messageMediaWebPage(webpage: Api.WebPage)
+        case messageMediaWebPage(flags: Int32, webpage: Api.WebPage)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -880,10 +880,11 @@ public extension Api {
                     serializeString(venueId, buffer: buffer, boxed: false)
                     serializeString(venueType, buffer: buffer, boxed: false)
                     break
-                case .messageMediaWebPage(let webpage):
+                case .messageMediaWebPage(let flags, let webpage):
                     if boxed {
-                        buffer.appendInt32(-1557277184)
+                        buffer.appendInt32(-571405253)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     webpage.serialize(buffer, true)
                     break
     }
@@ -919,8 +920,8 @@ public extension Api {
                 return ("messageMediaUnsupported", [])
                 case .messageMediaVenue(let geo, let title, let address, let provider, let venueId, let venueType):
                 return ("messageMediaVenue", [("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
-                case .messageMediaWebPage(let webpage):
-                return ("messageMediaWebPage", [("webpage", webpage as Any)])
+                case .messageMediaWebPage(let flags, let webpage):
+                return ("messageMediaWebPage", [("flags", flags as Any), ("webpage", webpage as Any)])
     }
     }
     
@@ -1201,13 +1202,16 @@ public extension Api {
             }
         }
         public static func parse_messageMediaWebPage(_ reader: BufferReader) -> MessageMedia? {
-            var _1: Api.WebPage?
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.WebPage?
             if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.WebPage
+                _2 = Api.parse(reader, signature: signature) as? Api.WebPage
             }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageMedia.messageMediaWebPage(webpage: _1!)
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.MessageMedia.messageMediaWebPage(flags: _1!, webpage: _2!)
             }
             else {
                 return nil

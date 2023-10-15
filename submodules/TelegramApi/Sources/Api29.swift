@@ -1035,7 +1035,7 @@ public extension Api.stories {
     }
 }
 public extension Api.updates {
-    enum ChannelDifference: TypeConstructorDescription {
+    indirect enum ChannelDifference: TypeConstructorDescription {
         case channelDifference(flags: Int32, pts: Int32, timeout: Int32?, newMessages: [Api.Message], otherUpdates: [Api.Update], chats: [Api.Chat], users: [Api.User])
         case channelDifferenceEmpty(flags: Int32, pts: Int32, timeout: Int32?)
         case channelDifferenceTooLong(flags: Int32, timeout: Int32?, dialog: Api.Dialog, messages: [Api.Message], chats: [Api.Chat], users: [Api.User])

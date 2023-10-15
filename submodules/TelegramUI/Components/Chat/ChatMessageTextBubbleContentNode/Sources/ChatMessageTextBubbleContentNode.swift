@@ -67,6 +67,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var cachedChatMessageText: CachedChatMessageText?
     
+    private var textSelectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>?
+    
+    private var linkPreviewOptionsDisposable: Disposable?
+    private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
@@ -126,6 +131,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.linkPreviewOptionsDisposable?.dispose()
+    }
+    
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         let spoilerTextLayout = TextNodeWithEntities.asyncLayout(self.spoilerTextNode)
@@ -140,7 +149,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let message = item.message
                 
                 let incoming: Bool
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .forward = info.kind {
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .forward = info {
                     incoming = false
                 } else {
                     incoming = item.message.effectivelyIncoming(item.context.account.peerId)
@@ -564,15 +573,40 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 strongSelf.statusNode.pressed = nil
                             }
                             
-                            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case let .reply(initialQuote) = info.kind {
-                                if strongSelf.textSelectionNode == nil {
-                                    strongSelf.updateIsExtractedToContextPreview(true)
-                                    if let initialQuote, item.message.id == initialQuote.messageId, let string = strongSelf.textNode.textNode.cachedLayout?.attributedString {
-                                        let nsString = string.string as NSString
-                                        let subRange = nsString.range(of: initialQuote.text)
-                                        if subRange.location != NSNotFound {
-                                            strongSelf.beginTextSelection(range: subRange, displayMenu: false)
+                            if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                                if case let .reply(info) = info {
+                                    if strongSelf.textSelectionNode == nil {
+                                        strongSelf.updateIsExtractedToContextPreview(true)
+                                        if let initialQuote = info.quote, item.message.id == initialQuote.messageId, let string = strongSelf.textNode.textNode.cachedLayout?.attributedString {
+                                            let nsString = string.string as NSString
+                                            let subRange = nsString.range(of: initialQuote.text)
+                                            if subRange.location != NSNotFound {
+                                                strongSelf.beginTextSelection(range: subRange, displayMenu: false)
+                                            }
                                         }
+                                        
+                                        if strongSelf.textSelectionState == nil {
+                                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                                let range = textSelectionNode.getSelection()
+                                                strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: range))
+                                            } else {
+                                                strongSelf.textSelectionState = Promise(strongSelf.getSelectionState(range: nil))
+                                            }
+                                        }
+                                        if let textSelectionState = strongSelf.textSelectionState {
+                                            info.selectionState.set(textSelectionState.get())
+                                        }
+                                    }
+                                } else if case let .link(link) = info {
+                                    if strongSelf.linkPreviewOptionsDisposable == nil {
+                                        strongSelf.linkPreviewOptionsDisposable = (link.options
+                                        |> deliverOnMainQueue).startStrict(next: { [weak strongSelf] options in
+                                            guard let strongSelf else {
+                                                return
+                                            }
+                                            
+                                            strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                        })
                                     }
                                 }
                             }
@@ -599,6 +633,13 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if case .tap = gesture {
+        } else {
+            if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
+                return .none
+            }
+        }
+        
         let textNodeFrame = self.textNode.textNode.frame
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
@@ -750,7 +791,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in 0 ..< rectsSet.count {
             let rects = rectsSet[i]
             let textHighlightNode: LinkHighlightingNode
-            if self.textHighlightingNodes.count < i {
+            if i < self.textHighlightingNodes.count {
                 textHighlightNode = self.textHighlightingNodes[i]
             } else {
                 textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.textHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.textHighlightColor)
@@ -763,6 +804,39 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in (rectsSet.count ..< self.textHighlightingNodes.count).reversed() {
             self.textHighlightingNodes[i].removeFromSupernode()
             self.textHighlightingNodes.remove(at: i)
+        }
+    }
+    
+    private func updateLinkPreviewTextHighlightState(text: String?) {
+        guard let item = self.item else {
+            return
+        }
+        var rectsSet: [[CGRect]] = []
+        if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
+            let nsString = string as NSString
+            let range = nsString.range(of: text)
+            if range.location != NSNotFound {
+                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
+                    rectsSet = [rects]
+                }
+            }
+        }
+        for i in 0 ..< rectsSet.count {
+            let rects = rectsSet[i]
+            let textHighlightNode: LinkHighlightingNode
+            if i < self.linkPreviewHighlightingNodes.count {
+                textHighlightNode = self.linkPreviewHighlightingNodes[i]
+            } else {
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
+                self.linkPreviewHighlightingNodes.append(textHighlightNode)
+                self.insertSubnode(textHighlightNode, belowSubnode: self.textNode.textNode)
+            }
+            textHighlightNode.frame = self.textNode.textNode.frame
+            textHighlightNode.updateRects(rects)
+        }
+        for i in (rectsSet.count ..< self.linkPreviewHighlightingNodes.count).reversed() {
+            self.linkPreviewHighlightingNodes[i].removeFromSupernode()
+            self.linkPreviewHighlightingNodes.remove(at: i)
         }
     }
     
@@ -799,11 +873,11 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         return
                     }
                     
-                    /*if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
+                    if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                         item.controllerInteraction.presentControllerInCurrent(c, a)
-                    } else {*/
+                    } else {
                         item.controllerInteraction.presentGlobalOverlayController(c, a)
-                    //}
+                    }
                 }, rootNode: { [weak rootNode] in
                     return rootNode
                 }, performAction: { [weak self] text, action in
@@ -813,7 +887,10 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
                 })
                 textSelectionNode.updateRange = { [weak self] selectionRange in
-                    if let strongSelf = self, let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {
                         for (spoilerRange, _) in textLayout.spoilers {
                             if let intersection = selectionRange.intersection(spoilerRange), intersection.length > 0 {
                                 dustNode.update(revealed: true)
@@ -821,23 +898,25 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                     }
+                    if let textSelectionState = strongSelf.textSelectionState {
+                        textSelectionState.set(.single(strongSelf.getSelectionState(range: selectionRange)))
+                    }
                 }
                 
                 let enableCopy = !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()
                 textSelectionNode.enableCopy = enableCopy
                 
-                var enableQuote = false
+                let enableQuote = true
                 var enableOtherActions = true
-                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info, _) = subject, case .reply = info.kind {
-                    enableQuote = true
+                if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                     enableOtherActions = false
                 } else if item.controllerInteraction.canSetupReply(item.message) == .reply {
-                    enableQuote = true
                     enableOtherActions = false
                 }
                 textSelectionNode.enableQuote = enableQuote
                 textSelectionNode.enableTranslate = enableOtherActions
                 textSelectionNode.enableShare = enableOtherActions
+                textSelectionNode.menuSkipCoordnateConversion = !enableOtherActions
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
                 self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode.textNode)
@@ -904,11 +983,26 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         textSelectionNode.setSelection(range: range, displayMenu: displayMenu)
     }
     
-    public func getCurrentTextSelection() -> (text: String, entities: [MessageTextEntity])? {
+    public func cancelTextSelection() {
+        guard let textSelectionNode = self.textSelectionNode else {
+            return
+        }
+        textSelectionNode.cancelSelection()
+    }
+    
+    private func getSelectionState(range: NSRange?) -> ChatControllerSubject.MessageOptionsInfo.SelectionState {
+        var quote: ChatControllerSubject.MessageOptionsInfo.Quote?
+        if let item = self.item, let range, let selection = self.getCurrentTextSelection(customRange: range) {
+            quote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: item.message.id, text: selection.text)
+        }
+        return ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: quote)
+    }
+    
+    public func getCurrentTextSelection(customRange: NSRange? = nil) -> (text: String, entities: [MessageTextEntity])? {
         guard let textSelectionNode = self.textSelectionNode else {
             return nil
         }
-        guard let range = textSelectionNode.getSelection() else {
+        guard let range = customRange ?? textSelectionNode.getSelection() else {
             return nil
         }
         guard let item = self.item else {

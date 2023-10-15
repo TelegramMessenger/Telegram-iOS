@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/Postbox",
         "//submodules/TelegramCore",
+        "//submodules/Emoji",
     ],
     visibility = [
         "//visibility:public",

@@ -311,6 +311,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateForwardOptionsState: { _ in
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
+        }, presentLinkOptions: { _ in
         }, shareSelectedMessages: {
             shareMessages()
         }, updateTextInputStateAndMode: { _ in
@@ -2549,7 +2550,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }
                             
                             return ContextController.Items(content: .list(items))
-                        }, minHeight: nil)
+                        }, minHeight: nil, animated: true)
                     })))
                 }
                 if strongSelf.searchDisplayController == nil {
@@ -2699,7 +2700,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                     }
                                     
                                     return ContextController.Items(content: .list(items))
-                                }, minHeight: nil)
+                                }, minHeight: nil, animated: true)
                             })))
                         }
                         
@@ -2789,7 +2790,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if let foundGalleryMessage = foundGalleryMessage {
-                openChatInstantPage(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
+                strongSelf.context.sharedContext.openChatInstantPage(context: strongSelf.context, message: foundGalleryMessage, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { _ in
         }, openTheme: { _ in
@@ -5537,7 +5538,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         }, action: { [weak self] c, f in
                             self?.openReport(type: .default, contextController: c, backAction: { c in
                                 if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
+                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil, animated: true)
                                 }
                             })
                         })))
@@ -6791,7 +6792,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
             
             if let contextController = contextController {
-                contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
+                contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil, animated: true)
             } else {
                 strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                 if let (layout, navigationHeight) = strongSelf.validLayout {
@@ -6887,7 +6888,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
                 
                 if let contextController = contextController {
-                    contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil)
+                    contextController.setItems(.single(ContextController.Items(content: .list(items))), minHeight: nil, animated: true)
                 } else {
                     strongSelf.state = strongSelf.state.withHighlightedButton(.voiceChat)
                     if let (layout, navigationHeight) = strongSelf.validLayout {

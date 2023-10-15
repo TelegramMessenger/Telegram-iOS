@@ -211,7 +211,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ForumTopic: TypeConstructorDescription {
+    indirect enum ForumTopic: TypeConstructorDescription {
         case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings, draft: Api.DraftMessage?)
         case forumTopicDeleted(id: Int32)
     

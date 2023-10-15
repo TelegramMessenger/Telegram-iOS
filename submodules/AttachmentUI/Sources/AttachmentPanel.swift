@@ -779,6 +779,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
             }
         }, presentForwardOptions: { _ in
         }, presentReplyOptions: { _ in
+        }, presentLinkOptions: { _ in
         }, shareSelectedMessages: {
         }, updateTextInputStateAndMode: { [weak self] f in
             if let strongSelf = self {

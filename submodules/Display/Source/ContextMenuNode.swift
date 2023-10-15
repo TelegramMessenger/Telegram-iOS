@@ -146,7 +146,7 @@ final class ContextMenuNode: ASDisplayNode {
     
     private let feedback: HapticFeedback?
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool = false, blurred: Bool = false) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool = false) {
         self.actions = actions
         self.dismiss = dismiss
         self.dismissOnTap = dismissOnTap

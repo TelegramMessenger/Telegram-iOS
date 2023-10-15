@@ -47,7 +47,8 @@ public func webpagePreviewWithProgress(account: Account, url: String, webpageId:
                             }
                         }
                         switch result {
-                            case let .messageMediaWebPage(webpage):
+                            case let .messageMediaWebPage(flags, webpage):
+                                let _ = flags
                                 if let media = telegramMediaWebpageFromApiWebpage(webpage, url: url) {
                                     if case .Loaded = media.content {
                                         return .single(.result(media))
@@ -92,7 +93,7 @@ public func actualizedWebpage(account: Account, webpage: TelegramMediaWebpage) -
                         if let updatedWebpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil), case .Loaded = updatedWebpage.content, updatedWebpage.webpageId == webpage.webpageId {
                             return .single(updatedWebpage)
                         } else if case let .webPageNotModified(_, viewsValue) = apiWebpage, let views = viewsValue, case let .Loaded(content) = webpage.content {
-                            let updatedContent: TelegramMediaWebpageContent = .Loaded(TelegramMediaWebpageLoadedContent(url: content.url, displayUrl: content.displayUrl, hash: content.hash, type: content.type, websiteName: content.websiteName, title: content.title, text: content.text, embedUrl: content.embedUrl, embedType: content.embedType, embedSize: content.embedSize, duration: content.duration, author: content.author, image: content.image, file: content.file, story: content.story, attributes: content.attributes, instantPage: content.instantPage.flatMap({ InstantPage(blocks: $0.blocks, media: $0.media, isComplete: $0.isComplete, rtl: $0.rtl, url: $0.url, views: views) })))
+                            let updatedContent: TelegramMediaWebpageContent = .Loaded(TelegramMediaWebpageLoadedContent(url: content.url, displayUrl: content.displayUrl, hash: content.hash, type: content.type, websiteName: content.websiteName, title: content.title, text: content.text, embedUrl: content.embedUrl, embedType: content.embedType, embedSize: content.embedSize, duration: content.duration, author: content.author, image: content.image, file: content.file, story: content.story, attributes: content.attributes, instantPage: content.instantPage.flatMap({ InstantPage(blocks: $0.blocks, media: $0.media, isComplete: $0.isComplete, rtl: $0.rtl, url: $0.url, views: views) }), displayOptions: .default))
                             let updatedWebpage = TelegramMediaWebpage(webpageId: webpage.webpageId, content: updatedContent)
                             updateMessageMedia(transaction: transaction, id: webpage.webpageId, media: updatedWebpage)
                             return .single(updatedWebpage)

@@ -1199,9 +1199,12 @@ open class TextNode: ASDisplayNode {
             
             let rawSubstring = segment.substring.string as NSString
             let substringLength = rawSubstring.length
-            let typesetter = CTTypesetterCreateWithAttributedString(segment.substring as CFAttributedString)
             
-            var currentLineStartIndex = 0
+            let segmentTypesetterString = attributedString.attributedSubstring(from: NSRange(location: 0, length: segment.firstCharacterOffset + substringLength))
+            let typesetter = CTTypesetterCreateWithAttributedString(segmentTypesetterString as CFAttributedString)
+            
+            var currentLineStartIndex = segment.firstCharacterOffset
+            let segmentEndIndex = segment.firstCharacterOffset + substringLength
             
             var constrainedSegmentWidth = constrainedSize.width
             var additionalOffsetX: CGFloat = 0.0
@@ -1250,7 +1253,7 @@ open class TextNode: ASDisplayNode {
                         frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
                         ascent: lineAscent,
                         descent: lineDescent,
-                        range: NSRange(location: segment.firstCharacterOffset + currentLineStartIndex, length: lineCharacterCount),
+                        range: NSRange(location: currentLineStartIndex, length: lineCharacterCount),
                         isRTL: false,
                         strikethroughs: [],
                         spoilers: [],
@@ -1265,7 +1268,7 @@ open class TextNode: ASDisplayNode {
                 
                 currentLineStartIndex += lineCharacterCount
                 
-                if currentLineStartIndex >= substringLength {
+                if currentLineStartIndex >= segmentEndIndex {
                     break
                 }
             }
