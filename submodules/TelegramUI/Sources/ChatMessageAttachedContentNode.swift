@@ -72,6 +72,7 @@ final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
         
         self.shimmerEffectNode = ShimmerEffectForegroundNode()
         self.shimmerEffectNode.cornerRadius = 5.0
+        self.shimmerEffectNode.isHidden = true
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.isLayerBacked = true

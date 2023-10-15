@@ -21,6 +21,7 @@ public final class TokenListTextField: Component {
         public enum Content: Equatable {
             case peer(EnginePeer)
             case category(UIImage?)
+            case emoji(String)
             
             public static func ==(lhs: Content, rhs: Content) -> Bool {
                 switch lhs {
@@ -32,6 +33,12 @@ public final class TokenListTextField: Component {
                     }
                 case let .category(lhsImage):
                     if case let .category(rhsImage) = rhs, lhsImage === rhsImage {
+                        return true
+                    } else {
+                        return false
+                    }
+                case let .emoji(lhsEmoji):
+                    if case let .emoji(rhsEmoji) = rhs, lhsEmoji == rhsEmoji {
                         return true
                     } else {
                         return false
@@ -217,6 +224,8 @@ public final class TokenListTextField: Component {
                     mappedSubject = .peer(peer)
                 case let .category(image):
                     mappedSubject = .category(image)
+                case let .emoji(emoji):
+                    mappedSubject = .emoji(emoji)
                 }
                 
                 return EditableTokenListToken(

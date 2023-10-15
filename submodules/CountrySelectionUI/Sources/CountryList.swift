@@ -1,5 +1,6 @@
 import Foundation
 import AppBundle
+import TelegramStringFormatting
 
 public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
     if countryCode.count != 2 {
@@ -18,12 +19,7 @@ public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
         return ""
     }
     
-    let base : UInt32 = 127397
-    var s = ""
-    for v in countryCode.unicodeScalars {
-        s.unicodeScalars.append(UnicodeScalar(base + v.value)!)
-    }
-    return String(s)
+    return flagEmoji(countryCode: countryCode)
 }
 
 private func loadCountriesInfo() -> [(Int, String, String)] {

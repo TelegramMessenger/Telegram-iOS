@@ -45,6 +45,8 @@ final class StoryInteractionGuideComponent: Component {
         private let guideItems = ComponentView<Empty>()
         private let proceedButton = ComponentView<Empty>()
         
+        var currentIndex = 0
+        
         override init(frame: CGRect) {
             self.effectView = UIVisualEffectView(effect: nil)
             
@@ -91,6 +93,7 @@ final class StoryInteractionGuideComponent: Component {
         
         func update(component: StoryInteractionGuideComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
+            self.state = state
             
             let sideInset: CGFloat = 48.0
             
@@ -131,7 +134,15 @@ final class StoryInteractionGuideComponent: Component {
                             context: component.context,
                             title: "Go forward",
                             text: "Tap the screen",
-                            animationName: "story_forward"
+                            animationName: "story_forward",
+                            isPlaying: self.currentIndex == 0,
+                            playbackCompleted: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.currentIndex = 1
+                                self.state?.updated(transition: .easeInOut(duration: 0.3))
+                            }
                         )
                     )
                 ),
@@ -142,7 +153,15 @@ final class StoryInteractionGuideComponent: Component {
                             context: component.context,
                             title: "Pause and Seek",
                             text: "Hold and move sideways",
-                            animationName: "story_pause"
+                            animationName: "story_pause",
+                            isPlaying: self.currentIndex == 1,
+                            playbackCompleted: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.currentIndex = 2
+                                self.state?.updated(transition: .easeInOut(duration: 0.3))
+                            }
                         )
                     )
                 ),
@@ -153,7 +172,15 @@ final class StoryInteractionGuideComponent: Component {
                             context: component.context,
                             title: "Go back",
                             text: "Tap the left edge",
-                            animationName: "story_back"
+                            animationName: "story_back",
+                            isPlaying: self.currentIndex == 2,
+                            playbackCompleted: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.currentIndex = 3
+                                self.state?.updated(transition: .easeInOut(duration: 0.3))
+                            }
                         )
                     )
                 ),
@@ -164,14 +191,22 @@ final class StoryInteractionGuideComponent: Component {
                             context: component.context,
                             title: "Move between stories",
                             text: "Swipe left or right",
-                            animationName: "story_move"
+                            animationName: "story_move",
+                            isPlaying: self.currentIndex == 3,
+                            playbackCompleted: { [weak self] in
+                                guard let self else {
+                                    return
+                                }
+                                self.currentIndex = 0
+                                self.state?.updated(transition: .easeInOut(duration: 0.3))
+                            }
                         )
                     )
                 )
             ]
             
             let itemsSize = self.guideItems.update(
-                transition: .immediate,
+                transition: transition,
                 component: AnyComponent(List(items)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
@@ -225,17 +260,23 @@ private final class GuideItemComponent: Component {
     let title: String
     let text: String
     let animationName: String
+    let isPlaying: Bool
+    let playbackCompleted: () -> Void
     
     init(
         context: AccountContext,
         title: String,
         text: String,
-        animationName: String
+        animationName: String,
+        isPlaying: Bool,
+        playbackCompleted: @escaping () -> Void
     ) {
         self.context = context
         self.title = title
         self.text = text
         self.animationName = animationName
+        self.isPlaying = isPlaying
+        self.playbackCompleted = playbackCompleted
     }
 
     static func ==(lhs: GuideItemComponent, rhs: GuideItemComponent) -> Bool {
@@ -248,6 +289,9 @@ private final class GuideItemComponent: Component {
         if lhs.animationName != rhs.animationName {
             return false
         }
+        if lhs.isPlaying != rhs.isPlaying {
+            return false
+        }
         return true
     }
 
@@ -255,18 +299,33 @@ private final class GuideItemComponent: Component {
         private var component: GuideItemComponent?
         private weak var state: EmptyComponentState?
         
+        private let containerView = UIView()
+        private let selectionView = UIView()
+        
         private let animation = ComponentView<Empty>()
         private let titleLabel = ComponentView<Empty>()
         private let descriptionLabel = ComponentView<Empty>()
         
         override init(frame: CGRect) {
             super.init(frame: frame)
+                        
+            self.selectionView.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.1)
+            self.selectionView.clipsToBounds = true
+            self.selectionView.layer.cornerRadius = 16.0
+            if #available(iOS 13.0, *) {
+                self.selectionView.layer.cornerCurve = .continuous
+            }
+            self.selectionView.alpha = 0.0
+            
+            self.addSubview(self.containerView)
+            self.containerView.addSubview(self.selectionView)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
-                
+        
+        private var isPlaying = false
         func update(component: GuideItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
             
@@ -285,18 +344,40 @@ private final class GuideItemComponent: Component {
                         startingPosition: .begin,
                         size: CGSize(width: 60.0, height: 60.0),
                         renderingScale: UIScreen.main.scale,
-                        loop: true
+                        loop: false
                     )
                 ),
                 environment: {},
                 containerSize: availableSize
             )
             let animationFrame = CGRect(origin: CGPoint(x: originX - 11.0, y: 15.0), size: animationSize)
-            if let view = self.animation.view {
+            if let view = self.animation.view as? LottieComponent.View {
                 if view.superview == nil {
-                    self.addSubview(view)
+                    view.externalShouldPlay = false
+                    self.containerView.addSubview(view)
                 }
                 view.frame = animationFrame
+                
+                if component.isPlaying && !self.isPlaying {
+                    self.isPlaying = true
+                    Queue.mainQueue().justDispatch {
+                        let completionBlock = { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.isPlaying = false
+                            Queue.mainQueue().after(0.1) {
+                                self.component?.playbackCompleted()
+                            }
+                        }
+                                                
+                        view.playOnce(force: true, completion: { [weak view] in
+                            view?.playOnce(force: true, completion: {
+                                completionBlock()
+                            })
+                        })
+                    }
+                }
             }
             
             let titleSize = self.titleLabel.update(
@@ -308,7 +389,7 @@ private final class GuideItemComponent: Component {
             let titleFrame = CGRect(origin: CGPoint(x: originX + 60.0, y: 25.0), size: titleSize)
             if let view = self.titleLabel.view {
                 if view.superview == nil {
-                    self.addSubview(view)
+                    self.containerView.addSubview(view)
                 }
                 view.frame = titleFrame
             }
@@ -322,10 +403,17 @@ private final class GuideItemComponent: Component {
             let textFrame = CGRect(origin: CGPoint(x: originX + 60.0, y: titleFrame.maxY + 2.0), size: textSize)
             if let view = self.descriptionLabel.view {
                 if view.superview == nil {
-                    self.addSubview(view)
+                    self.containerView.addSubview(view)
                 }
                 view.frame = textFrame
             }
+            
+            self.selectionView.frame = CGRect(origin: .zero, size: size).insetBy(dx: 12.0, dy: 8.0)
+            transition.setAlpha(view: self.selectionView, alpha: component.isPlaying ? 1.0 : 0.0)
+            
+            self.containerView.bounds = CGRect(origin: .zero, size: size)
+            self.containerView.center = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+            transition.setScale(view: self.containerView, scale: component.isPlaying ? 1.1 : 1.0)
             
             return size
         }

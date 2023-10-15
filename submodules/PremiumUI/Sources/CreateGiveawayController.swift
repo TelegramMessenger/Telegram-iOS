@@ -19,6 +19,7 @@ import ItemListPeerActionItem
 import ShareWithPeersScreen
 import InAppPurchaseManager
 import UndoUI
+import CountrySelectionUI
 
 private final class CreateGiveawayControllerArguments {
     let context: AccountContext
@@ -26,17 +27,23 @@ private final class CreateGiveawayControllerArguments {
     let dismissInput: () -> Void
     let openPeersSelection: () -> Void
     let openChannelsSelection: () -> Void
+    let openCountriesSelection: () -> Void
     let openPremiumIntro: () -> Void
     let scrollToDate: () -> Void
+    let setItemIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
+    let removeChannel: (EnginePeer.Id) -> Void
     
-    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void, scrollToDate: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((CreateGiveawayControllerState) -> CreateGiveawayControllerState) -> Void, dismissInput: @escaping () -> Void, openPeersSelection: @escaping () -> Void, openChannelsSelection: @escaping () -> Void, openCountriesSelection: @escaping () -> Void, openPremiumIntro: @escaping () -> Void, scrollToDate: @escaping () -> Void, setItemIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, removeChannel: @escaping (EnginePeer.Id) -> Void) {
         self.context = context
         self.updateState = updateState
         self.dismissInput = dismissInput
         self.openPeersSelection = openPeersSelection
         self.openChannelsSelection = openChannelsSelection
+        self.openCountriesSelection = openCountriesSelection
         self.openPremiumIntro = openPremiumIntro
         self.scrollToDate = scrollToDate
+        self.setItemIdWithRevealedOptions = setItemIdWithRevealedOptions
+        self.removeChannel = removeChannel
     }
 }
 
@@ -76,13 +83,13 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     case subscriptionsInfo(PresentationTheme, String)
     
     case channelsHeader(PresentationTheme, String)
-    case channel(Int32, PresentationTheme, EnginePeer, Int32?)
+    case channel(Int32, PresentationTheme, EnginePeer, Int32?, Bool)
     case channelAdd(PresentationTheme, String)
     case channelsInfo(PresentationTheme, String)
     
     case usersHeader(PresentationTheme, String)
-    case usersAll(PresentationTheme, String, Bool)
-    case usersNew(PresentationTheme, String, Bool)
+    case usersAll(PresentationTheme, String, String, Bool)
+    case usersNew(PresentationTheme, String, String, Bool)
     case usersInfo(PresentationTheme, String)
     
     case timeHeader(PresentationTheme, String)
@@ -133,7 +140,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 return 6
             case .channelsHeader:
                 return 7
-            case let .channel(index, _, _, _):
+            case let .channel(index, _, _, _, _):
                 return 8 + index
             case .channelAdd:
                 return 100
@@ -220,8 +227,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .channel(lhsIndex, lhsTheme, lhsPeer, lhsBoosts):
-            if case let .channel(rhsIndex, rhsTheme, rhsPeer, rhsBoosts) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsPeer == rhsPeer, lhsBoosts == rhsBoosts {
+        case let .channel(lhsIndex, lhsTheme, lhsPeer, lhsBoosts, lhsIsRevealed):
+            if case let .channel(rhsIndex, rhsTheme, rhsPeer, rhsBoosts, rhsIsRevealed) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsPeer == rhsPeer, lhsBoosts == rhsBoosts, lhsIsRevealed == rhsIsRevealed {
                 return true
             } else {
                 return false
@@ -244,14 +251,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .usersAll(lhsTheme, lhsText, lhsSelected):
-            if case let .usersAll(rhsTheme, rhsText, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSelected == rhsSelected {
+        case let .usersAll(lhsTheme, lhsText, lhsSubtitle, lhsSelected):
+            if case let .usersAll(rhsTheme, rhsText, rhsSubtitle, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSubtitle == rhsSubtitle, lhsSelected == rhsSelected {
                 return true
             } else {
                 return false
             }
-        case let .usersNew(lhsTheme, lhsText, lhsSelected):
-            if case let .usersNew(rhsTheme, rhsText, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSelected == rhsSelected {
+        case let .usersNew(lhsTheme, lhsText, lhsSubtitle, lhsSelected):
+            if case let .usersNew(rhsTheme, rhsText, rhsSubtitle, rhsSelected) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsSubtitle == rhsSubtitle, lhsSelected == rhsSelected {
                 return true
             } else {
                 return false
@@ -369,10 +376,14 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .channelsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .channel(_, _, peer, boosts):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text("this channel will receive \($0) boosts", .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
+        case let .channel(_, _, peer, boosts, isRevealed):
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text("this channel will receive \($0) boosts", .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: boosts == nil, editing: false, revealed: isRevealed), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
 //                arguments.openPeer(peer)
-            }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            }, setPeerIdWithRevealedOptions: { lhs, rhs in
+                arguments.setItemIdWithRevealedOptions(lhs, rhs)
+            }, removePeer: { id in
+                arguments.removeChannel(id)
+            })
         case let .channelAdd(theme, text):
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.roundPlusIconImage(theme), title: text, alwaysPlain: false, hasSeparator: true, sectionId: self.section, height: .compactPeerList, color: .accent, editing: false, action: {
                 arguments.openChannelsSelection()
@@ -381,20 +392,34 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .usersHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .usersAll(_, title, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, isSelected: isSelected, sectionId: self.section, action: {
+        case let .usersAll(_, title, subtitle, isSelected):
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+                var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
+                    if !updatedState.onlyNewEligible {
+                        openSelection = true
+                    }
                     updatedState.onlyNewEligible = false
                     return updatedState
                 }
+                if openSelection {
+                    arguments.openCountriesSelection()
+                }
             })
-        case let .usersNew(_, title, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: nil, isSelected: isSelected, sectionId: self.section, action: {
+        case let .usersNew(_, title, subtitle, isSelected):
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+                var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
+                    if updatedState.onlyNewEligible {
+                        openSelection = true
+                    }
                     updatedState.onlyNewEligible = true
                     return updatedState
+                }
+                if openSelection {
+                    arguments.openCountriesSelection()
                 }
             })
         case let .usersInfo(_, text):
@@ -474,7 +499,7 @@ private struct PremiumGiftProduct: Equatable {
     }
 }
 
-private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: CreateGiveawaySubject, state: CreateGiveawayControllerState, presentationData: PresentationData, peers: [EnginePeer.Id: EnginePeer], products: [PremiumGiftProduct], defaultPrice: (Int64, NSDecimalNumber)) -> [CreateGiveawayEntry] {
+private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: CreateGiveawaySubject, state: CreateGiveawayControllerState, presentationData: PresentationData, locale: Locale, peers: [EnginePeer.Id: EnginePeer], products: [PremiumGiftProduct], defaultPrice: (Int64, NSDecimalNumber)) -> [CreateGiveawayEntry] {
     var entries: [CreateGiveawayEntry] = []
         
     switch subject {
@@ -517,7 +542,7 @@ private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: Cre
         let channels = [peerId] + state.channels
         for channelId in channels {
             if let channel = peers[channelId] {
-                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions : nil))
+                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions : nil, false))
             }
             index += 1
         }
@@ -525,8 +550,19 @@ private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: Cre
         entries.append(.channelsInfo(presentationData.theme, "Choose the channels users need to be subscribed to take part in the giveaway"))
         
         entries.append(.usersHeader(presentationData.theme, "USERS ELIGIBLE FOR THE GIVEAWAY".uppercased()))
-        entries.append(.usersAll(presentationData.theme, "All subscribers", !state.onlyNewEligible))
-        entries.append(.usersNew(presentationData.theme, "Only new subscribers", state.onlyNewEligible))
+        
+        let countriesText: String
+        if state.countries.count > 2 {
+            countriesText = "from \(state.countries.count) countries"
+        } else if !state.countries.isEmpty {
+            let allCountries = state.countries.map { locale.localizedString(forRegionCode: $0) ?? $0 }.joined(separator: " and ")
+            countriesText = "from \(allCountries)"
+        } else {
+            countriesText = "from all countries"
+        }
+        
+        entries.append(.usersAll(presentationData.theme, "All subscribers", countriesText, !state.onlyNewEligible))
+        entries.append(.usersNew(presentationData.theme, "Only new subscribers", countriesText, state.onlyNewEligible))
         entries.append(.usersInfo(presentationData.theme, "Choose if you want to limit the giveaway only to those who joined the channel after the giveaway started."))
         
         entries.append(.timeHeader(presentationData.theme, "DATE WHEN GIVEAWAY ENDS".uppercased()))
@@ -602,6 +638,7 @@ private struct CreateGiveawayControllerState: Equatable {
     var onlyNewEligible: Bool
     var time: Int32
     var pickingTimeLimit = false
+    var revealedItemId: EnginePeer.Id? = nil
     var updating = false
 }
 
@@ -634,6 +671,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     var buyActionImpl: (() -> Void)?
     var openPeersSelectionImpl: (() -> Void)?
     var openChannelsSelectionImpl: (() -> Void)?
+    var openCountriesSelectionImpl: (() -> Void)?
     var openPremiumIntroImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
@@ -649,13 +687,32 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         openPeersSelectionImpl?()
     }, openChannelsSelection: {
         openChannelsSelectionImpl?()
+    }, openCountriesSelection: {
+        openCountriesSelectionImpl?()
     }, openPremiumIntro: {
         openPremiumIntroImpl?()
     }, scrollToDate: {
         scrollToDateImpl?()
+    }, setItemIdWithRevealedOptions: { itemId, fromItemId in
+        updateState { state in
+            var updatedState = state
+            if (itemId == nil && fromItemId == state.revealedItemId) || (itemId != nil && fromItemId == nil) {
+                updatedState.revealedItemId = itemId
+            }
+            return updatedState
+        }
+    },
+    removeChannel: { id in
+        updateState { state in
+            var updatedState = state
+            updatedState.channels = updatedState.channels.filter { $0 != id }
+            return updatedState
+        }
     })
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    
+    let locale = localeWithStrings(context.sharedContext.currentPresentationData.with { $0 }.strings)
     
     let productsAndDefaultPrice: Signal<([PremiumGiftProduct], (Int64, NSDecimalNumber)), NoError> = combineLatest(
         .single([]) |> then(context.engine.payments.premiumGiftCodeOptions(peerId: peerId)),
@@ -724,8 +781,16 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         
         let previousState = previousState.swap(state)
         var animateChanges = false
-        if let previousState = previousState, previousState.pickingTimeLimit != state.pickingTimeLimit || previousState.mode != state.mode {
-            animateChanges = true
+        if let previousState = previousState {
+            if previousState.pickingTimeLimit != state.pickingTimeLimit {
+                animateChanges = true
+            }
+            if previousState.mode != state.mode {
+                animateChanges = true
+            }
+            if previousState.channels.count > state.channels.count {
+                animateChanges = true
+            }
         }
         
         var peers: [EnginePeer.Id: EnginePeer] = [:]
@@ -736,7 +801,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(""), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(peerId: peerId, subject: subject, state: state, presentationData: presentationData, peers: peers, products: products, defaultPrice: defaultPrice), style: .blocks, emptyStateItem: nil, headerItem: headerItem, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(peerId: peerId, subject: subject, state: state, presentationData: presentationData, locale: locale, peers: peers, products: products, defaultPrice: defaultPrice), style: .blocks, emptyStateItem: nil, headerItem: headerItem, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
@@ -996,6 +1061,30 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         })
     }
     
+    openCountriesSelectionImpl = {
+        let state = stateValue.with { $0 }
+        
+        let stateContext = CountriesMultiselectionScreen.StateContext(
+            context: context,
+            subject: .countries,
+            initialSelectedCountries: state.countries
+        )
+        let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in
+            let controller = CountriesMultiselectionScreen(
+                context: context,
+                stateContext: stateContext,
+                completion: { countries in
+                    updateState { state in
+                        var updatedState = state
+                        updatedState.countries = countries
+                        return updatedState
+                    }
+                }
+            )
+            pushControllerImpl?(controller)
+        })
+    }
+    
     openPremiumIntroImpl = {
         let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
         pushControllerImpl?(controller)
@@ -1022,6 +1111,9 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             }
         })
     }
+    
+    let countriesConfiguration = context.currentCountriesConfiguration.with { $0 }
+    AuthorizationSequenceCountrySelectionController.setupCountryCodes(countries: countriesConfiguration.countries, codesByPrefix: countriesConfiguration.countriesByPrefix)
     
     return controller
 }

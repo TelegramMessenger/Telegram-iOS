@@ -41,6 +41,7 @@ swift_library(
         "//submodules/OverlayStatusController",
         "//submodules/UndoUI",
         "//submodules/TemporaryCachedPeerDataManager",
+        "//submodules/CountrySelectionUI",
     ],
     visibility = [
         "//visibility:public",

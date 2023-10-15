@@ -18,6 +18,7 @@ import AvatarNode
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import UndoUI
 
 private let titleFont = Font.medium(15.0)
 private let textFont = Font.regular(13.0)
@@ -34,6 +35,8 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     
     private let participantsTitleNode: TextNode
     private let participantsTextNode: TextNode
+    
+    private let countriesTextNode: TextNode
     
     private let dateTitleNode: TextNode
     private let dateTextNode: TextNode
@@ -81,6 +84,8 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         self.participantsTitleNode = TextNode()
         self.participantsTextNode = TextNode()
         
+        self.countriesTextNode = TextNode()
+        
         self.dateTitleNode = TextNode()
         self.dateTextNode = TextNode()
         
@@ -98,6 +103,7 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.prizeTextNode)
         self.addSubnode(self.participantsTitleNode)
         self.addSubnode(self.participantsTextNode)
+        self.addSubnode(self.countriesTextNode)
         self.addSubnode(self.dateTitleNode)
         self.addSubnode(self.dateTextNode)
         self.addSubnode(self.buttonNode)
@@ -137,8 +143,18 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     override func didLoad() {
         super.didLoad()
         
-//        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.contactTap(_:)))
-//        self.view.addGestureRecognizer(tapRecognizer)
+        let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.bubbleTap(_:)))
+        self.view.addGestureRecognizer(tapRecognizer)
+    }
+    
+    @objc private func bubbleTap(_ gestureRecognizer: UITapGestureRecognizer) {
+        guard let item = self.item else {
+            return
+        }
+        
+        let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+        let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't participate in this giveaway.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+        item.controllerInteraction.presentController(controller, nil)
     }
     
     private func removePlaceholder(animated: Bool) {
@@ -159,6 +175,8 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
         
         let makeParticipantsTitleLayout = TextNode.asyncLayout(self.participantsTitleNode)
         let makeParticipantsTextLayout = TextNode.asyncLayout(self.participantsTextNode)
+        
+        let makeCountriesTextLayout = TextNode.asyncLayout(self.countriesTextNode)
         
         let makeDateTitleLayout = TextNode.asyncLayout(self.dateTitleNode)
         let makeDateTextLayout = TextNode.asyncLayout(self.dateTextNode)
@@ -215,12 +233,14 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
             
             let participantsTitleString = NSAttributedString(string: "Participants", font: titleFont, textColor: textColor)
             let participantsText: String
+            let countriesText: String
+            
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
                     if giveaway.channelPeerIds.count > 1 {
                         participantsText = "All users who join the channels below after this date:"
                     } else {
-                        participantsText = "All users who join this channel below after this date:"
+                        participantsText = "All users who join this channel after this date:"
                     }
                 } else {
                     if giveaway.channelPeerIds.count > 1 {
@@ -229,11 +249,40 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                         participantsText = "All subscribers of this channel:"
                     }
                 }
+                if !giveaway.countries.isEmpty {
+                    let locale = localeWithStrings(item.presentationData.strings)
+                    let countryNames = giveaway.countries.map { id in
+                        if let countryName = locale.localizedString(forRegionCode: id) {
+                            return "\(flagEmoji(countryCode: id))\(countryName)"
+                        } else {
+                            return id
+                        }
+                    }
+                    var countries: String = ""
+                    if countryNames.count == 1, let country = countryNames.first {
+                        countries = country
+                    } else {
+                        for i in 0 ..< countryNames.count {
+                            countries.append(countryNames[i])
+                            if i == countryNames.count - 2 {
+                                countries.append(" and ")
+                            } else if i < countryNames.count - 2 {
+                                countries.append(", ")
+                            }
+                        }
+                    }
+                    countriesText = "from \(countries)"
+                } else {
+                    countriesText = ""
+                }
             } else {
                 participantsText = ""
+                countriesText = ""
             }
                 
             let participantsTextString = NSAttributedString(string: participantsText, font: textFont, textColor: textColor)
+            
+            let countriesTextString = NSAttributedString(string: countriesText, font: textFont, textColor: textColor)
             
             let dateTitleString = NSAttributedString(string: "Winners Selection Date", font: titleFont, textColor: textColor)
             var dateTextString: NSAttributedString?
@@ -254,6 +303,8 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (participantsTitleLayout, participantsTitleApply) = makeParticipantsTitleLayout(TextNodeLayoutArguments(attributedString: participantsTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 let (participantsTextLayout, participantsTextApply) = makeParticipantsTextLayout(TextNodeLayoutArguments(attributedString: participantsTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
+                let (countriesTextLayout, countriesTextApply) = makeCountriesTextLayout(TextNodeLayoutArguments(attributedString: countriesTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (dateTitleLayout, dateTitleApply) = makeDateTitleLayout(TextNodeLayoutArguments(attributedString: dateTitleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 let (dateTextLayout, dateTextApply) = makeDateTextLayout(TextNodeLayoutArguments(attributedString: dateTextString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
@@ -395,6 +446,9 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                     
                     var layoutSize = CGSize(width: contentWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
                     
+                    if countriesTextLayout.size.height > 0.0 {
+                        layoutSize.height += countriesTextLayout.size.height + 7.0
+                    }
                     layoutSize.height += channelButtonSize.height
                     
                     if let statusSizeAndApply = statusSizeAndApply {
@@ -414,16 +468,13 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.updateVisibility()
                                                         
                             let _ = badgeTextApply()
-                            
                             let _ = prizeTitleApply()
                             let _ = prizeTextApply()
-                            
                             let _ = participantsTitleApply()
                             let _ = participantsTextApply()
-                            
+                            let _ = countriesTextApply()
                             let _ = dateTitleApply()
                             let _ = dateTextApply()
-                            
                             let _ = channelButtonApply()
                             let _ = buttonApply()
                             
@@ -456,7 +507,14 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
                             originY += participantsTextLayout.size.height + smallSpacing * 2.0 + 3.0
                             
                             strongSelf.channelButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - channelButtonSize.width) / 2.0), y: originY), size: channelButtonSize)
-                            originY += channelButtonSize.height + largeSpacing
+                            originY += channelButtonSize.height
+                            
+                            if countriesTextLayout.size.height > 0.0 {
+                                originY += smallSpacing * 2.0 + 3.0
+                                strongSelf.countriesTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - countriesTextLayout.size.width) / 2.0), y: originY), size: countriesTextLayout.size)
+                                originY += countriesTextLayout.size.height
+                            }
+                            originY += largeSpacing
                             
                             strongSelf.dateTitleNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - dateTitleLayout.size.width) / 2.0), y: originY), size: dateTitleLayout.size)
                             originY += dateTitleLayout.size.height + smallSpacing
@@ -522,25 +580,21 @@ class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
-            return .openMessage
+            return .ignore
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
             return .ignore
         }
         return .none
     }
-    
-    @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, .default)
-            }
-        }
-    }
-    
+
     @objc private func buttonPressed() {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
+            self.buttonNode.startShimmering()
+            Queue.mainQueue().after(0.75) {
+                self.buttonNode.stopShimmering()
+            }
         }
     }
     

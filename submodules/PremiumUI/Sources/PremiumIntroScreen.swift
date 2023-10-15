@@ -24,6 +24,7 @@ import UniversalMediaPlayer
 import CheckNode
 import AnimationCache
 import MultiAnimationRenderer
+import TelegramNotices
 
 public enum PremiumSource: Equatable {
     public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {
@@ -1428,12 +1429,15 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         var selectedProductId: String?
         var validPurchases: [InAppPurchaseManager.ReceiptPurchase] = []
         
+        var newPerks: [String] = []
+        
         var isPremium: Bool?
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
     
         private var stickersDisposable: Disposable?
+        private var newPerksDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
         
         var price: String? {
@@ -1511,12 +1515,27 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     }
                 }
             })
+            
+            
+            self.newPerksDisposable = (ApplicationSpecificNotice.dismissedPremiumAppIconsBadge(accountManager: context.sharedContext.accountManager)
+            |> deliverOnMainQueue).startStrict(next: { [weak self] dismissedPremiumAppIconsBadge in
+                guard let self else {
+                    return
+                }
+                var newPerks: [String] = []
+                if !dismissedPremiumAppIconsBadge {
+                    newPerks.append(PremiumPerk.appIcons.identifier)
+                }
+                self.newPerks = newPerks
+                self.updated()
+            })
         }
         
         deinit {
             self.disposable?.dispose()
             self.preloadDisposableSet.dispose()
             self.stickersDisposable?.dispose()
+            self.newPerksDisposable?.dispose()
         }
     }
     
@@ -1807,7 +1826,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                     subtitleColor: subtitleColor,
                                     arrowColor: arrowColor,
                                     accentColor: accentColor,
-                                    badge: perk.identifier == "stories" ? strings.Premium_New : nil
+                                    badge: state.newPerks.contains(perk.identifier) ? strings.Premium_New : nil
                                 )
                             )
                         ),
@@ -1837,6 +1856,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .animatedUserpics
                             case .appIcons:
                                 demoSubject = .appIcons
+                                let _ = ApplicationSpecificNotice.setDismissedPremiumAppIconsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .animatedEmoji:
                                 demoSubject = .animatedEmoji
                             case .emojiStatus:

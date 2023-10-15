@@ -106,6 +106,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ShareWithPeersScreen",
         "//submodules/TelegramUI/Components/ButtonComponent",
         "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
+        "//submodules/CountrySelectionUI",
     ],
     visibility = [
         "//visibility:public",

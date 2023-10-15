@@ -9,6 +9,7 @@ import ItemListUI
 import LocationResources
 import AppBundle
 import LiveLocationTimerNode
+import TelegramStringFormatting
 
 public enum LocationActionListItemIcon: Equatable {
     case location
@@ -280,14 +281,6 @@ final class LocationActionListItemNode: ListViewItemNode {
                                 strongSelf.iconNode.isHidden = true
                                 strongSelf.venueIconNode.isHidden = false
                             
-                                func flagEmoji(countryCode: String) -> String {
-                                    let base : UInt32 = 127397
-                                    var flagString = ""
-                                    for v in countryCode.uppercased().unicodeScalars {
-                                        flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
-                                    }
-                                    return flagString
-                                }
                                 let type = venue.venue?.type
                                 var flag: String?
                                 if let venue = venue.venue, venue.provider == "city", let countryCode = venue.id {

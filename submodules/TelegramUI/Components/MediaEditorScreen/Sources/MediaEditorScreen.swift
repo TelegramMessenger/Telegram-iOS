@@ -36,6 +36,7 @@ import LocationUI
 import LegacyMediaPickerUI
 import ReactionSelectionNode
 import VolumeSliderContextItem
+import TelegramStringFormatting
 
 enum DrawingScreenType {
     case drawing
@@ -3065,16 +3066,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             if !self.didSetupStaticEmojiPack {
                 self.staticEmojiPack.set(self.context.engine.stickers.loadedStickerPack(reference: .name("staticemoji"), forceActualized: false))
             }
-            
-            func flag(countryCode: String) -> String {
-                let base : UInt32 = 127397
-                var flagString = ""
-                for v in countryCode.uppercased().unicodeScalars {
-                    flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
-                }
-                return flagString
-            }
-            
+                        
             var location: CLLocationCoordinate2D?
             if let subject = self.subject {
                 if case let .asset(asset) = subject {
@@ -3095,7 +3087,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 if let self  {
                     let emojiFile: Signal<TelegramMediaFile?, NoError>
                     if let countryCode {
-                        let flagEmoji = flag(countryCode: countryCode)
+                        let flag = flagEmoji(countryCode: countryCode)
                         emojiFile = self.staticEmojiPack.get()
                         |> filter { result in
                             if case .result = result {
@@ -3114,7 +3106,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                         break
                                     }
                                 }
-                                if let displayText, displayText.hasPrefix(flagEmoji) {
+                                if let displayText, displayText.hasPrefix(flag) {
                                     return true
                                 } else {
                                     return false

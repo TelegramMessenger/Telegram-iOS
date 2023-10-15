@@ -11,6 +11,7 @@ struct EditableTokenListToken {
     enum Subject {
         case peer(EnginePeer)
         case category(UIImage?)
+        case emoji(String)
     }
     
     let id: AnyHashable
@@ -86,6 +87,7 @@ private final class TokenNode: ASDisplayNode {
     let token: EditableTokenListToken
     let avatarNode: AvatarNode
     let categoryAvatarNode: ASImageNode
+    let emojiTextNode: ImmediateTextNode
     let removeIconNode: ASImageNode
     let titleNode: ASTextNode
     let backgroundNode: ASImageNode
@@ -119,6 +121,7 @@ private final class TokenNode: ASDisplayNode {
         self.categoryAvatarNode = ASImageNode()
         self.categoryAvatarNode.displaysAsynchronously = false
         self.categoryAvatarNode.displayWithoutProcessing = true
+        self.emojiTextNode = ImmediateTextNode()
         
         self.removeIconNode = ASImageNode()
         self.removeIconNode.alpha = 0.0
@@ -132,6 +135,8 @@ private final class TokenNode: ASDisplayNode {
             cornerRadius = 24.0
         case .category:
             cornerRadius = 14.0
+        case .emoji:
+            cornerRadius = 24.0
         }
         
         self.backgroundNode = ASImageNode()
@@ -160,6 +165,9 @@ private final class TokenNode: ASDisplayNode {
         case let .category(image):
             self.addSubnode(self.categoryAvatarNode)
             self.categoryAvatarNode.image = image
+        case let .emoji(emoji):
+            self.addSubnode(self.emojiTextNode)
+            self.emojiTextNode.attributedText = NSAttributedString(string: emoji, font: Font.regular(17.0), textColor: .white)
         }
         
         self.updateIsSelected(isSelected, animated: false)
@@ -167,7 +175,12 @@ private final class TokenNode: ASDisplayNode {
     
     override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         let titleSize = self.titleNode.measure(CGSize(width: constrainedSize.width - 8.0, height: constrainedSize.height))
-        return CGSize(width: 22.0 + titleSize.width + 16.0, height: 28.0)
+        var width = 22.0 + titleSize.width + 16.0
+        if self.emojiTextNode.supernode != nil {
+            let _ = self.emojiTextNode.updateLayout(constrainedSize)
+            width += 3.0
+        }
+        return CGSize(width: width, height: 28.0)
     }
     
     override func layout() {
@@ -181,7 +194,13 @@ private final class TokenNode: ASDisplayNode {
         self.categoryAvatarNode.frame = self.avatarNode.frame
         self.removeIconNode.frame = self.avatarNode.frame
         
-        self.titleNode.frame = CGRect(origin: CGPoint(x: 29.0, y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
+        var textLeftOffset: CGFloat = 29.0
+        if let emojiTextSize = self.emojiTextNode.cachedLayout?.size {
+            self.emojiTextNode.frame = CGRect(origin: CGPoint(x: 7.0, y: 4.0), size: emojiTextSize)
+            textLeftOffset += 3.0
+        }
+        
+        self.titleNode.frame = CGRect(origin: CGPoint(x: textLeftOffset, y: floor((self.bounds.size.height - titleSize.height) / 2.0)), size: titleSize)
     }
     
     func updateIsSelected(_ isSelected: Bool, animated: Bool) {
@@ -192,6 +211,7 @@ private final class TokenNode: ASDisplayNode {
         
         self.avatarNode.alpha = isSelected ? 0.0 : 1.0
         self.categoryAvatarNode.alpha = isSelected ? 0.0 : 1.0
+        self.emojiTextNode.alpha = isSelected ? 0.0 : 1.0
         self.removeIconNode.alpha = isSelected ? 1.0 : 0.0
         
         if animated {
@@ -205,6 +225,9 @@ private final class TokenNode: ASDisplayNode {
                 self.categoryAvatarNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 self.categoryAvatarNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
                 
+                self.emojiTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+                self.emojiTextNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)
+                
                 self.removeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 self.removeIconNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
             } else {
@@ -216,6 +239,9 @@ private final class TokenNode: ASDisplayNode {
                 
                 self.categoryAvatarNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 self.categoryAvatarNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
+                
+                self.emojiTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                self.emojiTextNode.layer.animateScale(from: 0.01, to: 1.0, duration: 0.2)
                 
                 self.removeIconNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
                 self.removeIconNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2)

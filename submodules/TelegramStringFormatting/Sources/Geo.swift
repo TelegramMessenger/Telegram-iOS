@@ -44,3 +44,12 @@ public func stringForDistance(strings: PresentationStrings, distance: CLLocation
     
     return distanceFormatter.string(fromDistance: distance)
 }
+
+public func flagEmoji(countryCode: String) -> String {
+    let base : UInt32 = 127397
+    var flagString = ""
+    for v in countryCode.uppercased().unicodeScalars {
+        flagString.unicodeScalars.append(UnicodeScalar(base + v.value)!)
+    }
+    return flagString
+}

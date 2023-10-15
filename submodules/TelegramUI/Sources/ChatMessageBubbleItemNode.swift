@@ -1235,7 +1235,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var allowFullWidth = false
         let chatLocationPeerId: PeerId = item.chatLocation.peerId ?? item.content.firstMessage.id.peerId
-        
+                
         do {
             let peerId = chatLocationPeerId
             
@@ -1790,7 +1790,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
         }
-        
+                
         if initialDisplayHeader && displayAuthorInfo {
             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
                 authorNameString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
@@ -2399,7 +2399,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     print("contentNodeWidth \(contentNodeWidth) > \(maximumNodeWidth)")
                 }
                 #endif
-                maxContentWidth = max(maxContentWidth, contentNodeWidth)
+                
+                if contentNodeProperties.isDetached {
+                    
+                } else {
+                    maxContentWidth = max(maxContentWidth, contentNodeWidth)
+                }
                 
                 contentNodePropertiesAndFinalize.append((contentNodeProperties, contentPosition, contentNodeFinalize, contentGroupId, itemSelection))
             }
@@ -2414,6 +2419,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var contentNodesHeight: CGFloat = 0.0
         var totalContentNodesHeight: CGFloat = 0.0
         var currentContainerGroupOverlap: CGFloat = 0.0
+        var detachedContentNodesHeight: CGFloat = 0.0
         
         var mosaicStatusOrigin: CGPoint?
         for i in 0 ..< contentNodePropertiesAndFinalize.count {
@@ -2455,7 +2461,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     totalContentNodesHeight += properties.headerSpacing
                 }
-                
+                                
                 if currentContainerGroupId != contentGroupId {
                     if let containerGroupId = currentContainerGroupId {
                         var overlapOffset: CGFloat = 0.0
@@ -2475,11 +2481,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     currentItemSelection = itemSelection
                 }
                 
+                let contentNodeOriginY = contentNodesHeight - detachedContentNodesHeight
                 let (size, apply) = finalize(maxContentWidth)
-                contentNodeFramesPropertiesAndApply.append((CGRect(origin: CGPoint(x: 0.0, y: contentNodesHeight), size: size), properties, contentGroupId == nil, apply))
+                contentNodeFramesPropertiesAndApply.append((CGRect(origin: CGPoint(x: 0.0, y: contentNodeOriginY), size: size), properties, contentGroupId == nil, apply))
                 
                 contentNodesHeight += size.height
                 totalContentNodesHeight += size.height
+                
+                if properties.isDetached {
+                    detachedContentNodesHeight += size.height
+                }
             }
         }
         
@@ -2509,7 +2520,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
-        
+                
         let minimalContentSize: CGSize
         if hideBackground {
             minimalContentSize = CGSize(width: 1.0, height: 1.0)
@@ -2517,24 +2528,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             minimalContentSize = layoutConstants.bubble.minimumSize
         }
         let calculatedBubbleHeight = headerSize.height + contentSize.height + layoutConstants.bubble.contentInsets.top + layoutConstants.bubble.contentInsets.bottom
-        let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(minimalContentSize.height, calculatedBubbleHeight))
-        
+        let layoutBubbleSize = CGSize(width: max(contentSize.width, headerSize.width) + layoutConstants.bubble.contentInsets.left + layoutConstants.bubble.contentInsets.right, height: max(minimalContentSize.height, calculatedBubbleHeight - detachedContentNodesHeight))
         var contentVerticalOffset: CGFloat = 0.0
         if minimalContentSize.height > calculatedBubbleHeight + 2.0 {
             contentVerticalOffset = floorToScreenPixels((minimalContentSize.height - calculatedBubbleHeight) / 2.0)
         }
         
+        let availableWidth = params.width - params.leftInset - params.rightInset
         let backgroundFrame: CGRect
         let contentOrigin: CGPoint
         let contentUpperRightCorner: CGPoint
         switch alignment {
             case .none:
-                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: 0.0), size: layoutBubbleSize)
+                backgroundFrame = CGRect(origin: CGPoint(x: incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + avatarInset) : (params.width - params.rightInset - layoutBubbleSize.width - layoutConstants.bubble.edgeInset - deliveryFailedInset), y: detachedContentNodesHeight), size: layoutBubbleSize)
                 contentOrigin = CGPoint(x: backgroundFrame.origin.x + (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height + contentVerticalOffset)
                 contentUpperRightCorner = CGPoint(x: backgroundFrame.maxX - (incoming ? layoutConstants.bubble.contentInsets.right : layoutConstants.bubble.contentInsets.left), y: backgroundFrame.origin.y + layoutConstants.bubble.contentInsets.top + headerSize.height)
             case .center:
-                let availableWidth = params.width - params.leftInset - params.rightInset
-                backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: 0.0), size: layoutBubbleSize)
+                backgroundFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((availableWidth - layoutBubbleSize.width) / 2.0), y: detachedContentNodesHeight), size: layoutBubbleSize)
                 let contentOriginX: CGFloat
                 if !hideBackground {
                     contentOriginX = (incoming ? layoutConstants.bubble.contentInsets.left : layoutConstants.bubble.contentInsets.right)
@@ -2547,7 +2557,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let bubbleContentWidth = maxContentWidth - layoutConstants.bubble.edgeInset * 2.0 - (layoutConstants.bubble.contentInsets.right + layoutConstants.bubble.contentInsets.left)
 
-        var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height)
+        var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height + detachedContentNodesHeight)
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
             layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
         }
@@ -3203,6 +3213,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     containerSupernode.addSubnode(contentNode)
                     
+                    contentNode.itemNode = strongSelf
                     contentNode.bubbleBackgroundNode = strongSelf.backgroundNode
                     contentNode.bubbleBackdropNode = strongSelf.backgroundWallpaperNode
                     contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
@@ -3239,7 +3250,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var shouldClipOnTransitions = true
         var contentNodeIndex = 0
-        for (relativeFrame, _, useContentOrigin, apply) in contentNodeFramesPropertiesAndApply {
+        for (relativeFrame, properties, useContentOrigin, apply) in contentNodeFramesPropertiesAndApply {
             apply(animation, synchronousLoads, applyInfo)
             
             if contentNodeIndex >= strongSelf.contentNodes.count {
@@ -3252,7 +3263,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 shouldClipOnTransitions = false
             }
             
-            let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: useContentOrigin ? contentOrigin.y : 0.0)
+            var effectiveContentOriginX = contentOrigin.x
+            var effectiveContentOriginY = useContentOrigin ? contentOrigin.y : 0.0
+            if properties.isDetached {
+                effectiveContentOriginX = floorToScreenPixels((layout.size.width - relativeFrame.width) / 2.0)
+                effectiveContentOriginY = 0.0
+            }
+            
+            let contentNodeFrame = relativeFrame.offsetBy(dx: effectiveContentOriginX, dy: effectiveContentOriginY)
             let previousContentNodeFrame = contentNode.frame
             
             if case let .System(duration, _) = animation {

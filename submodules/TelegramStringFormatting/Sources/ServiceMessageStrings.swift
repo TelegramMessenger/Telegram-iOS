@@ -922,6 +922,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 resultTitleString = strings.Conversation_StoryExpiredMentionTextOutgoing(compactPeerName)
             }
             attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+        } else if let _ = media as? TelegramMediaGiveaway {
+            let compactAuthorName = message.author?.compactDisplayTitle ?? ""
+            let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
+            attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
         }
     }
     

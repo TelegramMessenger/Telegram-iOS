@@ -233,14 +233,14 @@ public final class LottieComponent: Component {
             }
         }
         
-        public func playOnce(delay: Double = 0.0, completion: (() -> Void)? = nil) {
+        public func playOnce(delay: Double = 0.0, force: Bool = false,  completion: (() -> Void)? = nil) {
             self.playOnceCompletion = completion
             
             guard let _ = self.animationInstance, let animationFrameRange = self.animationFrameRange else {
                 self.scheduledPlayOnce = true
                 return
             }
-            if !self.isEffectivelyVisible {
+            if !self.isEffectivelyVisible && !force {
                 self.scheduledPlayOnce = true
                 return
             }

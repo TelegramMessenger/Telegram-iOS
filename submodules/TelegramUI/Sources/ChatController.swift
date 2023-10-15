@@ -738,18 +738,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.bankCardDisposable = disposable
                     }
                     
-                    var cancelImpl: (() -> Void)?
-                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+//                    var cancelImpl: (() -> Void)?
+//                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     let progressSignal = Signal<Never, NoError> { subscriber in
-                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                            cancelImpl?()
-                        }))
-                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                        return ActionDisposable { [weak controller] in
-                            Queue.mainQueue().async() {
-                                controller?.dismiss()
-                            }
-                        }
+//                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+//                            cancelImpl?()
+//                        }))
+//                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+//                        return ActionDisposable { [weak controller] in
+//                            Queue.mainQueue().async() {
+//                                controller?.dismiss()
+//                            }
+//                        }
+                        return EmptyDisposable
                     }
                     |> runOn(Queue.mainQueue())
                     |> delay(0.15, queue: Queue.mainQueue())
@@ -761,14 +762,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             progressDisposable.dispose()
                         }
                     }
-                    cancelImpl = {
-                        disposable.set(nil)
-                    }
+//                    cancelImpl = {
+//                        disposable.set(nil)
+//                    }
                     disposable.set((signal
                     |> deliverOnMainQueue).startStrict(next: { [weak self] info in
                         if let strongSelf = self, let info = info {
-                            let date = stringForDate(timestamp: giveaway.untilDate, strings: strongSelf.presentationData.strings)
-                            let startDate = stringForDate(timestamp: message.timestamp, strings: strongSelf.presentationData.strings)
+                            let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: strongSelf.presentationData.strings)
                             
                             let title: String
                             let text: String
@@ -781,9 +781,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })]
                             
                             switch info {
-                            case let .ongoing(status):
-                                title = "About This Giveaway"
+                            case let .ongoing(start, status):
+                                let startDate = stringForDate(timestamp: start, strings: strongSelf.presentationData.strings)
                                 
+                                title = "About This Giveaway"
                                 
                                 let intro: String
                                 if case .almostOver = status {
@@ -793,33 +794,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 let ending: String
-                                if case .almostOver = status {
-                                    if giveaway.flags.contains(.onlyNewSubscribers) {
-                                        if giveaway.channelPeerIds.count > 1 {
-                                            ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
-                                        } else {
-                                            ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                                        }
+                                if giveaway.flags.contains(.onlyNewSubscribers) {
+                                    if giveaway.channelPeerIds.count > 1 {
+                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
                                     } else {
-                                        if giveaway.channelPeerIds.count > 1 {
-                                            ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
-                                        } else {
-                                            ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                                        }
+                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
                                     }
                                 } else {
-                                    if giveaway.flags.contains(.onlyNewSubscribers) {
-                                        if giveaway.channelPeerIds.count > 1 {
-                                            ending = "On **\(date)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
-                                        } else {
-                                            ending = "On **\(date)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                                        }
+                                    if giveaway.channelPeerIds.count > 1 {
+                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
                                     } else {
-                                        if giveaway.channelPeerIds.count > 1 {
-                                            ending = "On **\(date)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
-                                        } else {
-                                            ending = "On **\(date)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                                        }
+                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
                                     }
                                 }
                                 
@@ -827,9 +812,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 switch status {
                                 case .notQualified:
                                     if giveaway.channelPeerIds.count > 1 {
-                                        participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(date)**."
+                                        participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
                                     } else {
-                                        participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(date)**."
+                                        participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
                                     }
                                 case let .notAllowed(reason):
                                     switch reason {
@@ -839,6 +824,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     case let .channelAdmin(adminId):
                                         let _ = adminId
                                         participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
+                                    case let .disallowedCountry(countryCode):
+                                        let _ = countryCode
+                                        participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
                                     }
                                 case .participating:
                                     if giveaway.channelPeerIds.count > 1 {
@@ -855,8 +843,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 text = "\(intro)\n\n\(ending)\(participation)"
-                            case let .finished(status, finishDate, _, activatedCount):
-                                let date = stringForDate(timestamp: finishDate, strings: strongSelf.presentationData.strings)
+                            case let .finished(status, start, finish, _, activatedCount):
+                                let startDate = stringForDate(timestamp: start, strings: strongSelf.presentationData.strings)
+                                let finishDate = stringForDate(timestamp: finish, strings: strongSelf.presentationData.strings)
                                 title = "Giveaway Ended"
                                 
                                 let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
@@ -864,15 +853,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 var ending: String
                                 if giveaway.flags.contains(.onlyNewSubscribers) {
                                     if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
+                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
                                     } else {
-                                        ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
                                     }
                                 } else {
                                     if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
+                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
                                     } else {
-                                        ending = "On **\(date)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
                                     }
                                 }
                                 

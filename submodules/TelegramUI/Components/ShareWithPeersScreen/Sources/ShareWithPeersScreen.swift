@@ -11,11 +11,8 @@ import AccountContext
 import TelegramCore
 import Postbox
 import MultilineTextComponent
-import SolidRoundedButtonComponent
 import PresentationDataUtils
 import ButtonComponent
-import PlainButtonComponent
-import AnimatedCounterComponent
 import TokenListTextField
 import AvatarNode
 import LocalizedPeerData
@@ -230,26 +227,6 @@ final class ShareWithPeersScreenComponent: Component {
         }
         
         static func ==(lhs: CategoryItem, rhs: CategoryItem) -> Bool {
-            if lhs === rhs {
-                return true
-            }
-            return false
-        }
-    }
-    
-    final class PeerItem: Equatable {
-        let id: EnginePeer.Id
-        let peer: EnginePeer?
-        
-        init(
-            id: EnginePeer.Id,
-            peer: EnginePeer?
-        ) {
-            self.id = id
-            self.peer = peer
-        }
-        
-        static func ==(lhs: PeerItem, rhs: PeerItem) -> Bool {
             if lhs === rhs {
                 return true
             }
@@ -1465,6 +1442,9 @@ final class ShareWithPeersScreenComponent: Component {
                                     if peer.id.isGroupOrChannel {
                                         if case .channels = component.stateContext.subject, self.selectedPeers.count >= component.context.userLimits.maxGiveawayChannelsCount, index == nil {
                                             self.hapticFeedback.error()
+                                            
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(component.context.userLimits.maxGiveawayChannelsCount) channels.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         if case .channels = component.stateContext.subject {
@@ -1492,6 +1472,9 @@ final class ShareWithPeersScreenComponent: Component {
                                     } else {
                                         if case .members = component.stateContext.subject, self.selectedPeers.count >= 10, index == nil {
                                             self.hapticFeedback.error()
+                                            
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum 10 subscribers.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         togglePeer()
@@ -2993,6 +2976,10 @@ public class ShareWithPeersScreen: ViewControllerComponentContainer {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        var updatedLayout = layout
+        updatedLayout.intrinsicInsets.bottom += 66.0
+        self.presentationContext.containerLayoutUpdated(updatedLayout, transition: transition)
     }
     
     override public func viewDidAppear(_ animated: Bool) {

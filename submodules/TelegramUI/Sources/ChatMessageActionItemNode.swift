@@ -158,7 +158,12 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
         return { item, layoutConstants, _, _, _, _ in
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
+            var isGiveaway = false
+            if let _ = item.message.media.first(where: { $0 is TelegramMediaGiveaway }) {
+                isGiveaway = true
+            }
+            
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: isGiveaway ? .none : .center, isDetached: isGiveaway)
             
             let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
@@ -230,6 +235,8 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if let _ = image {
                     backgroundSize.height += imageSize.height + 10
+                } else if isGiveaway {
+                    backgroundSize.height += 8.0
                 }
                 
                 return (backgroundSize.width, { boundingWidth in
@@ -510,6 +517,10 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
     }
 
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if let item = self.item, item.message.media.first(where: { $0 is TelegramMediaGiveaway }) != nil {
+            return .none
+        }
+        
         let textNodeFrame = self.labelNode.textNode.frame
         if let (index, attributes) = self.labelNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY - 10.0)), gesture == .tap {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
@@ -528,7 +539,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             }
         }
-        if let imageNode = imageNode, imageNode.frame.contains(point) {
+        if let imageNode = self.imageNode, imageNode.frame.contains(point) {
             return .openMessage
         }
         

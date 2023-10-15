@@ -39,6 +39,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let placeholderNode: StickerShimmerEffectNode
     private let animationNode: AnimatedStickerNode
     
+    private let shimmerEffectNode: ShimmerEffectForegroundNode
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
@@ -93,6 +94,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 17.0
+        
+        self.shimmerEffectNode = ShimmerEffectForegroundNode()
+        self.shimmerEffectNode.cornerRadius = 17.0
                 
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
@@ -116,6 +120,7 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.animationNode)
         
         self.addSubnode(self.buttonNode)
+        self.buttonNode.addSubnode(self.shimmerEffectNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
         self.addSubnode(self.buttonTitleNode)
         
@@ -151,6 +156,26 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             return
         }
         let _ = item.controllerInteraction.openMessage(item.message, .default)
+        self.startShimmering()
+        Queue.mainQueue().after(0.75) {
+            self.stopShimmering()
+        }
+    }
+    
+    func startShimmering() {
+        self.shimmerEffectNode.isHidden = false
+        self.shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        let backgroundFrame = self.buttonNode.frame
+        self.shimmerEffectNode.frame = CGRect(origin: .zero, size: backgroundFrame.size)
+        self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
+        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.2), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+    }
+    
+    func stopShimmering() {
+        self.shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+            self?.shimmerEffectNode.isHidden = true
+        })
     }
     
     private func removePlaceholder(animated: Bool) {
@@ -500,7 +525,9 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             }
         }
         
-        if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
+        if self.buttonNode.frame.contains(point) {
+            return .ignore
+        } else if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
             return .openMessage
         } else if self.mediaBackgroundNode.frame.contains(point) {
             return .openMessage
@@ -546,6 +573,12 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             if !item.controllerInteraction.seenOneTimeAnimatedMedia.contains(item.message.id) {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                 self.animationNode.playOnce()
+                
+                Queue.mainQueue().after(0.05) {
+                    if let itemNode = self.itemNode, let supernode = itemNode.supernode {
+                        supernode.addSubnode(itemNode)
+                    }
+                }
             }
             
             if !alreadySeen && self.animationNode.isPlaying {

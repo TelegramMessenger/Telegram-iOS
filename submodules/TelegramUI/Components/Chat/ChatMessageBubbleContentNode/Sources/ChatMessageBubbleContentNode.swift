@@ -32,6 +32,7 @@ public struct ChatMessageBubbleContentProperties {
     public let shareButtonOffset: CGPoint?
     public let hidesHeaders: Bool
     public let avatarOffset: CGFloat?
+    public let isDetached: Bool
     
     public init(
         hidesSimpleAuthorHeader: Bool,
@@ -41,7 +42,8 @@ public struct ChatMessageBubbleContentProperties {
         forceAlignment: ChatMessageBubbleContentAlignment,
         shareButtonOffset: CGPoint? = nil,
         hidesHeaders: Bool = false,
-        avatarOffset: CGFloat? = nil
+        avatarOffset: CGFloat? = nil,
+        isDetached: Bool = false
     ) {
         self.hidesSimpleAuthorHeader = hidesSimpleAuthorHeader
         self.headerSpacing = headerSpacing
@@ -51,6 +53,7 @@ public struct ChatMessageBubbleContentProperties {
         self.shareButtonOffset = shareButtonOffset
         self.hidesHeaders = hidesHeaders
         self.avatarOffset = avatarOffset
+        self.isDetached = isDetached
     }
 }
 
@@ -169,6 +172,7 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
+    public weak var itemNode: ChatMessageItemNodeProtocol?
     public weak var bubbleBackgroundNode: ChatMessageBackground?
     public weak var bubbleBackdropNode: ChatMessageBubbleBackdrop?
     

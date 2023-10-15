@@ -354,6 +354,8 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .story:
         return .story
+    case .giveaway:
+        return .giveaway
     default:
         return nil
     }

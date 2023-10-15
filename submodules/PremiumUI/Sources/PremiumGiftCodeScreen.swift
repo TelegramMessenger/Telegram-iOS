@@ -264,6 +264,14 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         )
                     )
                 ))
+            } else if giftCode.isGiveaway {
+                tableItems.append(.init(
+                    id: "to",
+                    title: "To",
+                    component: AnyComponent(
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: "No recipient", font: tableFont, textColor: tableTextColor)))
+                    )
+                ))
             }
             let giftTitle: String
             if giftCode.months == 12 {
@@ -279,7 +287,12 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 )
             ))
             
-            let giftReason = giftCode.isGiveaway ? "Giveaway" : "You were selected by the channel"
+            let giftReason: String
+            if giftCode.toPeerId == nil {
+                giftReason = "Incomplete Giveaway"
+            } else {
+                giftReason = giftCode.isGiveaway ? "Giveaway" : "You were selected by the channel"
+            }
             tableItems.append(.init(
                 id: "reason",
                 title: "Reason",

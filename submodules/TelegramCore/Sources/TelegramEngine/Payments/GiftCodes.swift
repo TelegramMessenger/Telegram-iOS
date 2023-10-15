@@ -56,6 +56,7 @@ public enum PremiumGiveawayInfo: Equatable {
         public enum DisallowReason: Equatable {
             case joinedTooEarly(Int32)
             case channelAdmin(EnginePeer.Id)
+            case disallowedCountry(String)
         }
         
         case notQualified
@@ -70,8 +71,8 @@ public enum PremiumGiveawayInfo: Equatable {
         case refunded
     }
     
-    case ongoing(status: OngoingStatus)
-    case finished(status: ResultStatus, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
+    case ongoing(startDate: Int32, status: OngoingStatus)
+    case finished(status: ResultStatus, startDate: Int32, finishDate: Int32, winnersCount: Int32, activatedCount: Int32)
 }
 
 public struct PrepaidGiveaway: Equatable {
@@ -95,19 +96,21 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
         |> map { result -> PremiumGiveawayInfo? in
             if let result {
                 switch result {
-                case let .giveawayInfo(flags, joinedTooEarlyDate, adminDisallowedChatId):
+                case let .giveawayInfo(flags, startDate, joinedTooEarlyDate, adminDisallowedChatId, disallowedCountry):
                     if (flags & (1 << 3)) != 0 {
-                        return .ongoing(status: .almostOver)
+                        return .ongoing(startDate: startDate, status: .almostOver)
                     } else if (flags & (1 << 0)) != 0 {
-                        return .ongoing(status: .participating)
+                        return .ongoing(startDate: startDate, status: .participating)
+                    } else if let disallowedCountry = disallowedCountry {
+                        return .ongoing(startDate: startDate, status: .notAllowed(.disallowedCountry(disallowedCountry)))
                     } else if let joinedTooEarlyDate = joinedTooEarlyDate {
-                        return .ongoing(status: .notAllowed(.joinedTooEarly(joinedTooEarlyDate)))
+                        return .ongoing(startDate: startDate, status: .notAllowed(.joinedTooEarly(joinedTooEarlyDate)))
                     } else if let adminDisallowedChatId = adminDisallowedChatId {
-                        return .ongoing(status: .notAllowed(.channelAdmin(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(adminDisallowedChatId)))))
+                        return .ongoing(startDate: startDate, status: .notAllowed(.channelAdmin(EnginePeer.Id(namespace: Namespaces.Peer.CloudChannel, id: EnginePeer.Id.Id._internalFromInt64Value(adminDisallowedChatId)))))
                     } else {
-                        return .ongoing(status: .notQualified)
+                        return .ongoing(startDate: startDate, status: .notQualified)
                     }
-                case let .giveawayInfoResults(flags, giftCodeSlug, finishDate, winnersCount, activatedCount):
+                case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
                     if let giftCodeSlug = giftCodeSlug {
                         status = .won(slug: giftCodeSlug)
@@ -116,7 +119,7 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     } else {
                         status = .notWon
                     }
-                    return .finished(status: status, finishDate: finishDate, winnersCount: winnersCount, activatedCount: activatedCount)
+                    return .finished(status: status, startDate: startDate, finishDate: finishDate, winnersCount: winnersCount, activatedCount: activatedCount)
                 }
             } else {
                 return nil

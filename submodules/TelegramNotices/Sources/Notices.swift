@@ -183,6 +183,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case displayStoryUnmuteTooltip = 49
     case chatReplyOptionsTip = 50
     case displayStoryInteractionGuide = 51
+    case dismissedPremiumAppIconsBadge = 52
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -443,6 +444,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func displayStoryInteractionGuide() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.displayStoryInteractionGuide.key)
+    }
+    
+    static func dismissedPremiumAppIconsBadge() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedPremiumAppIconsBadge.key)
     }
 }
 
@@ -1708,6 +1713,27 @@ public struct ApplicationSpecificNotice {
     
     public static func displayStoryInteractionGuide(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
         return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.displayStoryInteractionGuide())
+        |> map { view -> Bool in
+            if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> take(1)
+    }
+    
+    public static func setDismissedPremiumAppIconsBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Never, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            if let entry = CodableEntry(ApplicationSpecificBoolNotice()) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.dismissedPremiumAppIconsBadge(), entry)
+            }
+        }
+        |> ignoreValues
+    }
+    
+    public static func dismissedPremiumAppIconsBadge(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Bool, NoError> {
+        return accountManager.noticeEntry(key: ApplicationSpecificNoticeKeys.dismissedPremiumAppIconsBadge())
         |> map { view -> Bool in
             if let _ = view.value?.get(ApplicationSpecificBoolNotice.self) {
                 return true

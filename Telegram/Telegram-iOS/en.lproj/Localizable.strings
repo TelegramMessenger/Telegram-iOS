@@ -10110,3 +10110,13 @@ Sorry for the inconvenience.";
 "Appearance.AppIconSteam" = "Steam";
 
 "Notification.GiftLink" = "You received a gift";
+
+"MESSAGE_GIFTCODE" = "%1$@ sent you a Gift Code for %2$@ months of Telegram Premium";
+"MESSAGE_GIVEAWAY" = "%1$@ sent you a giveaway of %2$@x %3$@mo Premium subscriptions";
+"CHANNEL_MESSAGE_GIVEAWAY" = "%1$@ posted a giveaway of %2$@x %3$@mo Premium subscriptions";
+"CHAT_MESSAGE_GIVEAWAY" = "%1$@ sent a giveaway of %3$@x %4$@mo Premium subscriptions to the group %2$@";
+"PINNED_GIVEAWAY" = "%1$@ pinned a giveaway";
+"REACT_GIVEAWAY" = "%1$@ reacted %2$@ to your giveaway";
+"CHAT_REACT_GIVEAWAY" = "%1$@ reacted %3$@ in group %2$@ to your giveaway";
+
+"Notification.GiveawayStarted" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its followers.";

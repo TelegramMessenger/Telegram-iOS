@@ -60,7 +60,7 @@ private func loadCountryCodes() -> [(String, Int)] {
 
 private let countryCodes: [(String, Int)] = loadCountryCodes()
 
-func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, [Int])] {
+public func localizedCountryNamesAndCodes(strings: PresentationStrings) -> [((String, String), String, [Int])] {
     let locale = localeWithStrings(strings)
     var result: [((String, String), String, [Int])] = []
     for country in AuthorizationSequenceCountrySelectionController.countries() {
@@ -159,7 +159,7 @@ private func matchStringTokens(_ tokens: [Data], with other: [Data]) -> Bool {
     return false
 }
 
-private func searchCountries(items: [((String, String), String, [Int])], query: String) -> [((String, String), String, Int)] {
+public func searchCountries(items: [((String, String), String, [Int])], query: String) -> [((String, String), String, Int)] {
     let queryTokens = stringTokens(query.lowercased())
     
     var result: [((String, String), String, Int)] = []
