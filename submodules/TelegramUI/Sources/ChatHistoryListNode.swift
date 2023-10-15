@@ -1503,9 +1503,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 let previousSelectedMessages = previousValueAndVersion?.2
                 
                 if let previousVersion = previousValueAndVersion?.1 {
-                    if !GlobalExperimentalSettings.isAppStoreBuild {
-                        precondition(update.1 >= previousVersion)
-                    }
                     assert(update.1 >= previousVersion)
                 }
                                 

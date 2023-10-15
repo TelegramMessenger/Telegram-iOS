@@ -353,8 +353,6 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                 itemNode.updateHiddenMedia()
             } else if let itemNode = itemNode as? ListMessageNode {
                 itemNode.updateHiddenMedia()
-            } else if let itemNode = itemNode as? GridMessageItemNode {
-                itemNode.updateHiddenMedia()
             }
         }
     }
@@ -367,10 +365,6 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
                     transitionNode = result
                 }
             } else if let itemNode = itemNode as? ListMessageNode {
-                if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
-                    transitionNode = result
-                }
-            } else if let itemNode = itemNode as? GridMessageItemNode {
                 if let result = itemNode.transitionNode(id: messageId, media: media, adjustRect: false) {
                     transitionNode = result
                 }
