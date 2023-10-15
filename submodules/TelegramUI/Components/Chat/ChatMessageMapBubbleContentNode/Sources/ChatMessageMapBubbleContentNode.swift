@@ -18,7 +18,7 @@ private let titleFont = Font.medium(14.0)
 private let liveTitleFont = Font.medium(16.0)
 private let textFont = Font.regular(14.0)
 
-class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     private let imageNode: TransformImageNode
     private let pinNode: ChatMessageLiveLocationPositionNode
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
@@ -31,7 +31,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var timeoutTimer: (SwiftSignalKit.Timer, Int32)?
     
-    required init() {
+    required public init() {
         self.imageNode = TransformImageNode()
         self.imageNode.contentAnimations = [.subsequentUpdates]
         self.pinNode = ChatMessageLiveLocationPositionNode()
@@ -45,14 +45,14 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.pinNode)
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
         }
         return true
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -60,14 +60,14 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.timeoutTimer?.0.invalidate()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.imageTap(_:)))
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makePinLayout = self.pinNode.asyncLayout()
         let statusLayout = self.dateAndStatusNode.asyncLayout()
@@ -467,19 +467,19 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    override public func transitionNode(messageId: MessageId, media: Media, adjustRect: Bool) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isEqual(to: media) {
             let imageNode = self.imageNode
             return (self.imageNode, self.imageNode.bounds, { [weak imageNode] in
@@ -489,7 +489,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+    override public func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
         if let currentMedia = self.media, let media = media {
             for item in media {
@@ -504,11 +504,11 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         return .none
     }
     
-    @objc func imageTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
                 let _ = item.controllerInteraction.openMessage(item.message, .default)
@@ -516,7 +516,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
         }

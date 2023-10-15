@@ -54,6 +54,13 @@ import ChatMessageReactionsFooterContentNode
 import ChatMessageInstantVideoBubbleContentNode
 import ChatMessageCommentFooterContentNode
 import ChatMessageActionBubbleContentNode
+import ChatMessageContactBubbleContentNode
+import ChatMessageEventLogPreviousDescriptionContentNode
+import ChatMessageEventLogPreviousLinkContentNode
+import ChatMessageEventLogPreviousMessageContentNode
+import ChatMessageGameBubbleContentNode
+import ChatMessageInvoiceBubbleContentNode
+import ChatMessageMapBubbleContentNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool

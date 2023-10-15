@@ -19,7 +19,7 @@ private let avatarFont = avatarPlaceholderFont(size: 16.0)
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
 
-class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
+public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     private let avatarNode: AvatarNode
     private let dateAndStatusNode: ChatMessageDateAndStatusNode
     private let titleNode: TextNode
@@ -30,7 +30,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     
     private let buttonNode: ChatMessageAttachedContentButtonNode
     
-    required init() {
+    required public init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         self.titleNode = TextNode()
@@ -63,23 +63,23 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func accessibilityActivate() -> Bool {
+    override public func accessibilityActivate() -> Bool {
         self.buttonPressed()
         return true
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.contactTap(_:)))
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let statusLayout = self.dateAndStatusNode.asyncLayout()
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -378,19 +378,19 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
     }
     
-    override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+    override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
             return .openMessage
         }
@@ -400,7 +400,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         return .none
     }
     
-    @objc func contactTap(_ recognizer: UITapGestureRecognizer) {
+    @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
                 let _ = item.controllerInteraction.openMessage(item.message, .default)
@@ -414,14 +414,14 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
+    override public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.dateAndStatusNode.isHidden {
             return self.dateAndStatusNode.reactionView(value: value)
         }
         return nil
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.dateAndStatusNode.supernode != nil, let result = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: event) {
             return result
         }
