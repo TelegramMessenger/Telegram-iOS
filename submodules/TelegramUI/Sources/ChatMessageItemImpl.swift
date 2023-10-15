@@ -16,6 +16,7 @@ import ChatMessageItem
 import ChatMessageItemView
 import ChatMessageStickerItemNode
 import ChatMessageAnimatedStickerItemNode
+import ChatMessageBubbleItemNode
 
 private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
     if let story = media as? TelegramMediaStory, story.isMention {

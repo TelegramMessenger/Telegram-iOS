@@ -15,6 +15,7 @@ import ChatMessageItemView
 import ChatMessageStickerItemNode
 import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
+import ChatMessageBubbleItemNode
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode

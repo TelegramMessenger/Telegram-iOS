@@ -14,6 +14,7 @@ import PresentationDataUtils
 import ChatMessageTextBubbleContentNode
 import TextFormat
 import ChatMessageItemView
+import ChatMessageBubbleItemNode
 
 private enum OptionsId: Hashable {
     case reply

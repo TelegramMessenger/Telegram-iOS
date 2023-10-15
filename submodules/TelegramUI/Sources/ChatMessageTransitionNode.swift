@@ -18,6 +18,7 @@ import ChatMessageStickerItemNode
 import ChatMessageInstantVideoItemNode
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageTransitionNode
+import ChatMessageBubbleItemNode
 
 private func convertAnimatingSourceRect(_ rect: CGRect, fromView: UIView, toView: UIView?) -> CGRect {
     if let presentationLayer = fromView.layer.presentation() {
@@ -412,9 +413,27 @@ public final class ChatMessageTransitionNodeImpl: ASDisplayNode, ChatMessageTran
                 self.contextSourceNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: sourceAbsoluteRect.maxY - targetAbsoluteRect.maxY), verticalCurve, verticalDuration)
 
                 if let itemNode = self.itemNode as? ChatMessageBubbleItemNode {
-                    itemNode.animateContentFromTextInputField(textInput: textInput, transition: combinedTransition)
+                    itemNode.animateContentFromTextInputField(
+                        textInput: ChatMessageBubbleItemNode.AnimationTransitionTextInput(
+                            backgroundView: textInput.backgroundView,
+                            contentView: textInput.contentView,
+                            sourceRect: textInput.sourceRect,
+                            scrollOffset: textInput.scrollOffset
+                        ),
+                        transition: combinedTransition
+                    )
                     if let sourceReplyPanel = sourceReplyPanel {
-                        itemNode.animateReplyPanel(sourceReplyPanel: sourceReplyPanel, transition: combinedTransition)
+                        itemNode.animateReplyPanel(
+                            sourceReplyPanel: ChatMessageBubbleItemNode.AnimationTransitionReplyPanel(
+                                titleNode: sourceReplyPanel.titleNode,
+                                textNode: sourceReplyPanel.textNode,
+                                lineNode: sourceReplyPanel.lineNode,
+                                imageNode: sourceReplyPanel.imageNode,
+                                relativeSourceRect: sourceReplyPanel.relativeSourceRect,
+                                relativeTargetRect: sourceReplyPanel.relativeTargetRect
+                            ),
+                            transition: combinedTransition
+                        )
                     }
                 } else if let itemNode = self.itemNode as? ChatMessageAnimatedStickerItemNode {
                     itemNode.animateContentFromTextInputField(

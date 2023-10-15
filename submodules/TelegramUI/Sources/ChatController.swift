@@ -111,6 +111,7 @@ import ChatMessageItem
 import ChatMessageItemView
 import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
+import ChatMessageBubbleItemNode
 
 public enum ChatControllerPeekActions {
     case standard
