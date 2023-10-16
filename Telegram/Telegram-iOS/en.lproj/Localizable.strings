@@ -10120,3 +10120,6 @@ Sorry for the inconvenience.";
 "CHAT_REACT_GIVEAWAY" = "%1$@ reacted %3$@ in group %2$@ to your giveaway";
 
 "Notification.GiveawayStarted" = "%1$@ just started a giveaway of Telegram Premium subscriptions for its followers.";
+
+"Channel.AdminLog.MessageChangedNameColorSet" = "%1$@ set name color to %2$@";
+"Channel.AdminLog.MessageChangedBackgroundEmojiSet" = "%1$@ set background emoji to %2$@";

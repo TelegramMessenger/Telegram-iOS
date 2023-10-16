@@ -710,6 +710,10 @@ public extension TelegramEngine {
             return _internal_updateBotAbout(account: self.account, peerId: peerId, about: about)
         }
         
+        public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+            return _internal_updatePeerNameColorAndEmoji(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
+        }
+        
         public func getChatListPeers(filterPredicate: ChatListFilterPredicate) -> Signal<[EnginePeer], NoError> {
             return self.account.postbox.transaction { transaction -> [EnginePeer] in
                 return transaction.getChatListPeers(groupId: .root, filterPredicate: filterPredicate, additionalFilter: nil).map(EnginePeer.init)

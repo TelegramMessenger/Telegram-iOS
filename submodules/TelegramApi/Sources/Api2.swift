@@ -680,6 +680,8 @@ public extension Api {
     indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
+        case channelAdminLogEventActionChangeBackgroundEmoji(prevValue: Int64, newValue: Int64)
+        case channelAdminLogEventActionChangeColor(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int64, newValue: Int64)
         case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
@@ -737,6 +739,20 @@ public extension Api {
                     }
                     prevValue.serialize(buffer, true)
                     newValue.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionChangeBackgroundEmoji(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1147126836)
+                    }
+                    serializeInt64(prevValue, buffer: buffer, boxed: false)
+                    serializeInt64(newValue, buffer: buffer, boxed: false)
+                    break
+                case .channelAdminLogEventActionChangeColor(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(1009460347)
+                    }
+                    serializeInt32(prevValue, buffer: buffer, boxed: false)
+                    serializeInt32(newValue, buffer: buffer, boxed: false)
                     break
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                     if boxed {
@@ -1020,6 +1036,10 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeAbout", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeAvailableReactions", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangeBackgroundEmoji(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeBackgroundEmoji", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
+                case .channelAdminLogEventActionChangeColor(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeColor", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeHistoryTTL", [("prevValue", prevValue as Any), ("newValue", newValue as Any)])
                 case .channelAdminLogEventActionChangeLinkedChat(let prevValue, let newValue):
@@ -1132,6 +1152,34 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeAvailableReactions(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeBackgroundEmoji(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeBackgroundEmoji(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeColor(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeColor(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil

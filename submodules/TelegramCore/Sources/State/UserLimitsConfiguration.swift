@@ -24,6 +24,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxStoriesSuggestedReactions: Int32
     public let maxGiveawayChannelsCount: Int32
     public let maxGiveawayCountriesCount: Int32
+    public let minChannelNameColorLevel: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -48,7 +49,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxStoriesMonthlyCount: 30,
             maxStoriesSuggestedReactions: 1,
             maxGiveawayChannelsCount: 10,
-            maxGiveawayCountriesCount: 10
+            maxGiveawayCountriesCount: 10,
+            minChannelNameColorLevel: 10
         )
     }
 
@@ -74,7 +76,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxStoriesMonthlyCount: Int32,
         maxStoriesSuggestedReactions: Int32,
         maxGiveawayChannelsCount: Int32,
-        maxGiveawayCountriesCount: Int32
+        maxGiveawayCountriesCount: Int32,
+        minChannelNameColorLevel: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxArchivedPinnedChatCount = maxArchivedPinnedChatCount
@@ -98,6 +101,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxStoriesSuggestedReactions = maxStoriesSuggestedReactions
         self.maxGiveawayChannelsCount = maxGiveawayChannelsCount
         self.maxGiveawayCountriesCount = maxGiveawayCountriesCount
+        self.minChannelNameColorLevel = minChannelNameColorLevel
     }
 }
 
@@ -144,5 +148,6 @@ extension UserLimitsConfiguration {
         self.maxStoriesSuggestedReactions = getValue("stories_suggested_reactions_limit", orElse: defaultValue.maxStoriesMonthlyCount)
         self.maxGiveawayChannelsCount = getGeneralValue("giveaway_add_peers_max", orElse: defaultValue.maxGiveawayChannelsCount)
         self.maxGiveawayCountriesCount = getGeneralValue("giveaway_countries_max", orElse: defaultValue.maxGiveawayCountriesCount)
+        self.minChannelNameColorLevel = getGeneralValue("channel_color_level_min", orElse: defaultValue.minChannelNameColorLevel)
     }
 }

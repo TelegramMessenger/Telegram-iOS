@@ -69,7 +69,7 @@ private func filterOriginalMessageFlags(_ message: Message) -> Message {
 
 private func filterMessageChannelPeer(_ peer: Peer) -> Peer {
     if let peer = peer as? TelegramChannel {
-        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden)
+        return TelegramChannel(id: peer.id, accessHash: peer.accessHash, title: peer.title, username: peer.username, photo: peer.photo, creationDate: peer.creationDate, version: peer.version, participationStatus: peer.participationStatus, info: .group(TelegramChannelGroupInfo(flags: [])), flags: peer.flags, restrictionInfo: peer.restrictionInfo, adminRights: peer.adminRights, bannedRights: peer.bannedRights, defaultBannedRights: peer.defaultBannedRights, usernames: peer.usernames, storiesHidden: peer.storiesHidden, nameColor: peer.nameColor, backgroundEmojiId: peer.backgroundEmojiId)
     }
     return peer
 }
@@ -1717,13 +1717,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 }
                 var text: String = ""
                 var entities: [MessageTextEntity] = []
-                /*
-                "Channel.AdminLog.TopicRenamed" = "%1$@ renamed topic %2$@ to %3$@";
-                "Channel.AdminLog.TopicRenamedWithIcon" = "%1$@ renamed topic %2$@ to %3$@ and changed icon to %4$@";
-                "Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
-                "Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
-                "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";*/
-            
+                
                 let authorTitle: String = author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 if prevInfo.isHidden != newInfo.isHidden {
                     appendAttributedText(text: newInfo.isHidden ? self.presentationData.strings.Channel_AdminLog_TopicHidden(authorTitle, newInfo.info.title) : self.presentationData.strings.Channel_AdminLog_TopicUnhidden(authorTitle, newInfo.info.title), generateEntities: { index in
@@ -1865,6 +1859,59 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 }, to: &text, entities: &entities)
             
                 let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+            
+            case let .changeNameColor(_, updatedValue):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedNameColorSet(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", "\(updatedValue)")
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
+                let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
+                return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+            case let .changeBackgroundEmojiId(_, updatedValue):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+
+                var text: String = ""
+                var entities: [MessageTextEntity] = []
+                
+                let rawText = self.presentationData.strings.Channel_AdminLog_MessageChangedBackgroundEmojiSet(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", "\(updatedValue ?? 0)")
+                
+                appendAttributedText(text: rawText, generateEntities: { index in
+                    if index == 0, let author = author {
+                        return [.TextMention(peerId: author.id)]
+                    } else if index == 1 {
+                        return [.Bold]
+                    }
+                    return []
+                }, to: &text, entities: &entities)
+                
+                let action = TelegramMediaActionType.customText(text: text, entities: entities)
+                
                 let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 return ChatMessageItemImpl(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadPeerId: nil, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
         }

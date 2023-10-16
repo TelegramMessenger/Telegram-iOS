@@ -87,6 +87,8 @@ public enum AdminLogEventAction {
     case pinTopic(prevInfo: EngineMessageHistoryThread.Info?, newInfo: EngineMessageHistoryThread.Info?)
     case toggleForum(isForum: Bool)
     case toggleAntiSpam(isEnabled: Bool)
+    case changeNameColor(prev: PeerNameColor, new: PeerNameColor)
+    case changeBackgroundEmojiId(prev: Int64?, new: Int64?)
 }
 
 public enum ChannelAdminLogEventError {
@@ -341,12 +343,17 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     case .none:
                                         newInfo = nil
                                     }
-                                    
                                     action = .pinTopic(prevInfo: prevInfo, newInfo: newInfo)
                                 case let .channelAdminLogEventActionToggleForum(newValue):
                                     action = .toggleForum(isForum: newValue == .boolTrue)
                                 case let .channelAdminLogEventActionToggleAntiSpam(newValue):
                                     action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
+                                default:
+                                    action = .toggleInvites(false)
+//                                case let .channelAdminLogEventActionChangeColor(prevValue, newValue):
+//                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
+//                                case let .channelAdminLogEventActionChangeBackgroundEmoji(prevValue, newValue):
+//                                    action = .changeBackgroundEmojiId(prev: prevValue, new: newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

@@ -264,7 +264,9 @@ private class AdMessagesHistoryContextImpl {
                     bannedRights: nil,
                     defaultBannedRights: nil,
                     usernames: [],
-                    storiesHidden: nil
+                    storiesHidden: nil,
+                    nameColor: nil,
+                    backgroundEmojiId: nil
                 )
             case let .webPage(webPage):
                 author = TelegramChannel(
@@ -283,7 +285,9 @@ private class AdMessagesHistoryContextImpl {
                     bannedRights: nil,
                     defaultBannedRights: nil,
                     usernames: [],
-                    storiesHidden: nil
+                    storiesHidden: nil,
+                    nameColor: nil,
+                    backgroundEmojiId: nil
                 )
             }
             

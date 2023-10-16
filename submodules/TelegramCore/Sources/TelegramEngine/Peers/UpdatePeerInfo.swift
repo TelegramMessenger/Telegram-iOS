@@ -88,3 +88,36 @@ func _internal_updatePeerDescription(account: Account, peerId: PeerId, descripti
         }
     } |> mapError { _ -> UpdatePeerDescriptionError in } |> switchToLatest
 }
+
+public enum UpdatePeerNameColorAndEmojiError {
+    case generic
+}
+
+func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+    let accountPeerId = account.peerId
+    return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
+        if let peer = transaction.getPeer(peerId) {
+            if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
+                let flags: Int32 = (1 << 0)
+                return account.network.request(Api.functions.channels.updateColor(flags: flags, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
+                    |> mapError { _ -> UpdatePeerNameColorAndEmojiError in
+                        return .generic
+                    }
+                    |> mapToSignal { result -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
+                        account.stateManager.addUpdates(result)
+                        
+                        return account.postbox.transaction { transaction -> Void in
+                            if let apiChat = apiUpdatesGroups(result).first {
+                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+                            }
+                        } |> mapError { _ -> UpdatePeerNameColorAndEmojiError in }
+                    }
+            } else {
+                return .fail(.generic)
+            }
+        } else {
+            return .fail(.generic)
+        }
+    } |> mapError { _ -> UpdatePeerNameColorAndEmojiError in } |> switchToLatest
+}

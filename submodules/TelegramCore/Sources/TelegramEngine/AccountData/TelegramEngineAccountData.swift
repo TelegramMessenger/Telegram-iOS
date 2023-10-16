@@ -34,6 +34,10 @@ public extension TelegramEngine {
         public func updateAbout(about: String?) -> Signal<Void, UpdateAboutError> {
             return _internal_updateAbout(account: self.account, about: about)
         }
+        
+        public func updateNameColorAndEmoji(nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
+            return _internal_updateNameColorAndEmoji(account: self.account, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
+        }
 
         public func unregisterNotificationToken(token: Data, type: NotificationTokenType, otherAccountUserIds: [PeerId.Id]) -> Signal<Never, NoError> {
             return _internal_unregisterNotificationToken(account: self.account, token: token, type: type, otherAccountUserIds: otherAccountUserIds)

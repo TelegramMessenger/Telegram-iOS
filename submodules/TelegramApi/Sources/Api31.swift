@@ -1217,6 +1217,23 @@ public extension Api.functions.account {
                 }
 }
 public extension Api.functions.account {
+                static func updateColor(flags: Int32, color: Int32, backgroundEmojiId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1610494909)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(color, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "account.updateColor", parameters: [("flags", String(describing: flags)), ("color", String(describing: color)), ("backgroundEmojiId", String(describing: backgroundEmojiId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.account {
                 static func updateDeviceLocked(period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(954152242)
@@ -2981,6 +2998,24 @@ public extension Api.functions.channels {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
+                static func updateColor(flags: Int32, channel: Api.InputChannel, color: Int32, backgroundEmojiId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1645879327)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    channel.serialize(buffer, true)
+                    serializeInt32(color, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "channels.updateColor", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("color", String(describing: color)), ("backgroundEmojiId", String(describing: backgroundEmojiId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

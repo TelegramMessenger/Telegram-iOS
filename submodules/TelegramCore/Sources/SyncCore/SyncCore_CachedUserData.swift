@@ -114,6 +114,25 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     }
 }
 
+public enum PeerNameColor: Int32 {
+    case red
+    case orange
+    case violet
+    case green
+    case cyan
+    case blue
+    case pink
+    case other7
+    case other8
+    case other9
+    case other10
+    case other11
+    case other12
+    case other13
+    case other14
+    case other15
+}
+
 public struct PeerEmojiStatus: Equatable, Codable {
     public var fileId: Int64
     public var expirationDate: Int32?
