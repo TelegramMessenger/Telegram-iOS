@@ -264,6 +264,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         
         self.isOpaqueWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
+        self.automaticallyControlPresentationContextLayout = false
         
         self.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
         

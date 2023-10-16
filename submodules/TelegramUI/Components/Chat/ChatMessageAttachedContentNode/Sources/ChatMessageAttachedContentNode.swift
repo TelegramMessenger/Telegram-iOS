@@ -53,6 +53,7 @@ public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
 
 public final class ChatMessageAttachedContentNode: HighlightTrackingButtonNode {
     private var backgroundView: UIImageView?
+    private var lineDashView: UIImageView?
     private let topTitleNode: TextNode
     private let textNode: TextNodeWithEntities
     private let inlineImageNode: TransformImageNode
@@ -251,13 +252,47 @@ public final class ChatMessageAttachedContentNode: HighlightTrackingButtonNode {
             let string = NSMutableAttributedString()
             var notEmpty = false
             
-            let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
+            let mainColor: UIColor
+            var secondaryColor: UIColor?
+            if !incoming {
+                mainColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
+            } else {
+                var authorNameColor: UIColor?
+                let author = message.author
+                if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
+                    authorNameColor = author?.nameColor?.color
+                    secondaryColor = author?.nameColor?.dashColors.1
+//                        if let rawAuthorNameColor = authorNameColor {
+//                            var dimColors = false
+//                            switch presentationData.theme.theme.name {
+//                                case .builtin(.nightAccent), .builtin(.night):
+//                                    dimColors = true
+//                                default:
+//                                    break
+//                            }
+//                            if dimColors {
+//                                var hue: CGFloat = 0.0
+//                                var saturation: CGFloat = 0.0
+//                                var brightness: CGFloat = 0.0
+//                                rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+//                                authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+//                            }
+//                        }
+                }
+                
+                if let authorNameColor {
+                    mainColor = authorNameColor
+                } else {
+                    mainColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
+                }
+            }
             
+            let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             if let title = title, !title.isEmpty {
                 if titleBeforeMedia {
-                    topTitleString.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
+                    topTitleString.append(NSAttributedString(string: title, font: titleFont, textColor: incoming ? mainColor : messageTheme.accentTextColor))
                 } else {
-                    string.append(NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor))
+                    string.append(NSAttributedString(string: title, font: titleFont, textColor: incoming ? mainColor : messageTheme.accentTextColor))
                     notEmpty = true
                 }
             }
@@ -565,7 +600,6 @@ public final class ChatMessageAttachedContentNode: HighlightTrackingButtonNode {
                 
                 let upatedTextCutout = textCutout
                 
-                
                 let (topTitleLayout, topTitleApply) = topTitleAsyncLayout(TextNodeLayoutArguments(attributedString: topTitleString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (textLayout, textApply) = textAsyncLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: upatedTextCutout, insets: UIEdgeInsets()))
                 
@@ -603,40 +637,7 @@ public final class ChatMessageAttachedContentNode: HighlightTrackingButtonNode {
                 var textFrame = CGRect(origin: CGPoint(), size: textLayout.size)
                 
                 textFrame = textFrame.offsetBy(dx: insets.left, dy: insets.top)
-                
-                let mainColor: UIColor
-                if !incoming {
-                    mainColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                } else {
-                    var authorNameColor: UIColor?
-                    let author = message.author
-                    if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
-                        authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
-                        if let rawAuthorNameColor = authorNameColor {
-                            var dimColors = false
-                            switch presentationData.theme.theme.name {
-                                case .builtin(.nightAccent), .builtin(.night):
-                                    dimColors = true
-                                default:
-                                    break
-                            }
-                            if dimColors {
-                                var hue: CGFloat = 0.0
-                                var saturation: CGFloat = 0.0
-                                var brightness: CGFloat = 0.0
-                                rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-                                authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
-                            }
-                        }
-                    }
-                    
-                    if let authorNameColor {
-                        mainColor = authorNameColor
-                    } else {
-                        mainColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
-                    }
-                }
-                
+                                
                 var boundingSize = textFrame.size
                 if titleBeforeMedia {
                     boundingSize.height += topTitleLayout.size.height + 4.0
@@ -854,9 +855,28 @@ public final class ChatMessageAttachedContentNode: HighlightTrackingButtonNode {
                                 backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme)
                             }
                             backgroundView.tintColor = mainColor
-                            
-                            animation.animator.updateFrame(layer: backgroundView.layer, frame: CGRect(origin: CGPoint(x: 11.0, y: insets.top - 3.0), size: CGSize(width: adjustedBoundingSize.width - 4.0 - insets.right, height: adjustedBoundingSize.height - insets.top - insets.bottom + 4.0)), completion: nil)
+                                                        
+                            let backgroundFrame = CGRect(origin: CGPoint(x: 11.0, y: insets.top - 3.0), size: CGSize(width: adjustedBoundingSize.width - 4.0 - insets.right, height: adjustedBoundingSize.height - insets.top - insets.bottom + 4.0))
+                            animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
                             backgroundView.isHidden = !displayLine
+                            
+                            if let secondaryColor {
+                                let lineDashView: UIImageView
+                                if let current = strongSelf.lineDashView {
+                                    lineDashView = current
+                                } else {
+                                    lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme))
+                                    strongSelf.lineDashView = lineDashView
+                                    strongSelf.view.insertSubview(lineDashView, aboveSubview: backgroundView)
+                                }
+                                lineDashView.tintColor = secondaryColor
+                                lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 3.0, height: backgroundFrame.height))
+                            } else {
+                                if let lineDashView = strongSelf.lineDashView {
+                                    strongSelf.lineDashView = nil
+                                    lineDashView.removeFromSuperview()
+                                }
+                            }
                             
                             //strongSelf.borderColor = UIColor.red.cgColor
                             //strongSelf.borderWidth = 2.0

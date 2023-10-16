@@ -10123,3 +10123,20 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageChangedNameColorSet" = "%1$@ set name color to %2$@";
 "Channel.AdminLog.MessageChangedBackgroundEmojiSet" = "%1$@ set background emoji to %2$@";
+
+"Appearance.NameColor" = "Your Name Color";
+
+"NameColor.Title.Account" = "Your Name Color";
+"NameColor.Title.Channel" = "Channel Title Color";
+
+"NameColor.ChatPreview.Title" = "COLOR PREVIEW";
+"NameColor.ChatPreview.ReplyText" = "Reply to your message";
+"NameColor.ChatPreview.MessageText" = "Your name and replies to your messages will be shown in the selected color.";
+"NameColor.ChatPreview.LinkSite" = "Telegram";
+"NameColor.ChatPreview.LinkTitle" = "Link Preview";
+"NameColor.ChatPreview.LinkText" = "Your selected color will also tint the link preview.";
+"NameColor.ChatPreview.Description.Account" = "You can choose an individual color to tint your name, the links you send, and replies to your messages.";
+
+"NameColor.ApplyColor" = "Apply Color";
+
+"NameColor.TooltipPremium.Account" = "Subscribe to [Telegram Premium]() to choose a custom color for your name.";

@@ -1316,4 +1316,26 @@ public struct PresentationResourcesChat {
             })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius)).withRenderingMode(.alwaysTemplate)
         })
     }
+    
+    public static func chatReplyLineDashTemplateImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatReplyLineDashTemplateImage.rawValue, { theme in
+            let radius: CGFloat = 3.0
+            let offset: CGFloat = 5.0
+            
+            return generateImage(CGSize(width: radius, height: radius * 6.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                                
+                context.move(to: CGPoint(x: size.width, y: offset))
+                context.addLine(to: CGPoint(x: size.width, y: offset + radius * 3.0))
+                context.addLine(to: CGPoint(x: 0.0, y: offset + radius * 4.0))
+                context.addLine(to: CGPoint(x: 0.0, y: offset + radius))
+                context.closePath()
+                
+                context.setFillColor(UIColor.white.cgColor)
+                context.fillPath()
+            })?.resizableImage(withCapInsets: .zero, resizingMode: .tile).withRenderingMode(.alwaysTemplate)
+        })
+    }
+    
+//chatReplyLineDashTemplateImage
 }

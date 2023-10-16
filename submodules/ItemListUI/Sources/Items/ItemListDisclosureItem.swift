@@ -35,6 +35,7 @@ public enum ItemListDisclosureLabelStyle {
     case multilineDetailText
     case badge(UIColor)
     case color(UIColor)
+    case semitransparentBadge(UIColor)
     case image(image: UIImage, size: CGSize)
 }
 
@@ -125,6 +126,7 @@ public class ItemListDisclosureItem: ListViewItem, ItemListItem {
 }
 
 private let badgeFont = Font.regular(15.0)
+private let boldBadgeFont = Font.semibold(14.0)
 
 public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
@@ -256,10 +258,20 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             var updatedLabelBadgeImage: UIImage?
             var updatedLabelImage: UIImage?
             
+            var badgeDiameter: CGFloat = 20.0
             var badgeColor: UIColor?
+            var badgeColorUpdated = false
             if case let .badge(color) = item.labelStyle {
                 if item.label.count > 0 {
                     badgeColor = color
+                }
+            } else if case let .semitransparentBadge(color) = item.labelStyle {
+                badgeDiameter = 24.0
+                badgeColor = color.withAlphaComponent(0.1)
+                
+                badgeColorUpdated = true
+                if let currentItem = currentItem, case let .semitransparentBadge(previousColor) = currentItem.labelStyle, color.isEqual(previousColor) {
+                    badgeColorUpdated = false
                 }
             }
             if case let .color(color) = item.labelStyle {
@@ -277,7 +289,6 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 updatedLabelImage = image
             }
             
-            let badgeDiameter: CGFloat = 20.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
                 switch item.disclosureStyle {
@@ -289,7 +300,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                 if let badgeColor = badgeColor {
                     updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
                 }
-            } else if let badgeColor = badgeColor, !currentHasBadge {
+            } else if let badgeColor = badgeColor, !currentHasBadge || badgeColorUpdated {
                 updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
             }
             
@@ -313,7 +324,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             
             var additionalTextRightInset: CGFloat = 0.0
             switch item.labelStyle {
-            case .badge:
+            case .badge, .semitransparentBadge:
                 additionalTextRightInset += 44.0
             default:
                 break
@@ -355,6 +366,9 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             case .badge:
                 labelBadgeColor = item.presentationData.theme.list.itemCheckColors.foregroundColor
                 labelFont = badgeFont
+            case let .semitransparentBadge(color):
+                labelBadgeColor = color
+                labelFont = boldBadgeFont
             case .detailText, .multilineDetailText:
                 labelBadgeColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = detailFont
@@ -578,14 +592,19 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.labelBadgeNode.removeFromSupernode()
                     }
                     
-                    let badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
+                    var badgeWidth = max(badgeDiameter, labelLayout.size.width + 10.0)
+                    if case .semitransparentBadge = item.labelStyle {
+                        badgeWidth += 2.0
+                    }
                     let badgeFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth, y: floor((contentSize.height - badgeDiameter) / 2.0)), size: CGSize(width: badgeWidth, height: badgeDiameter))
                     strongSelf.labelBadgeNode.frame = badgeFrame
                     
                     let labelFrame: CGRect
                     switch item.labelStyle {
                     case .badge:
-                        labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: badgeFrame.minY + 1), size: labelLayout.size)
+                        labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: badgeFrame.minY + 1.0), size: labelLayout.size)
+                    case .semitransparentBadge:
+                        labelFrame = CGRect(origin: CGPoint(x: params.width - rightInset - badgeWidth + (badgeWidth - labelLayout.size.width) / 2.0, y: badgeFrame.minY + 1.0 - UIScreenPixel + floorToScreenPixels((badgeDiameter - labelLayout.size.height) / 2.0)), size: labelLayout.size)
                     case .detailText, .multilineDetailText:
                         labelFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: labelLayout.size)
                     default:

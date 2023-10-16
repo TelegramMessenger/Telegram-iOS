@@ -114,7 +114,7 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     }
 }
 
-public enum PeerNameColor: Int32 {
+public enum PeerNameColor: Int32, CaseIterable {
     case red
     case orange
     case violet
@@ -122,12 +122,12 @@ public enum PeerNameColor: Int32 {
     case cyan
     case blue
     case pink
-    case other7
-    case other8
-    case other9
-    case other10
-    case other11
-    case other12
+    case redDash
+    case orangeDash
+    case violetDash
+    case greenDash
+    case cyanDash
+    case blueDash
     case other13
     case other14
     case other15
