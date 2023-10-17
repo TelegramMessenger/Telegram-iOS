@@ -52,18 +52,6 @@ public extension Peer {
             return nil
         }
     }
-    var nameColor: PeerNameColor? {
-        switch self {
-        case let user as TelegramUser:
-            return user.nameColor
-        case let group as TelegramGroup:
-            return group.nameColor
-        case let channel as TelegramChannel:
-            return channel.nameColor
-        default:
-            return nil
-        }
-    }
     
     var usernames: [TelegramPeerUsername] {
         switch self {

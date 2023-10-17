@@ -20,18 +20,23 @@ public struct PremiumGiftCodeOption: Codable, Equatable {
         case months
         case storeProductId
         case storeQuantity
+        case currency
+        case amount
     }
     
     public let users: Int32
     public let months: Int32
     public let storeProductId: String?
     public let storeQuantity: Int32
-    
-    public init(users: Int32, months: Int32, storeProductId: String?, storeQuantity: Int32) {
+    public let currency: String
+    public let amount: Int64
+    public init(users: Int32, months: Int32, storeProductId: String?, storeQuantity: Int32, currency: String, amount: Int64) {
         self.users = users
         self.months = months
         self.storeProductId = storeProductId
         self.storeQuantity = storeQuantity
+        self.currency = currency
+        self.amount = amount
     }
     
     public init(from decoder: Decoder) throws {
@@ -40,6 +45,9 @@ public struct PremiumGiftCodeOption: Codable, Equatable {
         self.months = try container.decode(Int32.self, forKey: .months)
         self.storeProductId = try container.decodeIfPresent(String.self, forKey: .storeProductId)
         self.storeQuantity = try container.decodeIfPresent(Int32.self, forKey: .storeQuantity) ?? 1
+        self.currency = try container.decode(String.self, forKey: .currency)
+        self.amount = try container.decode(Int64.self, forKey: .amount)
+
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -48,6 +56,8 @@ public struct PremiumGiftCodeOption: Codable, Equatable {
         try container.encode(self.months, forKey: .months)
         try container.encodeIfPresent(self.storeProductId, forKey: .storeProductId)
         try container.encode(self.storeQuantity, forKey: .storeQuantity)
+        try container.encode(self.currency, forKey: .currency)
+        try container.encode(self.amount, forKey: .amount)
     }
 }
 
@@ -234,8 +244,8 @@ func _internal_launchPrepaidGiveaway(account: Account, peerId: EnginePeer.Id, id
 extension PremiumGiftCodeOption {
     init(apiGiftCodeOption: Api.PremiumGiftCodeOption) {
         switch apiGiftCodeOption {
-        case let .premiumGiftCodeOption(_, users, months, storeProduct, storeQuantity, _, _):
-            self.init(users: users, months: months, storeProductId: storeProduct, storeQuantity: storeQuantity ?? 1)
+        case let .premiumGiftCodeOption(_, users, months, storeProduct, storeQuantity, curreny, amount):
+            self.init(users: users, months: months, storeProductId: storeProduct, storeQuantity: storeQuantity ?? 1, currency: curreny, amount: amount)
         }
     }
 }

@@ -7,7 +7,9 @@ import TelegramApi
 public enum BotPaymentInvoiceSource {
     case message(MessageId)
     case slug(String)
+    case premiumGiftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, quantity: Int32, option: PremiumGiftCodeOption)
 }
+
 
 public struct BotPaymentInvoiceFields: OptionSet {
     public var rawValue: Int32
@@ -203,17 +205,51 @@ extension BotPaymentRequestedInfo {
     }
 }
 
+private func _internal_parseInputInvoice(transaction: Transaction, source: BotPaymentInvoiceSource) -> Api.InputInvoice? {
+    switch source {
+    case let .message(messageId):
+        guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
+            return nil
+        }
+        return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
+    case let .slug(slug):
+        return .inputInvoiceSlug(slug: slug)
+    case let .premiumGiftCode(peerIds, boostPeerId, quantity, option):
+        
+        var flags: Int32 = 0
+        var apiBoostPeer: Api.InputPeer?
+        var apiInputUsers: [Api.InputUser] = []
+        
+        for peerId in peerIds {
+            if let user = transaction.getPeer(peerId), let apiUser = apiInputUser(user) {
+                apiInputUsers.append(apiUser)
+            }
+        }
+        
+        if let boostPeerId = boostPeerId, let boostPeer = transaction.getPeer(boostPeerId), let apiPeer = apiInputPeer(boostPeer) {
+            apiBoostPeer = apiPeer
+            flags |= (1 << 0)
+        }
+        let input: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: option.currency, amount: option.amount)
+
+        flags = 0
+        
+        if let _ = option.storeProductId {
+            flags |= (1 << 0)
+        }
+        if option.storeQuantity > 0 {
+            flags |= (1 << 1)
+        }
+        
+        let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: quantity, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
+        
+        return .inputInvoicePremiumGiftCode(purpose: input, option: option)
+    }
+}
+
 func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source: BotPaymentInvoiceSource) -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputInvoice? in
-        switch source {
-        case let .message(messageId):
-            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
-                return nil
-            }
-            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
-        case let .slug(slug):
-            return .inputInvoiceSlug(slug: slug)
-        }
+        return _internal_parseInputInvoice(transaction: transaction, source: source)
     }
     |> castError(BotPaymentFormRequestError.self)
     |> mapToSignal { invoice -> Signal<TelegramMediaInvoice, BotPaymentFormRequestError> in
@@ -251,15 +287,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
 
 func _internal_fetchBotPaymentForm(accountPeerId: PeerId, postbox: Postbox, network: Network, source: BotPaymentInvoiceSource, themeParams: [String: Any]?) -> Signal<BotPaymentForm, BotPaymentFormRequestError> {
     return postbox.transaction { transaction -> Api.InputInvoice? in
-        switch source {
-        case let .message(messageId):
-            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
-                return nil
-            }
-            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
-        case let .slug(slug):
-            return .inputInvoiceSlug(slug: slug)
-        }
+        return _internal_parseInputInvoice(transaction: transaction, source: source)
     }
     |> castError(BotPaymentFormRequestError.self)
     |> mapToSignal { invoice -> Signal<BotPaymentForm, BotPaymentFormRequestError> in
@@ -354,15 +382,7 @@ extension BotPaymentShippingOption {
 
 func _internal_validateBotPaymentForm(account: Account, saveInfo: Bool, source: BotPaymentInvoiceSource, formInfo: BotPaymentRequestedInfo) -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> {
     return account.postbox.transaction { transaction -> Api.InputInvoice? in
-        switch source {
-        case let .message(messageId):
-            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
-                return nil
-            }
-            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
-        case let .slug(slug):
-            return .inputInvoiceSlug(slug: slug)
-        }
+        return _internal_parseInputInvoice(transaction: transaction, source: source)
     }
     |> castError(ValidateBotPaymentFormError.self)
     |> mapToSignal { invoice -> Signal<BotPaymentValidatedFormInfo, ValidateBotPaymentFormError> in
@@ -440,15 +460,7 @@ public enum SendBotPaymentResult {
 
 func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPaymentInvoiceSource, validatedInfoId: String?, shippingOptionId: String?, tipAmount: Int64?, credentials: BotPaymentCredentials) -> Signal<SendBotPaymentResult, SendBotPaymentFormError> {
     return account.postbox.transaction { transaction -> Api.InputInvoice? in
-        switch source {
-        case let .message(messageId):
-            guard let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
-                return nil
-            }
-            return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
-        case let .slug(slug):
-            return .inputInvoiceSlug(slug: slug)
-        }
+        return _internal_parseInputInvoice(transaction: transaction, source: source)
     }
     |> castError(SendBotPaymentFormError.self)
     |> mapToSignal { invoice -> Signal<SendBotPaymentResult, SendBotPaymentFormError> in
@@ -510,6 +522,8 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     }
                                                 }
                                             }
+                                        case let .premiumGiftCode(peerIds, boostPeer, quantity, option):
+                                            receiptMessageId = nil
                                         }
                                     }
                                 }
