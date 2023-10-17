@@ -239,7 +239,11 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 if let quote = strongSelf.quote {
                     //TODO:localize
                     titleText = "Reply to quote by \(authorName)"
-                    strongSelf.textNode.attributedText = NSAttributedString(string: quote.text, font: textFont, textColor: strongSelf.theme.chat.inputPanel.primaryTextColor)
+                    
+                    let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
+                    let quoteText = stringWithAppliedEntities(trimToLineCount(quote.text, lineCount: 1), entities: quote.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
+                    
+                    strongSelf.textNode.attributedText = quoteText
                 } else {
                     titleText = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
                     strongSelf.textNode.attributedText = messageText
@@ -286,7 +290,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                                 let text: String
                                 //TODO:localize
                                 if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
-                                    text = "Tap here for options"
+                                    text = "Tap here for reply options"
                                 } else {
                                     text = "Tap here for forwarding options"
                                 }

@@ -1260,6 +1260,12 @@ public final class PendingMessageManager {
                             }
                         }
                     
+                        if let attribute = message.webpagePreviewAttribute {
+                            if attribute.leadingPreview {
+                                flags |= 1 << 16
+                            }
+                        }
+                    
                         sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyTo: replyTo, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
@@ -1310,6 +1316,12 @@ public final class PendingMessageManager {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
                                 replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
+                            }
+                        }
+                    
+                        if let attribute = message.webpagePreviewAttribute {
+                            if attribute.leadingPreview {
+                                flags |= 1 << 16
                             }
                         }
                         

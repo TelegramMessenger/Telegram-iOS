@@ -221,7 +221,7 @@ final class ContextSourceContainer: ASDisplayNode {
                     return
                 }
                 
-                self.setItems(items: items, animated: false)
+                self.setItems(items: items, animated: nil)
                 self.actionsReady.set(.single(true))
             }))
         }
@@ -273,7 +273,7 @@ final class ContextSourceContainer: ASDisplayNode {
             }))
         }
         
-        func setItems(items: ContextController.Items, animated: Bool) {
+        func setItems(items: ContextController.Items, animated: Bool?) {
             self.presentationNode.replaceItems(items: items, animated: animated)
         }
         

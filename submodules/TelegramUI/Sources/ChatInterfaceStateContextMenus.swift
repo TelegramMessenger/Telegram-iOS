@@ -382,7 +382,18 @@ func updatedChatEditInterfaceMessageState(state: ChatPresentationInterfaceState,
     var updated = state
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            updated = updated.updatedEditingUrlPreview((content.url, webpage))
+            let attribute = message.attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute
+            var positionBelowText = true
+            if let leadingPreview = attribute?.leadingPreview {
+                positionBelowText = !leadingPreview
+            }
+            let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
+                url: content.url,
+                webPage: webpage,
+                positionBelowText: positionBelowText,
+                largeMedia: attribute?.forceLargeMedia
+            )
+            updated = updated.updatedEditingUrlPreview(updatedPreview)
         }
     }
     var isPlaintext = true

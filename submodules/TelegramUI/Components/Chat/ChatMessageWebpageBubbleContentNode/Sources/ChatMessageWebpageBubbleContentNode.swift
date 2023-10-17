@@ -41,7 +41,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         self.contentNode.openMedia = { [weak self] mode in
             if let strongSelf = self, let item = strongSelf.item {
                 if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
-                    if let _ = content.image, let _ = content.instantPage {
+                    if let _ = content.instantPage {
                         if instantPageType(of: content) != .album {
                             item.controllerInteraction.openInstantPage(item.message, item.associatedData)
                             return
@@ -86,7 +86,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         } else if webpage.instantPage != nil {
                             strongSelf.contentNode.openMedia?(.default)
                         } else {
-                            item.controllerInteraction.openUrl(webpage.url, false, nil, nil)
+                            var isConcealed = true
+                            if item.message.text.contains(webpage.url) {
+                                isConcealed = false
+                            }
+                            item.controllerInteraction.openUrl(webpage.url, isConcealed, nil, nil, nil)
                         }
                     }
                 }
@@ -97,6 +101,16 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
             }
         }
+        self.contentNode.defaultContentAction = { [weak self] in
+            guard let self, let item = self.item, let webPage = self.webPage, case let .Loaded(content) = webPage.content else {
+                return .none
+            }
+            var isConcealed = true
+            if item.message.text.contains(content.url) {
+                isConcealed = false
+            }
+            return .url(url: content.url, concealed: isConcealed, activate: nil)
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {
@@ -104,7 +118,8 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
-        let contentNodeLayout = self.contentNode.asyncLayout()
+        let currentWebpage = self.webPage
+        let currentContentNodeLayout = self.contentNode.asyncLayout()
         
         return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
             var webPage: TelegramMediaWebpage?
@@ -117,6 +132,16 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                     break
                 }
+            }
+            
+            var updatedContentNode: ChatMessageAttachedContentNode?
+            let contentNodeLayout: ChatMessageAttachedContentNode.AsyncLayout
+            if currentWebpage == nil || currentWebpage?.webpageId == webPage?.id {
+                contentNodeLayout = currentContentNodeLayout
+            } else {
+                let updatedContentNodeValue = ChatMessageAttachedContentNode()
+                updatedContentNode = updatedContentNodeValue
+                contentNodeLayout = updatedContentNodeValue.asyncLayout()
             }
             
             var title: String?
@@ -353,11 +378,15 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
                 
-                if let largeMedia = webpage.displayOptions.largeMedia {
-                    if largeMedia {
-                        mediaAndFlags?.1.remove(.preferMediaInline)
-                    } else {
-                        mediaAndFlags?.1.insert(.preferMediaInline)
+                if let webPageContent, let isMediaLargeByDefault = webPageContent.isMediaLargeByDefault, !isMediaLargeByDefault {
+                    mediaAndFlags?.1.insert(.preferMediaInline)
+                } else if let attribute = item.message.attributes.first(where: { $0 is WebpagePreviewMessageAttribute }) as? WebpagePreviewMessageAttribute {
+                    if let forceLargeMedia = attribute.forceLargeMedia {
+                        if forceLargeMedia {
+                            mediaAndFlags?.1.remove(.preferMediaInline)
+                        } else {
+                            mediaAndFlags?.1.insert(.preferMediaInline)
+                        }
                     }
                 }
             } else if let adAttribute = item.message.adAttribute {
@@ -410,13 +439,39 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     let (size, apply) = finalizeLayout(boundingWidth)
                     
                     return (size, { [weak self] animation, synchronousLoads, applyInfo in
-                        if let strongSelf = self {
-                            strongSelf.item = item
-                            strongSelf.webPage = webPage
+                        guard let self else {
+                            return
+                        }
+                        self.item = item
+                        self.webPage = webPage
+                        
+                        if let updatedContentNode {
+                            let previousPosition = self.contentNode.position
+                            let updatedPosition = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
                             
+                            do {
+                                //animation.animator.updateScale(layer: self.contentNode.layer, scale: 0.9, completion: nil)
+                                animation.animator.updatePosition(layer: self.contentNode.layer, position: updatedPosition, completion: nil)
+                                animation.animator.updateAlpha(layer: self.contentNode.layer, alpha: 0.0, completion: { [weak contentNode] _ in
+                                    contentNode?.removeFromSupernode()
+                                })
+                            }
+                            
+                            self.contentNode = updatedContentNode
+                            self.addSubnode(updatedContentNode)
+                            
+                            do {
+                                apply(.None, synchronousLoads, applyInfo)
+                                self.contentNode.frame = size.centered(around: previousPosition)
+                                
+                                //animation.animator.animateScale(layer: self.contentNode.layer, from: 0.9, to: 1.0, completion: nil)
+                                self.contentNode.alpha = 0.0
+                                animation.animator.updateAlpha(layer: self.contentNode.layer, alpha: 1.0, completion: nil)
+                                animation.animator.updatePosition(layer: self.contentNode.layer, position: updatedPosition, completion: nil)
+                            }
+                        } else {
+                            self.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                             apply(animation, synchronousLoads, applyInfo)
-                            
-                            strongSelf.contentNode.frame = CGRect(origin: CGPoint(), size: size)
                         }
                     })
                 })
@@ -472,9 +527,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                         switch websiteType(of: content.websiteName) {
                             case .twitter:
-                                return .url(url: "https://twitter.com/\(mention)", concealed: false)
+                                return .url(url: "https://twitter.com/\(mention)", concealed: false, activate: nil)
                             case .instagram:
-                                return .url(url: "https://instagram.com/\(mention)", concealed: false)
+                                return .url(url: "https://instagram.com/\(mention)", concealed: false, activate: nil)
                             default:
                                 break
                         }
@@ -487,9 +542,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                         switch websiteType(of: content.websiteName) {
                             case .twitter:
-                                return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false)
+                                return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false, activate: nil)
                             case .instagram:
-                                return .url(url: "https://instagram.com/explore/tags/\(hashtag)", concealed: false)
+                                return .url(url: "https://instagram.com/explore/tags/\(hashtag)", concealed: false, activate: nil)
                             default:
                                 break
                         }

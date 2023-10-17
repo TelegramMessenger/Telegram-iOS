@@ -453,7 +453,7 @@ public final class TextNodeLayout: NSObject {
             
             for blockQuote in self.blockQuotes {
                 if lastLine.frame.intersects(blockQuote.frame) {
-                    width = max(width, blockQuote.frame.maxX)
+                    width = max(width, ceil(blockQuote.frame.maxX) + 2.0)
                 }
             }
             return width
@@ -764,6 +764,17 @@ public final class TextNodeLayout: NSObject {
         return nil
     }
     
+    public func attributeSubstringWithRange(name: String, index: Int) -> (String, String, NSRange)? {
+        if let attributedString = self.attributedString {
+            var range = NSRange()
+            let _ = attributedString.attribute(NSAttributedString.Key(rawValue: name), at: index, effectiveRange: &range)
+            if range.length != 0 {
+                return ((attributedString.string as NSString).substring(with: range), attributedString.string, range)
+            }
+        }
+        return nil
+    }
+    
     public func allAttributeRects(name: String) -> [(Any, CGRect)] {
         guard let attributedString = self.attributedString else {
             return []
@@ -1064,6 +1075,10 @@ open class TextNode: ASDisplayNode {
         return self.cachedLayout?.attributeSubstring(name: name, index: index)
     }
     
+    public func attributeSubstringWithRange(name: String, index: Int) -> (String, String, NSRange)? {
+        return self.cachedLayout?.attributeSubstringWithRange(name: name, index: index)
+    }
+    
     public func attributeRects(name: String, at index: Int) -> [CGRect]? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.lineAndAttributeRects(name: name, at: index)?.map { $0.1 }
@@ -1340,6 +1355,9 @@ open class TextNode: ASDisplayNode {
                 blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor))
             }
         }
+        
+        size.width = ceil(size.width)
+        size.height = ceil(size.height)
         
         let rawTextSize = size
         size.width += insets.left + insets.right
@@ -1992,7 +2010,8 @@ open class TextNode: ASDisplayNode {
             }
             
             for blockQuote in layout.blockQuotes {
-                let radius: CGFloat = 3.0
+                let radius: CGFloat = 4.0
+                let lineWidth: CGFloat = 3.0
                 
                 var blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
                 blockFrame.size.width += 4.0
@@ -2014,13 +2033,15 @@ open class TextNode: ASDisplayNode {
                 context.restoreGState()
                 context.resetClip()
                 
-                let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: radius, height: blockFrame.height))
+                let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: lineWidth, height: blockFrame.height))
                 context.move(to: CGPoint(x: lineFrame.minX, y: lineFrame.minY + radius))
                 context.addArc(tangent1End: CGPoint(x: lineFrame.minX, y: lineFrame.minY), tangent2End: CGPoint(x: lineFrame.minX + radius, y: lineFrame.minY), radius: radius)
                 context.addLine(to: CGPoint(x: lineFrame.minX + radius, y: lineFrame.maxY))
                 context.addArc(tangent1End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY), tangent2End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY - radius), radius: radius)
                 context.closePath()
-                context.fillPath()
+                context.clip()
+                context.fill(lineFrame)
+                context.resetClip()
             }
             
             if let textShadowColor = layout.textShadowColor {

@@ -16,7 +16,7 @@ enum ContextControllerPresentationNodeStateTransition {
 protocol ContextControllerPresentationNode: ASDisplayNode {
     var ready: Signal<Bool, NoError> { get }
     
-    func replaceItems(items: ContextController.Items, animated: Bool)
+    func replaceItems(items: ContextController.Items, animated: Bool?)
     func pushItems(items: ContextController.Items)
     func popItems()
     func wantsDisplayBelowKeyboard() -> Bool

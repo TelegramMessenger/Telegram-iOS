@@ -1052,7 +1052,7 @@ func _internal_uploadStoryImpl(postbox: Postbox, network: Network, accountPeerId
                                                 }
                                                 
                                                 id = idValue
-                                                let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, toPeerId)
+                                                let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, toPeerId)
                                                 if let parsedMedia = parsedMedia {
                                                     applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: postbox, force: originalMedia is TelegramMediaFile && parsedMedia is TelegramMediaFile)
                                                 }
@@ -1170,7 +1170,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
                         if case let .updateStory(_, story) = update {
                             switch story {
                             case let .storyItem(_, _, _, _, _, _, media, _, _, _, _):
-                                let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
+                                let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, account.peerId)
                                 if let parsedMedia = parsedMedia, let originalMedia = originalMedia {
                                     applyMediaResourceChanges(from: originalMedia, to: parsedMedia, postbox: account.postbox, force: false)
                                 }
@@ -1540,7 +1540,7 @@ extension Stories.StoredItem {
     init?(apiStoryItem: Api.StoryItem, existingItem: Stories.Item? = nil, peerId: PeerId, transaction: Transaction) {
         switch apiStoryItem {
         case let .storyItem(flags, id, date, expireDate, caption, entities, media, mediaAreas, privacy, views, sentReaction):
-            let (parsedMedia, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+            let (parsedMedia, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
             if let parsedMedia = parsedMedia {
                 var parsedPrivacy: Stories.Item.Privacy?
                 if let privacy = privacy {

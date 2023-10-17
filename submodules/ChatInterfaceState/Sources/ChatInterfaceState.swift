@@ -41,15 +41,15 @@ public struct ChatInterfaceSelectionState: Codable, Equatable {
 }
 
 public struct ChatEditMessageState: Codable, Equatable {
-    public let messageId: EngineMessage.Id
-    public let inputState: ChatTextInputState
-    public let disableUrlPreview: String?
-    public let inputTextMaxLength: Int32?
+    public var messageId: EngineMessage.Id
+    public var inputState: ChatTextInputState
+    public var disableUrlPreviews: [String]
+    public var inputTextMaxLength: Int32?
     
-    public init(messageId: EngineMessage.Id, inputState: ChatTextInputState, disableUrlPreview: String?, inputTextMaxLength: Int32?) {
+    public init(messageId: EngineMessage.Id, inputState: ChatTextInputState, disableUrlPreviews: [String], inputTextMaxLength: Int32?) {
         self.messageId = messageId
         self.inputState = inputState
-        self.disableUrlPreview = disableUrlPreview
+        self.disableUrlPreviews = disableUrlPreviews
         self.inputTextMaxLength = inputTextMaxLength
     }
 
@@ -68,7 +68,15 @@ public struct ChatEditMessageState: Codable, Equatable {
             self.inputState = ChatTextInputState()
         }
 
-        self.disableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup")
+        if let disableUrlPreviews = try? container.decodeIfPresent([String].self, forKey: "dupl") {
+            self.disableUrlPreviews = disableUrlPreviews
+        } else {
+            if let disableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup") {
+                self.disableUrlPreviews = [disableUrlPreview]
+            } else {
+                self.disableUrlPreviews = []
+            }
+        }
         self.inputTextMaxLength = try? container.decodeIfPresent(Int32.self, forKey: "tl")
     }
 
@@ -82,20 +90,20 @@ public struct ChatEditMessageState: Codable, Equatable {
 
         try container.encode(self.inputState, forKey: "is")
 
-        try container.encodeIfPresent(self.disableUrlPreview, forKey: "dup")
+        try container.encode(self.disableUrlPreviews, forKey: "dupl")
         try container.encodeIfPresent(self.inputTextMaxLength, forKey: "tl")
     }
     
     public static func ==(lhs: ChatEditMessageState, rhs: ChatEditMessageState) -> Bool {
-        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreview == rhs.disableUrlPreview && lhs.inputTextMaxLength == rhs.inputTextMaxLength
+        return lhs.messageId == rhs.messageId && lhs.inputState == rhs.inputState && lhs.disableUrlPreviews == rhs.disableUrlPreviews && lhs.inputTextMaxLength == rhs.inputTextMaxLength
     }
     
     public func withUpdatedInputState(_ inputState: ChatTextInputState) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreview: self.disableUrlPreview, inputTextMaxLength: self.inputTextMaxLength)
+        return ChatEditMessageState(messageId: self.messageId, inputState: inputState, disableUrlPreviews: self.disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength)
     }
     
-    public func withUpdatedDisableUrlPreview(_ disableUrlPreview: String?) -> ChatEditMessageState {
-        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreview: disableUrlPreview, inputTextMaxLength: self.inputTextMaxLength)
+    public func withUpdatedDisableUrlPreviews(_ disableUrlPreviews: [String]) -> ChatEditMessageState {
+        return ChatEditMessageState(messageId: self.messageId, inputState: self.inputState, disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: self.inputTextMaxLength)
     }
 }
 
@@ -278,7 +286,7 @@ public final class ChatInterfaceState: Codable, Equatable {
     
     public let timestamp: Int32
     public let composeInputState: ChatTextInputState
-    public let composeDisableUrlPreview: String?
+    public let composeDisableUrlPreviews: [String]
     public let replyMessageSubject: ReplyMessageSubject?
     public let forwardMessageIds: [EngineMessage.Id]?
     public let forwardOptionsState: ChatInterfaceForwardOptionsState?
@@ -326,7 +334,7 @@ public final class ChatInterfaceState: Codable, Equatable {
     public init() {
         self.timestamp = 0
         self.composeInputState = ChatTextInputState()
-        self.composeDisableUrlPreview = nil
+        self.composeDisableUrlPreviews = []
         self.replyMessageSubject = nil
         self.forwardMessageIds = nil
         self.forwardOptionsState = nil
@@ -339,10 +347,10 @@ public final class ChatInterfaceState: Codable, Equatable {
         self.inputLanguage = nil
     }
     
-    public init(timestamp: Int32, composeInputState: ChatTextInputState, composeDisableUrlPreview: String?, replyMessageSubject: ReplyMessageSubject?, forwardMessageIds: [EngineMessage.Id]?, forwardOptionsState: ChatInterfaceForwardOptionsState?, editMessage: ChatEditMessageState?, selectionState: ChatInterfaceSelectionState?, messageActionsState: ChatInterfaceMessageActionsState, historyScrollState: ChatInterfaceHistoryScrollState?, mediaRecordingMode: ChatTextInputMediaRecordingButtonMode, silentPosting: Bool, inputLanguage: String?) {
+    public init(timestamp: Int32, composeInputState: ChatTextInputState, composeDisableUrlPreviews: [String], replyMessageSubject: ReplyMessageSubject?, forwardMessageIds: [EngineMessage.Id]?, forwardOptionsState: ChatInterfaceForwardOptionsState?, editMessage: ChatEditMessageState?, selectionState: ChatInterfaceSelectionState?, messageActionsState: ChatInterfaceMessageActionsState, historyScrollState: ChatInterfaceHistoryScrollState?, mediaRecordingMode: ChatTextInputMediaRecordingButtonMode, silentPosting: Bool, inputLanguage: String?) {
         self.timestamp = timestamp
         self.composeInputState = composeInputState
-        self.composeDisableUrlPreview = composeDisableUrlPreview
+        self.composeDisableUrlPreviews = composeDisableUrlPreviews
         self.replyMessageSubject = replyMessageSubject
         self.forwardMessageIds = forwardMessageIds
         self.forwardOptionsState = forwardOptionsState
@@ -364,10 +372,13 @@ public final class ChatInterfaceState: Codable, Equatable {
         } else {
             self.composeInputState = ChatTextInputState()
         }
-        if let composeDisableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup") {
-            self.composeDisableUrlPreview = composeDisableUrlPreview
+        
+        if let composeDisableUrlPreviews = try? container.decodeIfPresent([String].self, forKey: "dupl") {
+            self.composeDisableUrlPreviews = composeDisableUrlPreviews
+        } else if let composeDisableUrlPreview = try? container.decodeIfPresent(String.self, forKey: "dup") {
+            self.composeDisableUrlPreviews = [composeDisableUrlPreview]
         } else {
-            self.composeDisableUrlPreview = nil
+            self.composeDisableUrlPreviews = []
         }
         
         if let replyMessageSubject = try? container.decodeIfPresent(ReplyMessageSubject.self, forKey: "replyMessageSubject") {
@@ -422,11 +433,8 @@ public final class ChatInterfaceState: Codable, Equatable {
 
         try container.encode(self.timestamp, forKey: "ts")
         try container.encode(self.composeInputState, forKey: "is")
-        if let composeDisableUrlPreview = self.composeDisableUrlPreview {
-            try container.encode(composeDisableUrlPreview, forKey: "dup")
-        } else {
-            try container.encodeNil(forKey: "dup")
-        }
+        try container.encode(self.composeDisableUrlPreviews, forKey: "dup;")
+        
         if let replyMessageSubject = self.replyMessageSubject {
             try container.encode(replyMessageSubject, forKey: "replyMessageSubject")
         } else {
@@ -472,7 +480,7 @@ public final class ChatInterfaceState: Codable, Equatable {
     }
     
     public static func ==(lhs: ChatInterfaceState, rhs: ChatInterfaceState) -> Bool {
-        if lhs.composeDisableUrlPreview != rhs.composeDisableUrlPreview {
+        if lhs.composeDisableUrlPreviews != rhs.composeDisableUrlPreviews {
             return false
         }
         if let lhsForwardMessageIds = lhs.forwardMessageIds, let rhsForwardMessageIds = rhs.forwardMessageIds {
@@ -506,11 +514,11 @@ public final class ChatInterfaceState: Codable, Equatable {
     public func withUpdatedComposeInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {
         let updatedComposeInputState = inputState
         
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
-    public func withUpdatedComposeDisableUrlPreview(_ disableUrlPreview: String?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: disableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+    public func withUpdatedComposeDisableUrlPreviews(_ disableUrlPreviews: [String]) -> ChatInterfaceState {
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: disableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedEffectiveInputState(_ inputState: ChatTextInputState) -> ChatInterfaceState {
@@ -522,19 +530,19 @@ public final class ChatInterfaceState: Codable, Equatable {
             updatedComposeInputState = inputState
         }
         
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: updatedEditMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: updatedComposeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: updatedEditMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedReplyMessageSubject(_ replyMessageSubject: ReplyMessageSubject?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedForwardMessageIds(_ forwardMessageIds: [EngineMessage.Id]?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedForwardOptionsState(_ forwardOptionsState: ChatInterfaceForwardOptionsState?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedSelectedMessages(_ messageIds: [EngineMessage.Id]) -> ChatInterfaceState {
@@ -545,7 +553,7 @@ public final class ChatInterfaceState: Codable, Equatable {
         for messageId in messageIds {
             selectedIds.insert(messageId)
         }
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withToggledSelectedMessages(_ messageIds: [EngineMessage.Id], value: Bool) -> ChatInterfaceState {
@@ -560,39 +568,39 @@ public final class ChatInterfaceState: Codable, Equatable {
                 selectedIds.remove(messageId)
             }
         }
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: ChatInterfaceSelectionState(selectedIds: selectedIds), messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withoutSelectionState() -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: nil, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: nil, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedTimestamp(_ timestamp: Int32) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedEditMessage(_ editMessage: ChatEditMessageState?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedMessageActionsState(_ f: (ChatInterfaceMessageActionsState) -> ChatInterfaceMessageActionsState) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: f(self.messageActionsState), historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: f(self.messageActionsState), historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedHistoryScrollState(_ historyScrollState: ChatInterfaceHistoryScrollState?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedMediaRecordingMode(_ mediaRecordingMode: ChatTextInputMediaRecordingButtonMode) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedSilentPosting(_ silentPosting: Bool) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: silentPosting, inputLanguage: self.inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: silentPosting, inputLanguage: self.inputLanguage)
     }
     
     public func withUpdatedInputLanguage(_ inputLanguage: String?) -> ChatInterfaceState {
-        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreview: self.composeDisableUrlPreview, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: inputLanguage)
+        return ChatInterfaceState(timestamp: self.timestamp, composeInputState: self.composeInputState, composeDisableUrlPreviews: self.composeDisableUrlPreviews, replyMessageSubject: self.replyMessageSubject, forwardMessageIds: self.forwardMessageIds, forwardOptionsState: self.forwardOptionsState, editMessage: self.editMessage, selectionState: self.selectionState, messageActionsState: self.messageActionsState, historyScrollState: self.historyScrollState, mediaRecordingMode: self.mediaRecordingMode, silentPosting: self.silentPosting, inputLanguage: inputLanguage)
     }
 
     public static func parse(_ state: OpaqueChatInterfaceState) -> ChatInterfaceState {

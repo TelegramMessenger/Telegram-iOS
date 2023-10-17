@@ -2743,7 +2743,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 }
             })
-        }, navigateToMessage: { fromId, id in
+        }, navigateToMessage: { _, _, _ in
         }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
         }, tapMessage: nil, clickThroughMessage: {
@@ -2780,7 +2780,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _, _ in
-        }, openUrl: { [weak self] url, concealed, external, _ in
+        }, openUrl: { [weak self] url, concealed, external, _, _ in
             guard let strongSelf = self else {
                 return
             }

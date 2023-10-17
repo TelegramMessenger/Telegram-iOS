@@ -132,11 +132,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         
         return { arguments in
             let fontSize = floor(arguments.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
-            let titleFont = Font.medium(fontSize)
+            let titleFont = Font.semibold(fontSize)
             let textFont = Font.regular(fontSize)
             
             var titleString: String
-            let textString: NSAttributedString
+            var textString: NSAttributedString
             let isMedia: Bool
             let isText: Bool
             var isExpiredStory: Bool = false
@@ -166,12 +166,29 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 isMedia = isMediaValue
                 isText = isTextValue
             } else if let replyForward = arguments.replyForward {
-                titleString = replyForward.authorName ?? " "
+                if let replyAuthorId = replyForward.peerId, let replyAuthor = arguments.parentMessage.peers[replyAuthorId] {
+                    titleString = EnginePeer(replyAuthor).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                } else {
+                    titleString = replyForward.authorName ?? " "
+                }
 
                 //TODO:localize
                 textString = NSAttributedString(string: replyForward.quote?.text ?? "Message")
-                isMedia = false
-                isText = true
+                if let media = replyForward.quote?.media {
+                    if let text = replyForward.quote?.text, !text.isEmpty {
+                    } else {
+                        if let contentKind = mediaContentKind(EngineMedia(media), message: nil, strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId) {
+                            let (string, _) = stringForMediaKind(contentKind, strings: arguments.strings)
+                            textString = string
+                        } else {
+                            textString = NSAttributedString(string: "Message")
+                        }
+                    }
+                    isMedia = true
+                } else {
+                    isMedia = false
+                }
+                isText = replyForward.quote?.text != nil && replyForward.quote?.text != ""
             } else if let story = arguments.story {
                 if let authorPeer = arguments.parentMessage.peers[story.peerId] {
                     titleString = EnginePeer(authorPeer).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
@@ -315,7 +332,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 } else {
                     messageText = NSAttributedString(string: text, font: textFont, textColor: textColor)
                 }
-            } else if let replyForward = arguments.replyForward, let quote = replyForward.quote {
+            } else if isText, let replyForward = arguments.replyForward, let quote = replyForward.quote {
                 let entities = quote.entities.filter { entity in
                     if case .Strikethrough = entity.type {
                         return true
@@ -379,6 +396,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
                             imageDimensions = representation.dimensions.cgSize
                         }
+                    }
+                }
+            } else if let replyForward = arguments.replyForward, let media = replyForward.quote?.media {
+                if let image = media as? TelegramMediaImage {
+                    updatedMediaReference = .message(message: MessageReference(arguments.parentMessage), media: image)
+                    if let representation = largestRepresentationForPhoto(image) {
+                        imageDimensions = representation.dimensions.cgSize
+                    }
+                } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
+                    updatedMediaReference = .message(message: MessageReference(arguments.parentMessage), media: file)
+                    
+                    if let dimensions = file.dimensions {
+                        imageDimensions = dimensions.cgSize
+                    } else if let representation = largestImageRepresentation(file.previewRepresentations), !file.isSticker {
+                        imageDimensions = representation.dimensions.cgSize
+                    }
+                    if file.isInstantVideo {
+                        hasRoundImage = true
                     }
                 }
             }
@@ -654,6 +689,17 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 return node
             })
         }
+    }
+    
+    public func updateTouchesAtPoint(_ point: CGPoint?) {
+        var isHighlighted = false
+        if point != nil {
+            isHighlighted = true
+        }
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: isHighlighted ? 0.1 : 0.2, curve: .easeInOut)
+        let scale: CGFloat = isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
+        transition.updateSublayerTransformScale(node: self, scale: scale)
     }
 
     public func animateFromInputPanel(sourceReplyPanel: TransitionReplyPanel, unclippedTransitionNode: ASDisplayNode? = nil, localRect: CGRect, transition: CombinedTransition) -> CGPoint {

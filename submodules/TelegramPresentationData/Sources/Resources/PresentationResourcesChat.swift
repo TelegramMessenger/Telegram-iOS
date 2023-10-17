@@ -1287,9 +1287,10 @@ public struct PresentationResourcesChat {
     
     public static func chatReplyBackgroundTemplateImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatReplyBackgroundTemplateImage.rawValue, { theme in
-            let radius: CGFloat = 3.0
+            let radius: CGFloat = 4.0
+            let lineWidth: CGFloat = 3.0
             
-            return generateImage(CGSize(width: radius * 2.0 + 1.0, height: radius * 2.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: radius * 2.0 + 4.0, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 
                 context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
@@ -1299,8 +1300,8 @@ public struct PresentationResourcesChat {
                 context.fill(CGRect(origin: CGPoint(), size: size))
                 
                 context.setFillColor(UIColor.white.cgColor)
-                context.fill(CGRect(origin: CGPoint(), size: CGSize(width: radius, height: size.height)))
-            })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius)).withRenderingMode(.alwaysTemplate)
+                context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
+            })?.stretchableImage(withLeftCapWidth: Int(radius) + 2, topCapHeight: Int(radius) + 3).withRenderingMode(.alwaysTemplate)
         })
     }
     

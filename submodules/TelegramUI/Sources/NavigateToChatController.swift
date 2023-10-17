@@ -17,6 +17,7 @@ import LegacyInstantVideoController
 import StoryContainerScreen
 import CameraScreen
 import MediaEditorScreen
+import ChatControllerInteraction
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
@@ -76,7 +77,7 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     if case let .id(messageId) = messageSubject {
                         let navigationController = params.navigationController
                         let animated = params.animated
-                        controller.navigateToMessage(messageLocation: .id(messageId, timecode), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                        controller.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: nil)), animated: isFirst, completion: { [weak navigationController, weak controller] in
                             if let navigationController = navigationController, let controller = controller {
                                 let _ = navigationController.popToViewController(controller, animated: animated)
                             }

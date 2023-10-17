@@ -140,7 +140,7 @@ enum ChatRecordingActivity {
 }
 
 public enum NavigateToMessageLocation {
-    case id(MessageId, Double?)
+    case id(MessageId, NavigateToMessageParams)
     case index(MessageIndex)
     case upperBound(PeerId)
     
@@ -509,7 +509,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return .widthMultiplier(factor: 0.35, min: 16.0, max: 200.0)
     }
     
-    var scheduledScrollToMessageId: (MessageId, Double?)?
+    var scheduledScrollToMessageId: (MessageId, NavigateToMessageParams)?
     
     public var purposefulAction: (() -> Void)?
     var updatedClosedPinnedMessageId: ((MessageId) -> Void)?
@@ -553,7 +553,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var storyStats: PeerStoryStats?
     
     var performTextSelectionAction: ((Message?, Bool, NSAttributedString, TextSelectionAction) -> Void)?
-    var performOpenURL: ((Message?, String) -> Void)?
+    var performOpenURL: ((Message?, String, Promise<Bool>?) -> Void)?
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, botAppStart: ChatControllerInitialBotAppStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
@@ -926,7 +926,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .pinnedMessageUpdated:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, nil))
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text)))
                                     break
                                 }
                             }
@@ -935,7 +935,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .gameScore:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, nil))
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text)))
                                     break
                                 }
                             }
@@ -1090,7 +1090,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .setSameChatWallpaper:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.controllerInteraction?.navigateToMessage(message.id, attribute.messageId)
+                                    strongSelf.controllerInteraction?.navigateToMessage(message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
                                     return true
                                 }
                             }
@@ -2170,10 +2170,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.window?.presentInGlobalOverlay(pinchController)
         }, openMessageContextActions: { message, node, rect, gesture in
             gesture?.cancel()
-        }, navigateToMessage: { [weak self] fromId, id in
-            self?.navigateToMessage(from: fromId, to: .id(id, nil), forceInCurrentChat: fromId.peerId == id.peerId)
+        }, navigateToMessage: { [weak self] fromId, id, params in
+            self?.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
         }, navigateToMessageStandalone: { [weak self] id in
-            self?.navigateToMessage(from: nil, to: .id(id, nil), forceInCurrentChat: false)
+            self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
             if let context = self?.context, let navigationController = self?.effectiveNavigationController {
                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .always).startStandalone()
@@ -2743,7 +2743,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.openPeer(peer: nil, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil, peerTypes: peerTypes)
                 }
             }
-        }, openUrl: { [weak self] url, concealed, _, message in
+        }, openUrl: { [weak self] url, concealed, _, message, progress in
             if let strongSelf = self {
                 var skipConcealedAlert = false
                 if let author = message?.author, author.isVerified {
@@ -2755,8 +2755,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if let performOpenURL = strongSelf.performOpenURL {
-                    performOpenURL(message, url)
+                    performOpenURL(message, url, progress)
                 } else {
+                    progress?.set(.single(false))
                     strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
                 }
             }
@@ -2834,7 +2835,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatDisplayNode.collapseInput()
                         
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
+                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
                         })
                     }
                 }, nil)
@@ -3364,7 +3365,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     items.append(ActionSheetButtonItem(title: url.title, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message)
+                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message, nil)
                                         }
                                     }))
                                 }
@@ -3797,7 +3798,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(Double(timestamp)))
                     } else {
-                        strongSelf.navigateToMessage(messageLocation: .id(messageId, Double(timestamp)), animated: true, forceInCurrentChat: true)
+                        strongSelf.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: Double(timestamp), quote: nil)), animated: true, forceInCurrentChat: true)
                     }
                 }
             }
@@ -3853,7 +3854,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 let inlineStickers: [MediaId: TelegramMediaFile] = [:]
-                                strongSelf.editMessageDisposable.set((strongSelf.context.engine.messages.requestEditMessage(messageId: messageId, text: message.text, media: .keep, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: false, scheduleTime: time) |> deliverOnMainQueue).startStrict(next: { result in
+                                strongSelf.editMessageDisposable.set((strongSelf.context.engine.messages.requestEditMessage(messageId: messageId, text: message.text, media: .keep, entities: entities, inlineStickers: inlineStickers, webpagePreviewAttribute: nil, disableUrlPreview: false, scheduleTime: time) |> deliverOnMainQueue).startStrict(next: { result in
                                 }, error: { error in
                                 }))
                             }
@@ -3967,8 +3968,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let messageId = message?.id, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                     var quoteData: EngineMessageReplyQuote?
                     
-                    let quoteText = (message.text as NSString).substring(with: NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound))
-                    quoteData = EngineMessageReplyQuote(text: quoteText, entities: [])
+                    let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
+                    let quoteText = (message.text as NSString).substring(with: nsRange)
+                    quoteData = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), media: nil)
                     
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(
                         messageId: message.id,
@@ -4181,7 +4183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.openMessageReplies(messageId: threadMessageId, displayProgressInMessage: message.id, isChannelPost: true, atMessage: attribute.messageId, displayModalProgress: false)
                         }
                     } else {
-                        strongSelf.navigateToMessage(from: nil, to: .id(attribute.messageId, nil))
+                        strongSelf.navigateToMessage(from: nil, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil)))
                     }
                     break
                 }
@@ -4584,7 +4586,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .peer(id, messageId, startParam):
                 if case let .peer(currentPeerId) = self.chatLocation, currentPeerId == id {
                     if let messageId {
-                        self.navigateToMessage(from: nil, to: .id(messageId, nil), rememberInStack: false)
+                        self.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
                     }
                 } else {
                     let navigationData: ChatControllerInteractionNavigateToPeer
@@ -4607,7 +4609,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
-                self.controllerInteraction?.openUrl(url, false, false, nil)
+                self.controllerInteraction?.openUrl(url, false, false, nil, nil)
             }
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
             guard let self else {
@@ -5311,9 +5313,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     case .reply:
                         //TODO:localize
                         subtitleTextSignal = .single("You can select a specific part to quote")
-                    case .link:
-                        //TODO:localize
-                        subtitleTextSignal = .single("Tap on a link to generate its preview")
+                    case let .link(link):
+                        subtitleTextSignal = link.options
+                        |> map { options -> String? in
+                            if options.hasAlternativeLinks {
+                                //TODO:localize
+                                return "Tap on a link to generate its preview"
+                            } else {
+                                return nil
+                            }
+                        }
+                        |> distinctUntilChanged
                     }
                 }
                 
@@ -6935,7 +6945,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             func pinnedHistorySignal(anchorMessageId: MessageId?, count: Int) -> Signal<ChatHistoryViewUpdate, NoError> {
                 let location: ChatHistoryLocation
                 if let anchorMessageId = anchorMessageId {
-                    location = .InitialSearch(location: .id(anchorMessageId), count: count, highlight: false)
+                    location = .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(anchorMessageId), quote: nil), count: count, highlight: false)
                 } else {
                     location = .Initial(count: count)
                 }
@@ -8012,15 +8022,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.updatePlainInputSeparatorAlpha(plainInputSeparatorAlpha, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
         
-        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toIndex, initial in
-            if let strongSelf = self, case let .message(index) = toIndex {
+        self.chatDisplayNode.historyNode.scrolledToIndex = { [weak self] toSubject, initial in
+            if let strongSelf = self, case let .message(index) = toSubject.index {
                 if case let .message(messageSubject, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
                     if messageId.peerId == index.id.peerId {
                         strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                     }
                 } else if let controllerInteraction = strongSelf.controllerInteraction {
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(index.id) {
-                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
+                        let highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId, quote: toSubject.quote)
                         controllerInteraction.highlightedState = highlightedState
                         strongSelf.updateItemNodesHighlightedStates(animated: initial)
                         strongSelf.scrolledToMessageIdValue = ScrolledToMessageId(id: index.id, allowedReplacementDirection: [])
@@ -8034,9 +8044,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }))
                         
-                        if let (messageId, maybeTimecode) = strongSelf.scheduledScrollToMessageId {
+                        if let quote = toSubject.quote, !message.text.contains(quote) {
+                            //TODO:localize
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                        }
+                        
+                        if let (messageId, params) = strongSelf.scheduledScrollToMessageId {
                             strongSelf.scheduledScrollToMessageId = nil
-                            if let timecode = maybeTimecode, message.id == messageId {
+                            if let timecode = params.timestamp, message.id == messageId {
                                 Queue.mainQueue().after(0.2) {
                                     let _ = strongSelf.controllerInteraction?.openMessage(message, .timecode(timecode))
                                 }
@@ -8334,18 +8349,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.dismissUrlPreview = { [weak self] in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.interfaceState.editMessage {
-                    if let (link, _) = strongSelf.presentationInterfaceState.editingUrlPreview {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                            $0.updatedInterfaceState {
-                                $0.withUpdatedEditMessage($0.editMessage.flatMap { $0.withUpdatedDisableUrlPreview(link) })
+                    if let link = strongSelf.presentationInterfaceState.editingUrlPreview?.url {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
+                            return presentationInterfaceState.updatedInterfaceState { interfaceState in
+                                return interfaceState.withUpdatedEditMessage(interfaceState.editMessage.flatMap { editMessage in
+                                    var editMessage = editMessage
+                                    if !editMessage.disableUrlPreviews.contains(link) {
+                                        editMessage.disableUrlPreviews.append(link)
+                                    }
+                                    return editMessage
+                                })
                             }
                         })
                     }
                 } else {
-                    if let (link, _) = strongSelf.presentationInterfaceState.urlPreview {
-                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
-                            $0.updatedInterfaceState {
-                                $0.withUpdatedComposeDisableUrlPreview(link)
+                    if let link = strongSelf.presentationInterfaceState.urlPreview?.url {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { presentationInterfaceState in
+                            return presentationInterfaceState.updatedInterfaceState { interfaceState in
+                                var composeDisableUrlPreviews = interfaceState.composeDisableUrlPreviews
+                                if !composeDisableUrlPreviews.contains(link) {
+                                    composeDisableUrlPreviews.append(link)
+                                }
+                                return interfaceState.withUpdatedComposeDisableUrlPreviews(composeDisableUrlPreviews)
                             }
                         })
                     }
@@ -8356,7 +8381,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.navigateButtons.downPressed = { [weak self] in
             if let strongSelf = self, strongSelf.isNodeLoaded {
                 if let messageId = strongSelf.historyNavigationStack.removeLast() {
-                    strongSelf.navigateToMessage(from: nil, to: .id(messageId.id, nil), rememberInStack: false)
+                    strongSelf.navigateToMessage(from: nil, to: .id(messageId.id, NavigateToMessageParams(timestamp: nil, quote: nil)), rememberInStack: false)
                 } else {
                     if case .known = strongSelf.chatDisplayNode.historyNode.visibleContentOffset() {
                         strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
@@ -8379,7 +8404,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         switch result {
                             case let .result(messageId):
                                 if let messageId = messageId {
-                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil))
+                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)))
                                 }
                             case .loading:
                                 break
@@ -8437,7 +8462,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             case let .result(messageId):
                                 if let messageId = messageId {
                                     strongSelf.chatDisplayNode.historyNode.suspendReadingReactions = true
-                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil), scrollPosition: .center(.top), completion: {
+                                    strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), scrollPosition: .center(.top), completion: {
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -8640,29 +8665,31 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                            var updated = state.updatedInterfaceState {
-                                var entities: [MessageTextEntity] = []
-                                for attribute in message.attributes {
-                                    if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                        entities = attribute.entities
-                                        break
-                                    }
+                            var entities: [MessageTextEntity] = []
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    entities = attribute.entities
+                                    break
                                 }
-                                var inputTextMaxLength: Int32 = 4096
-                                var webpageUrl: String?
-                                for media in message.media {
-                                    if media is TelegramMediaImage || media is TelegramMediaFile {
-                                        inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
-                                    } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                                        webpageUrl = content.url
-                                    }
+                            }
+                            var inputTextMaxLength: Int32 = 4096
+                            var webpageUrl: String?
+                            for media in message.media {
+                                if media is TelegramMediaImage || media is TelegramMediaFile {
+                                    inputTextMaxLength = strongSelf.context.userLimits.maxCaptionLength
+                                } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+                                    webpageUrl = content.url
                                 }
-                                let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
-                                var disableUrlPreview: String?
-                                if let detectedWebpageUrl = detectUrl(inputText), webpageUrl == nil {
-                                    disableUrlPreview = detectedWebpageUrl
-                                }
-                                return $0.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreview: disableUrlPreview, inputTextMaxLength: inputTextMaxLength))
+                            }
+                            
+                            let inputText = chatInputStateStringWithAppliedEntities(message.text, entities: entities)
+                            var disableUrlPreviews: [String] = []
+                            if webpageUrl == nil {
+                                disableUrlPreviews = detectUrls(inputText)
+                            }
+                            
+                            var updated = state.updatedInterfaceState { interfaceState in
+                                return interfaceState.withUpdatedEditMessage(ChatEditMessageState(messageId: messageId, inputState: ChatTextInputState(inputText: inputText), disableUrlPreviews: disableUrlPreviews, inputTextMaxLength: inputTextMaxLength))
                             }
                             
                             updated = updatedChatEditInterfaceMessageState(state: updated, message: message)
@@ -8967,9 +8994,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, editMessage: { [weak self] in
             if let strongSelf = self, let editMessage = strongSelf.presentationInterfaceState.interfaceState.editMessage {
                 var disableUrlPreview = false
-                if let (link, _) = strongSelf.presentationInterfaceState.editingUrlPreview {
-                    if editMessage.disableUrlPreview == link {
+                
+                var webpage: TelegramMediaWebpage?
+                var webpagePreviewAttribute: WebpagePreviewMessageAttribute?
+                if let urlPreview = strongSelf.presentationInterfaceState.editingUrlPreview {
+                    if editMessage.disableUrlPreviews.contains(urlPreview.url) {
                         disableUrlPreview = true
+                    } else {
+                        webpage = urlPreview.webPage
+                        webpagePreviewAttribute = WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true)
                     }
                 }
                 
@@ -9022,6 +9055,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let editMediaReference = strongSelf.presentationInterfaceState.editMessageState?.mediaReference {
                     media = .update(editMediaReference)
                     updatingMedia = true
+                } else if let webpage {
+                    media = .update(.standalone(media: webpage))
                 } else {
                     media = .keep
                 }
@@ -9032,8 +9067,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         if let currentMessage = currentMessage {
                             let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
-                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia || disableUrlPreview {
-                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview)
+                            let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true)
+                            
+                            if currentMessage.text != text.string || currentEntities != entities || updatingMedia || webpagePreviewAttribute != currentWebpagePreviewAttribute || disableUrlPreview {
+                                strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
                             }
                         }
                         
@@ -9197,7 +9234,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             }
         }, navigateToMessage: { [weak self] messageId, dropStack, forceInCurrentChat, statusSubject in
-            self?.navigateToMessage(from: nil, to: .id(messageId, nil), forceInCurrentChat: forceInCurrentChat, dropStack: dropStack, statusSubject: statusSubject)
+            self?.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: forceInCurrentChat, dropStack: dropStack, statusSubject: statusSubject)
         }, navigateToChat: { [weak self] peerId in
             guard let strongSelf = self else {
                 return
@@ -9261,7 +9298,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatDisplayNode.collapseInput()
                             
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreview(nil) }
+                                $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))).withUpdatedComposeDisableUrlPreviews([]) }
                             })
                         }
                     }, nil)
@@ -12264,8 +12301,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         inScopeResult = result
                     } else {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = result($0.urlPreview?.1) {
-                                return $0.updatedUrlPreview((updatedUrlPreviewUrl, webpage))
+                            if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = result($0.urlPreview?.webPage) {
+                                let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
+                                    url: updatedUrlPreviewUrl,
+                                    webPage: webpage,
+                                    positionBelowText: $0.urlPreview?.positionBelowText ?? true,
+                                    largeMedia: $0.urlPreview?.largeMedia
+                                )
+                                return $0.updatedUrlPreview(updatedPreview)
                             } else {
                                 return $0.updatedUrlPreview(nil)
                             }
@@ -12275,8 +12318,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
             inScope = false
             if let inScopeResult = inScopeResult {
-                if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.1) {
-                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview((updatedUrlPreviewUrl, webpage))
+                if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.webPage) {
+                    let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
+                        url: updatedUrlPreviewUrl,
+                        webPage: webpage,
+                        positionBelowText: updatedChatPresentationInterfaceState.urlPreview?.positionBelowText ?? true,
+                        largeMedia: updatedChatPresentationInterfaceState.urlPreview?.largeMedia
+                    )
+                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview(updatedPreview)
                 } else {
                     updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedUrlPreview(nil)
                 }
@@ -12296,8 +12345,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         inScopeResult = result
                     } else {
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                            if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = result($0.editingUrlPreview?.1) {
-                                return $0.updatedEditingUrlPreview((updatedEditingUrlPreviewUrl, webpage))
+                            if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = result($0.editingUrlPreview?.webPage) {
+                                let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
+                                    url: updatedEditingUrlPreviewUrl,
+                                    webPage: webpage,
+                                    positionBelowText: $0.editingUrlPreview?.positionBelowText ?? true,
+                                    largeMedia: $0.editingUrlPreview?.largeMedia
+                                )
+                                return $0.updatedEditingUrlPreview(updatedPreview)
                             } else {
                                 return $0.updatedEditingUrlPreview(nil)
                             }
@@ -12307,8 +12362,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }))
             inScope = false
             if let inScopeResult = inScopeResult {
-                if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.1) {
-                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedEditingUrlPreview((updatedEditingUrlPreviewUrl, webpage))
+                if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.webPage) {
+                    let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
+                        url: updatedEditingUrlPreviewUrl,
+                        webPage: webpage,
+                        positionBelowText: updatedChatPresentationInterfaceState.editingUrlPreview?.positionBelowText ?? true,
+                        largeMedia: updatedChatPresentationInterfaceState.editingUrlPreview?.largeMedia
+                    )
+                    updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedEditingUrlPreview(updatedPreview)
                 } else {
                     updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedEditingUrlPreview(nil)
                 }
@@ -15704,7 +15765,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     var interfaceState = interfaceState
                                     interfaceState = interfaceState.withUpdatedReplyMessageSubject(nil)
                                     interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: "")))
-                                    interfaceState = interfaceState.withUpdatedComposeDisableUrlPreview(nil)
+                                    interfaceState = interfaceState.withUpdatedComposeDisableUrlPreviews([])
                                     return interfaceState
                                 }
                             }
@@ -16233,7 +16294,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func scrollToEndOfHistory() {
-        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .upperBound, anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true, highlight: false), id: 0)
+        let locationInput = ChatHistoryLocationInput(content: .Scroll(subject: MessageHistoryScrollToSubject(index: .upperBound, quote: nil), anchorIndex: .upperBound, sourceIndex: .lowerBound, scrollPosition: .top(0.0), animated: true, highlight: false), id: 0)
         
         let historyView = preloadedChatHistoryViewForLocation(locationInput, context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
         let signal = historyView
@@ -16297,7 +16358,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func scrollToStartOfHistory() {
-        let locationInput = ChatHistoryLocationInput(content: .Scroll(index: .lowerBound, anchorIndex: .lowerBound, sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true, highlight: false), id: 0)
+        let locationInput = ChatHistoryLocationInput(content: .Scroll(subject: MessageHistoryScrollToSubject(index: .lowerBound, quote: nil), anchorIndex: .lowerBound, sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true, highlight: false), id: 0)
         
         let historyView = preloadedChatHistoryViewForLocation(locationInput, context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
         let signal = historyView
@@ -16420,7 +16481,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         strongSelf.loadingMessage.set(.single(nil))
                         if let messageId = messageId {
-                            strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil), forceInCurrentChat: true)
+                            strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: true)
                         }
                     }
                 }))
@@ -16457,7 +16518,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             strongSelf.loadingMessage.set(.single(nil))
                             if let messageId = messageId {
-                                strongSelf.navigateToMessage(from: nil, to: .id(messageId, nil), forceInCurrentChat: true)
+                                strongSelf.navigateToMessage(from: nil, to: .id(messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: true)
                             }
                         }
                     }))
@@ -16714,7 +16775,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             chatLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
                         }
                         
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), keepStack: .always))
+                        var quote: String?
+                        if case let .id(_, params) = messageLocation {
+                            quote = params.quote
+                        }
+                        
+                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: chatLocation, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil), keepStack: .always))
                     }
                 })
             } else if forceInCurrentChat {
@@ -16741,7 +16807,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             delayCompletion = false
                         }
                         
-                        self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, scrollPosition: scrollPosition)
+                        var quote: String?
+                        if case let .id(_, params) = messageLocation {
+                            quote = params.quote
+                        }
+                        self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: message.index, animated: animated, quote: quote, scrollPosition: scrollPosition)
                         
                         if delayCompletion {
                             Queue.mainQueue().after(0.25, {
@@ -16753,14 +16823,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                         }
                         
-                        if case let .id(_, maybeTimecode) = messageLocation, let timecode = maybeTimecode {
+                        if case let .id(_, params) = messageLocation, let timecode = params.timestamp {
                             let _ = self.controllerInteraction?.openMessage(message, .timecode(timecode))
                         }
                     } else if case let .index(index) = messageLocation, index.id.id == 0, index.timestamp > 0, case .scheduledMessages = self.presentationInterfaceState.subject {
                         self.chatDisplayNode.historyNode.scrollToMessage(from: scrollFromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                     } else {
-                        if case let .id(messageId, maybeTimecode) = messageLocation, let timecode = maybeTimecode {
-                            self.scheduledScrollToMessageId = (messageId, timecode)
+                        if case let .id(messageId, params) = messageLocation, params.timestamp != nil {
+                            self.scheduledScrollToMessageId = (messageId, params)
                         }
                         self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
                         let searchLocation: ChatHistoryInitialSearchLocation
@@ -16776,7 +16846,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 searchLocation = .index(.absoluteUpperBound())
                             }
                         }
-                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         
                         let signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
@@ -16873,7 +16943,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.historyNavigationStack.add(fromIndex)
                     }
                     self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
-                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(location: searchLocation, count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                    
+                    var quote: String?
+                    if case let .id(_, params) = messageLocation {
+                        quote = params.quote
+                    }
+                    
+                    let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                     let signal = historyView
                         |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
                             switch historyView {
@@ -17785,7 +17861,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if case .peer(peerId.id) = strongSelf.chatLocation {
                         if let subject = subject, case let .message(messageSubject, _, timecode) = subject {
                             if case let .id(messageId) = messageSubject {
-                                strongSelf.navigateToMessage(from: sourceMessageId, to: .id(messageId, timecode))
+                                strongSelf.navigateToMessage(from: sourceMessageId, to: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: nil)))
                             }
                         } else {
                             self?.playShakeAnimation()
@@ -17858,6 +17934,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, commit: @escaping () -> Void = {}) {
         self.commitPurposefulAction()
+        
+        if let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url, content.instantPage != nil {
+            if let navigationController = self.navigationController as? NavigationController {
+                self.context.sharedContext.openChatInstantPage(context: self.context, message: message, sourcePeerType: nil, navigationController: navigationController)
+                return
+            }
+        }
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
@@ -18565,7 +18648,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return updatedState
                                 })
                                 
-                                strongSelf.navigateToMessage(messageLocation: .id(message.id, nil), animated: true)
+                                strongSelf.navigateToMessage(messageLocation: .id(message.id, NavigateToMessageParams(timestamp: nil, quote: nil)), animated: true)
                             }
                         } else {
                             strongSelf.scrollToEndOfHistory()
@@ -18587,7 +18670,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 })
                                 
                                 if let lastMessage = lastMessage {
-                                    strongSelf.navigateToMessage(messageLocation: .id(lastMessage.id, nil), animated: true)
+                                    strongSelf.navigateToMessage(messageLocation: .id(lastMessage.id, NavigateToMessageParams(timestamp: nil, quote: nil)), animated: true)
                                 }
                             })
                         }
@@ -18626,7 +18709,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             })
                             
                             if let updatedReplyMessageSubject {
-                                strongSelf.navigateToMessage(messageLocation: .id(updatedReplyMessageSubject.messageId, nil), animated: true)
+                                strongSelf.navigateToMessage(messageLocation: .id(updatedReplyMessageSubject.messageId, NavigateToMessageParams(timestamp: nil, quote: nil)), animated: true)
                             }
                         }
                     }

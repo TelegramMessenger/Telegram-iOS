@@ -437,6 +437,17 @@ public extension Message {
     }
 }
 
+public extension Message {
+    var webpagePreviewAttribute: WebpagePreviewMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? WebpagePreviewMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
+}
+
 public func _internal_parseMediaAttachment(data: Data) -> Media? {
     guard let object = Api.parse(Buffer(buffer: MemoryBuffer(data: data))) else {
         return nil

@@ -504,7 +504,17 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                 async {
                     let (top, bottom, dateAtBottom) = self.mergedWithItems(top: previousItem, bottom: nextItem)
                     
-                    let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !self.disableDate)
+                    var disableDate = self.disableDate
+                    if let subject = self.associatedData.subject, case let .messageOptions(_, _, info) = subject {
+                        switch info {
+                        case .reply, .link:
+                            disableDate = true
+                        default:
+                            break
+                        }
+                    }
+                    
+                    let (layout, apply) = nodeLayout(self, params, top, bottom, dateAtBottom && !disableDate)
                     Queue.mainQueue().async {
                         completion(layout, { info in
                             apply(animation, info, false)

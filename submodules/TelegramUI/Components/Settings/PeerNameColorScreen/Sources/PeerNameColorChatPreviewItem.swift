@@ -194,7 +194,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 
                 var media: [Media] = []
                 if let (site, title, text) = messageItem.linkPreview {
-                    media.append(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "", displayUrl: "", hash: 0, type: nil, websiteName: site, title: title, text: text, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil, displayOptions: TelegramMediaWebpageDisplayOptions.default))))
+                    media.append(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "", displayUrl: "", hash: 0, type: nil, websiteName: site, title: title, text: text, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil))))
                 }
                 
                 let message = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: messageItem.outgoing ? [] : [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[authorPeerId], text: messageItem.text, attributes: messageItem.reply != nil ? [ReplyMessageAttribute(messageId: replyMessageId, threadMessageId: nil, quote: nil)] : [], media: media, peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])

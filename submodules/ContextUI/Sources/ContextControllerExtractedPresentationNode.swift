@@ -484,7 +484,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
-    func replaceItems(items: ContextController.Items, animated: Bool) {
+    func replaceItems(items: ContextController.Items, animated: Bool?) {
         if case .twoLists = items.content {
             let stackItems = makeContextControllerActionsStackItem(items: items)
             self.actionsStackNode.replace(item: stackItems.first!, animated: animated)

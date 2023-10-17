@@ -26,6 +26,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageReplyInfoNode
 import InstantVideoRadialStatusNode
 import ChatInstantVideoMessageDurationNode
+import ChatControllerInteraction
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -1288,7 +1289,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
                                             return
                                         } else if let attribute = attribute as? ReplyStoryAttribute {
                                             item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
@@ -1309,7 +1310,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                                 return
                                             }
                                         }
-                                        item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                                        item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId, NavigateToMessageParams(timestamp: nil, quote: nil))
                                         return
                                     } else if let peer = forwardInfo.source ?? forwardInfo.author {
                                         item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)

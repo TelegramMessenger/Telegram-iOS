@@ -380,27 +380,14 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     ))
                 }
                 
-                let buttonImage: UIImage
-                let buttonHighlightedImage: UIImage
                 let titleColor: UIColor
-                let titleHighlightedColor: UIColor
                 if incoming {
-                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme.theme)!
-                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme.theme)!
                     titleColor = item.presentationData.theme.theme.chat.message.incoming.accentTextColor
-                    
-                    let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: true, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColors.fill[0]
                 } else {
-                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(item.presentationData.theme.theme)!
-                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(item.presentationData.theme.theme)!
                     titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    
-                    let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: false, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColors.fill[0]
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, false, "LEARN MORE", titleColor, titleHighlightedColor, false)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, "LEARN MORE", titleColor, false, true)
                 
                 let months = giveaway?.months ?? 0
                 let animationName: String
@@ -476,7 +463,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             let _ = dateTitleApply()
                             let _ = dateTextApply()
                             let _ = channelButtonApply()
-                            let _ = buttonApply()
+                            let _ = buttonApply(animation)
                             
                             let smallSpacing: CGFloat = 2.0
                             let largeSpacing: CGFloat = 14.0

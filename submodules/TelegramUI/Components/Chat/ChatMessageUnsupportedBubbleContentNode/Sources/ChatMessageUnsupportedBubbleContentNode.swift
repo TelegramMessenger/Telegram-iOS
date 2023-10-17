@@ -42,29 +42,18 @@ public final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleCon
                 let presentationData = item.presentationData
                 let insets = UIEdgeInsets(top: 0.0, left: 12.0, bottom: 9.0, right: 12.0)
                 
-                let buttonImage: UIImage
-                let buttonHighlightedImage: UIImage
                 let titleColor: UIColor
-                let titleHighlightedColor: UIColor
                 if incoming {
-                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(presentationData.theme.theme)!
-                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(presentationData.theme.theme)!
                     titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
-                    let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: true, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColor.fill[0]
                 } else {
-                    buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(presentationData.theme.theme)!
-                    buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(presentationData.theme.theme)!
                     titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    let bubbleColor = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
-                    titleHighlightedColor = bubbleColor.fill[0]
                 }
-                let (buttonWidth, continueActionButtonLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, false, presentationData.strings.Conversation_UpdateTelegram, titleColor, titleHighlightedColor, false)
+                let (buttonWidth, continueActionButtonLayout) = makeButtonLayout(constrainedSize.width, nil, false, presentationData.strings.Conversation_UpdateTelegram, titleColor, false, true)
                 
                 let initialWidth = buttonWidth + insets.left + insets.right
                 
                 return (initialWidth, { boundingWidth in
-                    var actionButtonSizeAndApply: ((CGSize, () -> ChatMessageAttachedContentButtonNode))?
+                    var actionButtonSizeAndApply: ((CGSize, (ListViewItemUpdateAnimation) -> ChatMessageAttachedContentButtonNode))?
                     let refinedButtonWidth = max(boundingWidth - insets.left - insets.right, buttonWidth)
                     
                     let (size, apply) = continueActionButtonLayout(refinedButtonWidth, 33.0)
@@ -76,7 +65,7 @@ public final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleCon
                             strongSelf.item = item
                             
                             if let (size, apply) = actionButtonSizeAndApply {
-                                _ = apply()
+                                _ = apply(animation)
                                 strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: insets.left, y: 0.0), size: size)
                             }
                         }

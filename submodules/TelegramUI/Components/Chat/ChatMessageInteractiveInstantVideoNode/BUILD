@@ -37,6 +37,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageReplyInfoNode",
         "//submodules/TelegramUI/Components/Chat/InstantVideoRadialStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatInstantVideoMessageDurationNode",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

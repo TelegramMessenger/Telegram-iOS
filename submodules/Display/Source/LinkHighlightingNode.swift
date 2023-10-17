@@ -52,7 +52,7 @@ private func drawConnectingCorner(context: CGContext, color: UIColor, at point: 
     }
 }
 
-public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat, stroke: Bool = false, useModernPathCalculation: Bool) -> (CGPoint, UIImage?) {
+public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat, stroke: Bool = false, strokeWidth: CGFloat = 2.0, useModernPathCalculation: Bool) -> (CGPoint, UIImage?) {
     if rects.isEmpty {
         return (CGPoint(), nil)
     }
@@ -66,10 +66,15 @@ public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, 
         bottomRight.y = max(bottomRight.y, rects[i].maxY)
     }
     
-    topLeft.x -= inset
-    topLeft.y -= inset
-    bottomRight.x += inset * 2.0
-    bottomRight.y += inset * 2.0
+    var drawingInset = inset
+    if stroke {
+        drawingInset += 2.0
+    }
+    
+    topLeft.x -= drawingInset
+    topLeft.y -= drawingInset
+    bottomRight.x += drawingInset * 2.0
+    bottomRight.y += drawingInset * 2.0
     
     return (topLeft, generateImage(CGSize(width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
@@ -84,7 +89,7 @@ public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, 
                 
                 if stroke {
                     context.setStrokeColor(color.cgColor)
-                    context.setLineWidth(2.0)
+                    context.setLineWidth(strokeWidth)
                     context.strokePath()
                 } else {
                     context.fillPath()
@@ -212,7 +217,7 @@ public func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, 
                 
                 if stroke {
                     context.setStrokeColor(color.cgColor)
-                    context.setLineWidth(2.0)
+                    context.setLineWidth(strokeWidth)
                     context.strokePath()
                 } else {
                     context.fillPath()
@@ -306,6 +311,8 @@ public final class LinkHighlightingNode: ASDisplayNode {
     public var outerRadius: CGFloat = 4.0
     public var inset: CGFloat = 2.0
     public var useModernPathCalculation: Bool = false
+    public var borderOnly: Bool = false
+    public var strokeWidth: CGFloat = 1.0
     
     private var _color: UIColor
     public var color: UIColor {
@@ -352,7 +359,7 @@ public final class LinkHighlightingNode: ASDisplayNode {
         if self.rects.isEmpty {
             self.imageNode.image = nil
         }
-        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius, useModernPathCalculation: self.useModernPathCalculation)
+        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius, stroke: self.borderOnly, strokeWidth: self.strokeWidth, useModernPathCalculation: self.useModernPathCalculation)
         
         if let image = image {
             self.imageNode.image = image
