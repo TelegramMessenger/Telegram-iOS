@@ -7,7 +7,7 @@ import TelegramApi
 public enum BotPaymentInvoiceSource {
     case message(MessageId)
     case slug(String)
-    case premiumGiftCode(peerIds: [EnginePeer.Id], boostPeer: EnginePeer.Id?, quantity: Int32, option: PremiumGiftCodeOption)
+    case premiumGiveaway(boostPeer: EnginePeer.Id, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32, currency: String, amount: Int64, option: PremiumGiftCodeOption)
 }
 
 
@@ -214,23 +214,30 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
         return .inputInvoiceMessage(peer: inputPeer, msgId: messageId.id)
     case let .slug(slug):
         return .inputInvoiceSlug(slug: slug)
-    case let .premiumGiftCode(peerIds, boostPeerId, quantity, option):
+    case let .premiumGiveaway(boostPeerId, additionalPeerIds, countries, onlyNewSubscribers, randomId, untilDate, currency, amount, option):
         
+        guard let peer = transaction.getPeer(boostPeerId), let apiBoostPeer = apiInputPeer(peer) else {
+            return nil
+        }
         var flags: Int32 = 0
-        var apiBoostPeer: Api.InputPeer?
         var apiInputUsers: [Api.InputUser] = []
         
-        for peerId in peerIds {
-            if let user = transaction.getPeer(peerId), let apiUser = apiInputUser(user) {
-                apiInputUsers.append(apiUser)
-            }
-        }
-        
-        if let boostPeerId = boostPeerId, let boostPeer = transaction.getPeer(boostPeerId), let apiPeer = apiInputPeer(boostPeer) {
-            apiBoostPeer = apiPeer
+        if onlyNewSubscribers {
             flags |= (1 << 0)
         }
-        let input: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiftCode(flags: flags, users: apiInputUsers, boostPeer: apiBoostPeer, currency: option.currency, amount: option.amount)
+        var additionalPeers: [Api.InputPeer] = []
+        if !additionalPeerIds.isEmpty {
+            flags |= (1 << 1)
+            for peerId in additionalPeerIds {
+                if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
+                    additionalPeers.append(inputPeer)
+                }
+            }
+        }
+        if !countries.isEmpty {
+            flags |= (1 << 2)
+        }
+        let input: Api.InputStorePaymentPurpose = .inputStorePaymentPremiumGiveaway(flags: flags, boostPeer: apiBoostPeer, additionalPeers: additionalPeers, countriesIso2: countries, randomId: randomId, untilDate: untilDate, currency: currency, amount: amount)
 
         flags = 0
         
@@ -241,7 +248,7 @@ private func _internal_parseInputInvoice(transaction: Transaction, source: BotPa
             flags |= (1 << 1)
         }
         
-        let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: quantity, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
+        let option: Api.PremiumGiftCodeOption = .premiumGiftCodeOption(flags: flags, users: option.users, months: option.months, storeProduct: option.storeProductId, storeQuantity: option.storeQuantity, currency: option.currency, amount: option.amount)
         
         return .inputInvoicePremiumGiftCode(purpose: input, option: option)
     }
@@ -522,8 +529,12 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     }
                                                 }
                                             }
-                                        case let .premiumGiftCode(peerIds, boostPeer, quantity, option):
-                                            receiptMessageId = nil
+                                        case let .premiumGiveaway(_, _, _, _, randomId, _, _, _, _):
+                                            if message.globallyUniqueId == randomId {
+                                                if case let .Id(id) = message.id {
+                                                    receiptMessageId = id
+                                                }
+                                            }
                                         }
                                     }
                                 }
