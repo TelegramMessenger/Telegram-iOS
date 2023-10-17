@@ -528,32 +528,21 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     var media: [Media] = []
                     if case let .Loaded(content) = options.webpage.content {
-                        var displayOptions: TelegramMediaWebpageDisplayOptions = .default
-                        
-                        if options.linkBelowText {
-                            displayOptions.position = .belowText
-                        } else {
-                            displayOptions.position = .aboveText
-                        }
-                        
-                        if options.largeMedia {
-                            displayOptions.largeMedia = true
-                        } else {
-                            displayOptions.largeMedia = false
-                        }
-                        
-                        media.append(TelegramMediaWebpage(webpageId: options.webpage.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
+                        media.append(TelegramMediaWebpage(webpageId: options.webpage.webpageId, content: .Loaded(content)))
                     }
                     
                     var attributes: [MessageAttribute] = []
+                    
                     attributes.append(TextEntitiesMessageAttribute(entities: options.messageEntities))
+                    
+                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !options.linkBelowText, forceLargeMedia: options.largeMedia, isManuallyAdded: true))
                     
                     if let replyMessage {
                         associatedMessages[replyMessage.id] = replyMessage
                         
                         var mappedQuote: EngineMessageReplyQuote?
                         if let quote = options.replyQuote {
-                            mappedQuote = EngineMessageReplyQuote(text: quote, entities: [])
+                            mappedQuote = EngineMessageReplyQuote(text: quote, entities: [], media: nil)
                         }
                         
                         attributes.append(ReplyMessageAttribute(messageId: replyMessage.id, threadMessageId: nil, quote: mappedQuote))
@@ -3411,10 +3400,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
                             var webpage: TelegramMediaWebpage?
-                            if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
-                                attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
-                            } else {
-                                webpage = self.chatPresentationInterfaceState.urlPreview?.1
+                            if let urlPreview = self.chatPresentationInterfaceState.urlPreview {
+                                if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreviews.contains(urlPreview.url) {
+                                    attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
+                                } else {
+                                    webpage = urlPreview.webPage
+                                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true))
+                                }
                             }
                             
                             var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
@@ -3488,7 +3480,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             strongSelf.ignoreUpdateHeight = true
                             textInputPanelNode.text = ""
-                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreview(nil) })
+                            strongSelf.requestUpdateChatInterfaceState(.immediate, true, { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeDisableUrlPreviews([]) })
                             strongSelf.ignoreUpdateHeight = false
                         }
                     }, usedCorrelationId)

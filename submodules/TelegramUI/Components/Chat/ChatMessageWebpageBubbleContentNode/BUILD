@@ -28,6 +28,7 @@ swift_library(
         "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
         "//submodules/TelegramUI/Components/Chat/ChatMessageInteractiveMediaNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageAttachedContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatHistoryEntry",
     ],
     visibility = [
         "//visibility:public",

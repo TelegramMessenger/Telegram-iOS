@@ -56,6 +56,14 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
         return []
     }
     
+    public var associatedPeerIds: [PeerId] {
+        if let peerId = self.peerId {
+            return [peerId]
+        } else {
+            return []
+        }
+    }
+    
     public init(peerId: PeerId?, authorName: String?, quote: EngineMessageReplyQuote?) {
         self.peerId = peerId
         self.authorName = authorName

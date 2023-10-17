@@ -427,7 +427,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed)
+                return .url(url: url, concealed: concealed, activate: nil)
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -454,8 +454,8 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                             switch tapAction {
                                 case .none, .ignore:
                                     break
-                                case let .url(url, concealed):
-                                    self.item?.controllerInteraction.openUrl(url, concealed, nil, nil)
+                                case let .url(url, concealed, activate):
+                                    self.item?.controllerInteraction.openUrl(url, concealed, nil, nil, activate?())
                                 case let .peerMention(peerId, _, _):
                                     if let item = self.item {
                                         let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
@@ -480,7 +480,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                                 switch tapAction {
                                     case .none, .ignore:
                                         break
-                                    case let .url(url, _):
+                                    case let .url(url, _, _):
                                         item.controllerInteraction.longTap(.url(url), nil)
                                     case let .peerMention(peerId, mention, _):
                                         item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)

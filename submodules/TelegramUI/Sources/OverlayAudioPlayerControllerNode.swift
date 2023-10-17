@@ -81,7 +81,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
-        }, navigateToMessage: { _, _ in
+        }, navigateToMessage: { _, _, _ in
         }, navigateToMessageStandalone: { _ in
         }, navigateToThreadMessage: { _, _, _ in
         }, tapMessage: nil, clickThroughMessage: {
@@ -98,7 +98,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _, _ in
-        }, openUrl: { _, _, _, _ in
+        }, openUrl: { _, _, _, _, _ in
         }, shareCurrentLocation: {
         }, shareAccountContact: {
         }, sendBotCommand: { _, _ in

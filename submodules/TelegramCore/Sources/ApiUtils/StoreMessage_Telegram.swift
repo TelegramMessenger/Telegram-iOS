@@ -261,8 +261,9 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                 let peerId: PeerId = chatPeerId.peerId
                 
                 switch replyTo {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                     let _ = replyHeader
+                    let _ = replyMedia
                     let _ = replyToTopId
                     let _ = quoteText
                     let _ = quoteEntities
@@ -282,8 +283,9 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
         case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                     let _ = replyHeader
+                    let _ = replyMedia
                     let _ = replyToTopId
                     let _ = quoteText
                     let _ = quoteEntities
@@ -302,48 +304,63 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
     return nil
 }
 
-func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId: PeerId) -> (Media?, Int32?, Bool?, Bool?) {
+struct ParsedMessageWebpageAttributes {
+    var forceLargeMedia: Bool?
+    var isManuallyAdded: Bool
+}
+
+func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId: PeerId) -> (media: Media?, expirationTimer: Int32?, nonPremium: Bool?, hasSpoiler: Bool?, webpageAttributes: ParsedMessageWebpageAttributes?) {
     if let media = media {
         switch media {
         case let .messageMediaPhoto(flags, photo, ttlSeconds):
             if let photo = photo {
                 if let mediaImage = telegramMediaImageFromApiPhoto(photo) {
-                    return (mediaImage, ttlSeconds, nil, (flags & (1 << 3)) != 0)
+                    return (mediaImage, ttlSeconds, nil, (flags & (1 << 3)) != 0, nil)
                 }
             } else {
-                return (TelegramMediaExpiredContent(data: .image), nil, nil, nil)
+                return (TelegramMediaExpiredContent(data: .image), nil, nil, nil, nil)
             }
         case let .messageMediaContact(phoneNumber, firstName, lastName, vcard, userId):
             let contactPeerId: PeerId? = userId == 0 ? nil : PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
             let mediaContact = TelegramMediaContact(firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, peerId: contactPeerId, vCardData: vcard.isEmpty ? nil : vcard)
-            return (mediaContact, nil, nil, nil)
+            return (mediaContact, nil, nil, nil, nil)
         case let .messageMediaGeo(geo):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
-            return (mediaMap, nil, nil, nil)
+            return (mediaMap, nil, nil, nil, nil)
         case let .messageMediaVenue(geo, title, address, provider, venueId, venueType):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: title, address: address, provider: provider, venueId: venueId, venueType: venueType, liveBroadcastingTimeout: nil, liveProximityNotificationRadius: nil, heading: nil)
-            return (mediaMap, nil, nil, nil)
+            return (mediaMap, nil, nil, nil, nil)
         case let .messageMediaGeoLive(_, geo, heading, period, proximityNotificationRadius):
             let mediaMap = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
-            return (mediaMap, nil, nil, nil)
+            return (mediaMap, nil, nil, nil, nil)
         case let .messageMediaDocument(flags, document, _, ttlSeconds):
             if let document = document {
                 if let mediaFile = telegramMediaFileFromApiDocument(document) {
-                    return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0)
+                    return (mediaFile, ttlSeconds, (flags & (1 << 3)) != 0, (flags & (1 << 4)) != 0, nil)
                 }
             } else {
-                return (TelegramMediaExpiredContent(data: .file), nil, nil, nil)
+                return (TelegramMediaExpiredContent(data: .file), nil, nil, nil, nil)
             }
-        case let .messageMediaWebPage(_, webpage):
+        case let .messageMediaWebPage(flags, webpage):
             if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage, url: nil) {
-                return (mediaWebpage, nil, nil, nil)
+                var webpageForceLargeMedia: Bool?
+                if (flags & (1 << 0)) != 0 {
+                    webpageForceLargeMedia = true
+                } else if (flags & (1 << 1)) != 0 {
+                    webpageForceLargeMedia = false
+                }
+                
+                return (mediaWebpage, nil, nil, nil, ParsedMessageWebpageAttributes(
+                    forceLargeMedia: webpageForceLargeMedia,
+                    isManuallyAdded: (flags & (1 << 3)) != 0
+                ))
             }
         case .messageMediaUnsupported:
-            return (TelegramMediaUnsupported(), nil, nil, nil)
+            return (TelegramMediaUnsupported(), nil, nil, nil, nil)
         case .messageMediaEmpty:
             break
         case let .messageMediaGame(game):
-            return (TelegramMediaGame(apiGame: game), nil, nil, nil)
+            return (TelegramMediaGame(apiGame: game), nil, nil, nil, nil)
         case let .messageMediaInvoice(flags, title, description, photo, receiptMsgId, currency, totalAmount, startParam, apiExtendedMedia):
             var parsedFlags = TelegramMediaInvoiceFlags()
             if (flags & (1 << 3)) != 0 {
@@ -367,7 +384,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                         }
                         extendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
                     case let .messageExtendedMedia(apiMedia):
-                        let (media, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, peerId)
+                        let (media, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, peerId)
                         if let media = media {
                             extendedMedia = .full(media: media)
                         } else {
@@ -378,7 +395,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 extendedMedia = nil
             }
             
-            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, extendedMedia: extendedMedia, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), nil, nil, nil)
+            return (TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: receiptMsgId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }, currency: currency, totalAmount: totalAmount, startParam: startParam, extendedMedia: extendedMedia, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), nil, nil, nil, nil)
         case let .messageMediaPoll(poll, results):
             switch poll {
             case let .poll(id, flags, question, answers, closePeriod, _):
@@ -394,23 +411,23 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 } else {
                     kind = .poll(multipleAnswers: (flags & (1 << 2)) != 0)
                 }
-                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod), nil, nil, nil)
+                return (TelegramMediaPoll(pollId: MediaId(namespace: Namespaces.Media.CloudPoll, id: id), publicity: publicity, kind: kind, text: question, options: answers.map(TelegramMediaPollOption.init(apiOption:)), correctAnswers: nil, results: TelegramMediaPollResults(apiResults: results), isClosed: (flags & (1 << 0)) != 0, deadlineTimeout: closePeriod), nil, nil, nil, nil)
             }
         case let .messageMediaDice(value, emoticon):
-            return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil)
+            return (TelegramMediaDice(emoji: emoticon, value: value), nil, nil, nil, nil)
         case let .messageMediaStory(flags, peerId, id, _):
             let isMention = (flags & (1 << 1)) != 0
-            return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil)
+            return (TelegramMediaStory(storyId: StoryId(peerId: peerId.peerId, id: id), isMention: isMention), nil, nil, nil, nil)
         case let .messageMediaGiveaway(apiFlags, channels, countries, quantity, months, untilDate):
             var flags: TelegramMediaGiveaway.Flags = []
             if (apiFlags & (1 << 0)) != 0 {
                 flags.insert(.onlyNewSubscribers)
             }
-            return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil)
+            return (TelegramMediaGiveaway(flags: flags, channelPeerIds: channels.map { PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value($0)) }, countries: countries ?? [], quantity: quantity, months: months, untilDate: untilDate), nil, nil, nil, nil)
         }
     }
     
-    return (nil, nil, nil, nil)
+    return (nil, nil, nil, nil, nil)
 }
 
 func mediaAreaFromApiMediaArea(_ mediaArea: Api.MediaArea) -> MediaArea? {
@@ -567,12 +584,12 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                         let isForumTopic = (flags & (1 << 3)) != 0
                         
                         var quote: EngineMessageReplyQuote?
-                        if let quoteText = quoteText {
-                            quote = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []))
+                        if quoteText != nil || replyMedia != nil {
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
                         
                         if let replyToMsgId = replyToMsgId {
@@ -669,7 +686,7 @@ extension StoreMessage {
                 var consumableContent: (Bool, Bool)? = nil
                 
                 if let media = media {
-                    let (mediaValue, expirationTimer, nonPremium, hasSpoiler) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                    let (mediaValue, expirationTimer, nonPremium, hasSpoiler, webpageAttributes) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                     if let mediaValue = mediaValue {
                         medias.append(mediaValue)
                     
@@ -684,6 +701,14 @@ extension StoreMessage {
                         
                         if let hasSpoiler = hasSpoiler, hasSpoiler {
                             attributes.append(MediaSpoilerMessageAttribute())
+                        }
+                        
+                        if mediaValue is TelegramMediaWebpage {
+                            let leadingPreview = (flags & (1 << 27)) != 0
+                            
+                            if let webpageAttributes {
+                                attributes.append(WebpagePreviewMessageAttribute(leadingPreview: leadingPreview, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded))
+                            }
                         }
                     }
                 }
@@ -841,10 +866,10 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                         var quote: EngineMessageReplyQuote?
-                        if let quoteText = quoteText {
-                            quote = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []))
+                        if quoteText != nil || replyMedia != nil {
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
                         
                         if let replyToMsgId = replyToMsgId {

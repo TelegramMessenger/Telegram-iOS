@@ -20,13 +20,11 @@ import MultiAnimationRenderer
 
 public struct ChatInterfaceHighlightedState: Equatable {
     public let messageStableId: UInt32
+    public let quote: String?
     
-    public init(messageStableId: UInt32) {
+    public init(messageStableId: UInt32, quote: String?) {
         self.messageStableId = messageStableId
-    }
-    
-    public static func ==(lhs: ChatInterfaceHighlightedState, rhs: ChatInterfaceHighlightedState) -> Bool {
-        return lhs.messageStableId == rhs.messageStableId
+        self.quote = quote
     }
 }
 
@@ -75,6 +73,16 @@ public protocol ChatMessageTransitionProtocol: ASDisplayNode {
     
 }
 
+public struct NavigateToMessageParams {
+    public var timestamp: Double?
+    public var quote: String?
+    
+    public init(timestamp: Double?, quote: String?) {
+        self.timestamp = timestamp
+        self.quote = quote
+    }
+}
+
 public final class ChatControllerInteraction {
     public enum OpenPeerSource {
         case `default`
@@ -90,7 +98,7 @@ public final class ChatControllerInteraction {
     public let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
     public let activateMessagePinch: (PinchSourceContainerNode) -> Void
     public let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    public let navigateToMessage: (MessageId, MessageId) -> Void
+    public let navigateToMessage: (MessageId, MessageId, NavigateToMessageParams) -> Void
     public let navigateToMessageStandalone: (MessageId) -> Void
     public let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
     public let tapMessage: ((Message) -> Void)?
@@ -105,7 +113,7 @@ public final class ChatControllerInteraction {
     public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
-    public let openUrl: (String, Bool, Bool?, Message?) -> Void
+    public let openUrl: (String, Bool, Bool?, Message?, Promise<Bool>?) -> Void
     public let shareCurrentLocation: () -> Void
     public let shareAccountContact: () -> Void
     public let sendBotCommand: (MessageId?, String) -> Void
@@ -204,7 +212,7 @@ public final class ChatControllerInteraction {
         updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
-        navigateToMessage: @escaping (MessageId, MessageId) -> Void,
+        navigateToMessage: @escaping (MessageId, MessageId, NavigateToMessageParams) -> Void,
         navigateToMessageStandalone: @escaping (MessageId) -> Void,
         navigateToThreadMessage: @escaping (PeerId, Int64, MessageId?) -> Void,
         tapMessage: ((Message) -> Void)?,
@@ -219,7 +227,7 @@ public final class ChatControllerInteraction {
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
-        openUrl: @escaping (String, Bool, Bool?, Message?) -> Void,
+        openUrl: @escaping (String, Bool, Bool?, Message?, Promise<Bool>?) -> Void,
         shareCurrentLocation: @escaping () -> Void,
         shareAccountContact: @escaping () -> Void,
         sendBotCommand: @escaping (MessageId?, String) -> Void,

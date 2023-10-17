@@ -41,6 +41,7 @@ public protocol ContextControllerActionsStackItem: AnyObject {
         requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void
     ) -> ContextControllerActionsStackItemNode
     
+    var id: AnyHashable? { get }
     var tip: ContextController.Tip? { get }
     var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
     var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
@@ -833,6 +834,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         }
     }
     
+    let id: AnyHashable?
     private let items: [ContextMenuItem]
     let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
@@ -840,12 +842,14 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     let dismissed: (() -> Void)?
     
     init(
+        id: AnyHashable?,
         items: [ContextMenuItem],
         reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
     ) {
+        self.id = id
         self.items = items
         self.reactionItems = reactionItems
         self.tip = tip
@@ -928,6 +932,7 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         }
     }
     
+    let id: AnyHashable?
     private let content: ContextControllerItemsContent
     let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
@@ -935,12 +940,14 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     let dismissed: (() -> Void)?
     
     init(
+        id: AnyHashable?,
         content: ContextControllerItemsContent,
         reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
         tip: ContextController.Tip?,
         tipSignal: Signal<ContextController.Tip?, NoError>?,
         dismissed: (() -> Void)?
     ) {
+        self.id = id
         self.content = content
         self.reactionItems = reactionItems
         self.tip = tip
@@ -970,11 +977,11 @@ func makeContextControllerActionsStackItem(items: ContextController.Items) -> [C
     }
     switch items.content {
     case let .list(listItems):
-        return [ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     case let .twoLists(listItems1, listItems2):
-        return [ContextControllerActionsListStackItem(items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: nil)]
+        return [ContextControllerActionsListStackItem(id: items.id, items: listItems1, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: items.dismissed), ContextControllerActionsListStackItem(id: nil, items: listItems2, reactionItems: nil, tip: nil, tipSignal: nil, dismissed: nil)]
     case let .custom(customContent):
-        return [ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
+        return [ContextControllerActionsCustomStackItem(id: items.id, content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal, dismissed: items.dismissed)]
     }
 }
 
@@ -1084,6 +1091,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     final class ItemContainer: ASDisplayNode {
         let getController: () -> ContextControllerProtocol?
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
+        let item: ContextControllerActionsStackItem
         let node: ContextControllerActionsStackItemNode
         let dimNode: ASDisplayNode
         var tip: ContextController.Tip?
@@ -1110,6 +1118,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         ) {
             self.getController = getController
             self.requestUpdate = requestUpdate
+            self.item = item
             self.node = item.node(
                 getController: getController,
                 requestDismiss: requestDismiss,
@@ -1316,9 +1325,20 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
     }
     
-    func replace(item: ContextControllerActionsStackItem, animated: Bool) {
+    func replace(item: ContextControllerActionsStackItem, animated: Bool?) {
+        var resolvedAnimated = false
+        if let animated {
+            resolvedAnimated = animated
+        } else {
+            if let id = item.id, let lastId = self.itemContainers.last?.item.id {
+                if id != lastId {
+                    resolvedAnimated = true
+                }
+            }
+        }
+        
         for itemContainer in self.itemContainers {
-            if animated {
+            if resolvedAnimated {
                 self.dismissingItemContainers.append((itemContainer, false))
             } else {
                 itemContainer.tipNode?.removeFromSupernode()
@@ -1328,7 +1348,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         self.itemContainers.removeAll()
         self.navigationContainer.isNavigationEnabled = self.itemContainers.count > 1
         
-        self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: animated)
+        self.push(item: item, currentScrollingState: nil, positionLock: nil, animated: resolvedAnimated)
     }
     
     func push(item: ContextControllerActionsStackItem, currentScrollingState: CGFloat?, positionLock: CGFloat?, animated: Bool) {

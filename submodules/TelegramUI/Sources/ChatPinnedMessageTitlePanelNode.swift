@@ -858,7 +858,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         if url.hasPrefix("tg://") {
                             isConcealed = false
                         }
-                        controllerInteraction.openUrl(url, isConcealed, nil, nil)
+                        controllerInteraction.openUrl(url, isConcealed, nil, nil, nil)
                     case .requestMap:
                         controllerInteraction.shareCurrentLocation()
                     case .requestPhone:

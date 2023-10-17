@@ -339,7 +339,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                     return
                 }
                 
-                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities))).withoutSelectionState() }) })
+                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities, media: nil))).withoutSelectionState() }) })
                 
                 f(.default)
             })))
@@ -381,7 +381,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                                     return
                                 }
                                 
-                                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities))).withoutSelectionState() }) })
+                                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities, media: nil))).withoutSelectionState() }) })
                                 
                                 f(.default)
                             })))
@@ -603,7 +603,15 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
     guard let peerId = selfController.chatLocation.peerId else {
         return nil
     }
-    guard let initialUrlPreview = selfController.presentationInterfaceState.urlPreview else {
+    
+    let initialUrlPreview: ChatPresentationInterfaceState.UrlPreview?
+    if selfController.presentationInterfaceState.interfaceState.editMessage != nil {
+        initialUrlPreview = selfController.presentationInterfaceState.editingUrlPreview
+    } else {
+        initialUrlPreview = selfController.presentationInterfaceState.urlPreview
+    }
+    
+    guard let initialUrlPreview else {
         return nil
     }
     
@@ -612,23 +620,53 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         replySelectionState.get()
     )
     |> map { state, replySelectionState -> ChatControllerSubject.LinkOptions in
-        let urlPreview = state.urlPreview ?? initialUrlPreview
+        let urlPreview: ChatPresentationInterfaceState.UrlPreview
+        if state.interfaceState.editMessage != nil {
+            urlPreview = state.editingUrlPreview ?? initialUrlPreview
+        } else {
+            urlPreview = state.urlPreview ?? initialUrlPreview
+        }
         
-        var webpageOptions: TelegramMediaWebpageDisplayOptions = .default
+        var webpageHasLargeMedia = false
+        if case let .Loaded(content) = urlPreview.webPage.content {
+            if let isMediaLargeByDefault = content.isMediaLargeByDefault {
+                if isMediaLargeByDefault {
+                    webpageHasLargeMedia = true
+                }
+            } else {
+                webpageHasLargeMedia = true
+            }
+        }
         
-        if let (_, webpage) = state.urlPreview, case let .Loaded(content) = webpage.content {
-            webpageOptions = content.displayOptions
+        let composeInputText: NSAttributedString = state.interfaceState.effectiveInputState.inputText
+        
+        var replyMessageId: EngineMessage.Id?
+        var replyQuote: String?
+        
+        if state.interfaceState.editMessage == nil {
+            replyMessageId = state.interfaceState.replyMessageSubject?.messageId
+            replyQuote = replySelectionState.quote?.text
+        }
+        
+        let inputText = chatInputStateStringWithAppliedEntities(composeInputText.string, entities: generateChatInputTextEntities(composeInputText, generateLinks: false))
+        
+        var largeMedia = false
+        if webpageHasLargeMedia {
+            largeMedia = urlPreview.largeMedia ?? true
+        } else {
+            largeMedia = false
         }
         
         return ChatControllerSubject.LinkOptions(
-            messageText: state.interfaceState.composeInputState.inputText.string,
-            messageEntities: generateChatInputTextEntities(state.interfaceState.composeInputState.inputText, generateLinks: true),
-            replyMessageId: state.interfaceState.replyMessageSubject?.messageId,
-            replyQuote: replySelectionState.quote?.text,
-            url: urlPreview.0,
-            webpage: urlPreview.1,
-            linkBelowText: webpageOptions.position != .aboveText,
-            largeMedia: webpageOptions.largeMedia != false
+            messageText: composeInputText.string,
+            messageEntities: generateChatInputTextEntities(composeInputText, generateLinks: true),
+            hasAlternativeLinks: detectUrls(inputText).count > 1,
+            replyMessageId: replyMessageId,
+            replyQuote: replyQuote,
+            url: urlPreview.url,
+            webpage: urlPreview.webPage,
+            linkBelowText: urlPreview.positionBelowText,
+            largeMedia: largeMedia
         )
     }
     |> distinctUntilChanged
@@ -640,9 +678,9 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
     
     let items = linkOptions
     |> deliverOnMainQueue
-    |> map { [weak selfController] linkOptions -> [ContextMenuItem] in
+    |> map { [weak selfController] linkOptions -> ContextController.Items in
         guard let selfController else {
-            return []
+            return ContextController.Items(id: AnyHashable(linkOptions.url), content: .list([]))
         }
         var items: [ContextMenuItem] = []
         
@@ -657,15 +695,19 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                 }
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    guard var urlPreview = state.urlPreview else {
-                        return state
+                    if state.interfaceState.editMessage != nil {
+                        guard var urlPreview = state.editingUrlPreview else {
+                            return state
+                        }
+                        urlPreview.positionBelowText = false
+                        return state.updatedEditingUrlPreview(urlPreview)
+                    } else {
+                        guard var urlPreview = state.urlPreview else {
+                            return state
+                        }
+                        urlPreview.positionBelowText = false
+                        return state.updatedUrlPreview(urlPreview)
                     }
-                    if case let .Loaded(content) = urlPreview.1.content {
-                        var displayOptions = content.displayOptions
-                        displayOptions.position = .aboveText
-                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
-                    }
-                    return state.updatedUrlPreview(urlPreview)
                 })
             })))
             
@@ -677,20 +719,24 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                 }
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    guard var urlPreview = state.urlPreview else {
-                        return state
+                    if state.interfaceState.editMessage != nil {
+                        guard var urlPreview = state.editingUrlPreview else {
+                            return state
+                        }
+                        urlPreview.positionBelowText = true
+                        return state.updatedEditingUrlPreview(urlPreview)
+                    } else {
+                        guard var urlPreview = state.urlPreview else {
+                            return state
+                        }
+                        urlPreview.positionBelowText = true
+                        return state.updatedUrlPreview(urlPreview)
                     }
-                    if case let .Loaded(content) = urlPreview.1.content {
-                        var displayOptions = content.displayOptions
-                        displayOptions.position = .belowText
-                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
-                    }
-                    return state.updatedUrlPreview(urlPreview)
                 })
             })))
         }
         
-        if "".isEmpty {
+        if case let .Loaded(content) = linkOptions.webpage.content, let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
             if !items.isEmpty {
                 items.append(.separator)
             }
@@ -705,15 +751,19 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                 }
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    guard var urlPreview = state.urlPreview else {
-                        return state
+                    if state.interfaceState.editMessage != nil {
+                        guard var urlPreview = state.editingUrlPreview else {
+                            return state
+                        }
+                        urlPreview.largeMedia = false
+                        return state.updatedEditingUrlPreview(urlPreview)
+                    } else {
+                        guard var urlPreview = state.urlPreview else {
+                            return state
+                        }
+                        urlPreview.largeMedia = false
+                        return state.updatedUrlPreview(urlPreview)
                     }
-                    if case let .Loaded(content) = urlPreview.1.content {
-                        var displayOptions = content.displayOptions
-                        displayOptions.largeMedia = false
-                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
-                    }
-                    return state.updatedUrlPreview(urlPreview)
                 })
             })))
             
@@ -725,15 +775,19 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                 }
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    guard var urlPreview = state.urlPreview else {
-                        return state
+                    if state.interfaceState.editMessage != nil {
+                        guard var urlPreview = state.editingUrlPreview else {
+                            return state
+                        }
+                        urlPreview.largeMedia = true
+                        return state.updatedEditingUrlPreview(urlPreview)
+                    } else {
+                        guard var urlPreview = state.urlPreview else {
+                            return state
+                        }
+                        urlPreview.largeMedia = true
+                        return state.updatedUrlPreview(urlPreview)
                     }
-                    if case let .Loaded(content) = urlPreview.1.content {
-                        var displayOptions = content.displayOptions
-                        displayOptions.largeMedia = true
-                        urlPreview = (urlPreview.0, TelegramMediaWebpage(webpageId: urlPreview.1.webpageId, content: .Loaded(content.withDisplayOptions(displayOptions))))
-                    }
-                    return state.updatedUrlPreview(urlPreview)
                 })
             })))
         }
@@ -755,32 +809,44 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
             f(.default)
         })))
         
-        return items
+        return ContextController.Items(id: AnyHashable(linkOptions.url), content: .list(items))
     }
     
-    chatController.performOpenURL = { [weak selfController] message, url in
+    chatController.performOpenURL = { [weak selfController] message, url, progress in
         guard let selfController else {
             return
         }
         
-        //TODO:
-        //func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
         if let (updatedUrlPreviewUrl, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewUrl {
+            progress?.set(.single(true))
             let _ = (signal
+            |> afterDisposed {
+                progress?.set(.single(false))
+            }
             |> deliverOnMainQueue).start(next: { [weak selfController] result in
                 guard let selfController else {
                     return
                 }
                 
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
-                    if let webpage = result(nil), var urlPreview = state.urlPreview {
-                        if case let .Loaded(content) = urlPreview.1.content, case let .Loaded(newContent) = webpage.content {
-                            urlPreview = (updatedUrlPreviewUrl, TelegramMediaWebpage(webpageId: webpage.webpageId, content: .Loaded(newContent.withDisplayOptions(content.displayOptions))))
+                    if state.interfaceState.editMessage != nil {
+                        if let webpage = result(nil), var urlPreview = state.editingUrlPreview {
+                            urlPreview.url = updatedUrlPreviewUrl
+                            urlPreview.webPage = webpage
+                            
+                            return state.updatedEditingUrlPreview(urlPreview)
+                        } else {
+                            return state
                         }
-                        
-                        return state.updatedUrlPreview(urlPreview)
                     } else {
-                        return state
+                        if let webpage = result(nil), var urlPreview = state.urlPreview {
+                            urlPreview.url = updatedUrlPreviewUrl
+                            urlPreview.webPage = webpage
+                            
+                            return state.updatedUrlPreview(urlPreview)
+                        } else {
+                            return state
+                        }
                     }
                 })
             })
@@ -792,7 +858,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         id: AnyHashable(OptionsId.link),
         title: "Link",
         source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
-        items: items |> map { ContextController.Items(content: .list($0)) }
+        items: items
     )
 }
 

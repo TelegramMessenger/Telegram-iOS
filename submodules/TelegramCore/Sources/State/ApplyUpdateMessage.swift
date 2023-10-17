@@ -157,7 +157,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 text = updatedMessage.text
                 forwardInfo = updatedMessage.forwardInfo
             } else if case let .updateShortSentMessage(_, _, _, _, _, apiMedia, entities, ttlPeriod) = result {
-                let (mediaValue, _, nonPremium, hasSpoiler) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
+                let (mediaValue, _, nonPremium, hasSpoiler, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                 if let mediaValue = mediaValue {
                     media = [mediaValue]
                 } else {

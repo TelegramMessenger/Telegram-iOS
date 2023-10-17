@@ -10,12 +10,64 @@ public enum EnqueueMessageGrouping {
 }
 
 public struct EngineMessageReplyQuote: Codable, Equatable {
+    private enum CodingKeys: String, CodingKey {
+        case text = "t"
+        case entities = "e"
+        case media = "m"
+    }
+    
     public var text: String
     public var entities: [MessageTextEntity]
+    public var media: Media?
     
-    public init(text: String, entities: [MessageTextEntity]) {
+    public init(text: String, entities: [MessageTextEntity], media: Media?) {
         self.text = text
         self.entities = entities
+        self.media = media
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.text = try container.decode(String.self, forKey: .text)
+        self.entities = try container.decode([MessageTextEntity].self, forKey: .entities)
+        
+        if let mediaData = try container.decodeIfPresent(Data.self, forKey: .media) {
+            self.media = PostboxDecoder(buffer: MemoryBuffer(data: mediaData)).decodeRootObject() as? Media
+        } else {
+            self.media = nil
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.text, forKey: .text)
+        try container.encode(self.entities, forKey: .entities)
+        if let media = self.media {
+            let mediaEncoder = PostboxEncoder()
+            mediaEncoder.encodeRootObject(media)
+            try container.encode(mediaEncoder.makeData(), forKey: .media)
+        }
+    }
+    
+    public static func ==(lhs: EngineMessageReplyQuote, rhs: EngineMessageReplyQuote) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.entities != rhs.entities {
+            return false
+        }
+        if let lhsMedia = lhs.media, let rhsMedia = rhs.media {
+            if !lhsMedia.isEqual(to: rhsMedia) {
+                return false
+            }
+        } else {
+            if (lhs.media == nil) != (rhs.media == nil) {
+                return false
+            }
+        }
+        return true
     }
 }
 
@@ -165,6 +217,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
             case _ as SendAsMessageAttribute:
                 return true
             case _ as MediaSpoilerMessageAttribute:
+                return true
+            case _ as WebpagePreviewMessageAttribute:
                 return true
             default:
                 return false
@@ -510,7 +564,16 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             threadMessageId = replyMessage.effectiveReplyThreadMessageId
                             if quote == nil, replyToMessageId.messageId.peerId != peerId {
                                 let nsText = replyMessage.text as NSString
-                                quote = EngineMessageReplyQuote(text: replyMessage.text, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true))
+                                var replyMedia: Media?
+                                for m in replyMessage.media {
+                                    switch m {
+                                    case _ as TelegramMediaImage, _ as TelegramMediaFile:
+                                        replyMedia = m
+                                    default:
+                                        break
+                                    }
+                                }
+                                quote = EngineMessageReplyQuote(text: replyMessage.text, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
                             }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote))

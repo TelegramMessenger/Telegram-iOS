@@ -28,14 +28,14 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
     }
     
     if let editMessage = chatPresentationInterfaceState.interfaceState.editMessage {
-        if let editingUrlPreview = chatPresentationInterfaceState.editingUrlPreview, editMessage.disableUrlPreview != editingUrlPreview.0 {
+        if let editingUrlPreview = chatPresentationInterfaceState.editingUrlPreview, !editMessage.disableUrlPreviews.contains(editingUrlPreview.url) {
             if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode {
                 previewPanelNode.interfaceInteraction = interfaceInteraction
-                previewPanelNode.replaceWebpage(url: editingUrlPreview.0, webpage: editingUrlPreview.1)
+                previewPanelNode.replaceWebpage(url: editingUrlPreview.url, webpage: editingUrlPreview.webPage)
                 previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 return previewPanelNode
             } else {
-                let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: editingUrlPreview.0, webpage: editingUrlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+                let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: editingUrlPreview.url, webpage: editingUrlPreview.webPage, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
                 panelNode.interfaceInteraction = interfaceInteraction
                 return panelNode
             }
@@ -50,14 +50,14 @@ func accessoryPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceS
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }
-    } else if let urlPreview = chatPresentationInterfaceState.urlPreview, chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != urlPreview.0 {
+    } else if let urlPreview = chatPresentationInterfaceState.urlPreview, !chatPresentationInterfaceState.interfaceState.composeDisableUrlPreviews.contains(urlPreview.url) {
         if let previewPanelNode = currentPanel as? WebpagePreviewAccessoryPanelNode {
             previewPanelNode.interfaceInteraction = interfaceInteraction
-            previewPanelNode.replaceWebpage(url: urlPreview.0, webpage: urlPreview.1)
+            previewPanelNode.replaceWebpage(url: urlPreview.url, webpage: urlPreview.webPage)
             previewPanelNode.updateThemeAndStrings(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             return previewPanelNode
         } else {
-            let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: urlPreview.0, webpage: urlPreview.1, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
+            let panelNode = WebpagePreviewAccessoryPanelNode(context: context, url: urlPreview.url, webpage: urlPreview.webPage, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panelNode.interfaceInteraction = interfaceInteraction
             return panelNode
         }

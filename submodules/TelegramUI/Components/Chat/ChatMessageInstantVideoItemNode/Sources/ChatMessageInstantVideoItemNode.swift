@@ -960,7 +960,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             return .optionalAction({
-                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
                             })
                         }
                     }
@@ -979,7 +979,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                                     return
                                 }
                             }
-                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId, NavigateToMessageParams(timestamp: nil, quote: nil))
                         } else if let peer = forwardInfo.source ?? forwardInfo.author {
                             item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                         } else if let _ = forwardInfo.authorSignature {
@@ -1026,7 +1026,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
             } else if item.content.firstMessage.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.content.firstMessage.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
-                        item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId)
+                        item.controllerInteraction.navigateToMessage(item.content.firstMessage.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
                         break
                     }
                 }

@@ -3665,13 +3665,26 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         return nil
     }
     
+    var suggestedActionCounter: Int = 0
+    
     @available(iOS 13.0, *)
     func chatInputTextNodeMenu(forTextRange textRange: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu {
         guard let editableTextNode = self.textInputNode else {
             return UIMenu(children: [])
         }
         
+        /*if "".isEmpty {
+            let index = self.suggestedActionCounter % suggestedActions.count
+            self.suggestedActionCounter += 1
+            print("action index: \(index)")
+            return UIMenu(children: [suggestedActions[index]])
+        }*/
+        
         var actions = suggestedActions
+        
+        if let index = actions.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.replace;") }) {
+            actions.remove(at: index)
+        }
         
         if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
             
@@ -3732,7 +3745,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             ] as [UIAction])
             
             let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
-            actions.insert(formatMenu, at: 2)
+            if let index = actions.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.format;") }) {
+                actions[index] = formatMenu
+            } else {
+                actions.insert(formatMenu, at: 2)
+            }
         }
         return UIMenu(children: actions)
     }

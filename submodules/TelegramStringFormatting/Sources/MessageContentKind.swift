@@ -356,6 +356,12 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         return .story
     case .giveaway:
         return .giveaway
+    case let .webpage(webpage):
+        if let message, message.text.isEmpty, case let .Loaded(content) = webpage.content {
+            return .text(NSAttributedString(string: content.displayUrl))
+        } else {
+            return nil
+        }
     default:
         return nil
     }

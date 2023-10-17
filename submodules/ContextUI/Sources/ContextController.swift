@@ -2226,6 +2226,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             case custom(ContextControllerItemsContent)
         }
         
+        public var id: AnyHashable?
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
@@ -2238,6 +2239,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var dismissed: (() -> Void)?
 
         public init(
+            id: AnyHashable? = nil,
             content: Content,
             context: AccountContext? = nil,
             reactionItems: [ReactionContextItem] = [],
@@ -2249,6 +2251,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             tipSignal: Signal<Tip?, NoError>? = nil,
             dismissed: (() -> Void)? = nil
         ) {
+            self.id = id
             self.content = content
             self.context = context
             self.animationCache = animationCache
@@ -2262,6 +2265,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
 
         public init() {
+            self.id = nil
             self.content = .list([])
             self.context = nil
             self.reactionItems = []

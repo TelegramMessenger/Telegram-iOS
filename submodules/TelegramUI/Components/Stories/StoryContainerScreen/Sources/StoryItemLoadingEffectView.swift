@@ -74,25 +74,6 @@ final class StoryItemLoadingEffectView: UIView {
                     
                     UIGraphicsPopContext()
                 }
-                
-                /*
-                let numColors = 7
-                var locations: [CGFloat] = []
-                var colors: [CGColor] = []
-                for i in 0 ..< numColors {
-                    let position: CGFloat = CGFloat(i) / CGFloat(numColors - 1)
-                    locations.append(position)
-                    
-                    let distanceFromCenterFraction: CGFloat = max(0.0, min(1.0, abs(position - 0.5) / 0.5))
-                    let colorAlpha = sin((1.0 - distanceFromCenterFraction) * CGFloat.pi * 0.5)
-                    
-                    colors.append(foregroundColor.withMultipliedAlpha(colorAlpha).cgColor)
-                }
-                
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-                
-                context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.0), options: CGGradientDrawingOptions())*/
             })
         }
         self.backgroundView.image = generateGradient(effectAlpha)
@@ -109,11 +90,6 @@ final class StoryItemLoadingEffectView: UIView {
     }
     
     private func updateAnimations(size: CGSize) {
-        /*if "".isEmpty {
-            self.backgroundView.center = CGPoint(x: size.width * 0.5, y: size.height * 0.5)
-            return
-        }*/
-        
         if self.backgroundView.layer.animation(forKey: "shimmer") != nil || (self.playOnce && self.didPlayOnce) {
             return
         }

@@ -11,6 +11,7 @@ import ChatMessageBackground
 import ChatControllerInteraction
 import ChatHistoryEntry
 import ChatMessageItemCommon
+import SwiftSignalKit
 
 public enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -73,7 +74,10 @@ public enum ChatMessageBubbleMergeStatus {
 public enum ChatMessageBubbleRelativePosition {
     public enum NeighbourType {
         case media
-        case freeform
+        case header
+        case footer
+        case text
+        case reactions
     }
     
     public enum NeighbourSpacing {
@@ -119,7 +123,7 @@ public enum ChatMessageBubblePreparePosition {
 
 public enum ChatMessageBubbleContentTapAction {
     case none
-    case url(url: String, concealed: Bool)
+    case url(url: String, concealed: Bool, activate: (() -> Promise<Bool>?)?)
     case textMention(String)
     case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
     case botCommand(String)

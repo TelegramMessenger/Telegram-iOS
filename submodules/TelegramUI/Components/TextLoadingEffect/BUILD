@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "RichTextView",
-    module_name = "RichTextView",
+    name = "TextLoadingEffect",
+    module_name = "TextLoadingEffect",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -10,6 +10,9 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
+        "//submodules/Display",
+        "//submodules/AppBundle",
+        "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

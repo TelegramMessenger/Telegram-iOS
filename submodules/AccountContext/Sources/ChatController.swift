@@ -531,6 +531,7 @@ public enum ChatControllerSubject: Equatable {
     public struct LinkOptions: Equatable {
         public var messageText: String
         public var messageEntities: [MessageTextEntity]
+        public var hasAlternativeLinks: Bool
         public var replyMessageId: EngineMessage.Id?
         public var replyQuote: String?
         public var url: String
@@ -541,6 +542,7 @@ public enum ChatControllerSubject: Equatable {
         public init(
             messageText: String,
             messageEntities: [MessageTextEntity],
+            hasAlternativeLinks: Bool,
             replyMessageId: EngineMessage.Id?,
             replyQuote: String?,
             url: String,
@@ -550,6 +552,7 @@ public enum ChatControllerSubject: Equatable {
         ) {
             self.messageText = messageText
             self.messageEntities = messageEntities
+            self.hasAlternativeLinks = hasAlternativeLinks
             self.replyMessageId = replyMessageId
             self.replyQuote = replyQuote
             self.url = url

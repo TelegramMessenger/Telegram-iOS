@@ -217,7 +217,9 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                                             ranges.append(text.index(text.startIndex, offsetBy: entity.range.lowerBound) ..< text.index(text.startIndex, offsetBy: entity.range.upperBound))
                                         }
                                         for range in ranges {
-                                            text.removeSubrange(range)
+                                            if range.upperBound < text.endIndex {
+                                                text.removeSubrange(range)
+                                            }
                                         }
                                     }
                                     

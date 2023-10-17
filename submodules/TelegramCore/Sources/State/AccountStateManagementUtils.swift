@@ -1148,9 +1148,15 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         let messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaValue, expirationTimer, nonPremium, hasSpoiler) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                        let (mediaValue, expirationTimer, nonPremium, hasSpoiler, webpageAttributes) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
+                            
+                            if mediaValue is TelegramMediaWebpage {
+                                if let webpageAttributes {
+                                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded))
+                                }
+                            }
                         }
                         if let expirationTimer = expirationTimer {
                             attributes.append(AutoclearTimeoutMessageAttribute(timeout: expirationTimer, countdownBeginTime: nil))
@@ -1532,15 +1538,17 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, _, replyToTopId, quoteText, quoteEntities):
+                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                                 let _ = replyHeader
+                                let _ = replyMedia
                                 let _ = replyToTopId
                                 
                                 var quote: EngineMessageReplyQuote?
                                 if let quoteText = quoteText {
                                     quote = EngineMessageReplyQuote(
                                         text: quoteText,
-                                        entities: messageTextEntitiesFromApiEntities(quoteEntities ?? [])
+                                        entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
+                                        media: textMediaAndExpirationTimerFromApiMedia(replyMedia, accountPeerId).media
                                     )
                                 }
                                 
@@ -4492,7 +4500,7 @@ func replayFinalState(
                             }
                             updatedExtendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
                         case let .messageExtendedMedia(apiMedia):
-                            let (media, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
+                            let (media, _, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                             if let media = media {
                                 updatedExtendedMedia = .full(media: media)
                             } else {

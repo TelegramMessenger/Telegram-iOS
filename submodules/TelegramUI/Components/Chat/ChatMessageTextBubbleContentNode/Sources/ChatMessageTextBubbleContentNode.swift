@@ -24,7 +24,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ShimmeringLinkNode
 import ChatMessageItemCommon
-import RichTextView
+import TextLoadingEffect
 
 private final class CachedChatMessageText {
     let text: String
@@ -72,6 +72,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var linkPreviewOptionsDisposable: Disposable?
     private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
     
+    private var quoteHighlightingNodes: [LinkHighlightingNode] = []
+    
+    private var linkProgressRange: NSRange?
+    private var linkProgressView: TextLoadingEffectView?
+    private var linkProgressDisposable: Disposable?
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
@@ -107,7 +113,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.textAccessibilityOverlayNode)
         
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
-            self?.item?.controllerInteraction.openUrl(url, false, false, nil)
+            self?.item?.controllerInteraction.openUrl(url, false, false, nil, nil)
         }
         
         self.statusNode.reactionSelected = { [weak self] value in
@@ -133,6 +139,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     deinit {
         self.linkPreviewOptionsDisposable?.dispose()
+        self.linkProgressDisposable?.dispose()
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -146,6 +153,31 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
+                var topInset: CGFloat = 0.0
+                var bottomInset: CGFloat = 0.0
+                if case let .linear(top, bottom) = position {
+                    switch top {
+                    case .None:
+                        topInset = layoutConstants.text.bubbleInsets.top
+                    case let .Neighbour(_, topType, _):
+                        switch topType {
+                        case .text:
+                            topInset = layoutConstants.text.bubbleInsets.top - 2.0
+                        case .header, .footer, .media, .reactions:
+                            topInset = layoutConstants.text.bubbleInsets.top
+                        }
+                    default:
+                        topInset = layoutConstants.text.bubbleInsets.top
+                    }
+                    
+                    switch bottom {
+                    case .None:
+                        bottomInset = layoutConstants.text.bubbleInsets.bottom
+                    default:
+                        bottomInset = layoutConstants.text.bubbleInsets.bottom - 3.0
+                    }
+                }
+                
                 let message = item.message
                 
                 let incoming: Bool
@@ -353,7 +385,12 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textFont = item.presentationData.messageFont
                 
                 if let entities = entities {
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, message: item.message, adjustQuoteFontSize: true)
+                    var underlineLinks = true
+                    if !messageTheme.primaryTextColor.isEqual(messageTheme.linkTextColor) {
+                        underlineLinks = false
+                    }
+                    
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -436,8 +473,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var textFrame = CGRect(origin: CGPoint(x: -textInsets.left, y: -textInsets.top), size: textLayout.size)
                 var textFrameWithoutInsets = CGRect(origin: CGPoint(x: textFrame.origin.x + textInsets.left, y: textFrame.origin.y + textInsets.top), size: CGSize(width: textFrame.width - textInsets.left - textInsets.right, height: textFrame.height - textInsets.top - textInsets.bottom))
                 
-                textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
-                textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: layoutConstants.text.bubbleInsets.top)
+                textFrame = textFrame.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: topInset)
+                textFrameWithoutInsets = textFrameWithoutInsets.offsetBy(dx: layoutConstants.text.bubbleInsets.left, dy: topInset)
 
                 var suggestedBoundingWidth: CGFloat = textFrameWithoutInsets.width
                 if let statusSuggestedWidthAndContinue = statusSuggestedWidthAndContinue {
@@ -457,7 +494,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     boundingSize.width += layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
-                    boundingSize.height += layoutConstants.text.bubbleInsets.top + layoutConstants.text.bubbleInsets.bottom
+                    
+                    boundingSize.height += topInset + bottomInset
                     
                     return (boundingSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
@@ -605,11 +643,15 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                                 return
                                             }
                                             
-                                            strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                            if options.hasAlternativeLinks {
+                                                strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                            }
                                         })
                                     }
                                 }
                             }
+                            
+                            strongSelf.updateLinkProgressState()
                         }
                     })
                 })
@@ -646,10 +688,38 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .none
             } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
-                if let (attributeText, fullText) = self.textNode.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                var urlRange: NSRange?
+                if let (attributeText, fullText, urlRangeValue) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.URL, index: index) {
+                    urlRange = urlRangeValue
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed)
+                return .url(url: url, concealed: concealed, activate: { [weak self] in
+                    guard let self else {
+                        return nil
+                    }
+                    
+                    let promise = Promise<Bool>()
+                    
+                    self.linkProgressDisposable?.dispose()
+                    
+                    if self.linkProgressRange != nil {
+                        self.linkProgressRange = nil
+                        self.updateLinkProgressState()
+                    }
+                    
+                    self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                        guard let self else {
+                            return
+                        }
+                        let updatedRange: NSRange? = value ? urlRange : nil
+                        if self.linkProgressRange != updatedRange {
+                            self.linkProgressRange = updatedRange
+                            self.updateLinkProgressState()
+                        }
+                    })
+                    
+                    return promise
+                })
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
@@ -811,6 +881,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         guard let item = self.item else {
             return
         }
+        
         var rectsSet: [[CGRect]] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
             let nsString = string as NSString
@@ -827,7 +898,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             if i < self.linkPreviewHighlightingNodes.count {
                 textHighlightNode = self.linkPreviewHighlightingNodes[i]
             } else {
-                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor.withMultipliedAlpha(0.5) : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor.withMultipliedAlpha(0.5))
                 self.linkPreviewHighlightingNodes.append(textHighlightNode)
                 self.insertSubnode(textHighlightNode, belowSubnode: self.textNode.textNode)
             }
@@ -837,6 +908,77 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in (rectsSet.count ..< self.linkPreviewHighlightingNodes.count).reversed() {
             self.linkPreviewHighlightingNodes[i].removeFromSupernode()
             self.linkPreviewHighlightingNodes.remove(at: i)
+        }
+    }
+    
+    private func updateLinkProgressState() {
+        guard let item = self.item else {
+            return
+        }
+        
+        let range: NSRange = self.linkProgressRange ?? NSRange(location: NSNotFound, length: 0)
+        if range.location != NSNotFound {
+            let linkProgressView: TextLoadingEffectView
+            if let current = self.linkProgressView {
+                linkProgressView = current
+            } else {
+                linkProgressView = TextLoadingEffectView(frame: CGRect())
+                self.linkProgressView = linkProgressView
+                self.view.addSubview(linkProgressView)
+            }
+            linkProgressView.frame = self.textNode.textNode.frame
+            
+            let progressColor: UIColor = item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor
+            
+            linkProgressView.update(color: progressColor, textNode: self.textNode.textNode, range: range)
+        } else {
+            if let linkProgressView = self.linkProgressView {
+                self.linkProgressView = nil
+                linkProgressView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak linkProgressView] _ in
+                    linkProgressView?.removeFromSuperview()
+                })
+            }
+        }
+    }
+    
+    public func updateQuoteTextHighlightState(text: String?, animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        var rectsSet: [[CGRect]] = []
+        if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
+            let nsString = string as NSString
+            let range = nsString.range(of: text)
+            if range.location != NSNotFound {
+                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
+                    rectsSet = [rects]
+                }
+            }
+        }
+        for i in 0 ..< rectsSet.count {
+            let rects = rectsSet[i]
+            let textHighlightNode: LinkHighlightingNode
+            if i < self.quoteHighlightingNodes.count {
+                textHighlightNode = self.quoteHighlightingNodes[i]
+            } else {
+                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
+                self.quoteHighlightingNodes.append(textHighlightNode)
+                self.insertSubnode(textHighlightNode, belowSubnode: self.textNode.textNode)
+            }
+            textHighlightNode.frame = self.textNode.textNode.frame
+            textHighlightNode.updateRects(rects)
+        }
+        for i in (rectsSet.count ..< self.quoteHighlightingNodes.count).reversed() {
+            let node = self.quoteHighlightingNodes[i]
+            self.quoteHighlightingNodes.remove(at: i)
+            
+            if animated {
+                node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                    node?.removeFromSupernode()
+                })
+            } else {
+                node.removeFromSupernode()
+            }
         }
     }
     

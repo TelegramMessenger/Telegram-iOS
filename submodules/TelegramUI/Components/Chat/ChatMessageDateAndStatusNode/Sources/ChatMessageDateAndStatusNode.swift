@@ -193,7 +193,7 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
     }
     
     public enum LayoutInput {
-        case trailingContent(contentWidth: CGFloat, reactionSettings: TrailingReactionSettings?)
+        case trailingContent(contentWidth: CGFloat?, reactionSettings: TrailingReactionSettings?)
         case standalone(reactionSettings: StandaloneReactionSettings?)
         
         public var displayInlineReactions: Bool {
@@ -848,14 +848,20 @@ public class ChatMessageDateAndStatusNode: ASDisplayNode {
                 
                 if reactionButtonsSize.width.isZero {
                     verticalReactionsInset = 0.0
-                    if contentWidth + layoutSize.width > arguments.constrainedSize.width {
+                    if let contentWidth {
+                        if contentWidth + layoutSize.width > arguments.constrainedSize.width {
+                            resultingWidth = layoutSize.width
+                            verticalInset = 0.0
+                            resultingHeight = layoutSize.height + verticalInset
+                        } else {
+                            resultingWidth = contentWidth + layoutSize.width
+                            verticalInset = -layoutSize.height
+                            resultingHeight = 0.0
+                        }
+                    } else {
                         resultingWidth = layoutSize.width
                         verticalInset = 0.0
                         resultingHeight = layoutSize.height + verticalInset
-                    } else {
-                        resultingWidth = contentWidth + layoutSize.width
-                        verticalInset = -layoutSize.height
-                        resultingHeight = 0.0
                     }
                 } else {
                     var additionalVerticalInset: CGFloat = 0.0
