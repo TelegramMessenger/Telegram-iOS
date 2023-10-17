@@ -3965,8 +3965,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             })
                         }
                     case let .url(url, concealed, activate):
-                        return .action({
-                            self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage, activate?())
+                        return .action({ [weak self] in
+                            guard let self, let item = self.item else {
+                                return
+                            }
+                            item.controllerInteraction.openUrl(url, concealed, nil, item.content.firstMessage, activate?())
                         })
                     case let .peerMention(peerId, _, openProfile):
                         return .action({ [weak self] in
