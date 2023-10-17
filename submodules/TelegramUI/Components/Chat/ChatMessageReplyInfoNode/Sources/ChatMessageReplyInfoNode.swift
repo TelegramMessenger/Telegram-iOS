@@ -100,6 +100,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     }
     
     private let backgroundView: UIImageView
+    private var lineDashView: UIImageView?
     private var quoteIconView: UIImageView?
     private let contentNode: ASDisplayNode
     private var titleNode: TextNode?
@@ -216,11 +217,13 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let dustColor: UIColor
             
             var authorNameColor: UIColor?
+            var dashSecondaryColor: UIColor?
             
             let author = arguments.message?.effectiveAuthor
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser {
-                authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
+                authorNameColor = author?.nameColor?.color
+                dashSecondaryColor = author?.nameColor?.dashColors.1
                 if let rawAuthorNameColor = authorNameColor {
                     var dimColors = false
                     switch arguments.presentationData.theme.theme.name {
@@ -240,6 +243,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             }
             
             let mainColor: UIColor
+            var secondaryColor: UIColor?
             
             switch arguments.type {
                 case let .bubble(incoming):
@@ -247,6 +251,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if incoming {
                         if let authorNameColor {
                             mainColor = authorNameColor
+                            secondaryColor = dashSecondaryColor
                         } else {
                             mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
                         }
@@ -607,6 +612,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 node.backgroundView.tintColor = mainColor
                 node.backgroundView.frame = backgroundFrame
+                
+                if let secondaryColor {
+                    let lineDashView: UIImageView
+                    if let current = node.lineDashView {
+                        lineDashView = current
+                    } else {
+                        lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme))
+                        node.lineDashView = lineDashView
+                        node.contentNode.view.addSubview(lineDashView)
+                    }
+                    lineDashView.tintColor = secondaryColor
+                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 3.0, height: backgroundFrame.height))
+                } else {
+                    if let lineDashView = node.lineDashView {
+                        node.lineDashView = nil
+                        lineDashView.removeFromSuperview()
+                    }
+                }
                 
                 if arguments.quote != nil || arguments.replyForward?.quote != nil {
                     let quoteIconView: UIImageView

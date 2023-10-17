@@ -114,6 +114,7 @@ swift_library(
         "//submodules/ImageBlur:ImageBlur",
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/TelegramUI/Components/PeerInfo/PeerInfoStoryGridScreen",
+        "//submodules/TelegramUI/Components/Settings/PeerNameColorScreen",
     ],
     visibility = [
         "//visibility:public",

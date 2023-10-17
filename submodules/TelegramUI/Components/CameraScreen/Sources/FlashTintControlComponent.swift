@@ -81,7 +81,7 @@ private final class FlashColorComponent: Component {
                 
         func update(component: FlashColorComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
-            let contentSize = CGSize(width: 24.0, height: 24.0)
+            let contentSize = CGSize(width: 30.0, height: 30.0)
             self.contentView.frame = CGRect(origin: .zero, size: contentSize)
             
             let bounds = CGRect(origin: .zero, size: contentSize)
@@ -192,7 +192,7 @@ final class FlashTintControlComponent: Component {
             let isFirstTime = self.component == nil
             self.component = component
             
-            let size = CGSize(width: 160.0, height: 40.0)
+            let size = CGSize(width: 184.0, height: 92.0)
             if isFirstTime {
                 self.maskLayer.path = generateRoundedRectWithTailPath(rectSize: size, cornerRadius: 10.0, tailSize: CGSize(width: 18, height: 7.0), tailRadius: 1.0, tailPosition: 0.8, transformTail: false).cgPath
                 self.maskLayer.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height + 7.0))
@@ -264,7 +264,7 @@ final class FlashTintControlComponent: Component {
                 if view.superview == nil {
                     self.containerView.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - swatchesSize.width) / 2.0), y: floorToScreenPixels((size.height - swatchesSize.height) / 2.0)), size: swatchesSize)
+                view.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - swatchesSize.width) / 2.0), y: 8.0), size: swatchesSize)
             }
             
             self.dismissView.frame = CGRect(origin: .zero, size: availableSize)

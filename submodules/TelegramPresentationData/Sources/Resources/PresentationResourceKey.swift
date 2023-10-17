@@ -300,6 +300,7 @@ public enum PresentationResourceKey: Int32 {
     
     case chatReplyBackgroundTemplateImage
     case chatReplyServiceBackgroundTemplateImage
+    case chatReplyLineDashTemplateImage
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {
