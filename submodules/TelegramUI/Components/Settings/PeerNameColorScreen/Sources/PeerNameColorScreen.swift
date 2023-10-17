@@ -336,6 +336,7 @@ public func PeerNameColorScreen(
                     }
                     dismissImpl?()
                 } else {
+                    HapticFeedback().error()
                     let controller = UndoOverlayController(
                         presentationData: presentationData,
                         content: .premiumPaywall(

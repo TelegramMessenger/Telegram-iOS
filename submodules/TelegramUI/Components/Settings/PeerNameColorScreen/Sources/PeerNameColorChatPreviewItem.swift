@@ -164,6 +164,8 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
 
         var currentBackgroundNode = self.backgroundNode
         
+        let currentItem = self.item
+        
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
@@ -214,7 +216,9 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
                         
-                        apply(ListViewItemApply(isOnScreen: true))
+                        Queue.mainQueue().after(0.01) {
+                            apply(ListViewItemApply(isOnScreen: true))
+                        }
                     })
                 }
             } else {
@@ -248,6 +252,15 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+                    
+                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor {
+                        if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
+                            strongSelf.view.addSubview(snapshot)
+                            snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                snapshot.removeFromSuperview()
+                            })
+                        }
+                    }
                     
                     strongSelf.messageNodes = nodes
                     var topOffset: CGFloat = 4.0

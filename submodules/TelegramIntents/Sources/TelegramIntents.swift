@@ -151,7 +151,7 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                                     if let image = generateImage(size, rotatedContext: { size, context in
                                         context.clear(CGRect(origin: CGPoint(), size: size))
                                         
-                                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarFont, letters: peer.displayLetters, peerId: peer.id)
+                                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), font: avatarFont, letters: peer.displayLetters, peerId: peer.id, nameColor: peer.nameColor)
                                     })?.withRenderingMode(.alwaysOriginal) {
                                         avatarImage = image
                                     }

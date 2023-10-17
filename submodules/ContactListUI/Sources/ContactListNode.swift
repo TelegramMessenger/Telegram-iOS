@@ -1085,15 +1085,18 @@ public final class ContactListNode: ASDisplayNode {
 
                             var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
                             var excludeSelf = false
+                            var requirePhoneNumbers = false
                             for filter in filters {
                                 switch filter {
-                                    case .excludeSelf:
-                                        excludeSelf = true
-                                        existingPeerIds.insert(context.account.peerId)
-                                    case let .exclude(peerIds):
-                                        existingPeerIds = existingPeerIds.union(peerIds)
-                                    case let .disable(peerIds):
-                                        disabledPeerIds = disabledPeerIds.union(peerIds)
+                                case .excludeSelf:
+                                    excludeSelf = true
+                                    existingPeerIds.insert(context.account.peerId)
+                                case let .exclude(peerIds):
+                                    existingPeerIds = existingPeerIds.union(peerIds)
+                                case let .disable(peerIds):
+                                    disabledPeerIds = disabledPeerIds.union(peerIds)
+                                case .excludeWithoutPhoneNumbers:
+                                    requirePhoneNumbers = true
                                 }
                             }
                             
@@ -1127,8 +1130,13 @@ public final class ContactListNode: ASDisplayNode {
                             }
                             for peer in remotePeers.0 {
                                 let matches: Bool
-                                if peer.peer is TelegramUser {
-                                    matches = true
+                                if let user = peer.peer as? TelegramUser {
+                                    let phone = user.phone ?? ""
+                                    if requirePhoneNumbers && phone.isEmpty {
+                                        matches = false
+                                    } else {
+                                        matches = true
+                                    }
                                 } else if searchGroups || searchChannels {
                                     if peer.peer is TelegramGroup && searchGroups {
                                         matches = true
@@ -1157,8 +1165,13 @@ public final class ContactListNode: ASDisplayNode {
                             }
                             for peer in remotePeers.1 {
                                 let matches: Bool
-                                if peer.peer is TelegramUser {
-                                    matches = true
+                                if let user = peer.peer as? TelegramUser {
+                                    let phone = user.phone ?? ""
+                                    if requirePhoneNumbers && phone.isEmpty {
+                                        matches = false
+                                    } else {
+                                        matches = true
+                                    }
                                 } else if searchGroups || searchChannels {
                                     if peer.peer is TelegramGroup {
                                         matches = searchGroups
@@ -1270,23 +1283,32 @@ public final class ContactListNode: ASDisplayNode {
                         }
                         var existingPeerIds = Set<EnginePeer.Id>()
                         var disabledPeerIds = Set<EnginePeer.Id>()
+                        var requirePhoneNumbers = false
                         for filter in filters {
                             switch filter {
-                                case .excludeSelf:
-                                    existingPeerIds.insert(context.account.peerId)
-                                case let .exclude(peerIds):
-                                    existingPeerIds = existingPeerIds.union(peerIds)
-                                case let .disable(peerIds):
-                                    disabledPeerIds = disabledPeerIds.union(peerIds)
+                            case .excludeSelf:
+                                existingPeerIds.insert(context.account.peerId)
+                            case let .exclude(peerIds):
+                                existingPeerIds = existingPeerIds.union(peerIds)
+                            case let .disable(peerIds):
+                                disabledPeerIds = disabledPeerIds.union(peerIds)
+                            case .excludeWithoutPhoneNumbers:
+                                requirePhoneNumbers = true
                             }
                         }
                         
                         peers = peers.filter { contact in
                             switch contact {
-                                case let .peer(peer, _, _):
-                                    return !existingPeerIds.contains(peer.id)
-                                default:
-                                    return true
+                            case let .peer(peer, _, _):
+                                if requirePhoneNumbers, let user = peer as? TelegramUser {
+                                    let phone = user.phone ?? ""
+                                    if phone.isEmpty {
+                                        return false
+                                    }
+                                }
+                                return !existingPeerIds.contains(peer.id)
+                            default:
+                                return true
                             }
                         }
                         

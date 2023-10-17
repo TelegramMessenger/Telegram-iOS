@@ -771,6 +771,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 )
                 context.add(frontFlash
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+                    .scale(1.5 - component.cameraState.flashTintSize * 0.5)
                     .appear(.default(alpha: true))
                     .disappear(.default(alpha: true))
                 )

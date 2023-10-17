@@ -663,9 +663,10 @@ public final class ContactSelectionControllerParams {
     public let displayDeviceContacts: Bool
     public let displayCallIcons: Bool
     public let multipleSelection: Bool
+    public let requirePhoneNumbers: Bool
     public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, multipleSelection: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, displayCallIcons: Bool = false, multipleSelection: Bool = false, requirePhoneNumbers: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.autoDismiss = autoDismiss
@@ -674,6 +675,7 @@ public final class ContactSelectionControllerParams {
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         self.multipleSelection = multipleSelection
+        self.requirePhoneNumbers = requirePhoneNumbers
         self.confirmation = confirmation
     }
 }

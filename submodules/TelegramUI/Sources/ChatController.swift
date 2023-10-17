@@ -10958,7 +10958,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
-            strongSelf.presentAttachmentPremiumGift()
+            strongSelf.presentAttachmentMenu(subject: .gift)
             Queue.mainQueue().after(0.5) {
                 let _ = ApplicationSpecificNotice.incrementDismissedPremiumGiftSuggestion(accountManager: strongSelf.context.sharedContext.accountManager, peerId: peerId).startStandalone()
             }
@@ -13389,10 +13389,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
     }
     
-    func presentAttachmentPremiumGift() {
-        self.presentAttachmentMenu(subject: .gift)
-    }
-    
     enum AttachMenuSubject {
         case `default`
         case edit(mediaOptions: MessageMediaEditingOptions, mediaReference: AnyMediaReference)
@@ -13720,7 +13716,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = currentLocationController.swap(controller)
                     })
                 case .contact:
-                    let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true))
+                    let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: { $0.Contacts_Title }, displayDeviceContacts: true, multipleSelection: true, requirePhoneNumbers: true))
                     contactsController.presentScheduleTimePicker = { [weak self] completion in
                         if let strongSelf = self {
                             strongSelf.presentScheduleTimePicker(completion: completion)

@@ -1708,12 +1708,12 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 }
 
 private enum PeerAvatarReference: Equatable {
-    case letters(PeerId, [String])
+    case letters(PeerId, PeerNameColor?, [String])
     case image(PeerReference, TelegramMediaImageRepresentation)
     
     var peerId: PeerId {
         switch self {
-        case let .letters(value, _):
+        case let .letters(value, _, _):
             return value
         case let .image(value, _):
             return value.id
@@ -1726,7 +1726,7 @@ private extension PeerAvatarReference {
         if let photo = peer.smallProfileImage, let peerReference = PeerReference(peer) {
             self = .image(peerReference, photo)
         } else {
-            self = .letters(peer.id, peer.displayLetters)
+            self = .letters(peer.id, peer.nameColor, peer.displayLetters)
         }
     }
 }
@@ -1885,9 +1885,9 @@ public final class MergedAvatarsNode: ASDisplayNode {
             
             context.saveGState()
             switch parameters.peers[i] {
-            case let .letters(peerId, letters):
+            case let .letters(peerId, nameColor, letters):
                 context.translateBy(x: currentX, y: 0.0)
-                drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId)
+                drawPeerAvatarLetters(context: context, size: CGSize(width: mergedImageSize, height: mergedImageSize), font: avatarFont, letters: letters, peerId: peerId, nameColor: nameColor)
                 context.translateBy(x: -currentX, y: 0.0)
             case .image:
                 if let image = parameters.images[parameters.peers[i].peerId] {

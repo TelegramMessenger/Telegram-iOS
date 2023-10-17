@@ -156,7 +156,7 @@ public func peerAvatarCompleteImage(postbox: Postbox, network: Network, peer: En
         iconSignal = Signal { subscriber in
             let image = generateImage(size, rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
-                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), round: round, font: font, letters: displayLetters, peerId: peerId)
+                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width, height: size.height), round: round, font: font, letters: displayLetters, peerId: peerId, nameColor: peer.nameColor)
                 if blurred {
                     context.setFillColor(UIColor(rgb: 0x000000, alpha: 0.5).cgColor)
                     context.fill(CGRect(origin: CGPoint(), size: size))
@@ -346,7 +346,7 @@ public func peerAvatarImage(postbox: Postbox, network: Network, peerReference: P
     }
 }
 
-public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool = true, font: UIFont, letters: [String], peerId: EnginePeer.Id) {
+public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool = true, font: UIFont, letters: [String], peerId: EnginePeer.Id, nameColor: PeerNameColor?) {
     if round {
         context.beginPath()
         context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height:
@@ -365,7 +365,11 @@ public func drawPeerAvatarLetters(context: CGContext, size: CGSize, round: Bool 
     if colorIndex == -1 {
         colorsArray = AvatarNode.grayscaleColors.map(\.cgColor) as NSArray
     } else {
-        colorsArray = AvatarNode.gradientColors[colorIndex % AvatarNode.gradientColors.count].map(\.cgColor) as NSArray
+        var index = colorIndex % AvatarNode.gradientColors.count
+        if let nameColor {
+            index = Int(nameColor.rawValue) % AvatarNode.gradientColors.count
+        }
+        colorsArray = AvatarNode.gradientColors[index].map(\.cgColor) as NSArray
     }
     
     var locations: [CGFloat] = [1.0, 0.0]
