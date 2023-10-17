@@ -10127,15 +10127,18 @@ Sorry for the inconvenience.";
 "Appearance.NameColor" = "Your Name Color";
 
 "NameColor.Title.Account" = "Your Name Color";
-"NameColor.Title.Channel" = "Channel Title Color";
+"NameColor.Title.Channel" = "Your Channel Color";
 
 "NameColor.ChatPreview.Title" = "COLOR PREVIEW";
-"NameColor.ChatPreview.ReplyText" = "Reply to your message";
-"NameColor.ChatPreview.MessageText" = "Your name and replies to your messages will be shown in the selected color.";
+"NameColor.ChatPreview.ReplyText.Account" = "Reply to your message";
+"NameColor.ChatPreview.ReplyText.Channel" = "Reply to your channel message";
+"NameColor.ChatPreview.MessageText.Account" = "Your name and replies to your messages will be shown in the selected color.";
+"NameColor.ChatPreview.MessageText.Channel" = "The name of your channek and replies to its messages will be shown in the selected color.";
 "NameColor.ChatPreview.LinkSite" = "Telegram";
 "NameColor.ChatPreview.LinkTitle" = "Link Preview";
 "NameColor.ChatPreview.LinkText" = "Your selected color will also tint the link preview.";
 "NameColor.ChatPreview.Description.Account" = "You can choose an individual color to tint your name, the links you send, and replies to your messages.";
+"NameColor.ChatPreview.Description.Channel" = "You can choose an individual color to tint your channel's name, the links it sends, and replies to its messages.";
 
 "NameColor.ApplyColor" = "Apply Color";
 

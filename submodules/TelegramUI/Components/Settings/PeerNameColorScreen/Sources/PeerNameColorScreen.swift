@@ -213,6 +213,16 @@ private func peerNameColorScreenEntries(
         } else {
             nameColor = .blue
         }
+        
+        let replyText: String
+        let messageText: String
+        if case .channel = peer {
+            replyText = presentationData.strings.NameColor_ChatPreview_ReplyText_Channel
+            messageText = presentationData.strings.NameColor_ChatPreview_MessageText_Channel
+        } else {
+            replyText = presentationData.strings.NameColor_ChatPreview_ReplyText_Account
+            messageText = presentationData.strings.NameColor_ChatPreview_MessageText_Account
+        }
         let messageItem = PeerNameColorChatPreviewItem.MessageItem(
             outgoing: false,
             peerId: peer.id,
@@ -220,9 +230,9 @@ private func peerNameColorScreenEntries(
             photo: peer.profileImageRepresentations,
             nameColor: nameColor,
             backgroundEmojiId: nil,
-            reply: (peer.compactDisplayTitle, presentationData.strings.NameColor_ChatPreview_ReplyText),
+            reply: (peer.compactDisplayTitle, replyText),
             linkPreview: (presentationData.strings.NameColor_ChatPreview_LinkSite, presentationData.strings.NameColor_ChatPreview_LinkTitle, presentationData.strings.NameColor_ChatPreview_LinkText),
-            text: presentationData.strings.NameColor_ChatPreview_MessageText
+            text: messageText
         )
         
         entries.append(.colorHeader(presentationData.strings.NameColor_ChatPreview_Title))
@@ -304,17 +314,20 @@ public func PeerNameColorScreen(
     |> map { presentationData, state, availableReactions, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let isPremium = peer?.isPremium ?? false
         let title: String
+        let isLocked: Bool
         switch subject {
         case .account:
             title = presentationData.strings.NameColor_Title_Account
+            isLocked = !isPremium
         case .channel:
             title = presentationData.strings.NameColor_Title_Channel
+            isLocked = false
         }
         
         let footerItem = ApplyColorFooterItem(
             theme: presentationData.theme,
             title: presentationData.strings.NameColor_ApplyColor,
-            locked: !isPremium,
+            locked: isLocked,
             action: {
                 if isPremium {
                     let state = stateValue.with { $0 }

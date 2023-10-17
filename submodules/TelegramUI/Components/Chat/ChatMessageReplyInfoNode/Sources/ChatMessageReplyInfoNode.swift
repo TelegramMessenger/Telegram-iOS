@@ -221,25 +221,25 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let author = arguments.message?.effectiveAuthor
             
-            if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser {
+            if author?.hasCustomNameColor == true || ([Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser) {
                 authorNameColor = author?.nameColor?.color
                 dashSecondaryColor = author?.nameColor?.dashColors.1
-                if let rawAuthorNameColor = authorNameColor {
-                    var dimColors = false
-                    switch arguments.presentationData.theme.theme.name {
-                        case .builtin(.nightAccent), .builtin(.night):
-                            dimColors = true
-                        default:
-                            break
-                    }
-                    if dimColors {
-                        var hue: CGFloat = 0.0
-                        var saturation: CGFloat = 0.0
-                        var brightness: CGFloat = 0.0
-                        rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-                        authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
-                    }
-                }
+//                if let rawAuthorNameColor = authorNameColor {
+//                    var dimColors = false
+//                    switch arguments.presentationData.theme.theme.name {
+//                        case .builtin(.nightAccent), .builtin(.night):
+//                            dimColors = true
+//                        default:
+//                            break
+//                    }
+//                    if dimColors {
+//                        var hue: CGFloat = 0.0
+//                        var saturation: CGFloat = 0.0
+//                        var brightness: CGFloat = 0.0
+//                        rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+//                        authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+//                    }
+//                }
             }
             
             let mainColor: UIColor

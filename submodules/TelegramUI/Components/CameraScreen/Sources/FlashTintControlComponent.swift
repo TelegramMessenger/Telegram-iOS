@@ -121,7 +121,7 @@ private final class FlashColorComponent: Component {
                 self.circleLayer.fillColor = UIColor(rgb: 0xffffff, alpha: 0.1).cgColor
                 self.ringLayer?.borderColor = UIColor.clear.cgColor
             }
-            
+                        
             return contentSize
         }
     }
@@ -138,23 +138,29 @@ private final class FlashColorComponent: Component {
 final class FlashTintControlComponent: Component {
     let position: CGPoint
     let tint: CameraState.FlashTint
+    let size: CGFloat
     let update: (CameraState.FlashTint?) -> Void
+    let updateSize: (CGFloat) -> Void
     let dismiss: () -> Void
     
     init(
         position: CGPoint,
         tint: CameraState.FlashTint,
+        size: CGFloat,
         update: @escaping (CameraState.FlashTint?) -> Void,
+        updateSize: @escaping (CGFloat) -> Void,
         dismiss: @escaping () -> Void
     ) {
         self.position = position
         self.tint = tint
+        self.size = size
         self.update = update
+        self.updateSize = updateSize
         self.dismiss = dismiss
     }
     
     static func == (lhs: FlashTintControlComponent, rhs: FlashTintControlComponent) -> Bool {
-        return lhs.position == rhs.position && lhs.tint == rhs.tint
+        return lhs.position == rhs.position && lhs.tint == rhs.tint && lhs.size == rhs.size
     }
     
     final class View: UIButton {
@@ -165,9 +171,15 @@ final class FlashTintControlComponent: Component {
         private let effectView: UIVisualEffectView
         private let maskLayer = CAShapeLayer()
         private let swatches = ComponentView<Empty>()
+        private let sliderView: SliderView
         
         override init(frame: CGRect) {
             self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+            
+            var sizeUpdateImpl: ((CGFloat) -> Void)?
+            self.sliderView = SliderView(minValue: 0.0, maxValue: 1.0, value: 1.0, valueChanged: { value , _ in
+                sizeUpdateImpl?(value)
+            })
             
             super.init(frame: frame)
             
@@ -176,8 +188,15 @@ final class FlashTintControlComponent: Component {
             self.addSubview(self.dismissView)
             self.addSubview(self.containerView)
             self.containerView.addSubview(self.effectView)
+            self.containerView.addSubview(self.sliderView)
          
             self.dismissView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dismissTapped)))
+            
+            sizeUpdateImpl = { [weak self] size in
+                if let self, let component {
+                    component.updateSize(size)
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -193,7 +212,12 @@ final class FlashTintControlComponent: Component {
             self.component = component
             
             let size = CGSize(width: 184.0, height: 92.0)
+            
+            self.sliderView.frame = CGRect(origin: CGPoint(x: 8.0, y: size.height - 38.0), size: CGSize(width: size.width - 16.0, height: 30.0))
+            
             if isFirstTime {
+                self.sliderView.value = component.size
+                
                 self.maskLayer.path = generateRoundedRectWithTailPath(rectSize: size, cornerRadius: 10.0, tailSize: CGSize(width: 18, height: 7.0), tailRadius: 1.0, tailPosition: 0.8, transformTail: false).cgPath
                 self.maskLayer.frame = CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height + 7.0))
                 self.effectView.layer.mask = self.maskLayer
@@ -296,5 +320,114 @@ final class FlashTintControlComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class SliderView: UIView {
+    private let foregroundView: UIView
+    private let knobView: UIImageView
+    
+    let minValue: CGFloat
+    let maxValue: CGFloat
+    var value: CGFloat = 1.0 {
+        didSet {
+            self.updateValue()
+        }
+    }
+    
+    private let valueChanged: (CGFloat, Bool) -> Void
+    
+    private let hapticFeedback = HapticFeedback()
+
+    init(minValue: CGFloat, maxValue: CGFloat, value: CGFloat, valueChanged: @escaping (CGFloat, Bool) -> Void) {
+        self.minValue = minValue
+        self.maxValue = maxValue
+        self.value = value
+        self.valueChanged = valueChanged
+        
+        self.foregroundView = UIView()
+        self.foregroundView.backgroundColor = UIColor(rgb: 0x8b8b8a)
+        
+        self.knobView = UIImageView(image: generateFilledCircleImage(diameter: 30.0, color: .white))
+        
+        super.init(frame: .zero)
+               
+        self.backgroundColor = UIColor(rgb: 0x3e3e3e)
+        self.clipsToBounds = true
+        self.layer.cornerRadius = 15.0
+        
+        self.foregroundView.isUserInteractionEnabled = false
+        self.knobView.isUserInteractionEnabled = false
+        
+        self.addSubview(self.foregroundView)
+        self.addSubview(self.knobView)
+        
+        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        self.addGestureRecognizer(panGestureRecognizer)
+        
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+        self.addGestureRecognizer(tapGestureRecognizer)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func updateValue(transition: Transition = .immediate) {
+        let width = self.frame.width
+        
+        let range = self.maxValue - self.minValue
+        let value = (self.value - self.minValue) / range
+        
+        transition.setFrame(view: self.foregroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: 15.0 + value * (width - 30.0), height: 30.0)))
+        transition.setFrame(view: self.knobView, frame: CGRect(origin: CGPoint(x: (width - 30.0) * value, y: 0.0), size: CGSize(width: 30.0, height: 30.0)))
+    }
+    
+    @objc private func panGesture(_ gestureRecognizer: UIPanGestureRecognizer) {
+        let range = self.maxValue - self.minValue
+        switch gestureRecognizer.state {
+            case .began:
+                break
+            case .changed:
+                let previousValue = self.value
+                
+                let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
+                let delta = translation / self.bounds.width * range
+                self.value = max(self.minValue, min(self.maxValue, self.value + delta))
+                gestureRecognizer.setTranslation(CGPoint(), in: gestureRecognizer.view)
+                
+                if self.value == 1.0 && previousValue != 1.0 {
+                    self.hapticFeedback.impact(.soft)
+                } else if self.value == 0.0 && previousValue != 0.0 {
+                    self.hapticFeedback.impact(.soft)
+                }
+                if abs(previousValue - self.value) >= 0.001 {
+                    self.valueChanged(self.value, false)
+                }
+            case .ended:
+                let translation: CGFloat = gestureRecognizer.translation(in: gestureRecognizer.view).x
+                let delta = translation / self.bounds.width * range
+                self.value = max(self.minValue, min(self.maxValue, self.value + delta))
+                self.valueChanged(self.value, true)
+            default:
+                break
+        }
+    }
+    
+    @objc private func tapGesture(_ gestureRecognizer: UITapGestureRecognizer) {
+        let range = self.maxValue - self.minValue
+        let location = gestureRecognizer.location(in: gestureRecognizer.view)
+        self.value = max(self.minValue, min(self.maxValue, self.minValue + location.x / self.bounds.width * range))
+        self.valueChanged(self.value, true)
+    }
+    
+    func canBeHighlighted() -> Bool {
+        return false
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+    }
+    
+    func performAction() {
     }
 }

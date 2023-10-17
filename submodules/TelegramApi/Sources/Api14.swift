@@ -699,6 +699,60 @@ public extension Api {
     }
 }
 public extension Api {
+    enum MyBoost: TypeConstructorDescription {
+        case myBoost(flags: Int32, slot: Int32, peer: Api.Peer?, expires: Int32, cooldownUntilDate: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .myBoost(let flags, let slot, let peer, let expires, let cooldownUntilDate):
+                    if boxed {
+                        buffer.appendInt32(1267991078)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(slot, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {peer!.serialize(buffer, true)}
+                    serializeInt32(expires, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt32(cooldownUntilDate!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .myBoost(let flags, let slot, let peer, let expires, let cooldownUntilDate):
+                return ("myBoost", [("flags", flags as Any), ("slot", slot as Any), ("peer", peer as Any), ("expires", expires as Any), ("cooldownUntilDate", cooldownUntilDate as Any)])
+    }
+    }
+    
+        public static func parse_myBoost(_ reader: BufferReader) -> MyBoost? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.Peer?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MyBoost.myBoost(flags: _1!, slot: _2!, peer: _3, expires: _4!, cooldownUntilDate: _5)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum NearestDc: TypeConstructorDescription {
         case nearestDc(country: String, thisDc: Int32, nearestDc: Int32)
     

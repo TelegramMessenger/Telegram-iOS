@@ -58,36 +58,41 @@ struct CameraState: Equatable {
     let flashMode: Camera.FlashMode
     let flashModeDidChange: Bool
     let flashTint: FlashTint
+    let flashTintSize: CGFloat
     let recording: Recording
     let duration: Double
     let isDualCameraEnabled: Bool
     
     func updatedMode(_ mode: CameraMode) -> CameraState {
-        return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedPosition(_ position: Camera.Position) -> CameraState {
-        return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedFlashMode(_ flashMode: Camera.FlashMode) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: flashMode, flashModeDidChange: self.flashMode != flashMode, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedFlashTint(_ flashTint: FlashTint) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+    }
+    
+    func updatedFlashTintSize(_ size: CGFloat) -> CameraState {
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: size, recording: self.recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedRecording(_ recording: Recording) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: recording, duration: self.duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedDuration(_ duration: Double) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: duration, isDualCameraEnabled: self.isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: duration, isDualCameraEnabled: self.isDualCameraEnabled)
     }
     
     func updatedIsDualCameraEnabled(_ isDualCameraEnabled: Bool) -> CameraState {
-        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, recording: self.recording, duration: self.duration, isDualCameraEnabled: isDualCameraEnabled)
+        return CameraState(mode: self.mode, position: self.position, flashMode: self.flashMode, flashModeDidChange: self.flashModeDidChange, flashTint: self.flashTint, flashTintSize: self.flashTintSize, recording: self.recording, duration: self.duration, isDualCameraEnabled: isDualCameraEnabled)
     }
 }
 
@@ -437,6 +442,14 @@ private final class CameraScreenComponent: CombinedComponent {
             } else {
                 camera.setFlashMode(.off)
             }
+        }
+        
+        func updateFlashTintSize(_ size: CGFloat) {
+            guard let controller = self.getController() else {
+                return
+            }
+            
+            controller.updateCameraState({ $0.updatedFlashTintSize(size) }, transition: .immediate)
         }
         
         func presentFlashTint() {
@@ -1156,8 +1169,12 @@ private final class CameraScreenComponent: CombinedComponent {
                     component: FlashTintControlComponent(
                         position: flashButtonPosition.offsetBy(dx: 0.0, dy: 27.0),
                         tint: component.cameraState.flashTint,
+                        size: component.cameraState.flashTintSize,
                         update: { [weak state] tint in
                             state?.updateFlashTint(tint)
+                        },
+                        updateSize: { [weak state] size in
+                            state?.updateFlashTintSize(size)
                         },
                         dismiss: { [weak state] in
                             state?.displayingFlashTint = false
@@ -1461,6 +1478,7 @@ public class CameraScreen: ViewController {
                 flashMode: .off,
                 flashModeDidChange: false,
                 flashTint: .white,
+                flashTintSize: 1.0,
                 recording: .none,
                 duration: 0.0,
                 isDualCameraEnabled: isDualCameraEnabled

@@ -8361,6 +8361,56 @@ public extension Api.functions.photos {
                     })
                 }
 }
+public extension Api.functions.premium {
+                static func applyBoost(flags: Int32, slot: Int32?, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1186373995)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(slot!, buffer: buffer, boxed: false)}
+                    peer.serialize(buffer, true)
+                    return (FunctionDescription(name: "premium.applyBoost", parameters: [("flags", String(describing: flags)), ("slot", String(describing: slot)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.premium {
+                static func getBoostsList(flags: Int32, peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.BoostsList>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1626764896)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeString(offset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "premium.getBoostsList", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.premium.BoostsList? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.premium.BoostsList?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.premium.BoostsList
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.premium {
+                static func getMyBoosts() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.MyBoosts>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(199719754)
+                    
+                    return (FunctionDescription(name: "premium.getMyBoosts", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.premium.MyBoosts? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.premium.MyBoosts?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.premium.MyBoosts
+                        }
+                        return result
+                    })
+                }
+}
 public extension Api.functions.stats {
                 static func getBroadcastStats(flags: Int32, channel: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.BroadcastStats>) {
                     let buffer = Buffer()
@@ -8633,36 +8683,6 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func applyBoost(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-224560085)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "stories.applyBoost", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Bool?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.stories {
-                static func canApplyBoost(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.CanApplyBoostResult>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-620379715)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "stories.canApplyBoost", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.CanApplyBoostResult? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.stories.CanApplyBoostResult?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.stories.CanApplyBoostResult
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.stories {
                 static func canSendStory(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-941629475)
@@ -8773,38 +8793,6 @@ public extension Api.functions.stories {
                         var result: Api.stories.AllStories?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.stories.AllStories
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.stories {
-                static func getBoostersList(peer: Api.InputPeer, offset: String, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.BoostersList>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(863959424)
-                    peer.serialize(buffer, true)
-                    serializeString(offset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "stories.getBoostersList", parameters: [("peer", String(describing: peer)), ("offset", String(describing: offset)), ("limit", String(describing: limit))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.BoostersList? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.stories.BoostersList?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.stories.BoostersList
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.stories {
-                static func getBoostsStatus(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stories.BoostsStatus>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(1279562866)
-                    peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "stories.getBoostsStatus", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stories.BoostsStatus? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.stories.BoostsStatus?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.stories.BoostsStatus
                         }
                         return result
                     })

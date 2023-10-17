@@ -522,7 +522,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                                                     }
                                                 }
                                             }
-                                        case let .premiumGiftCode(peerIds, boostPeer, quantity, option):
+                                        case .premiumGiftCode:
                                             receiptMessageId = nil
                                         }
                                     }

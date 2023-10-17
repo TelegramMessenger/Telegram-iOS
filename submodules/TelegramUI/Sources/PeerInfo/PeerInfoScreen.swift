@@ -94,6 +94,7 @@ import PeerReportScreen
 import WebUI
 import ShareWithPeersScreen
 import ItemListPeerItem
+import PeerNameColorScreen
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -522,6 +523,7 @@ private final class PeerInfoInteraction {
     let openAddBotToGroup: () -> Void
     let performBotCommand: (PeerInfoBotCommand) -> Void
     let editingOpenPublicLinkSetup: () -> Void
+    let editingOpenNameColorSetup: () -> Void
     let editingOpenInviteLinksSetup: () -> Void
     let editingOpenDiscussionGroupSetup: () -> Void
     let editingToggleMessageSignatures: (Bool) -> Void
@@ -574,6 +576,7 @@ private final class PeerInfoInteraction {
         openAddBotToGroup: @escaping () -> Void,
         performBotCommand: @escaping (PeerInfoBotCommand) -> Void,
         editingOpenPublicLinkSetup: @escaping () -> Void,
+        editingOpenNameColorSetup: @escaping () -> Void,
         editingOpenInviteLinksSetup: @escaping () -> Void,
         editingOpenDiscussionGroupSetup: @escaping () -> Void,
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
@@ -625,6 +628,7 @@ private final class PeerInfoInteraction {
         self.openAddBotToGroup = openAddBotToGroup
         self.performBotCommand = performBotCommand
         self.editingOpenPublicLinkSetup = editingOpenPublicLinkSetup
+        self.editingOpenNameColorSetup = editingOpenNameColorSetup
         self.editingOpenInviteLinksSetup = editingOpenInviteLinksSetup
         self.editingOpenDiscussionGroupSetup = editingOpenDiscussionGroupSetup
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
@@ -1537,18 +1541,18 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
             switch channel.info {
             case .broadcast:
                 let ItemUsername = 1
-                let ItemInviteLinks = 2
-                let ItemDiscussionGroup = 3
-                let ItemSignMessages = 4
-                let ItemSignMessagesHelp = 5
-                let ItemDeleteChannel = 6
-                let ItemReactions = 7
-                
-                let ItemAdmins = 8
-                let ItemMembers = 9
-                let ItemMemberRequests = 10
-                let ItemBanned = 11
-                let ItemRecentActions = 12
+                let ItemNameColor = 2
+                let ItemInviteLinks = 3
+                let ItemDiscussionGroup = 4
+                let ItemSignMessages = 5
+                let ItemSignMessagesHelp = 6
+                let ItemDeleteChannel = 7
+                let ItemReactions = 8
+                let ItemAdmins = 9
+                let ItemMembers = 10
+                let ItemMemberRequests = 11
+                let ItemBanned = 12
+                let ItemRecentActions = 13
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1563,7 +1567,14 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                         interaction.editingOpenPublicLinkSetup()
                     }))
                 }
-                 
+
+                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                    
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemNameColor, label: .semitransparentBadge(EnginePeer(channel).compactDisplayTitle, (data.peer?.nameColor ?? .blue).color), text: "Channel Color", icon: UIImage(bundleImageName: "Settings/Menu/Appearance"), action: {
+                        interaction.editingOpenNameColorSetup()
+                    }))
+                }
+                
                 if (isCreator && (channel.addressName?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
@@ -2275,6 +2286,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             editingOpenPublicLinkSetup: { [weak self] in
                 self?.editingOpenPublicLinkSetup()
+            },
+            editingOpenNameColorSetup: { [weak self] in
+                self?.editingOpenNameColorSetup()
             },
             editingOpenInviteLinksSetup: { [weak self] in
                 self?.editingOpenInviteLinksSetup()
@@ -7070,6 +7084,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 }
             }
         }
+    }
+    
+    private func editingOpenNameColorSetup() {
+        let controller = PeerNameColorScreen(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, subject: .channel(self.peerId))
+        self.controller?.push(controller)
     }
     
     private func editingOpenInviteLinksSetup() {
