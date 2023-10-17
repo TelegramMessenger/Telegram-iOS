@@ -49,29 +49,30 @@ public final class ChannelBoostStatus: Equatable {
 }
 
 func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal<ChannelBoostStatus?, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    }
-    |> mapToSignal { inputPeer -> Signal<ChannelBoostStatus?, NoError> in
-        guard let inputPeer = inputPeer else {
-            return .single(nil)
-        }
-        return account.network.request(Api.functions.stories.getBoostsStatus(peer: inputPeer))
-        |> map(Optional.init)
-        |> `catch` { _ -> Signal<Api.stories.BoostsStatus?, NoError> in
-            return .single(nil)
-        }
-        |> map { result -> ChannelBoostStatus? in
-            guard let result = result else {
-                return nil
-            }
-            
-            switch result {
-            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience, url, prepaidGiveaways):
-                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }), url: url, prepaidGiveaways: prepaidGiveaways?.map({ PrepaidGiveaway(apiPrepaidGiveaway: $0) }) ?? [])
-            }
-        }
-    }
+    return .single(nil)
+//    return account.postbox.transaction { transaction -> Api.InputPeer? in
+//        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+//    }
+//    |> mapToSignal { inputPeer -> Signal<ChannelBoostStatus?, NoError> in
+//        guard let inputPeer = inputPeer else {
+//            return .single(nil)
+//        }
+//        return account.network.request(Api.functions.stories.getBoostsStatus(peer: inputPeer))
+//        |> map(Optional.init)
+//        |> `catch` { _ -> Signal<Api.stories.BoostsStatus?, NoError> in
+//            return .single(nil)
+//        }
+//        |> map { result -> ChannelBoostStatus? in
+//            guard let result = result else {
+//                return nil
+//            }
+//            
+//            switch result {
+//            case let .boostsStatus(_, level, currentLevelBoosts, boosts, nextLevelBoosts, premiumAudience, url, prepaidGiveaways):
+//                return ChannelBoostStatus(level: Int(level), boosts: Int(boosts), currentLevelBoosts: Int(currentLevelBoosts), nextLevelBoosts: nextLevelBoosts.flatMap(Int.init), premiumAudience: premiumAudience.flatMap({ StatsPercentValue(apiPercentValue: $0) }), url: url, prepaidGiveaways: prepaidGiveaways?.map({ PrepaidGiveaway(apiPrepaidGiveaway: $0) }) ?? [])
+//            }
+//        }
+//    }
 }
 
 public enum CanApplyBoostStatus {
@@ -89,85 +90,87 @@ public enum CanApplyBoostStatus {
 }
 
 func _internal_canApplyChannelBoost(account: Account, peerId: PeerId) -> Signal<CanApplyBoostStatus, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    }
-    |> mapToSignal { inputPeer -> Signal<CanApplyBoostStatus, NoError> in
-        guard let inputPeer = inputPeer else {
-            return .single(.error(.generic))
-        }
-        return account.network.request(Api.functions.stories.canApplyBoost(peer: inputPeer), automaticFloodWait: false)
-        |> map { result -> (Api.stories.CanApplyBoostResult?, CanApplyBoostStatus.ErrorReason?) in
-            return (result, nil)
-        }
-        |> `catch` { error -> Signal<(Api.stories.CanApplyBoostResult?, CanApplyBoostStatus.ErrorReason?), NoError> in
-            let reason: CanApplyBoostStatus.ErrorReason
-            if error.errorDescription == "PREMIUM_ACCOUNT_REQUIRED" {
-                reason = .premiumRequired
-            } else if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
-                let errorText = error.errorDescription ?? ""
-                if let underscoreIndex = errorText.lastIndex(of: "_") {
-                    let timeoutText = errorText[errorText.index(after: underscoreIndex)...]
-                    if let timeoutValue = Int32(String(timeoutText)) {
-                        reason = .floodWait(timeoutValue)
-                    } else {
-                        reason = .generic
-                    }
-                } else {
-                    reason = .generic
-                }
-            } else if error.errorDescription == "SAME_BOOST_ALREADY_ACTIVE" || error.errorDescription == "BOOST_NOT_MODIFIED" {
-                reason = .peerBoostAlreadyActive
-            } else if error.errorDescription == "PREMIUM_GIFTED_NOT_ALLOWED" {
-                reason = .giftedPremiumNotAllowed
-            } else {
-                reason = .generic
-            }
-
-            return .single((nil, reason))
-        }
-        |> mapToSignal { result, errorReason -> Signal<CanApplyBoostStatus, NoError> in
-            guard let result = result else {
-                return .single(.error(errorReason ?? .generic))
-            }
-            
-            return account.postbox.transaction { transaction -> CanApplyBoostStatus in
-                switch result {
-                case .canApplyBoostOk:
-                    return .ok
-                case let .canApplyBoostReplace(currentBoost, chats):
-                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(transaction: transaction, chats: chats, users: []))
-                    
-                    if let peer = transaction.getPeer(currentBoost.peerId) {
-                        return .replace(currentBoost: EnginePeer(peer))
-                    } else {
-                        return .error(.generic)
-                    }
-                }
-            }
-        }
-    }
+    return .single(.error(.generic))
+//    return account.postbox.transaction { transaction -> Api.InputPeer? in
+//        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+//    }
+//    |> mapToSignal { inputPeer -> Signal<CanApplyBoostStatus, NoError> in
+//        guard let inputPeer = inputPeer else {
+//            return .single(.error(.generic))
+//        }
+//        return account.network.request(Api.functions.stories.canApplyBoost(peer: inputPeer), automaticFloodWait: false)
+//        |> map { result -> (Api.stories.CanApplyBoostResult?, CanApplyBoostStatus.ErrorReason?) in
+//            return (result, nil)
+//        }
+//        |> `catch` { error -> Signal<(Api.stories.CanApplyBoostResult?, CanApplyBoostStatus.ErrorReason?), NoError> in
+//            let reason: CanApplyBoostStatus.ErrorReason
+//            if error.errorDescription == "PREMIUM_ACCOUNT_REQUIRED" {
+//                reason = .premiumRequired
+//            } else if error.errorDescription.hasPrefix("FLOOD_WAIT_") {
+//                let errorText = error.errorDescription ?? ""
+//                if let underscoreIndex = errorText.lastIndex(of: "_") {
+//                    let timeoutText = errorText[errorText.index(after: underscoreIndex)...]
+//                    if let timeoutValue = Int32(String(timeoutText)) {
+//                        reason = .floodWait(timeoutValue)
+//                    } else {
+//                        reason = .generic
+//                    }
+//                } else {
+//                    reason = .generic
+//                }
+//            } else if error.errorDescription == "SAME_BOOST_ALREADY_ACTIVE" || error.errorDescription == "BOOST_NOT_MODIFIED" {
+//                reason = .peerBoostAlreadyActive
+//            } else if error.errorDescription == "PREMIUM_GIFTED_NOT_ALLOWED" {
+//                reason = .giftedPremiumNotAllowed
+//            } else {
+//                reason = .generic
+//            }
+//
+//            return .single((nil, reason))
+//        }
+//        |> mapToSignal { result, errorReason -> Signal<CanApplyBoostStatus, NoError> in
+//            guard let result = result else {
+//                return .single(.error(errorReason ?? .generic))
+//            }
+//            
+//            return account.postbox.transaction { transaction -> CanApplyBoostStatus in
+//                switch result {
+//                case .canApplyBoostOk:
+//                    return .ok
+//                case let .canApplyBoostReplace(currentBoost, chats):
+//                    updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: AccumulatedPeers(transaction: transaction, chats: chats, users: []))
+//                    
+//                    if let peer = transaction.getPeer(currentBoost.peerId) {
+//                        return .replace(currentBoost: EnginePeer(peer))
+//                    } else {
+//                        return .error(.generic)
+//                    }
+//                }
+//            }
+//        }
+//    }
 }
 
 func _internal_applyChannelBoost(account: Account, peerId: PeerId) -> Signal<Bool, NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(peerId).flatMap(apiInputPeer)
-    }
-    |> mapToSignal { inputPeer -> Signal<Bool, NoError> in
-        guard let inputPeer = inputPeer else {
-            return .single(false)
-        }
-        return account.network.request(Api.functions.stories.applyBoost(peer: inputPeer))
-        |> `catch` { error -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
-        }
-        |> map { result -> Bool in
-            if case .boolTrue = result {
-                return true
-            }
-            return false
-        }
-    }
+    return .single(false)
+//    return account.postbox.transaction { transaction -> Api.InputPeer? in
+//        return transaction.getPeer(peerId).flatMap(apiInputPeer)
+//    }
+//    |> mapToSignal { inputPeer -> Signal<Bool, NoError> in
+//        guard let inputPeer = inputPeer else {
+//            return .single(false)
+//        }
+//        return account.network.request(Api.functions.stories.applyBoost(peer: inputPeer))
+//        |> `catch` { error -> Signal<Api.Bool, NoError> in
+//            return .single(.boolFalse)
+//        }
+//        |> map { result -> Bool in
+//            if case .boolTrue = result {
+//                return true
+//            }
+//            return false
+//        }
+//    }
 }
 
 private final class ChannelBoostersContextImpl {
@@ -240,95 +243,95 @@ private final class ChannelBoostersContextImpl {
     }
     
     func loadMore() {
-        if self.isLoadingMore {
-            return
-        }
-        self.isLoadingMore = true
-        let account = self.account
-        let accountPeerId = account.peerId
-        let peerId = self.peerId
-        let populateCache = self.populateCache
-        
-        if self.loadedFromCache {
-            self.loadedFromCache = false
-        }
-        let lastOffset = self.lastOffset
-        
-        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
-            return transaction.getPeer(peerId).flatMap(apiInputPeer)
-        }
-        |> mapToSignal { inputPeer -> Signal<([ChannelBoostersContext.State.Booster], Int32, String?), NoError> in
-            if let inputPeer = inputPeer {
-                let offset = lastOffset ?? ""
-                let limit: Int32 = lastOffset == nil ? 25 : 50
-                
-                let signal = account.network.request(Api.functions.stories.getBoostersList(peer: inputPeer, offset: offset, limit: limit))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.stories.BoostersList?, NoError> in
-                    return .single(nil)
-                }
-                |> mapToSignal { result -> Signal<([ChannelBoostersContext.State.Booster], Int32, String?), NoError> in
-                    return account.postbox.transaction { transaction -> ([ChannelBoostersContext.State.Booster], Int32, String?) in
-                        guard let result = result else {
-                            return ([], 0, nil)
-                        }
-                        switch result {
-                        case let .boostersList(_, count, boosters, nextOffset, users):
-                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
-                            var resultBoosters: [ChannelBoostersContext.State.Booster] = []
-                            for booster in boosters {
-                                let peerId: EnginePeer.Id
-                                let expires: Int32
-                                switch booster {
-                                    case let .booster(userId, expiresValue):
-                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
-                                        expires = expiresValue
-                                }
-                                if let peer = transaction.getPeer(peerId) {
-                                    resultBoosters.append(ChannelBoostersContext.State.Booster(peer: EnginePeer(peer), expires: expires))
-                                }
-                            }
-                            if populateCache {
-                                if let entry = CodableEntry(CachedChannelBoosters(boosters: resultBoosters, count: count)) {
-                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedChannelBoosters, key: CachedChannelBoosters.key(peerId: peerId)), entry: entry)
-                                }
-                            }
-                            return (resultBoosters, count, nextOffset)
-                        }
-                    }
-                }
-                return signal
-            } else {
-                return .single(([], 0, nil))
-            }
-        }
-        |> deliverOn(self.queue)).start(next: { [weak self] boosters, updatedCount, nextOffset in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.lastOffset = nextOffset
-            if strongSelf.populateCache {
-                strongSelf.populateCache = false
-                strongSelf.results.removeAll()
-            }
-            var existingIds = Set(strongSelf.results.map { $0.peer.id })
-            for booster in boosters {
-                if !existingIds.contains(booster.peer.id) {
-                    strongSelf.results.append(booster)
-                    existingIds.insert(booster.peer.id)
-                }
-            }
-            strongSelf.isLoadingMore = false
-            strongSelf.hasLoadedOnce = true
-            strongSelf.canLoadMore = !boosters.isEmpty
-            if strongSelf.canLoadMore {
-                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
-            } else {
-                strongSelf.count = Int32(strongSelf.results.count)
-            }
-            strongSelf.updateState()
-        }))
-        self.updateState()
+//        if self.isLoadingMore {
+//            return
+//        }
+//        self.isLoadingMore = true
+//        let account = self.account
+//        let accountPeerId = account.peerId
+//        let peerId = self.peerId
+//        let populateCache = self.populateCache
+//        
+//        if self.loadedFromCache {
+//            self.loadedFromCache = false
+//        }
+//        let lastOffset = self.lastOffset
+//        
+//        self.disposable.set((self.account.postbox.transaction { transaction -> Api.InputPeer? in
+//            return transaction.getPeer(peerId).flatMap(apiInputPeer)
+//        }
+//        |> mapToSignal { inputPeer -> Signal<([ChannelBoostersContext.State.Booster], Int32, String?), NoError> in
+//            if let inputPeer = inputPeer {
+//                let offset = lastOffset ?? ""
+//                let limit: Int32 = lastOffset == nil ? 25 : 50
+//                
+//                let signal = account.network.request(Api.functions.stories.getBoostersList(peer: inputPeer, offset: offset, limit: limit))
+//                |> map(Optional.init)
+//                |> `catch` { _ -> Signal<Api.stories.BoostersList?, NoError> in
+//                    return .single(nil)
+//                }
+//                |> mapToSignal { result -> Signal<([ChannelBoostersContext.State.Booster], Int32, String?), NoError> in
+//                    return account.postbox.transaction { transaction -> ([ChannelBoostersContext.State.Booster], Int32, String?) in
+//                        guard let result = result else {
+//                            return ([], 0, nil)
+//                        }
+//                        switch result {
+//                        case let .boostersList(_, count, boosters, nextOffset, users):
+//                            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: AccumulatedPeers(users: users))
+//                            var resultBoosters: [ChannelBoostersContext.State.Booster] = []
+//                            for booster in boosters {
+//                                let peerId: EnginePeer.Id
+//                                let expires: Int32
+//                                switch booster {
+//                                    case let .booster(userId, expiresValue):
+//                                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+//                                        expires = expiresValue
+//                                }
+//                                if let peer = transaction.getPeer(peerId) {
+//                                    resultBoosters.append(ChannelBoostersContext.State.Booster(peer: EnginePeer(peer), expires: expires))
+//                                }
+//                            }
+//                            if populateCache {
+//                                if let entry = CodableEntry(CachedChannelBoosters(boosters: resultBoosters, count: count)) {
+//                                    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedChannelBoosters, key: CachedChannelBoosters.key(peerId: peerId)), entry: entry)
+//                                }
+//                            }
+//                            return (resultBoosters, count, nextOffset)
+//                        }
+//                    }
+//                }
+//                return signal
+//            } else {
+//                return .single(([], 0, nil))
+//            }
+//        }
+//        |> deliverOn(self.queue)).start(next: { [weak self] boosters, updatedCount, nextOffset in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            strongSelf.lastOffset = nextOffset
+//            if strongSelf.populateCache {
+//                strongSelf.populateCache = false
+//                strongSelf.results.removeAll()
+//            }
+//            var existingIds = Set(strongSelf.results.map { $0.peer.id })
+//            for booster in boosters {
+//                if !existingIds.contains(booster.peer.id) {
+//                    strongSelf.results.append(booster)
+//                    existingIds.insert(booster.peer.id)
+//                }
+//            }
+//            strongSelf.isLoadingMore = false
+//            strongSelf.hasLoadedOnce = true
+//            strongSelf.canLoadMore = !boosters.isEmpty
+//            if strongSelf.canLoadMore {
+//                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
+//            } else {
+//                strongSelf.count = Int32(strongSelf.results.count)
+//            }
+//            strongSelf.updateState()
+//        }))
+//        self.updateState()
     }
         
     private func updateCache() {

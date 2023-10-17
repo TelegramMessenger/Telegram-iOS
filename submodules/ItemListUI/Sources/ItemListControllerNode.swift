@@ -233,6 +233,8 @@ public final class ItemListControllerNodeView: UITracingLayerView {
 }
 
 open class ItemListControllerNode: ASDisplayNode {
+    private weak var controller: ItemListController?
+    
     private var _ready = ValuePromise<Bool>()
     open var ready: Signal<Bool, NoError> {
         return self._ready.get()
@@ -295,6 +297,7 @@ open class ItemListControllerNode: ASDisplayNode {
     private var previousContentOffset: ListViewVisibleContentOffset?
     
     public init(controller: ItemListController?, navigationBar: NavigationBar, state: Signal<(ItemListPresentationData, (ItemListNodeState, Any)), NoError>) {
+        self.controller = controller
         self.navigationBar = navigationBar
         
         self.listNode = ListView()
@@ -585,9 +588,10 @@ open class ItemListControllerNode: ASDisplayNode {
             insets.top += headerHeight
         }
         
+        var footerHeight: CGFloat = 0.0
         if let footerItemNode = self.footerItemNode {
-            let footerHeight = footerItemNode.updateLayout(layout: layout, transition: transition)
-            insets.bottom += footerHeight
+            footerHeight = footerItemNode.updateLayout(layout: layout, transition: transition)
+            insets.bottom = footerHeight
         }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
@@ -615,6 +619,12 @@ open class ItemListControllerNode: ASDisplayNode {
         if dequeue {
             self.dequeueTransitions()
         }
+        
+        var layout = layout
+        layout.intrinsicInsets.left = 4.0
+        layout.intrinsicInsets.right = 4.0
+        layout.intrinsicInsets.bottom = insets.bottom
+        self.controller?.presentationContext.containerLayoutUpdated(layout, transition: transition)
         
         if !self.afterLayoutActions.isEmpty {
             let afterLayoutActions = self.afterLayoutActions

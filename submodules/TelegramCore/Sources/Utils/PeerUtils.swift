@@ -216,6 +216,33 @@ public extension Peer {
             return false
         }
     }
+    
+    var nameColor: PeerNameColor? {
+        switch self {
+        case let user as TelegramUser:
+            if let nameColor = user.nameColor {
+                return nameColor
+            } else {
+                return PeerNameColor(rawValue: Int32(self.id.id._internalGetInt64Value() % 7)) ?? .blue
+            }
+        case let channel as TelegramChannel:
+            if let nameColor = channel.nameColor {
+                return nameColor
+            } else {
+                return PeerNameColor(rawValue: Int32(self.id.id._internalGetInt64Value() % 7)) ?? .blue
+            }
+        default:
+            return nil
+        }
+    }
+    
+    var hasCustomNameColor: Bool {
+        let defaultNameColor = PeerNameColor(rawValue: Int32(self.id.id._internalGetInt64Value() % 7)) ?? .blue
+        if self.nameColor != defaultNameColor {
+            return true
+        }
+        return false
+    }
 }
 
 public extension TelegramPeerUsername {

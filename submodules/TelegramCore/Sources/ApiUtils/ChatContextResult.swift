@@ -493,6 +493,13 @@ extension ChatContextResultMessage {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
                 self = .invoice(media: TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: currency, totalAmount: totalAmount, startParam: "", extendedMedia: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), replyMarkup: parsedReplyMarkup)
+            case let .botInlineMessageMediaWebPage(flags, message, entities, url, replyMarkup):
+                let _ = flags
+                let _ = message
+                let _ = entities
+                let _ = url
+                let _ = replyMarkup
+                fatalError()
         }
     }
 }

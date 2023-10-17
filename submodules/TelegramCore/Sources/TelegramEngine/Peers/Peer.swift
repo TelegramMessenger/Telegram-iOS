@@ -505,6 +505,10 @@ public extension EnginePeer {
         }
         return false
     }
+    
+    var nameColor: PeerNameColor? {
+        return self._asPeer().nameColor
+    }
 }
 
 public extension EnginePeer {

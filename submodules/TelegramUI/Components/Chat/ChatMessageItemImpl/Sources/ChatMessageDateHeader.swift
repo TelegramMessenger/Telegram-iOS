@@ -425,6 +425,9 @@ public final class ChatMessageAvatarHeader: ListViewItemHeader {
             return
         }
         node.updatePresentationData(self.presentationData, context: self.context)
+        if let peer = self.peer {
+            node.updatePeer(peer: peer)
+        }
         node.updateStoryStats(storyStats: self.storyStats, theme: self.presentationData.theme.theme, force: false)
     }
 }
@@ -441,7 +444,7 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
     
     private let peerId: PeerId
     private let messageReference: MessageReference?
-    private let peer: Peer?
+    private var peer: Peer?
     private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
@@ -517,6 +520,13 @@ public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
         self.containerNode.isGestureEnabled = false
 
         self.avatarNode.setCustomLetters(letters, icon: !letters.isEmpty ? nil : .phone)
+    }
+    
+    public func updatePeer(peer: Peer) {
+        if let previousPeer = self.peer, previousPeer.nameColor != peer.nameColor {
+            self.peer = peer
+            self.avatarNode.setPeer(context: self.context, theme: self.presentationData.theme.theme, peer: EnginePeer(peer), authorOfMessage: self.messageReference, overrideImage: nil, emptyColor: .black, synchronousLoad: false, displayDimensions: CGSize(width: 38.0, height: 38.0))
+        }
     }
 
     public func setPeer(context: AccountContext, theme: PresentationTheme, synchronousLoad: Bool, peer: Peer, authorOfMessage: MessageReference?, emptyColor: UIColor) {

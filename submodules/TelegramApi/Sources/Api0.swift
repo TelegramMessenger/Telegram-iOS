@@ -11,6 +11,7 @@ public enum Api {
     public enum payments {}
     public enum phone {}
     public enum photos {}
+    public enum premium {}
     public enum stats {}
     public enum stickers {}
     public enum storage {}
@@ -32,6 +33,7 @@ public enum Api {
         public enum payments {}
         public enum phone {}
         public enum photos {}
+        public enum premium {}
         public enum stats {}
         public enum stickers {}
         public enum stories {}
@@ -73,7 +75,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1834973166] = { return Api.BaseTheme.parse_baseThemeTinted($0) }
     dict[-1132882121] = { return Api.Bool.parse_boolFalse($0) }
     dict[-1720552011] = { return Api.Bool.parse_boolTrue($0) }
-    dict[245261184] = { return Api.Booster.parse_booster($0) }
+    dict[1405288648] = { return Api.Boost.parse_boost($0) }
     dict[-1778593322] = { return Api.BotApp.parse_botApp($0) }
     dict[1571189943] = { return Api.BotApp.parse_botAppNotModified($0) }
     dict[-1032140601] = { return Api.BotCommand.parse_botCommand($0) }
@@ -90,6 +92,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[85477117] = { return Api.BotInlineMessage.parse_botInlineMessageMediaGeo($0) }
     dict[894081801] = { return Api.BotInlineMessage.parse_botInlineMessageMediaInvoice($0) }
     dict[-1970903652] = { return Api.BotInlineMessage.parse_botInlineMessageMediaVenue($0) }
+    dict[-2137335386] = { return Api.BotInlineMessage.parse_botInlineMessageMediaWebPage($0) }
     dict[-1937807902] = { return Api.BotInlineMessage.parse_botInlineMessageText($0) }
     dict[400266251] = { return Api.BotInlineResult.parse_botInlineMediaResult($0) }
     dict[295067450] = { return Api.BotInlineResult.parse_botInlineResult($0) }
@@ -281,6 +284,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1768777083] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaGeo($0) }
     dict[-672693723] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaInvoice($0) }
     dict[1098628881] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaVenue($0) }
+    dict[-1109605104] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageMediaWebPage($0) }
     dict[1036876423] = { return Api.InputBotInlineMessage.parse_inputBotInlineMessageText($0) }
     dict[-1995686519] = { return Api.InputBotInlineMessageID.parse_inputBotInlineMessageID($0) }
     dict[-1227287081] = { return Api.InputBotInlineMessageID.parse_inputBotInlineMessageID64($0) }
@@ -574,6 +578,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2129714567] = { return Api.MessagesFilter.parse_inputMessagesFilterUrl($0) }
     dict[-1614803355] = { return Api.MessagesFilter.parse_inputMessagesFilterVideo($0) }
     dict[1358283666] = { return Api.MessagesFilter.parse_inputMessagesFilterVoice($0) }
+    dict[1267991078] = { return Api.MyBoost.parse_myBoost($0) }
     dict[-1910892683] = { return Api.NearestDc.parse_nearestDc($0) }
     dict[-1746354498] = { return Api.NotificationSound.parse_notificationSoundDefault($0) }
     dict[-2096391452] = { return Api.NotificationSound.parse_notificationSoundLocal($0) }
@@ -1175,6 +1180,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[539045032] = { return Api.photos.Photo.parse_photo($0) }
     dict[-1916114267] = { return Api.photos.Photos.parse_photos($0) }
     dict[352657236] = { return Api.photos.Photos.parse_photosSlice($0) }
+    dict[-2030542532] = { return Api.premium.BoostsList.parse_boostsList($0) }
+    dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
     dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[-1986399595] = { return Api.stats.MessageStats.parse_messageStats($0) }
@@ -1191,10 +1198,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
-    dict[-203604707] = { return Api.stories.BoostersList.parse_boostersList($0) }
-    dict[1911715597] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
-    dict[-1021889145] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostOk($0) }
-    dict[1898726997] = { return Api.stories.CanApplyBoostResult.parse_canApplyBoostReplace($0) }
+    dict[-869070685] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1574486984] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
@@ -1304,7 +1308,7 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Bool:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.Booster:
+            case let _1 as Api.Boost:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotApp:
                 _1.serialize(buffer, boxed)
@@ -1603,6 +1607,8 @@ public extension Api {
             case let _1 as Api.MessageViews:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessagesFilter:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MyBoost:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NearestDc:
                 _1.serialize(buffer, boxed)
@@ -2074,6 +2080,10 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.photos.Photos:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.premium.BoostsList:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.premium.MyBoosts:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.stats.BroadcastStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.MegagroupStats:
@@ -2086,11 +2096,7 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.stories.BoostersList:
-                _1.serialize(buffer, boxed)
             case let _1 as Api.stories.BoostsStatus:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stories.CanApplyBoostResult:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.PeerStories:
                 _1.serialize(buffer, boxed)
