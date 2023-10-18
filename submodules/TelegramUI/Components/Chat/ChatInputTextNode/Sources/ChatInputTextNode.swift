@@ -110,7 +110,7 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         get {
             return self.textView.defaultTextContainerInset
         } set(value) {
-            let targetValue = UIEdgeInsets(top: value.top, left: 0.0, bottom: value.bottom, right: 0.0)
+            let targetValue = UIEdgeInsets(top: value.top, left: value.left, bottom: value.bottom, right: value.right)
             if self.textView.defaultTextContainerInset != value {
                 self.textView.defaultTextContainerInset = targetValue
             }
@@ -183,6 +183,8 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
 }
 
 private final class ChatInputTextContainer: NSTextContainer {
+    var rightInset: CGFloat = 0.0
+    
     override var isSimpleRectangularTextContainer: Bool {
         return false
     }
@@ -200,6 +202,7 @@ private final class ChatInputTextContainer: NSTextContainer {
         
         result.origin.x -= 5.0
         result.size.width -= 5.0
+        result.size.width -= self.rightInset
         
         if let textStorage = self.layoutManager?.textStorage {
             let string: NSString = textStorage.string as NSString
@@ -233,6 +236,8 @@ private final class ChatInputTextContainer: NSTextContainer {
                 }
             }
         }
+        
+        result.size.width = max(1.0, result.size.width)
         
         return result
     }
@@ -453,6 +458,19 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     public func updateTextContainerInset() {
         var result = self.defaultTextContainerInset
         
+        var horizontalInsetsUpdated = false
+        if self.customTextContainer.rightInset != result.right {
+            horizontalInsetsUpdated = true
+            self.customTextContainer.rightInset = result.right
+        }
+        if self.measurementTextContainer.rightInset != result.right {
+            horizontalInsetsUpdated = true
+            self.measurementTextContainer.rightInset = result.right
+        }
+        
+        result.left = 0.0
+        result.right = 0.0
+        
         if self.customTextStorage.length != 0 {
             let topAttributes = self.customTextStorage.attributes(at: 0, effectiveRange: nil)
             let bottomAttributes = self.customTextStorage.attributes(at: self.customTextStorage.length - 1, effectiveRange: nil)
@@ -468,6 +486,11 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         if self.textContainerInset != result {
             self.textContainerInset = result
         }
+        if horizontalInsetsUpdated {
+            self.customLayoutManager.invalidateLayout(forCharacterRange: NSRange(location: 0, length: self.customTextStorage.length), actualCharacterRange: nil)
+            self.customLayoutManager.ensureLayout(for: self.customTextContainer)
+        }
+        
         self.updateTextElements()
     }
     
@@ -578,6 +601,11 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     
     override public func caretRect(for position: UITextPosition) -> CGRect {
         var result = super.caretRect(for: position)
+        
+        if "".isEmpty {
+            return result
+        }
+        
         guard let textStorage = self.customLayoutManager.textStorage else {
             return result
         }

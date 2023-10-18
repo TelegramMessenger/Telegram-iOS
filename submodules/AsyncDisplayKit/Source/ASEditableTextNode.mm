@@ -244,11 +244,6 @@
     [super scrollRectToVisible:rect animated:false];
 }
 
-- (CGRect)caretRectForPosition:(UITextPosition *)position {
-    CGRect rect = [super caretRectForPosition:position];
-    return rect;
-}
-
 #endif
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
@@ -506,9 +501,6 @@
 - (void)setTextContainerInset:(UIEdgeInsets)textContainerInset
 {
   AS::MutexLocker l(_textKitLock);
-    
-    textContainerInset.top += 12.0;
-    textContainerInset.bottom += 12.0;
 
   _textContainerInset = textContainerInset;
   _textKitComponents.textView.textContainerInset = textContainerInset;
@@ -1070,68 +1062,8 @@
   return [_wordKerner layoutManager:layoutManager boundingBoxForControlGlyphAtIndex:glyphIndex forTextContainer:textContainer proposedLineFragment:proposedRect glyphPosition:glyphPosition characterIndex:characterIndex];
 }
 
-- (CGFloat)layoutManager:(NSLayoutManager *)layoutManager paragraphSpacingBeforeGlyphAtIndex:(NSUInteger)glyphIndex withProposedLineFragmentRect:(CGRect)rect {
-    int characterIndex = (int)[layoutManager characterIndexForGlyphAtIndex:glyphIndex];
-    if (characterIndex < 0 || characterIndex >= layoutManager.textStorage.length) {
-        return 0.0;
-    }
-    
-    NSDictionary *attributes = [layoutManager.textStorage attributesAtIndex:characterIndex effectiveRange:nil];
-    NSObject *blockQuote = attributes[@"Attribute__Blockquote"];
-    if (blockQuote == nil) {
-        return 0.0f;
-    }
-    
-    if (characterIndex != 0) {
-        NSDictionary *previousAttributes = [layoutManager.textStorage attributesAtIndex:characterIndex - 1 effectiveRange:nil];
-        NSObject *previousBlockQuote = previousAttributes[@"Attribute__Blockquote"];
-        if (previousBlockQuote != nil && [blockQuote isEqual:previousBlockQuote]) {
-            return 0.0f;
-        }
-    }
-    
-    return 12.0f;
-}
-
-- (CGFloat)layoutManager:(NSLayoutManager *)layoutManager paragraphSpacingAfterGlyphAtIndex:(NSUInteger)glyphIndex withProposedLineFragmentRect:(CGRect)rect {
-    int characterIndex = (int)[layoutManager characterIndexForGlyphAtIndex:glyphIndex];
-    characterIndex--;
-    if (characterIndex < 0) {
-        characterIndex = 0;
-    }
-    if (characterIndex < 0 || characterIndex >= layoutManager.textStorage.length) {
-        return 0.0;
-    }
-    
-    NSDictionary *attributes = [layoutManager.textStorage attributesAtIndex:characterIndex effectiveRange:nil];
-    NSObject *blockQuote = attributes[@"Attribute__Blockquote"];
-    if (blockQuote == nil) {
-        return 0.0f;
-    }
-    
-    if (characterIndex + 1 < layoutManager.textStorage.length) {
-        NSDictionary *nextAttributes = [layoutManager.textStorage attributesAtIndex:characterIndex + 1 effectiveRange:nil];
-        NSObject *nextBlockQuote = nextAttributes[@"Attribute__Blockquote"];
-        if (nextBlockQuote != nil && [blockQuote isEqual:nextBlockQuote]) {
-            return 0.0f;
-        }
-    }
-    
-    return 12.0f;
-}
-
 - (BOOL)layoutManager:(NSLayoutManager *)layoutManager shouldSetLineFragmentRect:(inout CGRect *)lineFragmentRect lineFragmentUsedRect:(inout CGRect *)lineFragmentUsedRect baselineOffset:(inout CGFloat *)baselineOffset inTextContainer:(NSTextContainer *)textContainer forGlyphRange:(NSRange)glyphRange {
-    /*if (layoutManager.textStorage.length != 0) {
-        NSDictionary *attributes = [layoutManager.textStorage attributesAtIndex:0 effectiveRange:nil];
-        NSObject *blockQuote = attributes[@"Attribute__Blockquote"];
-        if (blockQuote != nil) {
-            CGRect rect = *lineFragmentRect;
-            rect.origin.y += 12.0;
-            CGRect usedRect = *lineFragmentUsedRect;
-            usedRect.origin.y += 12.0;
-        }
-    }*/
-  /*CGFloat fontLineHeight;
+  CGFloat fontLineHeight;
   UIFont *baseFont = _baseFont;
   if (_typingAttributes[NSFontAttributeName] != nil) {
     baseFont = _typingAttributes[NSFontAttributeName];
@@ -1154,7 +1086,7 @@
   
   *lineFragmentRect = rect;
   *lineFragmentUsedRect = usedRect;
-  *baselineOffset = *baselineOffset + baselineNudge;*/
+  *baselineOffset = *baselineOffset + baselineNudge;
   
   return true;
 }
