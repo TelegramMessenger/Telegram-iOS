@@ -133,6 +133,7 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
             var font: UIFont?
             var fontSize = fontSize
             if fontAttributes.contains(.blockQuote) {
+                fontAttributes.remove(.blockQuote)
                 fontSize = round(fontSize * 0.8235294117647058)
             }
             if fontAttributes == [.bold, .italic, .monospace] {
@@ -553,108 +554,53 @@ private func quoteRangesEqual(_ lhs: [(NSRange, ChatTextInputTextQuoteAttribute)
 
 private func refreshBlockQuotes(text: NSString, initialAttributedText: NSAttributedString, attributedText: NSMutableAttributedString, fullRange: NSRange) {
     var quoteRanges: [(NSRange, ChatTextInputTextQuoteAttribute)] = []
-    initialAttributedText.enumerateAttribute(ChatTextInputAttributes.quote, in: fullRange, options: [], using: { value, range, _ in
-        if let value = value as? ChatTextInputTextQuoteAttribute {
+    initialAttributedText.enumerateAttributes(in: fullRange, using: { dict, range, _ in
+        if let value = dict[ChatTextInputAttributes.quote] as? ChatTextInputTextQuoteAttribute {
             quoteRanges.append((range, value))
         }
     })
     quoteRanges.sort(by: { $0.0.location < $1.0.location })
     let initialQuoteRanges = quoteRanges
-    
-    for i in 0 ..< quoteRanges.count {
-        let range = quoteRanges[i].0
-        
-        var validLower = range.lowerBound
-        inner1: for i in range.lowerBound ..< range.upperBound {
-            if let c = UnicodeScalar(text.character(at: i)) {
-                if textUrlCharacters.contains(c) {
-                    validLower = i
-                    break inner1
-                }
-            } else {
-                break inner1
-            }
-        }
-        var validUpper = range.upperBound
-        inner2: for i in (validLower ..< range.upperBound).reversed() {
-            if let c = UnicodeScalar(text.character(at: i)) {
-                if textUrlCharacters.contains(c) {
-                    validUpper = i + 1
-                    break inner2
-                }
-            } else {
-                break inner2
-            }
-        }
-        
-        let minLower = (i == 0) ? fullRange.lowerBound : quoteRanges[i - 1].0.upperBound
-        inner3: for i in (minLower ..< validLower).reversed() {
-            if let c = UnicodeScalar(text.character(at: i)) {
-                if textUrlEdgeCharacters.contains(c) {
-                    validLower = i
-                } else {
-                    break inner3
-                }
-            } else {
-                break inner3
-            }
-        }
-        
-        let maxUpper = (i == quoteRanges.count - 1) ? fullRange.upperBound : quoteRanges[i + 1].0.lowerBound
-        inner3: for i in validUpper ..< maxUpper {
-            if let c = UnicodeScalar(text.character(at: i)) {
-                if textUrlEdgeCharacters.contains(c) {
-                    validUpper = i + 1
-                } else {
-                    break inner3
-                }
-            } else {
-                break inner3
-            }
-        }
-        
-        quoteRanges[i] = (NSRange(location: validLower, length: validUpper - validLower), quoteRanges[i].1)
-    }
-    
     quoteRanges = quoteRanges.filter({ $0.0.length > 0 })
     
-    while quoteRanges.count > 1 {
-        var hadReductions = false
-        outer: for i in 0 ..< quoteRanges.count - 1 {
-            if quoteRanges[i].1 === quoteRanges[i + 1].1 {
-                var combine = true
-                inner: for j in quoteRanges[i].0.upperBound ..< quoteRanges[i + 1].0.lowerBound {
-                    if let c = UnicodeScalar(text.character(at: j)) {
-                        if textUrlCharacters.contains(c) {
-                        } else {
-                            combine = false
-                            break inner
-                        }
-                    } else {
-                        combine = false
-                        break inner
-                    }
-                }
-                if combine {
-                    hadReductions = true
-                    quoteRanges[i] = (NSRange(location: quoteRanges[i].0.lowerBound, length: quoteRanges[i + 1].0.upperBound - quoteRanges[i].0.lowerBound), quoteRanges[i].1)
-                    quoteRanges.remove(at: i + 1)
-                    break outer
-                }
+    for i in 0 ..< quoteRanges.count {
+        var backIndex = quoteRanges[i].0.lowerBound
+        innerBack: while backIndex >= 0 {
+            let character = text.character(at: backIndex)
+            if character == 0x0a {
+                backIndex += 1
+                break innerBack
             }
+            backIndex -= 1
         }
-        if !hadReductions {
-            break
+        backIndex = max(backIndex, 0)
+        
+        if backIndex < quoteRanges[i].0.lowerBound {
+            quoteRanges[i].0 = NSRange(location: backIndex, length: quoteRanges[i].0.upperBound - backIndex)
+        }
+        
+        var forwardIndex = quoteRanges[i].0.upperBound
+        innerForward: while forwardIndex < text.length {
+            let character = text.character(at: forwardIndex)
+            if character == 0x0a {
+                forwardIndex -= 1
+                break innerForward
+            }
+            forwardIndex += 1
+        }
+        forwardIndex = min(forwardIndex, text.length - 1)
+        
+        if forwardIndex > quoteRanges[i].0.upperBound - 1 {
+            quoteRanges[i].0 = NSRange(location: quoteRanges[i].0.lowerBound, length: forwardIndex + 1 - quoteRanges[i].0.lowerBound)
         }
     }
     
-    if quoteRanges.count > 1 {
-        outer: for i in (1 ..< quoteRanges.count).reversed() {
-            for j in 0 ..< i {
-                if quoteRanges[j].1 === quoteRanges[i].1 {
-                    quoteRanges.remove(at: i)
-                    continue outer
-                }
+    for i in (0 ..< quoteRanges.count).reversed() {
+        inner: for mergeIndex in (i + 1 ..< quoteRanges.count).reversed() {
+            if quoteRanges[mergeIndex].1 === quoteRanges[i].1 || quoteRanges[mergeIndex].0.intersection(quoteRanges[i].0) != nil {
+                quoteRanges[i].0 = NSRange(location: quoteRanges[i].0.location, length: quoteRanges[mergeIndex].0.location + quoteRanges[mergeIndex].0.length - quoteRanges[i].0.location)
+                quoteRanges.removeSubrange((i + 1) ..< (mergeIndex + 1))
+                break inner
             }
         }
     }
@@ -777,6 +723,7 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
                 var font: UIFont?
                 var baseFontSize = baseFontSize
                 if fontAttributes.contains(.blockQuote) {
+                    fontAttributes.remove(.blockQuote)
                     baseFontSize = round(baseFontSize * 0.8235294117647058)
                 }
                 if fontAttributes == [.bold, .italic, .monospace] {

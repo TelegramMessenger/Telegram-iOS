@@ -67,9 +67,6 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
     }
     var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]
     
-    var nextBlockId = 0
-    
-    var rangeOffset: Int = 0
     for i in 0 ..< entities.count {
         if skipEntity {
             skipEntity = false
@@ -77,7 +74,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         }
         let stringLength = string.length
         let entity = entities[i]
-        var range = NSRange(location: entity.range.lowerBound + rangeOffset, length: entity.range.upperBound - entity.range.lowerBound)
+        var range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
         if nsString == nil {
             nsString = text as NSString
         }
@@ -223,38 +220,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     fontAttributes[range] = .blockQuote
                 }
                 
-                let paragraphBreak = "\n"
-            
-                var nsString = string.string as NSString
-                var stringLength = nsString.length
-                
-                let paragraphRange: NSRange
-                if range.lowerBound == 0 {
-                    paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
-                } else if nsString.character(at: range.lowerBound) == 0x0a {
-                    paragraphRange = NSRange(location: range.lowerBound + 1, length: range.upperBound - range.lowerBound - 1)
-                } else if nsString.character(at: range.lowerBound - 1) == 0x0a {
-                    paragraphRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
-                } else {
-                    string.insert(NSAttributedString(string: paragraphBreak), at: range.lowerBound)
-                    paragraphRange = NSRange(location: range.lowerBound + paragraphBreak.count, length: range.upperBound - range.lowerBound)
-                }
-                
-                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(id: nextBlockId, title: nil, color: baseQuoteTintColor), range: paragraphRange)
-                nextBlockId += 1
-            
-                nsString = string.string as NSString
-                stringLength = nsString.length
-                
-                if paragraphRange.upperBound < stringLength {
-                    if nsString.character(at: paragraphRange.upperBound) == 0x0a {
-                        string.replaceCharacters(in: NSMakeRange(paragraphRange.upperBound, 1), with: "")
-                        rangeOffset -= 1
-                    }
-                }
-            
-                rangeOffset += 0
-                //rangeOffset += paragraphBreak.count
+                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(title: nil, color: baseQuoteTintColor), range: range)
             case .BankCard:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -302,6 +268,12 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
             for range in ranges {
                 var font: UIFont?
                 
+                var fontAttributes = fontAttributes
+                var isQuote = false
+                if fontAttributes.contains(.blockQuote) {
+                    isQuote = true
+                    fontAttributes.remove(.blockQuote)
+                }
                 if fontAttributes == [.bold, .italic] {
                     font = boldItalicFont
                 } else if fontAttributes == [.bold] {
@@ -314,7 +286,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     font = baseFont
                 }
                 
-                if adjustQuoteFontSize, let fontValue = font, fontAttributes.contains(.blockQuote) {
+                if adjustQuoteFontSize, let fontValue = font, isQuote {
                     font = fontValue.withSize(round(fontValue.pointSize * 0.8235294117647058))
                 }
                 

@@ -114,6 +114,7 @@ import ChatMessageItemCommon
 import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
+import WebsiteType
 
 public enum ChatControllerPeekActions {
     case standard
@@ -17933,9 +17934,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, commit: @escaping () -> Void = {}) {
         self.commitPurposefulAction()
         
-        if let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url, content.instantPage != nil {
-            if let navigationController = self.navigationController as? NavigationController {
-                self.context.sharedContext.openChatInstantPage(context: self.context, message: message, sourcePeerType: nil, navigationController: navigationController)
+        if let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {
+            if content.instantPage != nil {
+                if let navigationController = self.navigationController as? NavigationController {
+                    switch instantPageType(of: content) {
+                    case .album:
+                        break
+                    default:
+                        self.context.sharedContext.openChatInstantPage(context: self.context, message: message, sourcePeerType: nil, navigationController: navigationController)
+                        return
+                    }
+                }
+            } else if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
+                let _ = self.controllerInteraction?.openMessage(message, .default)
                 return
             }
         }

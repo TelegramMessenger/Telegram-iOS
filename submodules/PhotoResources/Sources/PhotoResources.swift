@@ -2016,7 +2016,7 @@ public func chatWebpageSnippetFile(account: Account, userLocation: MediaResource
     }
 }
 
-public func chatWebpageSnippetPhoto(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebpageSnippetPhoto(account: Account, userLocation: MediaResourceUserLocation, photoReference: ImageMediaReference, placeholderColor: UIColor? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetPhotoData(account: account, userLocation: userLocation, photoReference: photoReference)
     
     return signal |> map { fullSizeData in
@@ -2052,6 +2052,22 @@ public func chatWebpageSnippetPhoto(account: Account, userLocation: MediaResourc
                 }
                 
                 addCorners(context, arguments: arguments)
+                
+                return context
+            } else if let placeholderColor {
+                guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                    return nil
+                }
+                
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    if arguments.corners.topLeft.radius != 0.0 {
+                        c.addPath(UIBezierPath(roundedRect: arguments.drawingRect, cornerRadius: arguments.corners.topLeft.radius).cgPath)
+                        c.clip()
+                    }
+                    c.setFillColor(placeholderColor.cgColor)
+                    c.fill(arguments.drawingRect)
+                }
                 
                 return context
             } else {

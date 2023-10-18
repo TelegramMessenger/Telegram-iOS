@@ -383,7 +383,7 @@ public enum ChatTextInputStateTextAttributeType: Codable, Equatable {
         case .spoiler:
             try container.encode(8 as Int32, forKey: "t")
         case .quote:
-            try container.encode(0 as Int32, forKey: "t")
+            try container.encode(9 as Int32, forKey: "t")
         }
     }
 }

@@ -47,8 +47,6 @@
         return false;
     }
     
-    return false;
-    
     return [super canPerformAction:action withSender:sender];
 }
 

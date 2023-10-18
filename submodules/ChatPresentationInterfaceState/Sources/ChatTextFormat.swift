@@ -8,33 +8,89 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
         let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
         var addAttribute = true
         var attributesToRemove: [NSAttributedString.Key] = []
-        state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
+        state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, _ in
             for (key, _) in attributes {
-                if key == attribute && range == nsRange {
+                if key == attribute {
                     addAttribute = false
                     attributesToRemove.append(key)
                 }
             }
         }
         
+        var selectionRange = state.selectionRange
+        
         let result = NSMutableAttributedString(attributedString: state.inputText)
         for attribute in attributesToRemove {
-            result.removeAttribute(attribute, range: nsRange)
-        }
-        if addAttribute {
             if attribute == ChatTextInputAttributes.quote {
-                result.addAttribute(attribute, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+                var removeRange = nsRange
+                
+                var selectionIndex = nsRange.upperBound
                 if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
                     result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
+                    selectionIndex += 1
+                    removeRange.length += 1
                 }
                 if nsRange.lowerBound != 0 && (result.string as NSString).character(at: nsRange.lowerBound - 1) != 0x0a {
                     result.insert(NSAttributedString(string: "\n"), at: nsRange.lowerBound)
+                    selectionIndex += 1
+                    removeRange.location += 1
+                } else if nsRange.lowerBound != 0 {
+                    removeRange.location -= 1
+                    removeRange.length += 1
                 }
+                
+                if removeRange.lowerBound > result.length {
+                    removeRange = NSRange(location: result.length, length: 0)
+                } else if removeRange.upperBound > result.length {
+                    removeRange = NSRange(location: removeRange.lowerBound, length: result.length - removeRange.lowerBound)
+                }
+                result.removeAttribute(attribute, range: removeRange)
+                
+                if selectionRange.lowerBound > result.length {
+                    selectionRange = result.length ..< result.length
+                } else if selectionRange.upperBound > result.length {
+                    selectionRange = selectionRange.lowerBound ..< result.length
+                }
+                
+                // Prevent merge back
+                result.enumerateAttributes(in: NSRange(location: selectionIndex, length: result.length - selectionIndex), options: .longestEffectiveRangeNotRequired) { attributes, range, _ in
+                    for (key, value) in attributes {
+                        if let _ = value as? ChatTextInputTextQuoteAttribute {
+                            result.removeAttribute(key, range: range)
+                            result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(), range: range)
+                        }
+                    }
+                }
+                
+                selectionRange = selectionIndex ..< selectionIndex
+            } else {
+                result.removeAttribute(attribute, range: nsRange)
+            }
+        }
+        
+        if addAttribute {
+            if attribute == ChatTextInputAttributes.quote {
+                result.addAttribute(attribute, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+                var selectionIndex = nsRange.upperBound
+                if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
+                    selectionIndex += 1
+                }
+                if nsRange.lowerBound != 0 && (result.string as NSString).character(at: nsRange.lowerBound - 1) != 0x0a {
+                    result.insert(NSAttributedString(string: "\n"), at: nsRange.lowerBound)
+                    selectionIndex += 1
+                }
+                selectionRange = selectionIndex ..< selectionIndex
             } else {
                 result.addAttribute(attribute, value: true as Bool, range: nsRange)
             }
         }
-        return ChatTextInputState(inputText: result, selectionRange: state.selectionRange)
+        if selectionRange.lowerBound > result.length {
+            selectionRange = result.length ..< result.length
+        } else if selectionRange.upperBound > result.length {
+            selectionRange = selectionRange.lowerBound ..< result.length
+        }
+        return ChatTextInputState(inputText: result, selectionRange: selectionRange)
     } else {
         return state
     }

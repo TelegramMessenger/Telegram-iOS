@@ -1173,16 +1173,19 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         var textFieldMinHeight: CGFloat = 35.0
+        var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
             textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+        }
+        
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
             let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right
-            
-            //let measuredHeight = textInputNode.measure(CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude))
-            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth)
+            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: textInputViewRealInsets.right)
             
             let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
             
@@ -3682,8 +3685,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var actions = suggestedActions
         
-        if let index = actions.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.replace;") }) {
-            actions.remove(at: index)
+        if #available(iOS 16.0, *) {
+            if let index = actions.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.replace;") }), let subMenu = actions[index] as? UIMenu {
+                var filteredChildren = subMenu.children
+                if let subIndex = filteredChildren.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.autofill;") }) {
+                    filteredChildren.remove(at: subIndex)
+                }
+                actions[index] = UIMenu(title: subMenu.title, subtitle: subMenu.subtitle, image: subMenu.image, identifier: subMenu.identifier, options: subMenu.options, children: filteredChildren)
+            }
         }
         
         if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
@@ -3745,11 +3754,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             ] as [UIAction])
             
             let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
-            if let index = actions.firstIndex(where: { $0.description.contains("identifier = com.apple.menu.format;") }) {
-                actions[index] = formatMenu
-            } else {
-                actions.insert(formatMenu, at: 2)
-            }
+            actions.insert(formatMenu, at: 1)
         }
         return UIMenu(children: actions)
     }

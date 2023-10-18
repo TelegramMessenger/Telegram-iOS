@@ -68,12 +68,10 @@ public struct TextRangeRectEdge: Equatable {
 }
 
 public final class TextNodeBlockQuoteData: NSObject {
-    public let id: Int
     public let title: NSAttributedString?
     public let color: UIColor
     
-    public init(id: Int, title: NSAttributedString?, color: UIColor) {
-        self.id = id
+    public init(title: NSAttributedString?, color: UIColor) {
         self.title = title
         self.color = color
         
@@ -85,9 +83,6 @@ public final class TextNodeBlockQuoteData: NSObject {
             return false
         }
         
-        if self.id != other.id {
-            return false
-        }
         if let lhsTitle = self.title, let rhsTitle = other.title {
             if !lhsTitle.isEqual(to: rhsTitle) {
                 return false
@@ -1142,8 +1137,10 @@ open class TextNode: ASDisplayNode {
         var segmentCharacterOffset = 0
         while true {
             var found = false
-            attributedString.enumerateAttribute(NSAttributedString.Key("Attribute__Blockquote"), in: NSRange(location: segmentCharacterOffset, length: wholeStringLength - segmentCharacterOffset), using: { value, effectiveRange, _ in
+            attributedString.enumerateAttribute(NSAttributedString.Key("Attribute__Blockquote"), in: NSRange(location: segmentCharacterOffset, length: wholeStringLength - segmentCharacterOffset), using: { value, effectiveRange, stop in
                 found = true
+                stop.pointee = ObjCBool(true)
+                
                 if segmentCharacterOffset != effectiveRange.location {
                     stringSegments.append(StringSegment(
                         title: nil,
@@ -1167,6 +1164,10 @@ open class TextNode: ASDisplayNode {
                             tintColor: value.color
                         ))
                     }
+                    segmentCharacterOffset = effectiveRange.location + effectiveRange.length
+                    if segmentCharacterOffset < wholeStringLength && rawWholeString.character(at: segmentCharacterOffset) == 0x0a {
+                        segmentCharacterOffset += 1
+                    }
                 } else {
                     stringSegments.append(StringSegment(
                         title: nil,
@@ -1175,9 +1176,8 @@ open class TextNode: ASDisplayNode {
                         isBlockQuote: false,
                         tintColor: nil
                     ))
+                    segmentCharacterOffset = effectiveRange.location + effectiveRange.length
                 }
-                
-                segmentCharacterOffset = effectiveRange.location + effectiveRange.length
             })
             if !found {
                 if segmentCharacterOffset != wholeStringLength {
@@ -1992,6 +1992,9 @@ open class TextNode: ASDisplayNode {
                 
                 context.setFillColor((layout.backgroundColor ?? UIColor.clear).cgColor)
                 context.fill(bounds)
+                
+                context.setBlendMode(.normal)
+                blendMode = .normal
             }
             
             let alignment = layout.resolvedAlignment
@@ -2803,6 +2806,7 @@ open class TextView: UIView {
                 context.setBlendMode(.copy)
                 context.setFillColor((layout.backgroundColor ?? UIColor.clear).cgColor)
                 context.fill(bounds)
+                context.setBlendMode(.copy)
             }
             
             if let textShadowColor = layout.textShadowColor {
