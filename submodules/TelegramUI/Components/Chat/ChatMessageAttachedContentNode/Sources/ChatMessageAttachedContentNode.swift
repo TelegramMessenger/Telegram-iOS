@@ -793,7 +793,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             self.inlineMediaValue = inlineMediaValue
                             
                             if updateMedia {
-                                let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: inlineMediaValue))
+                                let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: inlineMediaValue), placeholderColor: mainColor.withMultipliedAlpha(0.1))
                                 inlineMedia.setSignal(updateInlineImageSignal)
                             }
                             

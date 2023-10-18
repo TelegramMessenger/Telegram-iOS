@@ -1173,16 +1173,19 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         var textFieldMinHeight: CGFloat = 35.0
+        var textInputViewRealInsets = UIEdgeInsets()
         if let presentationInterfaceState = self.presentationInterfaceState {
             textFieldMinHeight = calclulateTextFieldMinHeight(presentationInterfaceState, metrics: metrics)
+        }
+        
+        if let presentationInterfaceState = self.presentationInterfaceState {
+            textInputViewRealInsets = calculateTextFieldRealInsets(presentationInterfaceState: presentationInterfaceState, accessoryButtonsWidth: accessoryButtonsWidth)
         }
         
         let textFieldHeight: CGFloat
         if let textInputNode = self.textInputNode {
             let maxTextWidth = width - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right
-            
-            //let measuredHeight = textInputNode.measure(CGSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude))
-            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth)
+            let measuredHeight = textInputNode.textHeightForWidth(maxTextWidth, rightInset: textInputViewRealInsets.right)
             
             let unboundTextFieldHeight = max(textFieldMinHeight, ceil(measuredHeight))
             

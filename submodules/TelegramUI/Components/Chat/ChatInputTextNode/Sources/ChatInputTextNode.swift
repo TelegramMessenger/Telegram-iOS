@@ -130,8 +130,8 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
     public func resetInitialPrimaryLanguage() {
     }
     
-    public func textHeightForWidth(_ width: CGFloat) -> CGFloat {
-        return self.textView.textHeightForWidth(width)
+    public func textHeightForWidth(_ width: CGFloat, rightInset: CGFloat) -> CGFloat {
+        return self.textView.textHeightForWidth(width, rightInset: rightInset)
     }
     
     @objc public func textViewDidBeginEditing(_ textView: UITextView) {
@@ -463,10 +463,6 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
             horizontalInsetsUpdated = true
             self.customTextContainer.rightInset = result.right
         }
-        if self.measurementTextContainer.rightInset != result.right {
-            horizontalInsetsUpdated = true
-            self.measurementTextContainer.rightInset = result.right
-        }
         
         result.left = 0.0
         result.right = 0.0
@@ -494,10 +490,11 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         self.updateTextElements()
     }
     
-    public func textHeightForWidth(_ width: CGFloat) -> CGFloat {
+    public func textHeightForWidth(_ width: CGFloat, rightInset: CGFloat) -> CGFloat {
         let measureSize = CGSize(width: width, height: 1000000.0)
         
-        if self.measurementTextStorage != self.attributedText || self.measurementTextContainer.size != measureSize {
+        if self.measurementTextStorage != self.attributedText || self.measurementTextContainer.size != measureSize || self.measurementTextContainer.rightInset != rightInset {
+            self.measurementTextContainer.rightInset = rightInset
             self.measurementTextStorage.setAttributedString(self.attributedText)
             self.measurementTextContainer.size = measureSize
             self.measurementLayoutManager.invalidateLayout(forCharacterRange: NSRange(location: 0, length: self.measurementTextStorage.length), actualCharacterRange: nil)
