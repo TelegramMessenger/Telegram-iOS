@@ -619,7 +619,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                             let nsString = string.string as NSString
                                             let subRange = nsString.range(of: initialQuote.text)
                                             if subRange.location != NSNotFound {
-                                                strongSelf.beginTextSelection(range: subRange, displayMenu: false)
+                                                strongSelf.beginTextSelection(range: subRange, displayMenu: true)
                                             }
                                         }
                                         

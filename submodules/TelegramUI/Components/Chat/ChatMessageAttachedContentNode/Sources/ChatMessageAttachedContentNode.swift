@@ -75,6 +75,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var media: Media?
     private var theme: ChatPresentationThemeData?
     
+    private var isHighlighted: Bool = false
+    private var highlightTimer: Foundation.Timer?
+    
     public var openMedia: ((InteractiveMediaNodeActivateContent) -> Void)?
     public var activateAction: (() -> Void)?
     public var requestUpdateLayout: (() -> Void)?
@@ -106,6 +109,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.statusNode)
+    }
+    
+    deinit {
+        self.highlightTimer?.invalidate()
     }
     
     @objc private func pressed() {
@@ -2041,8 +2048,34 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
         }
         
-        let transition: ContainedViewLayoutTransition = .animated(duration: isHighlighted ? 0.1 : 0.2, curve: .easeInOut)
-        let scale: CGFloat = isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
+        if self.isHighlighted != isHighlighted {
+            self.isHighlighted = isHighlighted
+            
+            if isHighlighted {
+                /*self.highlightTimer = Foundation.Timer.scheduledTimer(withTimeInterval: 0.05, repeats: false, block: { [weak self] timer in
+                    guard let self else {
+                        return
+                    }
+                    if self.highlightTimer === timer {
+                        self.highlightTimer = nil
+                    }
+                    self.applyIsHighlighted()
+                })*/
+                self.applyIsHighlighted()
+            } else {
+                self.applyIsHighlighted()
+            }
+        }
+    }
+    
+    private func applyIsHighlighted() {
+        if let highlightTimer = self.highlightTimer {
+            self.highlightTimer = nil
+            highlightTimer.invalidate()
+        }
+        
+        let transition: ContainedViewLayoutTransition = .animated(duration: self.isHighlighted ? 0.2 : 0.2, curve: .easeInOut)
+        let scale: CGFloat = self.isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
         transition.updateSublayerTransformScale(node: self, scale: scale)
     }
     
