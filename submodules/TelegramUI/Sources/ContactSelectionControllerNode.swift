@@ -23,6 +23,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     private let displayDeviceContacts: Bool
     private let displayCallIcons: Bool
+    private let filters: [ContactListFilter]
     
     let contactListNode: ContactListNode
     private let dimNode: ASDisplayNode
@@ -53,14 +54,20 @@ final class ContactSelectionControllerNode: ASDisplayNode {
     
     var searchContainerNode: ContactsSearchContainerNode?
     
-    init(context: AccountContext, presentationData: PresentationData, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool) {
+    init(context: AccountContext, presentationData: PresentationData, options: [ContactListAdditionalOption], displayDeviceContacts: Bool, displayCallIcons: Bool, multipleSelection: Bool, requirePhoneNumbers: Bool) {
         self.context = context
         self.presentationData = presentationData
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
+        var filters: [ContactListFilter] = [.excludeSelf]
+        if requirePhoneNumbers {
+            filters.append(.excludeWithoutPhoneNumbers)
+        }
+        self.filters = filters
+        
         var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), filters: filters, displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _, _ in
             contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         
@@ -186,7 +193,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             categories.insert(.global)
         }
         
-        let searchContainerNode = ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, addContact: nil, openPeer: { [weak self] peer in
+        let searchContainerNode = ContactsSearchContainerNode(context: self.context, updatedPresentationData: (self.presentationData, self.presentationDataPromise.get()), onlyWriteable: false, categories: categories, filters: self.filters, addContact: nil, openPeer: { [weak self] peer in
             if let strongSelf = self {
                 var updated = false
                 strongSelf.contactListNode.updateSelectionState { state -> ContactListNodeGroupSelectionState? in

@@ -422,6 +422,8 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 itemLayer.layerTintColor = theme.list.itemAccentColor.cgColor
             case .primary:
                 itemLayer.layerTintColor = theme.list.itemPrimaryTextColor.cgColor
+            case let .custom(color):
+                itemLayer.layerTintColor = color.cgColor
             }
             
             var itemFrame = itemLayout.frame(itemIndex: index)

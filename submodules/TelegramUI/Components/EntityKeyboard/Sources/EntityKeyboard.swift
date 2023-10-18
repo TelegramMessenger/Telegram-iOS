@@ -610,6 +610,7 @@ public final class EntityKeyboardComponent: Component {
                                         animationRenderer: emojiContent.animationRenderer,
                                         theme: component.theme,
                                         title: itemGroup.title ?? "",
+                                        customTintColor: itemGroup.customTintColor,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.supergroupId, subgroupId: nil)
                                         }

@@ -11,6 +11,8 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
     let date: Int32?
+    let minDate: Int32?
+    let maxDate: Int32?
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let updated: ((Int32) -> Void)?
@@ -20,6 +22,8 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         presentationData: ItemListPresentationData,
         dateTimeFormat: PresentationDateTimeFormat,
         date: Int32?,
+        minDate: Int32? = nil,
+        maxDate: Int32? = nil,
         sectionId: ItemListSectionId,
         style: ItemListStyle,
         updated: ((Int32) -> Void)?,
@@ -28,6 +32,8 @@ public class ItemListDatePickerItem: ListViewItem, ItemListItem {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
         self.date = date
+        self.minDate = minDate
+        self.maxDate = maxDate
         self.sectionId = sectionId
         self.style = style
         self.updated = updated
@@ -223,7 +229,15 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.item?.updated?(Int32(date.timeIntervalSince1970))
                     }
                 
-                    datePickerNode.minimumDate = Date()
+                    if let minDate = item.minDate {
+                        datePickerNode.minimumDate = Date(timeIntervalSince1970: TimeInterval(minDate))
+                    } else {
+                        datePickerNode.minimumDate = Date()
+                    }
+                    if let maxDate = item.maxDate {
+                        datePickerNode.maximumDate = Date(timeIntervalSince1970: TimeInterval(maxDate))
+                    }
+                    
                     datePickerNode.date = item.date.flatMap { Date(timeIntervalSince1970: TimeInterval($0)) }
                    
                     let datePickerSize = CGSize(width: width, height: contentSize.height)

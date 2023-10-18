@@ -1323,11 +1323,11 @@ public struct PresentationResourcesChat {
             let radius: CGFloat = 3.0
             let offset: CGFloat = 5.0
             
-            return generateImage(CGSize(width: radius, height: radius * 6.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 8.0, height: radius * 6.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                                 
-                context.move(to: CGPoint(x: size.width, y: offset))
-                context.addLine(to: CGPoint(x: size.width, y: offset + radius * 3.0))
+                context.move(to: CGPoint(x: radius, y: offset))
+                context.addLine(to: CGPoint(x: radius, y: offset + radius * 3.0))
                 context.addLine(to: CGPoint(x: 0.0, y: offset + radius * 4.0))
                 context.addLine(to: CGPoint(x: 0.0, y: offset + radius))
                 context.closePath()

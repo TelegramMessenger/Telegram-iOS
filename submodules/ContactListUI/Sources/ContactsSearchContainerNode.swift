@@ -322,6 +322,7 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                     var entries: [ContactListSearchEntry] = []
                     var existingPeerIds = Set<EnginePeer.Id>()
                     var disabledPeerIds = Set<EnginePeer.Id>()
+                    var requirePhoneNumbers = false
                     for filter in filters {
                         switch filter {
                             case .excludeSelf:
@@ -330,6 +331,8 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                                 existingPeerIds = existingPeerIds.union(peerIds)
                             case let .disable(peerIds):
                                 disabledPeerIds = disabledPeerIds.union(peerIds)
+                            case .excludeWithoutPhoneNumbers:
+                                requirePhoneNumbers = true
                         }
                     }
                     var existingNormalizedPhoneNumbers = Set<DeviceContactNormalizedPhoneNumber>()
@@ -338,6 +341,14 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                         if existingPeerIds.contains(peer.id) {
                             continue
                         }
+                        
+                        if case let .user(user) = peer, requirePhoneNumbers {
+                            let phone = user.phone ?? ""
+                            if phone.isEmpty {
+                                continue
+                            }
+                        }
+                        
                         existingPeerIds.insert(peer.id)
                         var enabled = true
                         if onlyWriteable {
@@ -354,6 +365,14 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                             if !(peer.peer is TelegramUser) {
                                 continue
                             }
+
+                            if let user = peer.peer as? TelegramUser, requirePhoneNumbers {
+                                let phone = user.phone ?? ""
+                                if phone.isEmpty {
+                                    continue
+                                }
+                            }
+                            
                             if !existingPeerIds.contains(peer.peer.id) {
                                 existingPeerIds.insert(peer.peer.id)
                                 
@@ -373,6 +392,14 @@ public final class ContactsSearchContainerNode: SearchDisplayControllerContentNo
                             if !(peer.peer is TelegramUser) {
                                 continue
                             }
+                            
+                            if let user = peer.peer as? TelegramUser, requirePhoneNumbers {
+                                let phone = user.phone ?? ""
+                                if phone.isEmpty {
+                                    continue
+                                }
+                            }
+                            
                             if !existingPeerIds.contains(peer.peer.id) {
                                 existingPeerIds.insert(peer.peer.id)
                                 

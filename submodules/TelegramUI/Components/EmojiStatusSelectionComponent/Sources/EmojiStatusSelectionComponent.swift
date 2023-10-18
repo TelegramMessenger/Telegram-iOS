@@ -822,6 +822,8 @@ public final class EmojiStatusSelectionController: ViewController {
                                 dynamicColor: self.presentationData.theme.list.itemAccentColor
                             )
                             switch item.tintMode {
+                            case let .custom(color):
+                                baseItemLayer.contentTintColor = color
                             case .accent:
                                 baseItemLayer.contentTintColor = self.presentationData.theme.list.itemAccentColor
                             case .primary:

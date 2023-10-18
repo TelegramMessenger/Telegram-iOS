@@ -37,6 +37,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     private let displayDeviceContacts: Bool
     private let displayCallIcons: Bool
     private let multipleSelection: Bool
+    private let requirePhoneNumbers: Bool
     
     private var _ready = Promise<Bool>()
     override var ready: Promise<Bool> {
@@ -91,6 +92,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.displayCallIcons = params.displayCallIcons
         self.confirmation = params.confirmation
         self.multipleSelection = params.multipleSelection
+        self.requirePhoneNumbers = params.requirePhoneNumbers
         
         self.presentationData = params.updatedPresentationData?.initial ?? params.context.sharedContext.currentPresentationData.with { $0 }
         
@@ -178,7 +180,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactSelectionControllerNode(context: self.context, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection)
+        self.displayNode = ContactSelectionControllerNode(context: self.context, presentationData: self.presentationData, options: self.options, displayDeviceContacts: self.displayDeviceContacts, displayCallIcons: self.displayCallIcons, multipleSelection: self.multipleSelection, requirePhoneNumbers: self.requirePhoneNumbers)
         self._ready.set(self.contactsNode.contactListNode.ready)
         
         self.contactsNode.navigationBar = self.navigationBar

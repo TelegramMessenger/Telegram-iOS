@@ -49,7 +49,7 @@ public final class ChannelBoostStatus: Equatable {
 }
 
 func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal<ChannelBoostStatus?, NoError> {
-    return .single(nil)
+    return .single(ChannelBoostStatus(level: 0, boosts: 0, currentLevelBoosts: 0, nextLevelBoosts: nil, premiumAudience: nil, url: "", prepaidGiveaways: []))
 //    return account.postbox.transaction { transaction -> Api.InputPeer? in
 //        return transaction.getPeer(peerId).flatMap(apiInputPeer)
 //    }

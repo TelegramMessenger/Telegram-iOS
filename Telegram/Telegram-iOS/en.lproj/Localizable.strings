@@ -10141,5 +10141,8 @@ Sorry for the inconvenience.";
 "NameColor.ChatPreview.Description.Channel" = "You can choose an individual color to tint your channel's name, the links it sends, and replies to its messages.";
 
 "NameColor.ApplyColor" = "Apply Color";
+"NameColor.ApplyColorAndBackgroundEmoji" = "Apply Color and Icon";
 
 "NameColor.TooltipPremium.Account" = "Subscribe to [Telegram Premium]() to choose a custom color for your name.";
+
+"NameColor.BackgroundEmoji.Title" = "ADD ICONS TO REPLIES";

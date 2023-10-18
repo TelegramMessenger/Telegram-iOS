@@ -12,7 +12,7 @@ import PresentationDataUtils
 import AccountContext
 import WallpaperBackgroundNode
 
-class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem {
+final class PeerNameColorChatPreviewItem: ListViewItem, ItemListItem {
     struct MessageItem: Equatable {
         static func == (lhs: MessageItem, rhs: MessageItem) -> Bool {
             if lhs.outgoing != rhs.outgoing {
@@ -131,7 +131,6 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
     private var itemHeaderNodes: [ListViewItemNode.HeaderId: ListViewItemHeaderNode] = [:]
     
     private var item: PeerNameColorChatPreviewItem?
-    private var finalImage = true
     
     private let disposable = MetaDisposable()
     
@@ -163,6 +162,8 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
         let currentNodes = self.messageNodes
 
         var currentBackgroundNode = self.backgroundNode
+        
+        let currentItem = self.item
         
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
@@ -214,7 +215,9 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                         itemNode.frame = nodeFrame
                         itemNode.isUserInteractionEnabled = false
                         
-                        apply(ListViewItemApply(isOnScreen: true))
+                        Queue.mainQueue().after(0.01) {
+                            apply(ListViewItemApply(isOnScreen: true))
+                        }
                     })
                 }
             } else {
@@ -248,6 +251,16 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+                    
+                    if let currentItem, currentItem.messageItems.first?.nameColor != item.messageItems.first?.nameColor {
+                        if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
+                            snapshot.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: snapshot.frame.size)
+                            strongSelf.view.addSubview(snapshot)
+                            snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+                                snapshot.removeFromSuperview()
+                            })
+                        }
+                    }
                     
                     strongSelf.messageNodes = nodes
                     var topOffset: CGFloat = 4.0
@@ -334,7 +347,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.componentTheme, top: hasTopCorners, bottom: hasBottomCorners) : nil
                     
-                    let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
                     
                     let displayMode: WallpaperDisplayMode
                     if abs(params.availableHeight - params.width) < 100.0, params.availableHeight > 700.0 {
@@ -352,7 +365,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     }
                     
                     if let backgroundNode = strongSelf.backgroundNode {
-                        backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
+                        backgroundNode.frame = backgroundFrame
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
                     strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)

@@ -113,7 +113,7 @@ private final class ContentNode: ASDisplayNode {
             } else {
                 let image = generateImage(size, rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
-                    drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: peer.displayLetters, peerId: peer.id)
+                    drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: peer.displayLetters, peerId: peer.id, nameColor: peer.nameColor)
                 })!
                 self.updateImage(image: image, size: size, spacing: spacing)
             }
@@ -346,7 +346,7 @@ public final class AnimatedAvatarSetView: UIView {
                 } else {
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
-                        drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: peer.displayLetters, peerId: peer.id)
+                        drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: peer.displayLetters, peerId: peer.id, nameColor: peer.nameColor)
                     })!
                     self.updateImage(image: image, size: size, spacing: spacing)
                 }

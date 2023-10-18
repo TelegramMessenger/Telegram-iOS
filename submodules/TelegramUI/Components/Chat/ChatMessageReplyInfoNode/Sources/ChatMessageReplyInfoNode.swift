@@ -654,11 +654,13 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         lineDashView = current
                     } else {
                         lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme))
+                        lineDashView.clipsToBounds = true
                         node.lineDashView = lineDashView
                         node.contentNode.view.addSubview(lineDashView)
                     }
                     lineDashView.tintColor = secondaryColor
-                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 3.0, height: backgroundFrame.height))
+                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 8.0, height: backgroundFrame.height))
+                    lineDashView.layer.cornerRadius = 4.0
                 } else {
                     if let lineDashView = node.lineDashView {
                         node.lineDashView = nil

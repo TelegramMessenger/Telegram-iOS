@@ -27,7 +27,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
     let context: AccountContext
     let giftCode: PremiumGiftCodeInfo
     let action: () -> Void
-    let cancel: () -> Void
+    let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let copyLink: (String) -> Void
@@ -37,7 +37,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
         context: AccountContext,
         giftCode: PremiumGiftCodeInfo,
         action: @escaping () -> Void,
-        cancel: @escaping  () -> Void,
+        cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         copyLink: @escaping (String) -> Void,
@@ -149,7 +149,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 component: Button(
                     content: AnyComponent(Image(image: closeImage)),
                     action: { [weak component] in
-                        component?.cancel()
+                        component?.cancel(true)
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -240,8 +240,10 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
                         action: {
                             if let peer = fromPeer {
-                                component.cancel()
                                 component.openPeer(peer)
+                                Queue.mainQueue().after(1.0, {
+                                    component.cancel(false)
+                                })
                             }
                         }
                     )
@@ -257,8 +259,10 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
                             action: {
                                 if let peer = toPeer {
-                                    component.cancel()
                                     component.openPeer(peer)
+                                    Queue.mainQueue().after(1.0, {
+                                        component.cancel(false)
+                                    })
                                 }
                             }
                         )
@@ -301,9 +305,11 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: giftCode.messageId != nil ? tableLinkColor : tableTextColor)))),
                         isEnabled: true,
                         action: {
-                            component.cancel()
                             if let messageId = giftCode.messageId {
                                 component.openMessage(messageId)
+                            }
+                            Queue.mainQueue().after(1.0) {
+                                component.cancel(true)
                             }
                         }
                     )
@@ -362,7 +368,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     iconPosition: .left,
                     action: {
                         if giftCode.isUsed {
-                            component.cancel()
+                            component.cancel(true)
                         } else {
                             component.action()
                         }
@@ -425,7 +431,6 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
     let context: AccountContext
     let giftCode: PremiumGiftCodeInfo
     let action: () -> Void
-    let cancel: () -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let copyLink: (String) -> Void
@@ -435,7 +440,6 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
         context: AccountContext,
         giftCode: PremiumGiftCodeInfo,
         action: @escaping () -> Void,
-        cancel: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         copyLink: @escaping (String) -> Void,
@@ -444,7 +448,6 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
         self.context = context
         self.giftCode = giftCode
         self.action = action
-        self.cancel = cancel
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.copyLink = copyLink
@@ -475,7 +478,7 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                         context: context.component.context,
                         giftCode: context.component.giftCode,
                         action: context.component.action,
-                        cancel: {
+                        cancel: { animate in
                             animateOut.invoke(Action { _ in
                                 if let controller = controller() {
                                     controller.dismiss(completion: nil)
@@ -535,7 +538,6 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
         context: AccountContext,
         giftCode: PremiumGiftCodeInfo,
         forceDark: Bool = false,
-        cancel: @escaping () -> Void = {},
         action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void = { _ in },
         openMessage: @escaping (EngineMessage.Id) -> Void = { _ in },
@@ -544,7 +546,7 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
         self.context = context
         
         var copyLinkImpl: ((String) -> Void)?
-        super.init(context: context, component: PremiumGiftCodeSheetComponent(context: context, giftCode: giftCode, action: action, cancel: cancel, openPeer: openPeer, openMessage: openMessage, copyLink: { link in
+        super.init(context: context, component: PremiumGiftCodeSheetComponent(context: context, giftCode: giftCode, action: action, openPeer: openPeer, openMessage: openMessage, copyLink: { link in
             copyLinkImpl?(link)
         }, shareLink: shareLink), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         

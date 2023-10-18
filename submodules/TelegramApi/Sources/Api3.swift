@@ -522,7 +522,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum Chat: TypeConstructorDescription {
-        case channel(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32, backgroundEmojiId: Int64?)
+        case channel(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32?, backgroundEmojiId: Int64?)
         case channelForbidden(flags: Int32, id: Int64, accessHash: Int64, title: String, untilDate: Int32?)
         case chat(flags: Int32, id: Int64, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?)
         case chatEmpty(id: Int64)
@@ -532,7 +532,7 @@ public extension Api {
     switch self {
                 case .channel(let flags, let flags2, let id, let accessHash, let title, let username, let photo, let date, let restrictionReason, let adminRights, let bannedRights, let defaultBannedRights, let participantsCount, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
                     if boxed {
-                        buffer.appendInt32(609791884)
+                        buffer.appendInt32(427944574)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -557,7 +557,7 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags2) & Int(1 << 4) != 0 {serializeInt32(storiesMaxId!, buffer: buffer, boxed: false)}
-                    serializeInt32(color, buffer: buffer, boxed: false)
+                    if Int(flags2) & Int(1 << 6) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     if Int(flags2) & Int(1 << 5) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
                     break
                 case .channelForbidden(let flags, let id, let accessHash, let title, let untilDate):
@@ -660,7 +660,7 @@ public extension Api {
             var _15: Int32?
             if Int(_2!) & Int(1 << 4) != 0 {_15 = reader.readInt32() }
             var _16: Int32?
-            _16 = reader.readInt32()
+            if Int(_2!) & Int(1 << 6) != 0 {_16 = reader.readInt32() }
             var _17: Int64?
             if Int(_2!) & Int(1 << 5) != 0 {_17 = reader.readInt64() }
             let _c1 = _1 != nil
@@ -678,10 +678,10 @@ public extension Api {
             let _c13 = (Int(_1!) & Int(1 << 17) == 0) || _13 != nil
             let _c14 = (Int(_2!) & Int(1 << 0) == 0) || _14 != nil
             let _c15 = (Int(_2!) & Int(1 << 4) == 0) || _15 != nil
-            let _c16 = _16 != nil
+            let _c16 = (Int(_2!) & Int(1 << 6) == 0) || _16 != nil
             let _c17 = (Int(_2!) & Int(1 << 5) == 0) || _17 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 {
-                return Api.Chat.channel(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, title: _5!, username: _6, photo: _7!, date: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, defaultBannedRights: _12, participantsCount: _13, usernames: _14, storiesMaxId: _15, color: _16!, backgroundEmojiId: _17)
+                return Api.Chat.channel(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, title: _5!, username: _6, photo: _7!, date: _8!, restrictionReason: _9, adminRights: _10, bannedRights: _11, defaultBannedRights: _12, participantsCount: _13, usernames: _14, storiesMaxId: _15, color: _16, backgroundEmojiId: _17)
             }
             else {
                 return nil
@@ -1238,15 +1238,15 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChatInvite: TypeConstructorDescription {
-        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?)
+        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32?)
         case chatInviteAlready(chat: Api.Chat)
         case chatInvitePeek(chat: Api.Chat, expires: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants):
+                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color):
                     if boxed {
-                        buffer.appendInt32(806110401)
+                        buffer.appendInt32(808708181)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -1258,6 +1258,7 @@ public extension Api {
                     for item in participants! {
                         item.serialize(buffer, true)
                     }}
+                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     break
                 case .chatInviteAlready(let chat):
                     if boxed {
@@ -1277,8 +1278,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants):
-                return ("chatInvite", [("flags", flags as Any), ("title", title as Any), ("about", about as Any), ("photo", photo as Any), ("participantsCount", participantsCount as Any), ("participants", participants as Any)])
+                case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color):
+                return ("chatInvite", [("flags", flags as Any), ("title", title as Any), ("about", about as Any), ("photo", photo as Any), ("participantsCount", participantsCount as Any), ("participants", participants as Any), ("color", color as Any)])
                 case .chatInviteAlready(let chat):
                 return ("chatInviteAlready", [("chat", chat as Any)])
                 case .chatInvitePeek(let chat, let expires):
@@ -1303,14 +1304,17 @@ public extension Api {
             if Int(_1!) & Int(1 << 4) != 0 {if let _ = reader.readInt32() {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             } }
+            var _7: Int32?
+            if Int(_1!) & Int(1 << 10) != 0 {_7 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6)
+            let _c7 = (Int(_1!) & Int(1 << 10) == 0) || _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6, color: _7)
             }
             else {
                 return nil

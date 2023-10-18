@@ -3754,9 +3754,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                         animationCache: animationCache,
                         animationRenderer: animationRenderer,
                         isStandalone: false,
-                        isStatusSelection: true,
-                        isReactionSelection: false,
-                        isEmojiSelection: false,
+                        subject: .status,
                         hasTrending: false,
                         topReactionItems: [],
                         areUnicodeEmojiEnabled: false,
@@ -10304,7 +10302,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                                 context.clear(CGRect(origin: CGPoint(), size: size))
                                 context.translateBy(x: inset, y: inset)
                                 
-                                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id)
+                                drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: displayLetters, peerId: primary.1.id, nameColor: primary.1.nameColor)
                             })?.withRenderingMode(.alwaysOriginal)
                             if let image = image {
                                 subscriber.putNext((image, image))

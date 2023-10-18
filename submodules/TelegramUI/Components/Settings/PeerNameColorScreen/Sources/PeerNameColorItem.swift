@@ -184,8 +184,10 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate
         if selected {
             transition.updateTransformScale(node: self.fillNode, scale: 0.8)
+            transition.updateTransformScale(node: self.ringNode, scale: 1.0)
         } else {
             transition.updateTransformScale(node: self.fillNode, scale: 1.0)
+            transition.updateTransformScale(node: self.ringNode, scale: 0.99)
         }
     }
     

@@ -94,7 +94,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     
     case timeHeader(PresentationTheme, String)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Int32?, Int32?)
     case timeInfo(PresentationTheme, String)
     
     case durationHeader(PresentationTheme, String)
@@ -282,8 +282,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate):
-            if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate {
+        case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsMinDate, lhsMaxDate):
+            if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsMinDate, rhsMaxDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsMinDate == rhsMinDate, lhsMaxDate == rhsMaxDate {
                 return true
             } else {
                 return false
@@ -450,8 +450,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                     }
                 }
             })
-        case let .timeCustomPicker(_, dateTimeFormat, date):
-            return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, sectionId: self.section, style: .blocks, updated: { date in
+        case let .timeCustomPicker(_, dateTimeFormat, date, minDate, maxDate):
+            return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, minDate: minDate, maxDate: maxDate, sectionId: self.section, style: .blocks, updated: { date in
                 arguments.updateState({ state in
                     var updatedState = state
                     updatedState.time = date
@@ -499,7 +499,18 @@ private struct PremiumGiftProduct: Equatable {
     }
 }
 
-private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: CreateGiveawaySubject, state: CreateGiveawayControllerState, presentationData: PresentationData, locale: Locale, peers: [EnginePeer.Id: EnginePeer], products: [PremiumGiftProduct], defaultPrice: (Int64, NSDecimalNumber)) -> [CreateGiveawayEntry] {
+private func createGiveawayControllerEntries(
+    peerId: EnginePeer.Id,
+    subject: CreateGiveawaySubject,
+    state: CreateGiveawayControllerState,
+    presentationData: PresentationData,
+    locale: Locale,
+    peers: [EnginePeer.Id: EnginePeer],
+    products: [PremiumGiftProduct],
+    defaultPrice: (Int64, NSDecimalNumber),
+    minDate: Int32,
+    maxDate: Int32
+) -> [CreateGiveawayEntry] {
     var entries: [CreateGiveawayEntry] = []
         
     switch subject {
@@ -568,7 +579,7 @@ private func createGiveawayControllerEntries(peerId: EnginePeer.Id, subject: Cre
         entries.append(.timeHeader(presentationData.theme, "DATE WHEN GIVEAWAY ENDS".uppercased()))
         entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, state.time, state.pickingTimeLimit))
         if state.pickingTimeLimit {
-            entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time))
+            entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate))
         }
         entries.append(.timeInfo(presentationData.theme, "Choose when \(state.subscriptions) subscribers of your channel will be randomly selected to receive Telegram Premium."))
     }
@@ -657,7 +668,11 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         initialSubscriptions = 5
     }
     
-    let expiryTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970) + 86400 * 5
+    let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+    let expiryTime = currentTime + 86400 * 3
+    let minDate = currentTime + 60 * 10
+    let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
+    
     let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], countries: [], onlyNewEligible: false, time: expiryTime)
 
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -801,7 +816,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(""), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(peerId: peerId, subject: subject, state: state, presentationData: presentationData, locale: locale, peers: peers, products: products, defaultPrice: defaultPrice), style: .blocks, emptyStateItem: nil, headerItem: headerItem, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: createGiveawayControllerEntries(peerId: peerId, subject: subject, state: state, presentationData: presentationData, locale: locale, peers: peers, products: products, defaultPrice: defaultPrice, minDate: minDate, maxDate: maxDate), style: .blocks, emptyStateItem: nil, headerItem: headerItem, footerItem: footerItem, crossfadeState: false, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))
     }
