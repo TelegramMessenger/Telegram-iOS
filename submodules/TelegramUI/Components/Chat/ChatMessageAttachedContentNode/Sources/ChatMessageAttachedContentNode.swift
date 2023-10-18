@@ -412,7 +412,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
                             }
                             
-                            let subtitleString = subtitle
+                            let subtitleString = NSMutableAttributedString(attributedString: subtitle)
+                            subtitleString.addAttribute(.foregroundColor, value: messageTheme.primaryTextColor, range: NSMakeRange(0, subtitle.length))
+                            subtitleString.addAttribute(.font, value: titleFont, range: NSMakeRange(0, subtitle.length))
+                            
                             let subtitleLayoutAndApplyValue = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitleString, backgroundColor: nil, maximumNumberOfLines: 5, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             subtitleLayoutAndApply = subtitleLayoutAndApplyValue
                             

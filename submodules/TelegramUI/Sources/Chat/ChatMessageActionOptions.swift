@@ -27,7 +27,7 @@ private func presentChatInputOptions(selfController: ChatControllerImpl, sourceN
     
     var sources: [ContextController.Source] = []
     
-    let replySelectionState = Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: nil))
+    let replySelectionState = Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>(ChatControllerSubject.MessageOptionsInfo.SelectionState(canQuote: false, quote: nil))
     
     if let source = chatReplyOptions(selfController: selfController, sourceNode: sourceNode, getContextController: {
         return getContextController?()
@@ -343,7 +343,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 
                 f(.default)
             })))
-        } else {
+        } else if let message = messages.first, !message.text.isEmpty {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Select Specific Quote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Quote"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, _ in
                 guard let selfController, let chatController else {
@@ -448,7 +448,18 @@ private func chatReplyOptions(selfController: ChatControllerImpl, sourceNode: AS
     if let quote = replySubject.quote {
         replyQuote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: replySubject.messageId, text: quote.text)
     }
-    selectionState.set(.single(ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: replyQuote)))
+    selectionState.set(selfController.context.account.postbox.messagesAtIds([replySubject.messageId])
+    |> map { messages -> ChatControllerSubject.MessageOptionsInfo.SelectionState in
+        var canQuote = false
+        if let message = messages.first, !message.text.isEmpty {
+            canQuote = true
+        }
+        return ChatControllerSubject.MessageOptionsInfo.SelectionState(
+            canQuote: canQuote,
+            quote: replyQuote
+        )
+    }
+    |> distinctUntilChanged)
     
     guard let chatController = selfController.context.sharedContext.makeChatController(context: selfController.context, chatLocation: .peer(id: peerId), subject: .messageOptions(peerIds: [replySubject.messageId.peerId], ids: [replySubject.messageId], info: .reply(ChatControllerSubject.MessageOptionsInfo.Reply(quote: replyQuote, selectionState: selectionState))), botStart: nil, mode: .standard(previewing: true)) as? ChatControllerImpl else {
         return nil

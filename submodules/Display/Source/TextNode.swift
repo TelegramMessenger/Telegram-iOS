@@ -105,11 +105,11 @@ private final class TextNodeLine {
     let descent: CGFloat
     let range: NSRange?
     let isRTL: Bool
-    let strikethroughs: [TextNodeStrikethrough]
-    let spoilers: [TextNodeSpoiler]
-    let spoilerWords: [TextNodeSpoiler]
-    let embeddedItems: [TextNodeEmbeddedItem]
-    let attachments: [TextNodeAttachment]
+    var strikethroughs: [TextNodeStrikethrough]
+    var spoilers: [TextNodeSpoiler]
+    var spoilerWords: [TextNodeSpoiler]
+    var embeddedItems: [TextNodeEmbeddedItem]
+    var attachments: [TextNodeAttachment]
     let additionalTrailingLine: (CTLine, Double)?
     
     init(line: CTLine, frame: CGRect, ascent: CGFloat, descent: CGFloat, range: NSRange?, isRTL: Bool, strikethroughs: [TextNodeStrikethrough], spoilers: [TextNodeSpoiler], spoilerWords: [TextNodeSpoiler], embeddedItems: [TextNodeEmbeddedItem], attachments: [TextNodeAttachment], additionalTrailingLine: (CTLine, Double)?) {
@@ -1039,6 +1039,78 @@ public final class TextAccessibilityOverlayNode: ASDisplayNode {
     }
 }
 
+private func addSpoiler(line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int) {
+    var secondaryLeftOffset: CGFloat = 0.0
+    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    var leftOffset = floor(rawLeftOffset)
+    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+        leftOffset = floor(secondaryLeftOffset)
+    }
+    
+    var secondaryRightOffset: CGFloat = 0.0
+    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    var rightOffset = ceil(rawRightOffset)
+    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+        rightOffset = ceil(secondaryRightOffset)
+    }
+    
+    line.spoilers.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset), height: ascent + descent)))
+}
+
+private func addSpoilerWord(line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+    var secondaryLeftOffset: CGFloat = 0.0
+    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    var leftOffset = floor(rawLeftOffset)
+    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+        leftOffset = floor(secondaryLeftOffset)
+    }
+    
+    var secondaryRightOffset: CGFloat = 0.0
+    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    var rightOffset = ceil(rawRightOffset)
+    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+        rightOffset = ceil(secondaryRightOffset)
+    }
+    
+    line.spoilerWords.append(TextNodeSpoiler(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent)))
+}
+
+private func addEmbeddedItem(item: AnyHashable, line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+    var secondaryLeftOffset: CGFloat = 0.0
+    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    var leftOffset = floor(rawLeftOffset)
+    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+        leftOffset = floor(secondaryLeftOffset)
+    }
+    
+    var secondaryRightOffset: CGFloat = 0.0
+    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    var rightOffset = ceil(rawRightOffset)
+    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+        rightOffset = ceil(secondaryRightOffset)
+    }
+    
+    line.embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
+}
+
+private func addAttachment(attachment: UIImage, line: TextNodeLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+    var secondaryLeftOffset: CGFloat = 0.0
+    let rawLeftOffset = CTLineGetOffsetForStringIndex(line.line, startIndex, &secondaryLeftOffset)
+    var leftOffset = floor(rawLeftOffset)
+    if !rawLeftOffset.isEqual(to: secondaryLeftOffset) {
+        leftOffset = floor(secondaryLeftOffset)
+    }
+    
+    var secondaryRightOffset: CGFloat = 0.0
+    let rawRightOffset = CTLineGetOffsetForStringIndex(line.line, endIndex, &secondaryRightOffset)
+    var rightOffset = ceil(rawRightOffset)
+    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+        rightOffset = ceil(secondaryRightOffset)
+    }
+    
+    line.attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
+}
+
 open class TextNode: ASDisplayNode {
     public internal(set) var cachedLayout: TextNodeLayout?
     
@@ -1304,7 +1376,9 @@ open class TextNode: ASDisplayNode {
         }
         
         var lines: [TextNodeLine] = []
+        
         var blockQuotes: [TextNodeBlockQuote] = []
+        
         for i in 0 ..< calculatedSegments.count {
             let segment = calculatedSegments[i]
             if i != 0 {
@@ -1335,6 +1409,64 @@ open class TextNode: ASDisplayNode {
                 //line.frame.size.width = max(blockWidth, line.frame.size.width)
                 size.height += line.frame.height
                 blockWidth = max(blockWidth, line.frame.origin.x + line.frame.width)
+                
+                if let range = line.range {
+                    attributedString.enumerateAttributes(in: range, options: []) { attributes, range, _ in
+                        if attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] != nil || attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] != nil {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(line.line, &ascent, &descent, nil)
+                            
+                            var startIndex: Int?
+                            var currentIndex: Int?
+                            
+                            let nsString = (attributedString.string as NSString)
+                            nsString.enumerateSubstrings(in: range, options: .byComposedCharacterSequences) { substring, range, _, _ in
+                                if let substring = substring, substring.rangeOfCharacter(from: .whitespacesAndNewlines) != nil {
+                                    if let currentStartIndex = startIndex {
+                                        startIndex = nil
+                                        let endIndex = range.location
+                                        addSpoilerWord(line: line, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex)
+                                    }
+                                } else if startIndex == nil {
+                                    startIndex = range.location
+                                }
+                                currentIndex = range.location + range.length
+                            }
+                            
+                            if let currentStartIndex = startIndex, let currentIndex = currentIndex {
+                                startIndex = nil
+                                let endIndex = currentIndex
+                                addSpoilerWord(line: line, ascent: ascent, descent: descent, startIndex: currentStartIndex, endIndex: endIndex, rightInset: 0.0)
+                            }
+                            
+                            addSpoiler(line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                        } else if let _ = attributes[NSAttributedString.Key.strikethroughStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(line.line, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(line.line, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            line.strikethroughs.append(TextNodeStrikethrough(range: range, frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: line.frame.height)))
+                        }
+                        
+                        if let embeddedItem = (attributes[NSAttributedString.Key(rawValue: "TelegramEmbeddedItem")] as? AnyHashable ?? attributes[NSAttributedString.Key(rawValue: "Attribute__EmbeddedItem")] as? AnyHashable) {
+                            if displayEmbeddedItemsUnderSpoilers || (attributes[NSAttributedString.Key(rawValue: "TelegramSpoiler")] == nil && attributes[NSAttributedString.Key(rawValue: "Attribute__Spoiler")] == nil) {
+                                var ascent: CGFloat = 0.0
+                                var descent: CGFloat = 0.0
+                                CTLineGetTypographicBounds(line.line, &ascent, &descent, nil)
+                                
+                                addEmbeddedItem(item: embeddedItem, line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            }
+                        }
+                        
+                        if let attachment = attributes[NSAttributedString.Key.attachment] as? UIImage {
+                            var ascent: CGFloat = 0.0
+                            var descent: CGFloat = 0.0
+                            CTLineGetTypographicBounds(line.line, &ascent, &descent, nil)
+                            
+                            addAttachment(attachment: attachment, line: line, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                        }
+                    }
+                }
                 
                 lines.append(line)
             }

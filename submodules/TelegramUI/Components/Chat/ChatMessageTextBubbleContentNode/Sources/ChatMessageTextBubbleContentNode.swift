@@ -1137,7 +1137,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if let item = self.item, let range, let selection = self.getCurrentTextSelection(customRange: range) {
             quote = ChatControllerSubject.MessageOptionsInfo.Quote(messageId: item.message.id, text: selection.text)
         }
-        return ChatControllerSubject.MessageOptionsInfo.SelectionState(quote: quote)
+        return ChatControllerSubject.MessageOptionsInfo.SelectionState(canQuote: true, quote: quote)
     }
     
     public func getCurrentTextSelection(customRange: NSRange? = nil) -> (text: String, entities: [MessageTextEntity])? {

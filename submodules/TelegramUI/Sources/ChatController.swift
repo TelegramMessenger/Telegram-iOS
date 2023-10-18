@@ -5311,9 +5311,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return nil
                             }
                         }
-                    case .reply:
-                        //TODO:localize
-                        subtitleTextSignal = .single("You can select a specific part to quote")
+                    case let .reply(reply):
+                        subtitleTextSignal = reply.selectionState.get()
+                        |> map { selectionState -> String? in
+                            if !selectionState.canQuote {
+                                return nil
+                            }
+                            //TODO:localize
+                            return "You can select a specific part to quote"
+                        }
                     case let .link(link):
                         subtitleTextSignal = link.options
                         |> map { options -> String? in
