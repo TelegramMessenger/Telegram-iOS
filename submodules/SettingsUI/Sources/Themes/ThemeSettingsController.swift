@@ -381,8 +381,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
-    if let accountPeer, case let .user(user) = accountPeer {
-        entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer.compactDisplayTitle, (user.nameColor ?? .blue).color))
+    if let accountPeer {
+        entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer.compactDisplayTitle, (accountPeer.nameColor ?? .blue).color))
     }
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))

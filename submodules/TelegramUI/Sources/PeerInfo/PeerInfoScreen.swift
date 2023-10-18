@@ -1569,7 +1569,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
 
                 if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
-                    
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemNameColor, label: .semitransparentBadge(EnginePeer(channel).compactDisplayTitle, (data.peer?.nameColor ?? .blue).color), text: "Channel Color", icon: UIImage(bundleImageName: "Settings/Menu/Appearance"), action: {
                         interaction.editingOpenNameColorSetup()
                     }))
