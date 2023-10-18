@@ -53,6 +53,7 @@ public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
 
 public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var backgroundView: UIImageView?
+    private var lineDashView: UIImageView?
     
     private var title: TextNodeWithEntities?
     private var subtitle: TextNodeWithEntities?
@@ -152,29 +153,32 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             
             let mainColor: UIColor
+            var secondaryColor: UIColor?
             if !incoming {
                 mainColor = messageTheme.accentTextColor
             } else {
                 var authorNameColor: UIColor?
                 let author = message.author
                 if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
-                    authorNameColor = author.flatMap { chatMessagePeerIdColors[Int(clamping: $0.id.id._internalGetInt64Value() % 7)] }
-                    if let rawAuthorNameColor = authorNameColor {
-                        var dimColors = false
-                        switch presentationData.theme.theme.name {
-                            case .builtin(.nightAccent), .builtin(.night):
-                                dimColors = true
-                            default:
-                                break
-                        }
-                        if dimColors {
-                            var hue: CGFloat = 0.0
-                            var saturation: CGFloat = 0.0
-                            var brightness: CGFloat = 0.0
-                            rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-                            authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
-                        }
-                    }
+                    authorNameColor = author?.nameColor?.color
+                    secondaryColor = author?.nameColor?.dashColors.1
+                    
+//                    if let rawAuthorNameColor = authorNameColor {
+//                        var dimColors = false
+//                        switch presentationData.theme.theme.name {
+//                            case .builtin(.nightAccent), .builtin(.night):
+//                                dimColors = true
+//                            default:
+//                                break
+//                        }
+//                        if dimColors {
+//                            var hue: CGFloat = 0.0
+//                            var saturation: CGFloat = 0.0
+//                            var brightness: CGFloat = 0.0
+//                            rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+//                            authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+//                        }
+//                    }
                 }
                 
                 if let authorNameColor {
@@ -392,7 +396,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
                             }
                             
-                            let titleString = NSAttributedString(string: title, font: titleFont, textColor: messageTheme.accentTextColor)
+                            let titleString = NSAttributedString(string: title, font: titleFont, textColor: mainColor)
                             let titleLayoutAndApplyValue = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             titleLayoutAndApply = titleLayoutAndApplyValue
                             
@@ -754,6 +758,26 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             backgroundView.tintColor = mainColor
+                            
+                            if let secondaryColor {
+                                let lineDashView: UIImageView
+                                if let current = self.lineDashView {
+                                    lineDashView = current
+                                } else {
+                                    lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme))
+                                    lineDashView.clipsToBounds = true
+                                    self.lineDashView = lineDashView
+                                    self.view.insertSubview(lineDashView, aboveSubview: backgroundView)
+                                }
+                                lineDashView.tintColor = secondaryColor
+                                lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 8.0, height: backgroundFrame.height))
+                                lineDashView.layer.cornerRadius = 4.0
+                            } else {
+                                if let lineDashView = self.lineDashView {
+                                    self.lineDashView = nil
+                                    lineDashView.removeFromSuperview()
+                                }
+                            }
                         } else {
                             if let backgroundView = self.backgroundView {
                                 self.backgroundView = nil

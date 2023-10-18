@@ -11,20 +11,21 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import UndoUI
+import EntityKeyboard
 
 private final class PeerNameColorScreenArguments {
     let context: AccountContext
     let updateNameColor: (PeerNameColor) -> Void
-    let openBackgroundEmoji: () -> Void
+    let updateBackgroundEmojiId: (Int64?) -> Void
     
     init(
         context: AccountContext,
         updateNameColor: @escaping (PeerNameColor) -> Void,
-        openBackgroundEmoji: @escaping () -> Void
+        updateBackgroundEmojiId: @escaping (Int64?) -> Void
     ) {
         self.context = context
         self.updateNameColor = updateNameColor
-        self.openBackgroundEmoji = openBackgroundEmoji
+        self.updateBackgroundEmojiId = updateBackgroundEmojiId
     }
 }
 
@@ -39,22 +40,22 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
         case colorMessage
         case colorPicker
         case colorDescription
+        case backgroundEmojiHeader
         case backgroundEmoji
-        case backgroundEmojiDescription
     }
     
     case colorHeader(String)
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
     case colorPicker(colors: [PeerNameColor], currentColor: PeerNameColor)
     case colorDescription(String)
-    case backgroundEmoji(String, MessageReaction.Reaction, AvailableReactions)
-    case backgroundEmojiDescription(String)
+    case backgroundEmojiHeader(String)
+    case backgroundEmoji(EmojiPagerContentComponent, UIColor)
     
     var section: ItemListSectionId {
         switch self {
         case .colorHeader, .colorMessage, .colorPicker, .colorDescription:
             return PeerNameColorScreenSection.nameColor.rawValue
-        case .backgroundEmoji, .backgroundEmojiDescription:
+        case .backgroundEmojiHeader, .backgroundEmoji:
             return PeerNameColorScreenSection.backgroundEmoji.rawValue
         }
     }
@@ -69,10 +70,10 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return .colorPicker
         case .colorDescription:
             return .colorDescription
+        case .backgroundEmojiHeader:
+            return .backgroundEmojiHeader
         case .backgroundEmoji:
             return .backgroundEmoji
-        case .backgroundEmojiDescription:
-            return .backgroundEmojiDescription
         }
     }
     
@@ -86,9 +87,9 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return 2
         case .colorDescription:
             return 3
-        case .backgroundEmoji:
+        case .backgroundEmojiHeader:
             return 4
-        case .backgroundEmojiDescription:
+        case .backgroundEmoji:
             return 5
         }
     }
@@ -119,14 +120,14 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .backgroundEmoji(lhsText, lhsReaction, lhsAvailableReactions):
-            if case let .backgroundEmoji(rhsText, rhsReaction, rhsAvailableReactions) = rhs, lhsText == rhsText, lhsReaction == rhsReaction, lhsAvailableReactions == rhsAvailableReactions {
+        case let .backgroundEmojiHeader(text):
+            if case .backgroundEmojiHeader(text) = rhs {
                 return true
             } else {
                 return false
             }
-        case let .backgroundEmojiDescription(text):
-            if case .backgroundEmojiDescription(text) = rhs {
+        case let .backgroundEmoji(lhsEmojiContent, lhsBackgroundIconColor):
+            if case let .backgroundEmoji(rhsEmojiContent, rhsBackgroundIconColor) = rhs, lhsEmojiContent == rhsEmojiContent, lhsBackgroundIconColor == rhsBackgroundIconColor {
                 return true
             } else {
                 return false
@@ -168,33 +169,25 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             )
         case let .colorDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .backgroundEmoji(title, reaction, availableReactions):
-            return BackgroundEmojiItem(
-                context: arguments.context,
-                presentationData: presentationData,
-                title: title,
-                reaction: reaction,
-                availableReactions:  availableReactions,
-                sectionId: self.section,
-                style: .blocks,
-                action: {
-                    arguments.openBackgroundEmoji()
-                })
-        case let .backgroundEmojiDescription(text):
-            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .backgroundEmojiHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .backgroundEmoji(emojiContent, backgroundIconColor):
+            return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, sectionId: self.section)
         }
     }
 }
 
 private struct PeerNameColorScreenState: Equatable {
     var updatedNameColor: PeerNameColor?
+    var updatedBackgroundEmojiId: Int64?
 }
 
 private func peerNameColorScreenEntries(
     presentationData: PresentationData,
     state: PeerNameColorScreenState,
     peer: EnginePeer?,
-    isPremium: Bool
+    isPremium: Bool,
+    emojiContent: EmojiPagerContentComponent
 ) -> [PeerNameColorScreenEntry] {
     var entries: [PeerNameColorScreenEntry] = []
     
@@ -203,7 +196,6 @@ private func peerNameColorScreenEntries(
             .blue
         ]
         allColors.append(contentsOf: PeerNameColor.allCases.filter { $0 != .blue})
-        allColors.removeLast(3)
         
         let nameColor: PeerNameColor
         if let updatedNameColor = state.updatedNameColor {
@@ -212,6 +204,19 @@ private func peerNameColorScreenEntries(
             nameColor = peerNameColor
         } else {
             nameColor = .blue
+        }
+        
+        let backgroundEmojiId: Int64?
+        if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
+            if updatedBackgroundEmojiId == 0 {
+                backgroundEmojiId = nil
+            } else {
+                backgroundEmojiId = updatedBackgroundEmojiId
+            }
+        } else if let emojiId = peer.backgroundEmojiId {
+            backgroundEmojiId = emojiId
+        } else {
+            backgroundEmojiId = nil
         }
         
         let replyText: String
@@ -229,13 +234,11 @@ private func peerNameColorScreenEntries(
             author: peer.compactDisplayTitle,
             photo: peer.profileImageRepresentations,
             nameColor: nameColor,
-            backgroundEmojiId: nil,
+            backgroundEmojiId: backgroundEmojiId,
             reply: (peer.compactDisplayTitle, replyText),
             linkPreview: (presentationData.strings.NameColor_ChatPreview_LinkSite, presentationData.strings.NameColor_ChatPreview_LinkTitle, presentationData.strings.NameColor_ChatPreview_LinkText),
             text: messageText
         )
-        
-        entries.append(.colorHeader(presentationData.strings.NameColor_ChatPreview_Title))
         entries.append(.colorMessage(
             wallpaper: presentationData.chatWallpaper,
             fontSize: presentationData.chatFontSize,
@@ -249,10 +252,10 @@ private func peerNameColorScreenEntries(
             currentColor: nameColor
         ))
         entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
+        
+        entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
+        entries.append(.backgroundEmoji(emojiContent, nameColor.color))
     }
-    
-//    entries.append(.backgroundEmoji(presentationData.strings.Settings_QuickReactionSetup_ChooseQuickReaction, reactionSettings.quickReaction, availableReactions))
-//    entries.append(.backgroundEmojiDescription(presentationData.strings.Settings_QuickReactionSetup_ChooseQuickReactionInfo))
     
     return entries
 }
@@ -290,8 +293,12 @@ public func PeerNameColorScreen(
                 return updatedState
             }
         },
-        openBackgroundEmoji: {
-            
+        updateBackgroundEmojiId: { emojiId in
+            updateState { state in
+                var updatedState = state
+                updatedState.updatedBackgroundEmojiId = emojiId
+                return updatedState
+            }
         }
     )
     
@@ -303,17 +310,52 @@ public func PeerNameColorScreen(
         peerId = channelId
     }
     
+    let emojiContent = combineLatest(
+        statePromise.get(),
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    )
+    |> mapToSignal { state, peer in
+        var selectedEmojiId: Int64?
+        if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
+            selectedEmojiId = updatedBackgroundEmojiId
+        } else {
+            selectedEmojiId = peer?.backgroundEmojiId
+        }
+        let nameColor: UIColor
+        if let updatedNameColor = state.updatedNameColor {
+            nameColor = updatedNameColor.color
+        } else {
+            nameColor = (peer?.nameColor ?? .blue).color
+        }
+        return EmojiPagerContentComponent.emojiInputData(
+            context: context,
+            animationCache: context.animationCache,
+            animationRenderer: context.animationRenderer,
+            isStandalone: false,
+            subject: .backgroundIcon,
+            hasTrending: false,
+            topReactionItems: [],
+            areUnicodeEmojiEnabled: false,
+            areCustomEmojiEnabled: true,
+            chatPeerId: context.account.peerId,
+            selectedItems: Set(selectedEmojiId.flatMap { [EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: $0)] } ?? []),
+            backgroundIconColor: nameColor
+        )
+    }
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
         statePromise.get(),
         context.engine.stickers.availableReactions(),
-        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+        emojiContent
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, availableReactions, peer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, availableReactions, peer, emojiContent -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let isPremium = peer?.isPremium ?? false
         let title: String
+        let buttonTitle: String
         let isLocked: Bool
         switch subject {
         case .account:
@@ -324,16 +366,33 @@ public func PeerNameColorScreen(
             isLocked = false
         }
         
+        let backgroundEmojiId: Int64
+        if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
+            backgroundEmojiId = updatedBackgroundEmojiId
+        } else if let emojiId = peer?.backgroundEmojiId {
+            backgroundEmojiId = emojiId
+        } else {
+            backgroundEmojiId = 0
+        }
+        if backgroundEmojiId != 0 {
+            buttonTitle = presentationData.strings.NameColor_ApplyColorAndBackgroundEmoji
+        } else {
+            buttonTitle = presentationData.strings.NameColor_ApplyColor
+        }
+        
         let footerItem = ApplyColorFooterItem(
             theme: presentationData.theme,
-            title: presentationData.strings.NameColor_ApplyColor,
+            title: buttonTitle,
             locked: isLocked,
             action: {
                 if isPremium {
                     let state = stateValue.with { $0 }
-                    if let nameColor = state.updatedNameColor {
-                        let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor, backgroundEmojiId: nil).startStandalone()
-                    }
+                                        
+                    let nameColor = state.updatedNameColor ?? peer?.nameColor
+                    let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer?.backgroundEmojiId
+                    
+                    let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                    
                     dismissImpl?()
                 } else {
                     HapticFeedback().error()
@@ -360,11 +419,81 @@ public func PeerNameColorScreen(
             }
         )
     
+        emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+            performItemAction: { _, item, _, _, _, _ in
+                var selectedFileId: Int64?
+                if let fileId = item.itemFile?.fileId.id {
+                    selectedFileId = fileId
+                } else {
+                    selectedFileId = 0
+                }
+                arguments.updateBackgroundEmojiId(selectedFileId)
+            },
+            deleteBackwards: {
+            },
+            openStickerSettings: {
+            },
+            openFeatured: {
+            },
+            openSearch: {
+            },
+            addGroupAction: { groupId, isPremiumLocked, _ in
+                guard let collectionId = groupId.base as? ItemCollectionId else {
+                    return
+                }
+                
+                let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { views in
+                    guard let view = views.views[viewKey] as? OrderedItemListView else {
+                        return
+                    }
+                    for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                        if featuredEmojiPack.info.id == collectionId {
+                            let _ = context.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                            
+                            break
+                        }
+                    }
+                })
+            },
+            clearGroup: { _ in
+            },
+            pushController: { c in
+            },
+            presentController: { c in
+            },
+            presentGlobalOverlayController: { c in
+            },
+            navigationController: {
+                return nil
+            },
+            requestUpdate: { _ in
+            },
+            updateSearchQuery: { _ in
+            },
+            updateScrollingToItemGroup: {
+            },
+            onScroll: {},
+            chatPeerId: nil,
+            peekBehavior: nil,
+            customLayout: nil,
+            externalBackground: nil,
+            externalExpansionView: nil,
+            customContentView: nil,
+            useOpaqueTheme: true,
+            hideBackground: false,
+            stateContext: nil,
+            addImage: nil
+        )
+        
         let entries = peerNameColorScreenEntries(
             presentationData: presentationData,
             state: state,
             peer: peer,
-            isPremium: isPremium
+            isPremium: isPremium,
+            emojiContent: emojiContent
         )
         
         let controllerState = ItemListControllerState(
@@ -390,77 +519,6 @@ public func PeerNameColorScreen(
     }
     
     let controller = ItemListController(context: context, state: signal)
-//    openQuickReactionImpl = { [weak controller] in
-//        let _ = (combineLatest(queue: .mainQueue(),
-//            settings,
-//            context.engine.stickers.availableReactions()
-//        )
-//        |> take(1)
-//        |> deliverOnMainQueue).start(next: { settings, availableReactions in
-//            var currentSelectedFileId: MediaId?
-//            switch settings.quickReaction {
-//            case .builtin:
-//                if let availableReactions = availableReactions {
-//                    if let reaction = availableReactions.reactions.first(where: { $0.value == settings.quickReaction }) {
-//                        currentSelectedFileId = reaction.selectAnimation.fileId
-//                        break
-//                    }
-//                }
-//            case let .custom(fileId):
-//                currentSelectedFileId = MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
-//            }
-//            
-//            var selectedItems = Set<MediaId>()
-//            if let currentSelectedFileId = currentSelectedFileId {
-//                selectedItems.insert(currentSelectedFileId)
-//            }
-//            
-//            guard let controller = controller else {
-//                return
-//            }
-//            var sourceItemNode: ItemListReactionItemNode?
-//            controller.forEachItemNode { itemNode in
-//                if let itemNode = itemNode as? ItemListReactionItemNode {
-//                    sourceItemNode = itemNode
-//                }
-//            }
-//            
-//            if let sourceItemNode = sourceItemNode {
-//                controller.present(EmojiStatusSelectionController(
-//                    context: context,
-//                    mode: .quickReactionSelection(completion: {
-//                        updateState { state in
-//                            var state = state
-//                            state.hasReaction = false
-//                            return state
-//                        }
-//                    }),
-//                    sourceView: sourceItemNode.iconView,
-//                    emojiContent: EmojiPagerContentComponent.emojiInputData(
-//                        context: context,
-//                        animationCache: context.animationCache,
-//                        animationRenderer: context.animationRenderer,
-//                        isStandalone: false,
-//                        isStatusSelection: false,
-//                        isReactionSelection: true,
-//                        isEmojiSelection: false,
-//                        hasTrending: false,
-//                        isQuickReactionSelection: true,
-//                        topReactionItems: [],
-//                        areUnicodeEmojiEnabled: false,
-//                        areCustomEmojiEnabled: true,
-//                        chatPeerId: context.account.peerId,
-//                        selectedItems: selectedItems
-//                    ),
-//                    currentSelection: nil,
-//                    destinationItemView: { [weak sourceItemNode] in
-//                        return sourceItemNode?.iconView
-//                    }
-//                ), in: .window(.root))
-//            }
-//        })
-//    }
-    
     presentImpl = { [weak controller] c in
         guard let controller else {
             return

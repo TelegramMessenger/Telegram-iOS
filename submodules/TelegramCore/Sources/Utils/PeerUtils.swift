@@ -243,6 +243,17 @@ public extension Peer {
         }
         return false
     }
+    
+    var backgroundEmojiId: Int64? {
+        switch self {
+        case let user as TelegramUser:
+            return user.backgroundEmojiId
+        case let channel as TelegramChannel:
+            return channel.backgroundEmojiId
+        default:
+            return nil
+        }
+    }
 }
 
 public extension TelegramPeerUsername {

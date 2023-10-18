@@ -22,6 +22,7 @@ swift_library(
         "//submodules/UndoUI",
         "//submodules/WallpaperBackgroundNode",
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/SolidRoundedButtonNode",
         "//submodules/AppBundle",
     ],

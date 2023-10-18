@@ -166,7 +166,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-531931925] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsMentions($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
     dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
-    dict[609791884] = { return Api.Chat.parse_channel($0) }
+    dict[427944574] = { return Api.Chat.parse_channel($0) }
     dict[399807445] = { return Api.Chat.parse_channelForbidden($0) }
     dict[1103884886] = { return Api.Chat.parse_chat($0) }
     dict[693512293] = { return Api.Chat.parse_chatEmpty($0) }
@@ -176,7 +176,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1626209256] = { return Api.ChatBannedRights.parse_chatBannedRights($0) }
     dict[1915758525] = { return Api.ChatFull.parse_channelFull($0) }
     dict[-908914376] = { return Api.ChatFull.parse_chatFull($0) }
-    dict[806110401] = { return Api.ChatInvite.parse_chatInvite($0) }
+    dict[808708181] = { return Api.ChatInvite.parse_chatInvite($0) }
     dict[1516793212] = { return Api.ChatInvite.parse_chatInviteAlready($0) }
     dict[1634294960] = { return Api.ChatInvite.parse_chatInvitePeek($0) }
     dict[-1940201511] = { return Api.ChatInviteImporter.parse_chatInviteImporter($0) }
@@ -578,7 +578,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2129714567] = { return Api.MessagesFilter.parse_inputMessagesFilterUrl($0) }
     dict[-1614803355] = { return Api.MessagesFilter.parse_inputMessagesFilterVideo($0) }
     dict[1358283666] = { return Api.MessagesFilter.parse_inputMessagesFilterVoice($0) }
-    dict[1267991078] = { return Api.MyBoost.parse_myBoost($0) }
+    dict[-1001897636] = { return Api.MyBoost.parse_myBoost($0) }
     dict[-1910892683] = { return Api.NearestDc.parse_nearestDc($0) }
     dict[-1746354498] = { return Api.NotificationSound.parse_notificationSoundDefault($0) }
     dict[-2096391452] = { return Api.NotificationSound.parse_notificationSoundLocal($0) }
@@ -962,7 +962,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1886646706] = { return Api.UrlAuthResult.parse_urlAuthResultAccepted($0) }
     dict[-1445536993] = { return Api.UrlAuthResult.parse_urlAuthResultDefault($0) }
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
-    dict[1876877535] = { return Api.User.parse_user($0) }
+    dict[-346018011] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
     dict[-1179571092] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
@@ -1181,6 +1181,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1916114267] = { return Api.photos.Photos.parse_photos($0) }
     dict[352657236] = { return Api.photos.Photos.parse_photosSlice($0) }
     dict[-2030542532] = { return Api.premium.BoostsList.parse_boostsList($0) }
+    dict[1029548774] = { return Api.premium.BoostsStatus.parse_boostsStatus($0) }
     dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
     dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
@@ -1198,7 +1199,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[276907596] = { return Api.storage.FileType.parse_fileWebp($0) }
     dict[1862033025] = { return Api.stories.AllStories.parse_allStories($0) }
     dict[291044926] = { return Api.stories.AllStories.parse_allStoriesNotModified($0) }
-    dict[-869070685] = { return Api.stories.BoostsStatus.parse_boostsStatus($0) }
     dict[-890861720] = { return Api.stories.PeerStories.parse_peerStories($0) }
     dict[1574486984] = { return Api.stories.Stories.parse_stories($0) }
     dict[-560009955] = { return Api.stories.StoryViews.parse_storyViews($0) }
@@ -2082,6 +2082,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.premium.BoostsList:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.premium.BoostsStatus:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.premium.MyBoosts:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.BroadcastStats:
@@ -2095,8 +2097,6 @@ public extension Api {
             case let _1 as Api.storage.FileType:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.AllStories:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.stories.BoostsStatus:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stories.PeerStories:
                 _1.serialize(buffer, boxed)

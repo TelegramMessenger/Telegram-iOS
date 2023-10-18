@@ -700,17 +700,18 @@ public extension Api {
 }
 public extension Api {
     enum MyBoost: TypeConstructorDescription {
-        case myBoost(flags: Int32, slot: Int32, peer: Api.Peer?, expires: Int32, cooldownUntilDate: Int32?)
+        case myBoost(flags: Int32, slot: Int32, peer: Api.Peer?, date: Int32, expires: Int32, cooldownUntilDate: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .myBoost(let flags, let slot, let peer, let expires, let cooldownUntilDate):
+                case .myBoost(let flags, let slot, let peer, let date, let expires, let cooldownUntilDate):
                     if boxed {
-                        buffer.appendInt32(1267991078)
+                        buffer.appendInt32(-1001897636)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(slot, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {peer!.serialize(buffer, true)}
+                    serializeInt32(date, buffer: buffer, boxed: false)
                     serializeInt32(expires, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt32(cooldownUntilDate!, buffer: buffer, boxed: false)}
                     break
@@ -719,8 +720,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .myBoost(let flags, let slot, let peer, let expires, let cooldownUntilDate):
-                return ("myBoost", [("flags", flags as Any), ("slot", slot as Any), ("peer", peer as Any), ("expires", expires as Any), ("cooldownUntilDate", cooldownUntilDate as Any)])
+                case .myBoost(let flags, let slot, let peer, let date, let expires, let cooldownUntilDate):
+                return ("myBoost", [("flags", flags as Any), ("slot", slot as Any), ("peer", peer as Any), ("date", date as Any), ("expires", expires as Any), ("cooldownUntilDate", cooldownUntilDate as Any)])
     }
     }
     
@@ -736,14 +737,17 @@ public extension Api {
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
-            if Int(_1!) & Int(1 << 1) != 0 {_5 = reader.readInt32() }
+            _5 = reader.readInt32()
+            var _6: Int32?
+            if Int(_1!) & Int(1 << 1) != 0 {_6 = reader.readInt32() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 1) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.MyBoost.myBoost(flags: _1!, slot: _2!, peer: _3, expires: _4!, cooldownUntilDate: _5)
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.MyBoost.myBoost(flags: _1!, slot: _2!, peer: _3, date: _4!, expires: _5!, cooldownUntilDate: _6)
             }
             else {
                 return nil

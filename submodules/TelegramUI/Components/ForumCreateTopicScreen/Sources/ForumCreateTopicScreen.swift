@@ -513,11 +513,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     animationCache: self.context.animationCache,
                     animationRenderer: self.context.animationRenderer,
                     isStandalone: false,
-                    isStatusSelection: false,
-                    isReactionSelection: false,
-                    isEmojiSelection: false,
+                    subject: .topicIcon,
                     hasTrending: false,
-                    isTopicIconSelection: true,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: false,
                     areCustomEmojiEnabled: true,
@@ -582,11 +579,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     animationCache: self.context.animationCache,
                     animationRenderer: self.context.animationRenderer,
                     isStandalone: false,
-                    isStatusSelection: false,
-                    isReactionSelection: false,
-                    isEmojiSelection: false,
+                    subject: .topicIcon,
                     hasTrending: false,
-                    isTopicIconSelection: true,
                     topReactionItems: [],
                     areUnicodeEmojiEnabled: false,
                     areCustomEmojiEnabled: true,
@@ -916,9 +910,6 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                                 }
                                 for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
                                     if featuredEmojiPack.info.id == collectionId {
-                                        //                                    if let strongSelf = self {
-                                        //                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
-                                        //                                    }
                                         let _ = accountContext.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
                                         
                                         break

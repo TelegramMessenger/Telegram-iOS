@@ -452,14 +452,14 @@ public extension Api {
 }
 public extension Api {
     enum User: TypeConstructorDescription {
-        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32, backgroundEmojiId: Int64?)
+        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32?, backgroundEmojiId: Int64?)
         case userEmpty(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
                     if boxed {
-                        buffer.appendInt32(1876877535)
+                        buffer.appendInt32(-346018011)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -486,7 +486,7 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags2) & Int(1 << 5) != 0 {serializeInt32(storiesMaxId!, buffer: buffer, boxed: false)}
-                    serializeInt32(color, buffer: buffer, boxed: false)
+                    if Int(flags2) & Int(1 << 7) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
                     if Int(flags2) & Int(1 << 6) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
                     break
                 case .userEmpty(let id):
@@ -553,7 +553,7 @@ public extension Api {
             var _17: Int32?
             if Int(_2!) & Int(1 << 5) != 0 {_17 = reader.readInt32() }
             var _18: Int32?
-            _18 = reader.readInt32()
+            if Int(_2!) & Int(1 << 7) != 0 {_18 = reader.readInt32() }
             var _19: Int64?
             if Int(_2!) & Int(1 << 6) != 0 {_19 = reader.readInt64() }
             let _c1 = _1 != nil
@@ -573,10 +573,10 @@ public extension Api {
             let _c15 = (Int(_1!) & Int(1 << 30) == 0) || _15 != nil
             let _c16 = (Int(_2!) & Int(1 << 0) == 0) || _16 != nil
             let _c17 = (Int(_2!) & Int(1 << 5) == 0) || _17 != nil
-            let _c18 = _18 != nil
+            let _c18 = (Int(_2!) & Int(1 << 7) == 0) || _18 != nil
             let _c19 = (Int(_2!) & Int(1 << 6) == 0) || _19 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 {
-                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18!, backgroundEmojiId: _19)
+                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18, backgroundEmojiId: _19)
             }
             else {
                 return nil

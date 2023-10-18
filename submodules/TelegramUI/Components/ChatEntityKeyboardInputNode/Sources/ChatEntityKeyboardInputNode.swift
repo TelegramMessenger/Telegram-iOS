@@ -160,7 +160,20 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, hasTrending: hasTrending, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId, hasSearch: hasSearch, hideBackground: hideBackground)
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(
+            context: context,
+            animationCache: animationCache,
+            animationRenderer: animationRenderer,
+            isStandalone: false,
+            subject: .emoji,
+            hasTrending: hasTrending,
+            topReactionItems: [],
+            areUnicodeEmojiEnabled: true,
+            areCustomEmojiEnabled: areCustomEmojiEnabled,
+            chatPeerId: chatPeerId,
+            hasSearch: hasSearch,
+            hideBackground: hideBackground
+        )
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
@@ -2256,7 +2269,19 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium).start(next: { value in
+        let _ = EmojiPagerContentComponent.emojiInputData(
+            context: context,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            isStandalone: true,
+            subject: .generic,
+            hasTrending: false, 
+            topReactionItems: [],
+            areUnicodeEmojiEnabled: true,
+            areCustomEmojiEnabled: areCustomEmojiEnabled,
+            chatPeerId: nil,
+            forceHasPremium: forceHasPremium
+        ).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2271,7 +2296,20 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, hasTrending: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium, hideBackground: hideBackground) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: EmojiPagerContentComponent.emojiInputData(
+                    context: context,
+                    animationCache: self.animationCache,
+                    animationRenderer: self.animationRenderer,
+                    isStandalone: true,
+                    subject: .generic,
+                    hasTrending: false,
+                    topReactionItems: [], 
+                    areUnicodeEmojiEnabled: true,
+                    areCustomEmojiEnabled: areCustomEmojiEnabled,
+                    chatPeerId: nil,
+                    forceHasPremium: forceHasPremium,
+                    hideBackground: hideBackground
+                ) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

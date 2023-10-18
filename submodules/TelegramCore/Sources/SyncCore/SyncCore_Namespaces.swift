@@ -80,6 +80,7 @@ public struct Namespaces {
         public static let CloudFeaturedProfilePhotoEmoji: Int32 = 23
         public static let CloudFeaturedGroupPhotoEmoji: Int32 = 24
         public static let NewSessionReviews: Int32 = 25
+        public static let CloudFeaturedBackgroundIconEmoji: Int32 = 26
     }
     
     public struct CachedItemCollection {

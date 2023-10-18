@@ -24,6 +24,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     let theme: PresentationTheme
+    let customTintColor: UIColor?
     let title: String
     let pressed: () -> Void
     
@@ -36,6 +37,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
         animationRenderer: MultiAnimationRenderer,
         theme: PresentationTheme,
         title: String,
+        customTintColor: UIColor? = nil,
         pressed: @escaping () -> Void
     ) {
         self.context = context
@@ -46,6 +48,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
         self.animationRenderer = animationRenderer
         self.theme = theme
         self.title = title
+        self.customTintColor = customTintColor
         self.pressed = pressed
     }
     
@@ -72,6 +75,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             return false
         }
         if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.customTintColor != rhs.customTintColor {
             return false
         }
         
@@ -109,6 +115,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
             let displaySize = dimensions.aspectFitted(CGSize(width: 44.0, height: 44.0))
             
             if self.itemLayer == nil {
+                let tintColor: EmojiPagerContentComponent.Item.TintMode = component.customTintColor.flatMap { .custom($0) } ?? .primary
                 let itemLayer = EmojiPagerContentComponent.View.ItemLayer(
                     item: EmojiPagerContentComponent.Item(
                         animationData: component.item,
@@ -116,7 +123,7 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                         itemFile: nil,
                         subgroupId: nil,
                         icon: .none,
-                        tintMode: component.item.isTemplate ? .primary : .none
+                        tintMode: component.item.isTemplate ? tintColor : .none
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,
@@ -165,6 +172,8 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                     itemLayer.layerTintColor = component.theme.list.itemPrimaryTextColor.cgColor
                 case .accent:
                     itemLayer.layerTintColor = component.theme.list.itemAccentColor.cgColor
+                case let .custom(color):
+                    itemLayer.layerTintColor = component.customTintColor?.cgColor ?? color.cgColor
                 }
                 
                 itemLayer.isVisibleForAnimations = itemEnvironment.isContentInFocus && component.context.sharedContext.energyUsageSettings.loopEmoji

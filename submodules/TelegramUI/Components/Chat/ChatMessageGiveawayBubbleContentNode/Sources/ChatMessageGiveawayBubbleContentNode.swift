@@ -154,7 +154,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         
         let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
         let controller = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can't participate in this giveaway.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
-        item.controllerInteraction.presentController(controller, nil)
+        item.controllerInteraction.presentControllerInCurrent(controller, nil)
     }
     
     private func removePlaceholder(animated: Bool) {
