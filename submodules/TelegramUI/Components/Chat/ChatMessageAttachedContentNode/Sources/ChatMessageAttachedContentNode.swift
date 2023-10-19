@@ -767,7 +767,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
                             } else {
                                 backgroundView = UIImageView()
-                                backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme)
+                                backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme, dashedOutgoing: !incoming && secondaryColor != nil)
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
                                 self.view.insertSubview(backgroundView, at: 0)
@@ -780,14 +780,14 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 if let current = self.lineDashView {
                                     lineDashView = current
                                 } else {
-                                    lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme))
+                                    lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme, incoming: incoming))
                                     lineDashView.clipsToBounds = true
                                     self.lineDashView = lineDashView
                                     self.view.insertSubview(lineDashView, aboveSubview: backgroundView)
                                 }
                                 lineDashView.tintColor = secondaryColor
-                                lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 8.0, height: backgroundFrame.height))
-                                lineDashView.layer.cornerRadius = 4.0
+                                lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 12.0, height: backgroundFrame.height))
+                                lineDashView.layer.cornerRadius = 6.0
                             } else {
                                 if let lineDashView = self.lineDashView {
                                     self.lineDashView = nil

@@ -3411,14 +3411,14 @@ public final class EmojiPagerContentComponent: Component {
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
                         case .stop:
-                            if let image = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/ButtonStop"), color: UIColor(rgb: 0xcdcdcd)) {
+                            if let image = generateTintedImage(image: UIImage(bundleImageName: "Premium/NoIcon"), color: .white) {
                                 let imageSize = image.size.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
                         }
                         
                         UIGraphicsPopContext()
-                    })
+                    })?.withRenderingMode(icon == .stop ? .alwaysTemplate : .alwaysOriginal)
                     self.contents = image?.cgImage
                 }
             }
@@ -5877,7 +5877,12 @@ public final class EmojiPagerContentComponent: Component {
                         var isSelected = false
                         if let itemFile = item.itemFile, component.selectedItems.contains(itemFile.fileId) {
                             isSelected = true
-                        } else if case let .icon(icon) = item.content.id, case .topic = icon, component.selectedItems.isEmpty {
+                        } else if case let .icon(icon) = item.content.id, component.selectedItems.isEmpty {
+                            if case .topic = icon {
+                                isSelected = true
+                            } else if case .stop = icon {
+                                isSelected = true
+                            }
                         }
                         
                         if isSelected {
@@ -5908,9 +5913,9 @@ public final class EmojiPagerContentComponent: Component {
                             
                             itemTransition.setFrame(layer: itemSelectionLayer, frame: baseItemFrame)
                             
-                            itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+//                            itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
                         } else {
-                            itemLayer.transform = CATransform3DIdentity
+//                            itemLayer.transform = CATransform3DIdentity
                         }
                         
                         if animateItemIn, !transition.animation.isImmediate, let contentAnimation = contentAnimation, case .groupExpanded(id: itemGroup.groupId) = contentAnimation.type, let placeholderView = self.visibleItemPlaceholderViews[itemId] {
@@ -6086,6 +6091,7 @@ public final class EmojiPagerContentComponent: Component {
                     break
                 }
                 if case let .icon(icon) = id.itemId, case .topic = icon, component.selectedItems.isEmpty {
+                } else if case let .icon(icon) = id.itemId, case .stop = icon, component.selectedItems.isEmpty {
                 } else if let fileId = fileId, component.selectedItems.contains(fileId) {
                 } else {
                     itemSelectionLayer.removeFromSuperlayer()
@@ -7859,7 +7865,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemFile: nil,
                     subgroupId: nil,
                     icon: .none,
-                    tintMode: .none
+                    tintMode: backgroundIconColor.flatMap { .custom($0) } ?? .accent
                 )
                 
                 let groupId = "recent"

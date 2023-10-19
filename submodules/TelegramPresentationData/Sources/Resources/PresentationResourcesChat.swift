@@ -1285,8 +1285,9 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatReplyBackgroundTemplateImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatReplyBackgroundTemplateImage.rawValue, { theme in
+    public static func chatReplyBackgroundTemplateImage(_ theme: PresentationTheme, dashedOutgoing: Bool) -> UIImage? {
+        let key: PresentationResourceKey = dashedOutgoing ? .chatReplyBackgroundTemplateOutgoingDashedImage : .chatReplyBackgroundTemplateIncomingImage
+        return theme.image(key.rawValue, { theme in
             let radius: CGFloat = 4.0
             let lineWidth: CGFloat = 3.0
             
@@ -1299,7 +1300,7 @@ public struct PresentationResourcesChat {
                 context.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
                 context.fill(CGRect(origin: CGPoint(), size: size))
                 
-                context.setFillColor(UIColor.white.cgColor)
+                context.setFillColor(UIColor.white.withAlphaComponent(dashedOutgoing ? 0.2 : 1.0).cgColor)
                 context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
             })?.stretchableImage(withLeftCapWidth: Int(radius) + 2, topCapHeight: Int(radius) + 3).withRenderingMode(.alwaysTemplate)
         })
@@ -1318,12 +1319,13 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatReplyLineDashTemplateImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatReplyLineDashTemplateImage.rawValue, { theme in
+    public static func chatReplyLineDashTemplateImage(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
+        let key: PresentationResourceKey = incoming ? .chatReplyLineDashTemplateIncomingImage : .chatReplyLineDashTemplateOutgoingImage
+        return theme.image(key.rawValue, { theme in
             let radius: CGFloat = 3.0
-            let offset: CGFloat = 5.0
+            let offset: CGFloat = incoming ? 5.0 : -3.0
             
-            return generateImage(CGSize(width: 8.0, height: radius * 6.0), rotatedContext: { size, context in
+            return generateImage(CGSize(width: 12.0, height: radius * 6.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                                 
                 context.move(to: CGPoint(x: radius, y: offset))
@@ -1334,6 +1336,17 @@ public struct PresentationResourcesChat {
                 
                 context.setFillColor(UIColor.white.cgColor)
                 context.fillPath()
+                
+                if !incoming {
+                    context.move(to: CGPoint(x: radius, y: size.height + offset))
+                    context.addLine(to: CGPoint(x: radius, y: size.height + offset + radius * 3.0))
+                    context.addLine(to: CGPoint(x: 0.0, y: size.height + offset + radius * 4.0))
+                    context.addLine(to: CGPoint(x: 0.0, y: size.height + offset + radius))
+                    context.closePath()
+                    
+                    context.setFillColor(UIColor.white.cgColor)
+                    context.fillPath()
+                }
             })?.resizableImage(withCapInsets: .zero, resizingMode: .tile).withRenderingMode(.alwaysTemplate)
         })
     }

@@ -162,7 +162,15 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                             completeSourceString = strings.Message_GenericForwardedPsa(peerString)
                         }
                     } else {
-                        titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        if incoming {
+                            if let color = peer?.nameColor?.color {
+                                titleColor = color
+                            } else {
+                                titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
+                            }
+                        } else {
+                            titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        }
                         
                         if let storyData = storyData {
                             switch storyData.storyType {

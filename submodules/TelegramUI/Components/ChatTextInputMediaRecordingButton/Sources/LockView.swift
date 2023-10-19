@@ -73,7 +73,7 @@ final class LockView: UIButton, TGModernConversationInputMicButtonLock {
         
         [
             "Path.Path.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
-            "Path.Path.Заливка 1": theme.chat.inputPanel.panelBackgroundColor,
+            "Path.Path.Заливка 1": theme.chat.inputPanel.panelBackgroundColor.withAlphaComponent(1.0),
             "Rectangle.Rectangle.Обводка 1": theme.chat.inputPanel.panelControlAccentColor,
             "Rectangle.Заливка 1": theme.chat.inputPanel.panelControlAccentColor,
             "Path 4.Path 4.Обводка 1": theme.chat.inputPanel.panelControlAccentColor

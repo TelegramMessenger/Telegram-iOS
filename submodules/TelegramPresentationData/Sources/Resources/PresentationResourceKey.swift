@@ -298,9 +298,12 @@ public enum PresentationResourceKey: Int32 {
     case storyViewListLikeIcon
     case navigationPostStoryIcon
     
-    case chatReplyBackgroundTemplateImage
+    case chatReplyBackgroundTemplateIncomingImage
+    case chatReplyBackgroundTemplateOutgoingDashedImage
     case chatReplyServiceBackgroundTemplateImage
-    case chatReplyLineDashTemplateImage
+    
+    case chatReplyLineDashTemplateIncomingImage
+    case chatReplyLineDashTemplateOutgoingImage
 }
 
 public enum ChatExpiredStoryIndicatorType: Hashable {

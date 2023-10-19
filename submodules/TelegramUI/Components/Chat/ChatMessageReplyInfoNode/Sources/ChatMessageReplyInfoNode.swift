@@ -346,17 +346,70 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let placeholderColor: UIColor = arguments.parentMessage.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             
             let textColor: UIColor
+            let dustColor: UIColor
+            
+            var authorNameColor: UIColor?
+            var dashSecondaryColor: UIColor?
+            
+            let author = arguments.message?.effectiveAuthor
+            
+//            if ([Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser) {
+            authorNameColor = author?.nameColor?.color
+            dashSecondaryColor = author?.nameColor?.dashColors.1
+//                if let rawAuthorNameColor = authorNameColor {
+//                    var dimColors = false
+//                    switch arguments.presentationData.theme.theme.name {
+//                        case .builtin(.nightAccent), .builtin(.night):
+//                            dimColors = true
+//                        default:
+//                            break
+//                    }
+//                    if dimColors {
+//                        var hue: CGFloat = 0.0
+//                        var saturation: CGFloat = 0.0
+//                        var brightness: CGFloat = 0.0
+//                        rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
+//                        authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
+//                    }
+//                }
+//            }
+            
+            let mainColor: UIColor
+            var secondaryColor: UIColor?
+            
+            var isIncoming = false
             switch arguments.type {
-            case let .bubble(incoming):
-                if isExpiredStory || isStory {
-                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                } else if isMedia {
-                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
-                } else {
-                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
-                }
-            case .standalone:
-                textColor = titleColor
+                case let .bubble(incoming):
+                    titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    if incoming {
+                        isIncoming = true
+                        if let authorNameColor {
+                            mainColor = authorNameColor
+                            secondaryColor = dashSecondaryColor
+                        } else {
+                            mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
+                        }
+                    } else {
+                        mainColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        if let _ = dashSecondaryColor {
+                            secondaryColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        }
+                    }
+                    if isExpiredStory || isStory {
+                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    } else if isMedia {
+                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
+                    } else {
+                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+                    }
+                    dustColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
+                case .standalone:
+                    let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
+                    titleColor = serviceColor.primaryText
+                    
+                    mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
+                    textColor = titleColor
+                    dustColor = titleColor
             }
             
             let messageText: NSAttributedString
@@ -699,7 +752,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if case .standalone = arguments.type {
                         node.backgroundView.image = PresentationResourcesChat.chatReplyServiceBackgroundTemplateImage(arguments.presentationData.theme.theme)
                     } else {
-                        node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme)
+                        node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme, dashedOutgoing: !isIncoming && secondaryColor != nil)
                     }
                     if node.backgroundView.superview == nil {
                         node.contentNode.view.insertSubview(node.backgroundView, at: 0)
@@ -719,14 +772,17 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let current = node.lineDashView {
                         lineDashView = current
                     } else {
-                        lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme))
+                        lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme, incoming: isIncoming))
                         lineDashView.clipsToBounds = true
                         node.lineDashView = lineDashView
                         node.contentNode.view.addSubview(lineDashView)
                     }
                     lineDashView.tintColor = secondaryColor
-                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 8.0, height: backgroundFrame.height))
-                    lineDashView.layer.cornerRadius = 4.0
+                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 12.0, height: backgroundFrame.height))
+                    lineDashView.layer.cornerRadius = 6.0
+                    if #available(iOS 13.0, *) {
+                        lineDashView.layer.cornerCurve = .continuous
+                    }
                 } else {
                     if let lineDashView = node.lineDashView {
                         node.lineDashView = nil
