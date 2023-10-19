@@ -300,7 +300,7 @@ public enum ResolvedUrl {
     case premiumOffer(reference: String?)
     case chatFolder(slug: String)
     case story(peerId: PeerId, id: Int32)
-    case boost(peerId: PeerId, status: ChannelBoostStatus?, canApplyStatus: CanApplyBoostStatus)
+    case boost(peerId: PeerId, status: ChannelBoostStatus?, myBoostStatus: MyBoostStatus?)
     case premiumGiftCode(slug: String)
 }
 

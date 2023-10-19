@@ -1196,13 +1196,13 @@ public extension TelegramEngine {
         public func getChannelBoostStatus(peerId: EnginePeer.Id) -> Signal<ChannelBoostStatus?, NoError> {
             return _internal_getChannelBoostStatus(account: self.account, peerId: peerId)
         }
-
-        public func canApplyChannelBoost(peerId: EnginePeer.Id) -> Signal<CanApplyBoostStatus, NoError> {
-            return _internal_canApplyChannelBoost(account: self.account, peerId: peerId)
-        }
         
-        public func applyChannelBoost(peerId: EnginePeer.Id) -> Signal<Bool, NoError> {
-            return _internal_applyChannelBoost(account: self.account, peerId: peerId)
+        public func getMyBoostStatus() -> Signal<MyBoostStatus?, NoError> {
+            return _internal_getMyBoostStatus(account: self.account)
+        }
+
+        public func applyChannelBoost(peerId: EnginePeer.Id, slots: [Int32]) -> Signal<Bool, NoError> {
+            return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
     }
 }

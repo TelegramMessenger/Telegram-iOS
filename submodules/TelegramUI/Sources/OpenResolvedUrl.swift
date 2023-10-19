@@ -835,7 +835,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }), nil)
                 }
             })
-        case let .boost(peerId, status, canApplyStatus):
+        case let .boost(peerId, status, myBoostsStatus):
+            let _ = myBoostsStatus
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
                 forceDark = true
@@ -847,7 +848,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 
                 var isBoosted = false
-                if case let .error(error) = canApplyStatus, case .peerBoostAlreadyActive = error {
+                if status.boostedByMe {
                     isBoosted = true
                 }
                 
@@ -876,54 +877,56 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     if isBoosted {
                         return true
                     }
-                    var dismiss = false
-                    switch canApplyStatus {
-                    case .ok:
-                        updateImpl?()
-                    case let .replace(previousPeer):
-                        let controller = replaceBoostConfirmationController(context: context, fromPeers: [previousPeer], toPeer: peer, commit: {
-                            updateImpl?()
-                        })
-                        present(controller, nil)
-                    case let .error(error):
-                        let title: String?
-                        let text: String
-                        
-                        var actions: [TextAlertAction] = [
-                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-                        ]
-                        
-                        switch error {
-                        case .generic:
-                            title = nil
-                            text = presentationData.strings.Login_UnknownError
-                        case let .floodWait(timeout):
-                            title = presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle
-                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
-                            text = presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string
-                            dismiss = true
-                        case .premiumRequired:
-                            title = presentationData.strings.ChannelBoost_Error_PremiumNeededTitle
-                            text = presentationData.strings.ChannelBoost_Error_PremiumNeededText
-                            actions = [
-                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
-                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-                                    dismissImpl?()
-                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: false, dismissed: nil)
-                                    navigationController?.pushViewController(controller)
-                                })
-                            ]
-                        case .giftedPremiumNotAllowed:
-                            title = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedTitle
-                            text = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedText
-                            dismiss = true
-                        case .peerBoostAlreadyActive:
-                            return true
-                        }
-                        
-                        let controller = textAlertController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, title: title, text: text, actions: actions, parseMarkdown: true)
-                        present(controller, nil)
-                    }
+                    let dismiss = false
+                    updateImpl?()
+                    
+//                    switch canApplyStatus {
+//                    case .ok:
+//                        updateImpl?()
+//                    case let .replace(previousPeer):
+//                        let controller = replaceBoostConfirmationController(context: context, fromPeers: [previousPeer], toPeer: peer, commit: {
+//                            updateImpl?()
+//                        })
+//                        present(controller, nil)
+//                    case let .error(error):
+//                        let title: String?
+//                        let text: String
+//                        
+//                        var actions: [TextAlertAction] = [
+//                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+//                        ]
+//                        
+//                        switch error {
+//                        case .generic:
+//                            title = nil
+//                            text = presentationData.strings.Login_UnknownError
+//                        case let .floodWait(timeout):
+//                            title = presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle
+//                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
+//                            text = presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string
+//                            dismiss = true
+//                        case .premiumRequired:
+//                            title = presentationData.strings.ChannelBoost_Error_PremiumNeededTitle
+//                            text = presentationData.strings.ChannelBoost_Error_PremiumNeededText
+//                            actions = [
+//                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
+//                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+//                                    dismissImpl?()
+//                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: false, dismissed: nil)
+//                                    navigationController?.pushViewController(controller)
+//                                })
+//                            ]
+//                        case .giftedPremiumNotAllowed:
+//                            title = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedTitle
+//                            text = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedText
+//                            dismiss = true
+//                        case .peerBoostAlreadyActive:
+//                            return true
+//                        }
+//                        
+//                        let controller = textAlertController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, title: title, text: text, actions: actions, parseMarkdown: true)
+//                        present(controller, nil)
+//                    }
                     return dismiss
                 },
                 openPeer: { peer in
@@ -942,7 +945,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 updateImpl = { [weak controller] in
                     if let _ = status.nextLevelBoosts {
-                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId).startStandalone()
+                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: []).startStandalone()
                         controller?.updateSubject(nextSubject, count: nextCount)
                     } else {
                         dismissImpl?()
