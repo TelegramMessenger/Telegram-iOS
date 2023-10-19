@@ -327,6 +327,14 @@ public func PeerNameColorScreen(
         } else {
             nameColor = (peer?.nameColor ?? .blue).color
         }
+        
+        let selectedItems: [EngineMedia.Id]
+        if let selectedEmojiId, selectedEmojiId != 0 {
+            selectedItems = [EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: selectedEmojiId)]
+        } else {
+            selectedItems = []
+        }
+        
         return EmojiPagerContentComponent.emojiInputData(
             context: context,
             animationCache: context.animationCache,
@@ -338,7 +346,7 @@ public func PeerNameColorScreen(
             areUnicodeEmojiEnabled: false,
             areCustomEmojiEnabled: true,
             chatPeerId: context.account.peerId,
-            selectedItems: Set(selectedEmojiId.flatMap { [EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: $0)] } ?? []),
+            selectedItems: Set(selectedItems),
             backgroundIconColor: nameColor
         )
     }
