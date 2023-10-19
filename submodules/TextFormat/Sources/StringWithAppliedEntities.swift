@@ -269,6 +269,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 var font: UIFont?
                 
                 var fontAttributes = fontAttributes
+                let initialFontAttributes = fontAttributes
                 var isQuote = false
                 if fontAttributes.contains(.blockQuote) {
                     isQuote = true
@@ -278,10 +279,10 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     font = boldItalicFont
                 } else if fontAttributes == [.bold] {
                     font = boldFont
-                    addedAttributes.append((range, fontAttributes))
+                    addedAttributes.append((range, initialFontAttributes))
                 } else if fontAttributes == [.italic] {
                     font = italicFont
-                    addedAttributes.append((range, fontAttributes))
+                    addedAttributes.append((range, initialFontAttributes))
                 } else {
                     font = baseFont
                 }
