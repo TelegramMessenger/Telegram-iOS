@@ -266,7 +266,6 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     } else {
                         let string = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
-                        strongSelf.textNode.attributedText = messageText
                     }
                     
                     if strongSelf.messageId.peerId != strongSelf.chatPeerId {
@@ -284,6 +283,8 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         }
                     }
                 }
+                
+                strongSelf.textNode.attributedText = messageText
                 
                 if let quote = strongSelf.quote {
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
