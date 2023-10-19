@@ -150,8 +150,19 @@ public final class TelegramUser: Peer, Equatable {
     }
     
     public var associatedMediaIds: [MediaId]? {
-        if let emojiStatus = self.emojiStatus {
-            return [MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId)]
+        if let emojiStatus = self.emojiStatus, let backgroundEmojiId = self.backgroundEmojiId {
+            return [
+                MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId),
+                MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId)
+            ]
+        } else if let emojiStatus = self.emojiStatus {
+            return [
+                MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId)
+            ]
+        } else if let backgroundEmojiId = self.backgroundEmojiId {
+            return [
+                MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId)
+            ]
         } else {
             return nil
         }

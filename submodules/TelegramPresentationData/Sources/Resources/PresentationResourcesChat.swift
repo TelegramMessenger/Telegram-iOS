@@ -1350,6 +1350,4 @@ public struct PresentationResourcesChat {
             })?.resizableImage(withCapInsets: .zero, resizingMode: .tile).withRenderingMode(.alwaysTemplate)
         })
     }
-    
-//chatReplyLineDashTemplateImage
 }

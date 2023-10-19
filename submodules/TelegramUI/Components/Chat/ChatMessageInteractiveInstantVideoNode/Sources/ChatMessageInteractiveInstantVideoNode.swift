@@ -253,7 +253,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var replyInfoApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
@@ -1002,7 +1002,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
                         let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
                         
-                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, false)
+                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, false, animation)
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)

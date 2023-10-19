@@ -178,7 +178,13 @@ public final class TelegramChannel: Peer, Equatable {
         return .title(title: self.title, addressNames: addressNames)
     }
     
-    public var associatedMediaIds: [MediaId]? { return nil }
+    public var associatedMediaIds: [MediaId]? {
+        if let backgroundEmojiId = self.backgroundEmojiId {
+            return [MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId)]
+        } else {
+            return nil
+        }
+    }
     
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil

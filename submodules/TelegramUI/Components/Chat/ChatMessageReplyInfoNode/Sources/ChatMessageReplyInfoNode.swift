@@ -16,6 +16,7 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 import ChatMessageItemCommon
+import MessageInlineBlockBackgroundView
 
 public enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
@@ -119,8 +120,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         }
     }
     
-    private let backgroundView: UIImageView
-    private var lineDashView: UIImageView?
+    private let backgroundView: MessageInlineBlockBackgroundView
     private var quoteIconView: UIImageView?
     private let contentNode: ASDisplayNode
     private var titleNode: TextNode?
@@ -131,7 +131,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     private var expiredStoryIconView: UIImageView?
     
     override public init() {
-        self.backgroundView = UIImageView()
+        self.backgroundView = MessageInlineBlockBackgroundView(frame: CGRect())
         
         self.contentNode = ASDisplayNode()
         self.contentNode.isUserInteractionEnabled = false
@@ -144,7 +144,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         self.addSubnode(self.contentNode)
     }
     
-    public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode) {
+    public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode) {
         let titleNodeLayout = TextNode.asyncLayout(maybeNode?.titleNode)
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
@@ -187,6 +187,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 } else {
                     mainColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    if dashSecondaryColor != nil {
+                        secondaryColor = .clear
+                    }
                 }
                 dustColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
             case .standalone:
@@ -584,7 +587,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 size.width += 16.0
             }
             
-            return (size, { realSize, attemptSynchronous in
+            return (size, { realSize, attemptSynchronous, animation in
                 let node: ChatMessageReplyInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode
@@ -696,15 +699,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.dustNode = nil
                 }
                 
-                if node.backgroundView.image == nil {
-                    if case .standalone = arguments.type {
-                        node.backgroundView.image = PresentationResourcesChat.chatReplyServiceBackgroundTemplateImage(arguments.presentationData.theme.theme)
-                    } else {
-                        node.backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(arguments.presentationData.theme.theme, dashedOutgoing: !isIncoming && secondaryColor != nil)
-                    }
-                    if node.backgroundView.superview == nil {
-                        node.contentNode.view.insertSubview(node.backgroundView, at: 0)
-                    }
+                if node.backgroundView.superview == nil {
+                    node.contentNode.view.insertSubview(node.backgroundView, at: 0)
                 }
                 
                 var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height + 2.0))
@@ -712,10 +708,29 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     backgroundFrame.size.height -= 1.0
                 }
                 
-                node.backgroundView.tintColor = mainColor
                 node.backgroundView.frame = backgroundFrame
                 
-                if let secondaryColor {
+                var pattern: MessageInlineBlockBackgroundView.Pattern?
+                if let backgroundEmojiId = author?.backgroundEmojiId {
+                    pattern = MessageInlineBlockBackgroundView.Pattern(
+                        context: arguments.context,
+                        fileId: backgroundEmojiId,
+                        file: arguments.parentMessage.associatedMedia[MediaId(
+                            namespace: Namespaces.Media.CloudFile,
+                            id: backgroundEmojiId
+                        )] as? TelegramMediaFile
+                    )
+                }
+                node.backgroundView.update(
+                    size: backgroundFrame.size,
+                    primaryColor: mainColor,
+                    secondaryColor: secondaryColor,
+                    pattern: pattern,
+                    animation: animation
+                )
+                
+                let _ = secondaryColor
+                /*if let secondaryColor {
                     let lineDashView: UIImageView
                     if let current = node.lineDashView {
                         lineDashView = current
@@ -736,7 +751,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.lineDashView = nil
                         lineDashView.removeFromSuperview()
                     }
-                }
+                }*/
                 
                 if arguments.quote != nil || arguments.replyForward?.quote != nil {
                     let quoteIconView: UIImageView

@@ -644,6 +644,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var adMessagesDisposable: Disposable?
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()
+    private var seenAdIds: [Data] = []
     private var pendingDynamicAdMessages: [Message] = []
     private var pendingDynamicAdMessageInterval: Int?
     private var remainingDynamicAdMessageInterval: Int?
@@ -2028,7 +2029,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 break
             }
         }
-        self.adMessagesContext?.markAsSeen(opaqueId: opaqueId)
+        if !self.seenAdIds.contains(opaqueId) {
+            self.seenAdIds.append(opaqueId)
+            self.adMessagesContext?.markAsSeen(opaqueId: opaqueId)
+        }
     }
     
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {

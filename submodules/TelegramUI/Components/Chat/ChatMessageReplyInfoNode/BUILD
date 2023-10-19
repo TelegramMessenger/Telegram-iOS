@@ -26,6 +26,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/Chat/MessageInlineBlockBackgroundView",
     ],
     visibility = [
         "//visibility:public",

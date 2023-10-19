@@ -427,7 +427,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
             let videoFrame = CGRect(origin: CGPoint(x: (incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + effectiveAvatarInset + layoutConstants.bubble.contentInsets.left) : (params.width - params.rightInset - videoLayout.contentSize.width - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - deliveryFailedInset)), y: 0.0), size: videoLayout.contentSize)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var replyInfoApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: NavigationBackgroundNode?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -763,7 +763,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                         if let (replyInfoSize, replyInfoApply) = replyInfoApply {
                             let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 11.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 9.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
                             
-                            let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads)
+                            let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads, animation)
                             if strongSelf.replyInfoNode == nil {
                                 strongSelf.replyInfoNode = replyInfoNode
                                 strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)

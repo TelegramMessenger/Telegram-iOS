@@ -1056,7 +1056,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var threadInfoApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode)?
-            var replyInfoApply: (CGSize, (CGSize, Bool) -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var needsReplyBackground = false
             var replyMarkup: ReplyMarkupMessageAttribute?
             
@@ -1490,7 +1490,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
                         let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 11.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 9.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: replyInfoSize)
                         
-                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads)
+                        let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads, animation)
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
