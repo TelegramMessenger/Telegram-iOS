@@ -703,6 +703,10 @@ const NSInteger PGCameraFrameRate = 30;
 
 #pragma mark - Flash
 
+- (AVCaptureFlashMode)currentDeviceFlashMode {
+    return [PGCameraCaptureSession _deviceFlashModeForCameraFlashMode:self.currentFlashMode];
+}
+
 - (PGCameraFlashMode)currentFlashMode
 {
     switch (self.currentMode)

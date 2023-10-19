@@ -119,12 +119,6 @@ private final class CameraContext {
     private let detectedCodesPipe = ValuePipe<[CameraCode]>()
     fileprivate let modeChangePromise = ValuePromise<Camera.ModeChange>(.none)
     
-    var previewNode: CameraPreviewNode? {
-        didSet {
-            self.previewNode?.prepare()
-        }
-    }
-    
     var previewView: CameraPreviewView?
     
     var simplePreviewView: CameraSimplePreviewView?
@@ -310,9 +304,7 @@ private final class CameraContext {
             self.mainDeviceContext?.output.processSampleBuffer = { [weak self] sampleBuffer, pixelBuffer, connection in
                 guard let self, let mainDeviceContext = self.mainDeviceContext else {
                     return
-                }
-                self.previewNode?.enqueue(sampleBuffer)
-                
+                } 
                 let timestamp = CACurrentMediaTime()
                 if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording {
                     var front = false
@@ -350,8 +342,6 @@ private final class CameraContext {
                 guard let self, let mainDeviceContext = self.mainDeviceContext else {
                     return
                 }
-                self.previewNode?.enqueue(sampleBuffer)
-                
                 let timestamp = CACurrentMediaTime()
                 if timestamp > self.lastSnapshotTimestamp + 2.5, !mainDeviceContext.output.isRecording {
                     var front = false
@@ -812,20 +802,6 @@ public final class Camera {
                 }
             }
             return disposable
-        }
-    }
-
-    public func attachPreviewNode(_ node: CameraPreviewNode) {
-        let nodeRef: Unmanaged<CameraPreviewNode> = Unmanaged.passRetained(node)
-        self.queue.async {
-            if let context = self.contextRef?.takeUnretainedValue() {
-                context.previewNode = nodeRef.takeUnretainedValue()
-                nodeRef.release()
-            } else {
-                Queue.mainQueue().async {
-                    nodeRef.release()
-                }
-            }
         }
     }
     

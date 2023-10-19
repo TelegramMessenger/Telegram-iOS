@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AsyncDisplayKit
 import ComponentFlow
 import RoundedRectWithTailPath
 
@@ -429,5 +430,37 @@ private final class SliderView: UIView {
     }
     
     func performAction() {
+    }
+}
+
+final class CameraFrontFlashOverlayController: ViewController {
+    class Node: ASDisplayNode {
+        init(color: UIColor) {
+            super.init()
+            
+            self.backgroundColor = color
+        }
+    }
+    
+    private let color: UIColor
+    init(color: UIColor) {
+        self.color = color
+        
+        super.init(navigationBarPresentationData: nil)
+    }
+    
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override func loadDisplayNode() {
+        self.displayNode = Node(color: self.color)
+        self.displayNodeDidLoad()
+    }
+    
+    func dismissAnimated() {
+        self.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
+            self.dismiss()
+        })
     }
 }

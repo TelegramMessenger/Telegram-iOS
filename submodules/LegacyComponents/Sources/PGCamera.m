@@ -391,6 +391,7 @@ NSString *const PGCameraAdjustingFocusKey = @"adjustingFocus";
             _currentPhotoOrientation = orientation;
             
             AVCapturePhotoSettings *photoSettings = [AVCapturePhotoSettings photoSettings];
+            photoSettings.flashMode = self.captureSession.currentDeviceFlashMode;
             [self.captureSession.imageOutput capturePhotoWithSettings:photoSettings delegate:self];
         }];
     };
