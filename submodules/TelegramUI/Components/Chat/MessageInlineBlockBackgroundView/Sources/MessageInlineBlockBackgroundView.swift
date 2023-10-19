@@ -32,7 +32,6 @@ private func generateTemplateImage(isMonochrome: Bool) -> UIImage {
     return generateImage(CGSize(width: radius * 2.0 + 4.0, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        //context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
         addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(), size: size), radius: radius)
         context.clip()
         
@@ -408,7 +407,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.frame = CGRect(origin: CGPoint(x: size.width - placement.position.x / 3.0 - itemSize.width * 0.5, y: placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
                 var alphaFraction = abs(placement.position.x) / 400.0
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
-                patternContentLayer.opacity = 0.5 * Float(1.0 - alphaFraction)
+                patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)
                 
                 maxIndex += 1
             }

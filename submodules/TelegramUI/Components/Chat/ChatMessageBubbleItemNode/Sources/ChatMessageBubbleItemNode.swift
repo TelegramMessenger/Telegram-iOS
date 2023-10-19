@@ -4955,6 +4955,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
+    public func getQuoteRect(quote: String) -> CGRect? {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                if let result = contentNode.getQuoteRect(quote: quote) {
+                    return contentNode.view.convert(result, to: self.view)
+                }
+            }
+        }
+        return nil
+    }
+    
     public func hasExpandedAudioTranscription() -> Bool {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageFileBubbleContentNode {
