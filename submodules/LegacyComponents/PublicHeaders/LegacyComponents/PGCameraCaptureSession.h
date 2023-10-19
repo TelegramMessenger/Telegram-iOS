@@ -20,6 +20,7 @@
 @property (nonatomic, assign) bool alwaysSetFlash;
 @property (nonatomic, assign) PGCameraMode currentMode;
 @property (nonatomic, assign) PGCameraFlashMode currentFlashMode;
+@property (nonatomic, readonly) AVCaptureFlashMode currentDeviceFlashMode;
 
 @property (nonatomic, assign) PGCameraPosition currentCameraPosition;
 @property (nonatomic, readonly) PGCameraPosition preferredCameraPosition;

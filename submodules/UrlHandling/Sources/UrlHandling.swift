@@ -739,10 +739,10 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             case .boost:
                                 return combineLatest(
                                     context.engine.peers.getChannelBoostStatus(peerId: peer.id),
-                                    context.engine.peers.canApplyChannelBoost(peerId: peer.id)
+                                    context.engine.peers.getMyBoostStatus()
                                 )
-                                |> map { boostStatus, canApplyStatus -> ResolvedUrl? in
-                                    return .boost(peerId: peer.id, status: boostStatus, canApplyStatus: canApplyStatus)
+                                |> map { boostStatus, myBoostStatus -> ResolvedUrl? in
+                                    return .boost(peerId: peer.id, status: boostStatus, myBoostStatus: myBoostStatus)
                                 }
                         }
                     } else {

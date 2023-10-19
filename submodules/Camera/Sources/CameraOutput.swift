@@ -245,7 +245,7 @@ final class CameraOutput: NSObject {
         }
         
         let settings = AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)])
-        settings.flashMode = flashMode
+        settings.flashMode = mirror ? .off : flashMode
         if let previewPhotoPixelFormatType = settings.availablePreviewPhotoPixelFormatTypes.first {
             settings.previewPhotoFormat = [kCVPixelBufferPixelFormatTypeKey as String: previewPhotoPixelFormatType]
         }

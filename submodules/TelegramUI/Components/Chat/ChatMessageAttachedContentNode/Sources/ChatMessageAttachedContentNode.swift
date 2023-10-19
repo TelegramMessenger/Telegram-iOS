@@ -158,15 +158,17 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
-            
+            let author = message.author
             let mainColor: UIColor
             var secondaryColor: UIColor?
             if !incoming {
                 mainColor = messageTheme.accentTextColor
+                if let _ = author?.nameColor?.dashColors.1 {
+                    secondaryColor = messageTheme.accentTextColor
+                }
             } else {
                 var authorNameColor: UIColor?
-                let author = message.author
-                if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
+//                if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
                     authorNameColor = author?.nameColor?.color
                     secondaryColor = author?.nameColor?.dashColors.1
                     
@@ -186,7 +188,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
 //                            authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
 //                        }
 //                    }
-                }
+//                }
                 
                 if let authorNameColor {
                     mainColor = authorNameColor

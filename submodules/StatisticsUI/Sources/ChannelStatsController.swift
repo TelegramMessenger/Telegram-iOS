@@ -115,7 +115,7 @@ private enum StatsEntry: ItemListNodeEntry {
     
     case boostersTitle(PresentationTheme, String)
     case boostersPlaceholder(PresentationTheme, String)
-    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer, Int32)
+    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer?, Int32)
     case boostersExpand(PresentationTheme, String)
     case boostersInfo(PresentationTheme, String)
     
@@ -534,10 +534,16 @@ private enum StatsEntry: ItemListNodeEntry {
                     arguments.contextAction(message.id, node, gesture)
                 })
             case let .booster(_, _, dateTimeFormat, peer, expires):
-                let expiresValue = stringForMediumDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
-                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
-                    arguments.openPeer(peer)
-                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
+            let _ = dateTimeFormat
+            let _ = peer
+            let _ = expires
+                return ItemListTextItem(presentationData: presentationData, text: .markdown("text"), sectionId: self.section)
+//                let expiresValue = stringForMediumDate(timestamp: expires, strings: presentationData.strings, dateTimeFormat: dateTimeFormat)
+//                return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: .text(presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: peer?.id != nil && peer?.id != arguments.context.account.peerId, sectionId: self.section, action: {
+//                    if let peer {
+//                        arguments.openPeer(peer)
+//                    }
+//                }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .boostersExpand(theme, title):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandBoosters()
@@ -732,7 +738,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             if let boostersState {
                 var boosterIndex: Int32 = 0
                 
-                var boosters: [ChannelBoostersContext.State.Booster] = boostersState.boosters
+                var boosters: [ChannelBoostersContext.State.Boost] = boostersState.boosts
                 var effectiveExpanded = state.boostersExpanded
                 if boosters.count > maxUsersDisplayedLimit && !state.boostersExpanded {
                     boosters = Array(boosters.prefix(Int(maxUsersDisplayedLimit)))
