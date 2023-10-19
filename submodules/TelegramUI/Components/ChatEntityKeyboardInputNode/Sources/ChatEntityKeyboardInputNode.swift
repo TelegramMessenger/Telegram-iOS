@@ -2381,7 +2381,8 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             hasActiveGroupCall: false,
             importState: nil,
             threadData: nil,
-            isGeneralThreadClosed: nil
+            isGeneralThreadClosed: nil,
+            replyMessage: nil
         )
 
         let _ = inputNode.updateLayout(

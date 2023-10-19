@@ -1017,7 +1017,8 @@ final class MediaEditorScreenComponent: Component {
                     hasActiveGroupCall: false,
                     importState: nil,
                     threadData: nil,
-                    isGeneralThreadClosed: nil
+                    isGeneralThreadClosed: nil,
+                    replyMessage: nil
                 )
                 
                 let availableInputMediaWidth = previewSize.width

@@ -17,6 +17,11 @@ private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageText
         }
     })
     test.removeAttribute(ChatTextInputAttributes.customEmoji, range: NSRange(location: 0, length: test.length))
+    
+    test.enumerateAttribute(ChatTextInputAttributes.quote, in: NSRange(location: 0, length: sourceString.length), using: { value, range, _ in
+        if value != nil {
+        }
+    })
 
     if let data = try? test.data(from: NSRange(location: 0, length: test.length), documentAttributes: [NSAttributedString.DocumentAttributeKey.documentType: NSAttributedString.DocumentType.rtf]) {
         if var rtf = String(data: data, encoding: .windowsCP1252) {

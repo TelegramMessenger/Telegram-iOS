@@ -3377,6 +3377,37 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     return
                 }
                 
+                if let replyMessageSubject = self.chatPresentationInterfaceState.interfaceState.replyMessageSubject, let quote = replyMessageSubject.quote {
+                    if let replyMessage = self.chatPresentationInterfaceState.replyMessage {
+                        if !replyMessage.text.contains(quote.text) {
+                            //TODO:localize
+                            let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
+                            let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)
+                            let errorText = errorTextData.string
+                            self.controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.context.sharedContext.currentPresentationData.with({ $0 })), title: self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedTitle, text: errorText, actions: [
+                                TextAlertAction(type: .genericAction, title: self.chatPresentationInterfaceState.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedActionEdit, action: { [weak self] in
+                                    guard let self, let controller = self.controller else {
+                                        return
+                                    }
+                                    controller.updateChatPresentationInterfaceState(interactive: false, { presentationInterfaceState in
+                                        return presentationInterfaceState.updatedInterfaceState { interfaceState in
+                                            guard var replyMessageSubject = interfaceState.replyMessageSubject else {
+                                                return interfaceState
+                                            }
+                                            replyMessageSubject.quote = nil
+                                            return interfaceState.withUpdatedReplyMessageSubject(replyMessageSubject)
+                                        }
+                                    })
+                                    presentChatLinkOptions(selfController: controller, sourceNode: controller.displayNode)
+                                }),
+                            ], parseMarkdown: true), in: .window(.root))
+                            
+                            return
+                        }
+                    }
+                }
+                
                 let timestamp = CACurrentMediaTime()
                 if self.lastSendTimestamp + 0.15 > timestamp {
                     return

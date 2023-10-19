@@ -326,6 +326,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var searchQuerySuggestionState: (ChatPresentationInputQuery?, Disposable)?
     var urlPreviewQueryState: (String?, Disposable)?
     var editingUrlPreviewQueryState: (String?, Disposable)?
+    var replyMessageState: (EngineMessage.Id, Disposable)?
     var searchState: ChatSearchState?
     
     var shakeFeedback: HapticFeedback?
@@ -618,7 +619,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.stickerSettings = ChatInterfaceStickerSettings()
         
-        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil)
+        self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil, isGeneralThreadClosed: nil, replyMessage: nil)
         self.presentationInterfaceStatePromise = ValuePromise(self.presentationInterfaceState)
         
         var mediaAccessoryPanelVisibility = MediaAccessoryPanelVisibility.none
@@ -5309,9 +5310,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 return nil
                             }
                         }
-                    case .reply:
-                        //TODO:localize
-                        subtitleTextSignal = .single("You can select a specific part to quote")
+                    case let .reply(reply):
+                        subtitleTextSignal = reply.selectionState.get()
+                        |> map { selectionState -> String? in
+                            if !selectionState.canQuote {
+                                return nil
+                            }
+                            //TODO:localize
+                            return "You can select a specific part to quote"
+                        }
                     case let .link(link):
                         subtitleTextSignal = link.options
                         |> map { options -> String? in
@@ -6758,6 +6765,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             self.urlPreviewQueryState?.1.dispose()
             self.editingUrlPreviewQueryState?.1.dispose()
+            self.replyMessageState?.1.dispose()
             self.audioRecorderDisposable?.dispose()
             self.audioRecorderStatusDisposable?.dispose()
             self.videoRecorderDisposable?.dispose()
@@ -8034,7 +8042,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateItemNodesHighlightedStates(animated: initial)
                         strongSelf.scrolledToMessageIdValue = ScrolledToMessageId(id: index.id, allowedReplacementDirection: [])
                         
-                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(0.7, queue: Queue.mainQueue())).startStrict(completed: {
+                        var hasQuote = false
+                        if let quote = toSubject.quote {
+                            if message.text.contains(quote) {
+                                hasQuote = true
+                            } else {
+                                //TODO:localize
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                            }
+                        }
+                        
+                        strongSelf.messageContextDisposable.set((Signal<Void, NoError>.complete() |> delay(hasQuote ? 1.5 : 0.7, queue: Queue.mainQueue())).startStrict(completed: {
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                 if controllerInteraction.highlightedState == highlightedState {
                                     controllerInteraction.highlightedState = nil
@@ -8042,11 +8060,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                         }))
-                        
-                        if let quote = toSubject.quote, !message.text.contains(quote) {
-                            //TODO:localize
-                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
-                        }
                         
                         if let (messageId, params) = strongSelf.scheduledScrollToMessageId {
                             strongSelf.scheduledScrollToMessageId = nil
@@ -12372,6 +12385,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else {
                     updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedEditingUrlPreview(nil)
                 }
+            }
+        }
+        
+        if let replyMessageId = updatedChatPresentationInterfaceState.interfaceState.replyMessageSubject?.messageId {
+            if self.replyMessageState?.0 != replyMessageId {
+                self.replyMessageState?.1.dispose()
+                updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedReplyMessage(nil)
+                let disposable = MetaDisposable()
+                self.replyMessageState = (replyMessageId, disposable)
+                disposable.set((self.context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.Message(id: replyMessageId))
+                |> deliverOnMainQueue).start(next: { [weak self] message in
+                    guard let self else {
+                        return
+                    }
+                    if message != self.presentationInterfaceState.replyMessage.flatMap(EngineMessage.init) {
+                        self.updateChatPresentationInterfaceState(interactive: false, { presentationInterfaceState in
+                            return presentationInterfaceState.updatedReplyMessage(message?._asMessage())
+                        })
+                    }
+                }))
+            }
+        } else {
+            if let replyMessageState = self.replyMessageState {
+                self.replyMessageState = nil
+                replyMessageState.1.dispose()
+                updatedChatPresentationInterfaceState = updatedChatPresentationInterfaceState.updatedReplyMessage(nil)
             }
         }
         

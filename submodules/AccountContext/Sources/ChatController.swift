@@ -574,9 +574,11 @@ public enum ChatControllerSubject: Equatable {
         }
         
         public struct SelectionState: Equatable {
+            public var canQuote: Bool
             public var quote: Quote?
             
-            public init(quote: Quote?) {
+            public init(canQuote: Bool, quote: Quote?) {
+                self.canQuote = canQuote
                 self.quote = quote
             }
         }
