@@ -455,7 +455,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double) {

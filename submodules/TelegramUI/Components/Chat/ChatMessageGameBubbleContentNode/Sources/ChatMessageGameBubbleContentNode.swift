@@ -129,7 +129,7 @@ public final class ChatMessageGameBubbleContentNode: ChatMessageBubbleContentNod
                 }
             }*/
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func updateHiddenMedia(_ media: [Media]?) -> Bool {

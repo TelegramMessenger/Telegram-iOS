@@ -521,6 +521,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private let mainContainerNode: ContextControllerSourceNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
+    private var backgroundHighlightNode: ChatMessageBackground?
     private let shadowNode: ChatMessageShadowNode
     private var clippingNode: ChatMessageBubbleClippingNode
     
@@ -557,7 +558,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private let messageAccessibilityArea: AccessibilityAreaNode
 
     private var backgroundType: ChatMessageBackgroundType?
-    private var highlightedState: Bool = false
+    
+    private struct HighlightedState: Equatable {
+        var quote: String?
+    }
+    private var highlightedState: HighlightedState?
     
     private var backgroundFrameTransition: (CGRect, CGRect)?
     
@@ -703,7 +708,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             
             if let singleUrl = accessibilityData.singleUrl {
-                strongSelf.item?.controllerInteraction.openUrl(singleUrl, false, false, strongSelf.item?.content.firstMessage, nil)
+                strongSelf.item?.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: singleUrl, concealed: false, external: false, message: strongSelf.item?.content.firstMessage))
                 return true
             }
             
@@ -1007,7 +1012,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         for contentNode in strongSelf.contentNodes {
                             let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
                             let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
-                            switch tapAction {
+                            switch tapAction.content {
                             case .none:
                                 break
                             case .ignore:
@@ -1066,7 +1071,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 for contentNode in strongSelf.contentNodes {
                     let contentNodePoint = strongSelf.view.convert(point, to: contentNode.view)
                     let tapAction = contentNode.tapActionAtPoint(contentNodePoint, gesture: .tap, isEstimating: true)
-                    switch tapAction {
+                    switch tapAction.content {
                         case .none:
                             if let _ = strongSelf.item?.controllerInteraction.tapMessage {
                                 return .waitForSingleTap
@@ -2818,7 +2823,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if item.presentationData.theme.theme.forceSync {
             legacyTransition = .immediate
         }
-        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: strongSelf.highlightedState, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: legacyTransition, backgroundNode: presentationContext.backgroundNode)
+        strongSelf.backgroundNode.setType(type: backgroundType, highlighted: false, graphics: graphics, maskMode: strongSelf.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: legacyTransition, backgroundNode: presentationContext.backgroundNode)
         strongSelf.backgroundWallpaperNode.setType(type: backgroundType, theme: item.presentationData.theme, essentialGraphics: graphics, maskMode: strongSelf.backgroundMaskMode, backgroundNode: presentationContext.backgroundNode)
         strongSelf.shadowNode.setType(type: backgroundType, hasWallpaper: hasWallpaper, graphics: graphics)
         
@@ -3535,6 +3540,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
                         if let strongSelf = strongSelf {
                             strongSelf.backgroundNode.frame = frame
+                            if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
+                                backgroundHighlightNode.frame = frame
+                                backgroundHighlightNode.updateLayout(size: frame.size, transition: .immediate)
+                            }
                             strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
                             strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
                             
@@ -3546,6 +3555,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
                 } else {
                     animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                    if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
+                        animation.animator.updateFrame(layer: backgroundHighlightNode.layer, frame: backgroundFrame, completion: nil)
+                        backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: animation)
+                    }
                     animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
                     strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
                     animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
@@ -3608,6 +3621,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
                 legacyTransition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
+                if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
+                    legacyTransition.updateFrame(node: backgroundHighlightNode, frame: backgroundFrame, completion: nil)
+                    backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: legacyTransition)
+                }
 
                 legacyTransition.updateFrame(node: strongSelf.clippingNode, frame: backgroundFrame)
                 legacyTransition.updateBounds(node: strongSelf.clippingNode, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size))
@@ -3617,6 +3634,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: legacyTransition)
             } else {
                 strongSelf.backgroundNode.frame = backgroundFrame
+                if let backgroundHighlightNode = strongSelf.backgroundHighlightNode {
+                    backgroundHighlightNode.frame = backgroundFrame
+                    backgroundHighlightNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
+                }
+                
                 strongSelf.clippingNode.frame = backgroundFrame
                 strongSelf.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
                 strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
@@ -3699,56 +3721,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     
     override public func shouldAnimateHorizontalFrameTransition() -> Bool {
         return false
-        /*if let _ = self.backgroundFrameTransition {
-            return true
-        } else {
-            return false
-        }*/
     }
     
     override public func animateFrameTransition(_ progress: CGFloat, _ currentValue: CGFloat) {
         super.animateFrameTransition(progress, currentValue)
-        
-        /*if let backgroundFrameTransition = self.backgroundFrameTransition {
-            let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
-            self.backgroundNode.frame = backgroundFrame
-
-            self.clippingNode.frame = backgroundFrame
-            self.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
-
-            self.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
-            self.backgroundWallpaperNode.frame = backgroundFrame
-            self.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
-            
-            if let type = self.backgroundNode.type {
-                var incomingOffset: CGFloat = 0.0
-                switch type {
-                case .incoming:
-                    incomingOffset = 5.0
-                default:
-                    break
-                }
-                self.mainContextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
-                self.mainContainerNode.targetNodeForActivationProgressContentRect = self.mainContextSourceNode.contentRect
-                if !self.mainContextSourceNode.isExtractedToContextPreview {
-                    if let (rect, size) = self.absoluteRect {
-                        self.updateAbsoluteRect(rect, within: size)
-                    }
-                }
-            }
-            self.messageAccessibilityArea.frame = backgroundFrame
-            
-            if let item = self.item, let shareButtonNode = self.shareButtonNode {
-                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
-            }
-            
-            if CGFloat(1.0).isLessThanOrEqualTo(progress) {
-                self.backgroundFrameTransition = nil
-                
-                self.clippingNode.clipsToBounds = false
-            }
-        }*/
     }
     
     @objc private func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
@@ -3948,7 +3924,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     let convertedLocation = self.view.convert(location, to: contentNode.view)
 
                     let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
-                    switch tapAction {
+                    switch tapAction.content {
                     case .none:
                         if let item = self.item, self.backgroundNode.frame.contains(CGPoint(x: self.frame.width - location.x, y: location.y)), let tapMessage = self.item?.controllerInteraction.tapMessage {
                             return .action({
@@ -3964,12 +3940,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             return .action({
                             })
                         }
-                    case let .url(url, concealed, activate):
+                    case let .url(url):
                         return .action({ [weak self] in
                             guard let self, let item = self.item else {
                                 return
                             }
-                            item.controllerInteraction.openUrl(url, concealed, nil, item.content.firstMessage, activate?())
+                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url.url, concealed: url.concealed, message: item.content.firstMessage, allowInlineWebpageResolution: url.allowInlineWebpageResolution, progress: tapAction.activate?()))
                         })
                     case let .peerMention(peerId, _, openProfile):
                         return .action({ [weak self] in
@@ -4123,12 +4099,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             tapMessage = contentNode.item?.message
                         }
                         let tapAction = contentNode.tapActionAtPoint(convertedLocation, gesture: gesture, isEstimating: false)
-                        switch tapAction {
+                        switch tapAction.content {
                         case .none, .ignore:
                             break
-                        case let .url(url, _, _):
+                        case let .url(url):
                             return .action({
-                                item.controllerInteraction.longTap(.url(url), message)
+                                item.controllerInteraction.longTap(.url(url.url), message)
                             })
                         case let .peerMention(peerId, mention, _):
                             return .action({
@@ -4480,43 +4456,114 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             return
         }
         
-        var highlighted = false
-        var highlightedQuote: String?
+        var highlightedState: HighlightedState?
         
         for contentNode in self.contentNodes {
             let _ = contentNode.updateHighlightedState(animated: animated)
         }
         
-        if let highlightedState = item.controllerInteraction.highlightedState {
+        if let highlightedStateValue = item.controllerInteraction.highlightedState {
             for (message, _) in item.content {
-                if highlightedState.messageStableId == message.stableId {
-                    highlighted = true
-                    highlightedQuote = highlightedState.quote
+                if highlightedStateValue.messageStableId == message.stableId {
+                    highlightedState = HighlightedState(quote: highlightedStateValue.quote)
                     break
                 }
             }
         }
         
-        if self.highlightedState != highlighted {
-            self.highlightedState = highlighted
+        if self.highlightedState != highlightedState {
+            self.highlightedState = highlightedState
+            
+            for contentNode in self.contentNodes {
+                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                    contentNode.updateQuoteTextHighlightState(text: nil, color: .clear, animated: true)
+                }
+            }
+            
             if let backgroundType = self.backgroundType {
                 let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
-                let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
-                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, backgroundNode: item.controllerInteraction.presentationContext.backgroundNode)
-            }
-        }
-        
-        if let highlightedQuote {
-            for contentNode in self.contentNodes {
-                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                    contentNode.updateQuoteTextHighlightState(text: highlightedQuote, animated: animated)
-                }
-            }
-        } else {
-            for contentNode in self.contentNodes {
-                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                    contentNode.updateQuoteTextHighlightState(text: nil, animated: animated)
+                if self.highlightedState != nil {
+                    let backgroundHighlightNode: ChatMessageBackground
+                    if let current = self.backgroundHighlightNode {
+                        backgroundHighlightNode = current
+                    } else {
+                        backgroundHighlightNode = ChatMessageBackground()
+                        self.mainContextSourceNode.contentNode.insertSubnode(backgroundHighlightNode, aboveSubnode: self.backgroundNode)
+                        self.backgroundHighlightNode = backgroundHighlightNode
+                        
+                        backgroundHighlightNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: true, hasWallpaper: false, transition: .immediate, backgroundNode: nil)
+                        
+                        backgroundHighlightNode.frame = self.backgroundNode.frame
+                        backgroundHighlightNode.updateLayout(size: backgroundHighlightNode.frame.size, transition: .immediate)
+                        
+                        if highlightedState?.quote != nil {
+                            Queue.mainQueue().after(0.3, { [weak self] in
+                                guard let self, let item = self.item, let backgroundHighlightNode = self.backgroundHighlightNode else {
+                                    return
+                                }
+                                
+                                if let highlightedState = self.highlightedState, let quote = highlightedState.quote {
+                                    let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
+                                    let incoming: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.incoming.bubble.withWallpaper
+                                    let outgoing: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.outgoing.bubble.withWallpaper
+                                    
+                                    let highlightColor: UIColor
+                                    if item.message.effectivelyIncoming(item.context.account.peerId) {
+                                        highlightColor = incoming.highlightedFill
+                                    } else {
+                                        highlightColor = outgoing.highlightedFill
+                                    }
+                                    
+                                    let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
+                                    
+                                    var quoteFrame: CGRect?
+                                    for contentNode in self.contentNodes {
+                                        if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                                            contentNode.updateQuoteTextHighlightState(text: quote, color: highlightColor, animated: false)
+                                            var sourceFrame = backgroundHighlightNode.view.convert(backgroundHighlightNode.bounds, to: contentNode.view)
+                                            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                                                sourceFrame.origin.x += 6.0
+                                                sourceFrame.size.width -= 6.0
+                                            } else {
+                                                sourceFrame.size.width -= 6.0
+                                            }
+                                            
+                                            if let localFrame = contentNode.animateQuoteTextHighlightIn(sourceFrame: sourceFrame, transition: transition) {
+                                                if self.contentNodes[0] !== contentNode && self.contentNodes[0].supernode === contentNode.supernode {
+                                                    contentNode.supernode?.insertSubnode(contentNode, belowSubnode: self.contentNodes[0])
+                                                }
+                                                
+                                                quoteFrame = contentNode.view.convert(localFrame, to: backgroundHighlightNode.view.superview)
+                                            }
+                                            break
+                                        }
+                                    }
+                                    
+                                    if let quoteFrame {
+                                        self.backgroundHighlightNode = nil
+                                        
+                                        backgroundHighlightNode.updateLayout(size: quoteFrame.size, transition: transition)
+                                        transition.updateFrame(node: backgroundHighlightNode, frame: quoteFrame)
+                                        backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.1, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
+                                            backgroundHighlightNode?.removeFromSupernode()
+                                        })
+                                    }
+                                }
+                            })
+                        }
+                    }
+                } else {
+                    if let backgroundHighlightNode = self.backgroundHighlightNode {
+                        self.backgroundHighlightNode = nil
+                        if animated {
+                            backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
+                                backgroundHighlightNode?.removeFromSupernode()
+                            })
+                        } else {
+                            backgroundHighlightNode.removeFromSupernode()
+                        }
+                    }
                 }
             }
         }

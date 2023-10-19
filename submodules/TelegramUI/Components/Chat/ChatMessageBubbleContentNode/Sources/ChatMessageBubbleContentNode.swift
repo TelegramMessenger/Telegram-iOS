@@ -121,26 +121,52 @@ public enum ChatMessageBubblePreparePosition {
     case mosaic(top: ChatMessageBubbleRelativePosition, bottom: ChatMessageBubbleRelativePosition)
 }
 
-public enum ChatMessageBubbleContentTapAction {
-    case none
-    case url(url: String, concealed: Bool, activate: (() -> Promise<Bool>?)?)
-    case textMention(String)
-    case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
-    case botCommand(String)
-    case hashtag(String?, String)
-    case instantPage
-    case wallpaper
-    case theme
-    case call(peerId: PeerId, isVideo: Bool)
-    case openMessage
-    case timecode(Double, String)
-    case tooltip(String, ASDisplayNode?, CGRect?)
-    case bankCard(String)
-    case ignore
-    case openPollResults(Data)
-    case copy(String)
-    case largeEmoji(String, String?, TelegramMediaFile)
-    case customEmoji(TelegramMediaFile)
+public struct ChatMessageBubbleContentTapAction {
+    public struct Url {
+        public var url: String
+        public var concealed: Bool
+        public var allowInlineWebpageResolution: Bool
+        
+        public init(
+            url: String,
+            concealed: Bool,
+            allowInlineWebpageResolution: Bool = false
+        ) {
+            self.url = url
+            self.concealed = concealed
+            self.allowInlineWebpageResolution = allowInlineWebpageResolution
+        }
+    }
+    
+    public enum Content {
+        case none
+        case url(Url)
+        case textMention(String)
+        case peerMention(peerId: PeerId, mention: String, openProfile: Bool)
+        case botCommand(String)
+        case hashtag(String?, String)
+        case instantPage
+        case wallpaper
+        case theme
+        case call(peerId: PeerId, isVideo: Bool)
+        case openMessage
+        case timecode(Double, String)
+        case tooltip(String, ASDisplayNode?, CGRect?)
+        case bankCard(String)
+        case ignore
+        case openPollResults(Data)
+        case copy(String)
+        case largeEmoji(String, String?, TelegramMediaFile)
+        case customEmoji(TelegramMediaFile)
+    }
+    
+    public var content: Content
+    public var activate: (() -> Promise<Bool>?)?
+    
+    public init(content: Content, activate: (() -> Promise<Bool>?)? = nil) {
+        self.content = content
+        self.activate = activate
+    }
 }
 
 public final class ChatMessageBubbleContentItem {
@@ -235,7 +261,7 @@ open class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     open func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     open func updateTouchesAtPoint(_ point: CGPoint?) {

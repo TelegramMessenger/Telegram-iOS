@@ -26,6 +26,26 @@ private let quoteIcon: UIImage = {
     return UIImage(bundleImageName: "Chat/Message/ReplyQuoteIcon")!.precomposed().withRenderingMode(.alwaysTemplate)
 }()
 
+private let channelIcon: UIImage = {
+    let sourceImage = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")!
+    return generateImage(CGSize(width: sourceImage.size.width + 4.0, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPushContext(context)
+        sourceImage.draw(at: CGPoint(x: 2.0, y: 2.0))
+        UIGraphicsPopContext()
+    })!.precomposed().withRenderingMode(.alwaysTemplate)
+}()
+
+private let groupIcon: UIImage = {
+    let sourceImage = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")!
+    return generateImage(CGSize(width: sourceImage.size.width + 3.0, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        UIGraphicsPushContext(context)
+        sourceImage.draw(at: CGPoint(x: 3.0, y: 1.0))
+        UIGraphicsPopContext()
+    })!.precomposed().withRenderingMode(.alwaysTemplate)
+}()
+
 public class ChatMessageReplyInfoNode: ASDisplayNode {
     public final class TransitionReplyPanel {
         public let titleNode: ASDisplayNode
@@ -135,29 +155,121 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let titleFont = Font.semibold(fontSize)
             let textFont = Font.regular(fontSize)
             
-            var titleString: String
+            var titleString: NSAttributedString
             var textString: NSAttributedString
             let isMedia: Bool
             let isText: Bool
             var isExpiredStory: Bool = false
             var isStory: Bool = false
             
+            let titleColor: UIColor
+            let mainColor: UIColor
+            let dustColor: UIColor
+            var secondaryColor: UIColor?
+            
+            var authorNameColor: UIColor?
+            var dashSecondaryColor: UIColor?
+            
+            let author = arguments.message?.effectiveAuthor
+            
+            if author?.hasCustomNameColor == true || ([Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser) {
+                authorNameColor = author?.nameColor?.color
+                dashSecondaryColor = author?.nameColor?.dashColors.1
+            }
+            
+            switch arguments.type {
+            case let .bubble(incoming):
+                titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                if incoming {
+                    if let authorNameColor {
+                        mainColor = authorNameColor
+                        secondaryColor = dashSecondaryColor
+                    } else {
+                        mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
+                    }
+                } else {
+                    mainColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                }
+                dustColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
+            case .standalone:
+                let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
+                titleColor = serviceColor.primaryText
+                
+                mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
+                dustColor = titleColor
+            }
+            
             if let message = arguments.message {
                 let author = message.effectiveAuthor
-                titleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder) ?? arguments.strings.User_DeletedAccount
+                let rawTitleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder) ?? arguments.strings.User_DeletedAccount
+                titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 
                 if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) || arguments.parentMessage.forwardInfo != nil {
                     if let author = forwardInfo.author {
-                        titleString = EnginePeer(author).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                        let rawTitleString = EnginePeer(author).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                        titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                     } else if let authorSignature = forwardInfo.authorSignature {
-                        titleString = authorSignature
+                        let rawTitleString = authorSignature
+                        titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                     }
                 }
                 
-                if message.id.peerId != arguments.parentMessage.id.peerId {
-                    //TODO:localize
-                    if let peer = message.peers[message.id.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
-                        titleString += " in \(peer.debugDisplayTitle)"
+                if message.id.peerId != arguments.parentMessage.id.peerId, let peer = message.peers[message.id.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
+                    final class RunDelegateData {
+                        let ascent: CGFloat
+                        let descent: CGFloat
+                        let width: CGFloat
+                        
+                        init(ascent: CGFloat, descent: CGFloat, width: CGFloat) {
+                            self.ascent = ascent
+                            self.descent = descent
+                            self.width = width
+                        }
+                    }
+                    let font = titleFont
+                    let runDelegateData = RunDelegateData(
+                        ascent: font.ascender,
+                        descent: font.descender,
+                        width: channelIcon.size.width
+                    )
+                    var callbacks = CTRunDelegateCallbacks(
+                        version: kCTRunDelegateCurrentVersion,
+                        dealloc: { dataRef in
+                            Unmanaged<RunDelegateData>.fromOpaque(dataRef).release()
+                        },
+                        getAscent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().ascent
+                        },
+                        getDescent: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().descent
+                        },
+                        getWidth: { dataRef in
+                            let data = Unmanaged<RunDelegateData>.fromOpaque(dataRef)
+                            return data.takeUnretainedValue().width
+                        }
+                    )
+                    
+                    if let runDelegate = CTRunDelegateCreate(&callbacks, Unmanaged.passRetained(runDelegateData).toOpaque()) {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            let rawTitleString = NSMutableAttributedString(attributedString: titleString)
+                            rawTitleString.insert(NSAttributedString(string: ">", attributes: [
+                                .attachment: channelIcon,
+                                .foregroundColor: titleColor,
+                                NSAttributedString.Key(rawValue: kCTRunDelegateAttributeName as String): runDelegate
+                            ]), at: 0)
+                            titleString = rawTitleString
+                        } else {
+                            let rawTitleString = NSMutableAttributedString(attributedString: titleString)
+                            rawTitleString.append(NSAttributedString(string: ">", attributes: [
+                                .attachment: groupIcon,
+                                .foregroundColor: titleColor,
+                                NSAttributedString.Key(rawValue: kCTRunDelegateAttributeName as String): runDelegate
+                            ]))
+                            rawTitleString.append(NSAttributedString(string: peer.debugDisplayTitle, font: titleFont, textColor: titleColor))
+                            titleString = rawTitleString
+                        }
                     }
                 }
                 
@@ -167,9 +279,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 isText = isTextValue
             } else if let replyForward = arguments.replyForward {
                 if let replyAuthorId = replyForward.peerId, let replyAuthor = arguments.parentMessage.peers[replyAuthorId] {
-                    titleString = EnginePeer(replyAuthor).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                    let rawTitleString = EnginePeer(replyAuthor).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                    titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 } else {
-                    titleString = replyForward.authorName ?? " "
+                    let rawTitleString = replyForward.authorName ?? " "
+                    titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 }
 
                 //TODO:localize
@@ -191,9 +305,11 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 isText = replyForward.quote?.text != nil && replyForward.quote?.text != ""
             } else if let story = arguments.story {
                 if let authorPeer = arguments.parentMessage.peers[story.peerId] {
-                    titleString = EnginePeer(authorPeer).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                    let rawTitleString = EnginePeer(authorPeer).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
+                    titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 } else {
-                    titleString = arguments.strings.User_DeletedAccount
+                    let rawTitleString = arguments.strings.User_DeletedAccount
+                    titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 }
                 isText = false
                 
@@ -221,7 +337,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     isMedia = true
                 }
             } else {
-                titleString = " "
+                titleString = NSAttributedString(string: " ", font: titleFont, textColor: titleColor)
                 textString = NSAttributedString(string: " ")
                 isMedia = true
                 isText = false
@@ -229,69 +345,19 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let placeholderColor: UIColor = arguments.parentMessage.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             
-            let titleColor: UIColor
             let textColor: UIColor
-            let dustColor: UIColor
-            
-            var authorNameColor: UIColor?
-            var dashSecondaryColor: UIColor?
-            
-            let author = arguments.message?.effectiveAuthor
-            
-            if author?.hasCustomNameColor == true || ([Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(arguments.parentMessage.id.peerId.namespace) && author?.id.namespace == Namespaces.Peer.CloudUser) {
-                authorNameColor = author?.nameColor?.color
-                dashSecondaryColor = author?.nameColor?.dashColors.1
-//                if let rawAuthorNameColor = authorNameColor {
-//                    var dimColors = false
-//                    switch arguments.presentationData.theme.theme.name {
-//                        case .builtin(.nightAccent), .builtin(.night):
-//                            dimColors = true
-//                        default:
-//                            break
-//                    }
-//                    if dimColors {
-//                        var hue: CGFloat = 0.0
-//                        var saturation: CGFloat = 0.0
-//                        var brightness: CGFloat = 0.0
-//                        rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-//                        authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
-//                    }
-//                }
-            }
-            
-            let mainColor: UIColor
-            var secondaryColor: UIColor?
-            
             switch arguments.type {
-                case let .bubble(incoming):
-                    titleColor = incoming ? (authorNameColor ?? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor) : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    if incoming {
-                        if let authorNameColor {
-                            mainColor = authorNameColor
-                            secondaryColor = dashSecondaryColor
-                        } else {
-                            mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
-                        }
-                    } else {
-                        mainColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    }
-                    if isExpiredStory || isStory {
-                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    } else if isMedia {
-                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
-                    } else {
-                        textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
-                    }
-                    dustColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
-                case .standalone:
-                    let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
-                    titleColor = serviceColor.primaryText
-                    
-                    mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
-                    textColor = titleColor
-                    dustColor = titleColor
+            case let .bubble(incoming):
+                if isExpiredStory || isStory {
+                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                } else if isMedia {
+                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
+                } else {
+                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.primaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
+                }
+            case .standalone:
+                textColor = titleColor
             }
-            
             
             let messageText: NSAttributedString
             if isText, let message = arguments.message {
@@ -448,7 +514,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleString, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: maxTitleNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
+            let (titleLayout, titleApply) = titleNodeLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: maxTitleNumberOfLines, truncationType: .end, constrainedSize: CGSize(width: contrainedTextSize.width - additionalTitleWidth, height: contrainedTextSize.height), alignment: .natural, cutout: nil, insets: textInsets))
             if isExpiredStory || isStory {
                 contrainedTextSize.width -= 26.0
             }
@@ -699,9 +765,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             isHighlighted = true
         }
         
-        let transition: ContainedViewLayoutTransition = .animated(duration: isHighlighted ? 0.1 : 0.2, curve: .easeInOut)
+        let transition: ContainedViewLayoutTransition = .animated(duration: isHighlighted ? 0.3 : 0.2, curve: .easeInOut)
         let scale: CGFloat = isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
-        transition.updateSublayerTransformScale(node: self, scale: scale)
+        transition.updateSublayerTransformScale(node: self, scale: scale, beginWithCurrentState: true)
     }
 
     public func animateFromInputPanel(sourceReplyPanel: TransitionReplyPanel, unclippedTransitionNode: ASDisplayNode? = nil, localRect: CGRect, transition: CombinedTransition) -> CGPoint {

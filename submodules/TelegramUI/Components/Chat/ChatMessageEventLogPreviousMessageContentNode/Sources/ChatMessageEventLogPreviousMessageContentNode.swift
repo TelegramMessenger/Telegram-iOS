@@ -97,7 +97,7 @@ public final class ChatMessageEventLogPreviousMessageContentNode: ChatMessageBub
             let contentNodeFrame = self.contentNode.frame
             return self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY), gesture: gesture, isEstimating: isEstimating)
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func updateTouchesAtPoint(_ point: CGPoint?) {

@@ -314,9 +314,9 @@ public class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleCont
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.mediaBackgroundNode.frame.contains(point) {
-            return .openMessage
+            return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
 }

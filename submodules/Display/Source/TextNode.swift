@@ -2236,7 +2236,9 @@ open class TextNode: ASDisplayNode {
                 }
                     
                 let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                
                 if glyphRuns.count != 0 {
+                    let hasAttachments = !line.attachments.isEmpty
                     for run in glyphRuns {
                         let run = run as! CTRun
                         let glyphCount = CTRunGetGlyphCount(run)
@@ -2269,9 +2271,41 @@ open class TextNode: ASDisplayNode {
                         if fixDoubleEmoji {
                             context.setBlendMode(.normal)
                         }
-                        CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                        
+                        if hasAttachments {
+                            let stringRange = CTRunGetStringRange(run)
+                            if line.attachments.contains(where: { $0.range.contains(stringRange.location) }) {
+                            } else {
+                                CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                            }
+                        } else {
+                            CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                        }
+                        
                         if fixDoubleEmoji {
                             context.setBlendMode(blendMode)
+                        }
+                    }
+                }
+                
+                for attachment in line.attachments {
+                    let image = attachment.attachment
+                    var textColor: UIColor?
+                    layout.attributedString?.enumerateAttributes(in: attachment.range, options: []) { attributes, range, _ in
+                        if let color = attributes[NSAttributedString.Key.foregroundColor] as? UIColor {
+                            textColor = color
+                        }
+                    }
+                    if let textColor {
+                        if let tintedImage = generateTintedImage(image: image, color: textColor) {
+                            let imageRect = CGRect(origin: CGPoint(x: attachment.frame.midX - tintedImage.size.width * 0.5, y: attachment.frame.midY - tintedImage.size.height * 0.5 + 1.0), size: tintedImage.size).offsetBy(dx: lineFrame.minX, dy: lineFrame.minY)
+                            context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                            context.draw(tintedImage.cgImage!, in: imageRect)
+                            context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
                         }
                     }
                 }

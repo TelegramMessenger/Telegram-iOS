@@ -83,7 +83,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     public var activateAction: (() -> Void)?
     public var requestUpdateLayout: (() -> Void)?
     
-    public var defaultContentAction: () -> ChatMessageBubbleContentTapAction = { return .none }
+    public var defaultContentAction: () -> ChatMessageBubbleContentTapAction = { return ChatMessageBubbleContentTapAction(content: .none) }
     
     public var visibility: ListViewItemNodeVisibility = .none {
         didSet {
@@ -729,6 +729,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         case .actionButton:
                             actualSize.height += buttonBottomSpacing
                         }
+                    } else {
+                        if let (_, inlineMediaSize) = inlineMediaAndSize {
+                            if actualSize.height < insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset {
+                                actualSize.height = insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
+                            }
+                        }
                     }
                     
                     if case let .linear(_, bottom) = position {
@@ -796,7 +802,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         
                         if let (inlineMediaValue, inlineMediaSize) = inlineMediaAndSize {
-                            let inlineMediaFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - inlineMediaSize.width, y: backgroundInsets.top + inlineMediaEdgeInset), size: inlineMediaSize)
+                            var inlineMediaFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - inlineMediaSize.width, y: backgroundInsets.top + inlineMediaEdgeInset), size: inlineMediaSize)
+                            if contentLayoutOrder.isEmpty {
+                                inlineMediaFrame.origin.x = insets.left
+                            }
                             
                             let inlineMedia: TransformImageNode
                             var updateMedia = false
@@ -2002,21 +2011,21 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     if let (attributeText, fullText) = text.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                         concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                     }
-                    return .url(url: url, concealed: concealed, activate: nil)
+                    return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))
                 } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                    return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
+                    return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
                 } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                    return .textMention(peerName)
+                    return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
                 } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                    return .botCommand(botCommand)
+                    return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
                 } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                    return .hashtag(hashtag.peerName, hashtag.hashtag)
+                    return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
                 }
             }
         }
         
         if let actionButton = self.actionButton, actionButton.frame.contains(point) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         
         return self.defaultContentAction()
@@ -2101,9 +2110,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             highlightTimer.invalidate()
         }
         
-        let transition: ContainedViewLayoutTransition = .animated(duration: self.isHighlighted ? 0.2 : 0.2, curve: .easeInOut)
+        let transition: ContainedViewLayoutTransition = .animated(duration: self.isHighlighted ? 0.3 : 0.2, curve: .easeInOut)
         let scale: CGFloat = self.isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
-        transition.updateSublayerTransformScale(node: self, scale: scale)
+        transition.updateSublayerTransformScale(node: self, scale: scale, beginWithCurrentState: true)
     }
     
     public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {

@@ -2743,8 +2743,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.openPeer(peer: nil, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil, peerTypes: peerTypes)
                 }
             }
-        }, openUrl: { [weak self] url, concealed, _, message, progress in
+        }, openUrl: { [weak self] urlData in
             if let strongSelf = self {
+                let url = urlData.url
+                let concealed = urlData.concealed
+                let message = urlData.message
+                let progress = urlData.progress
+                
                 var skipConcealedAlert = false
                 if let author = message?.author, author.isVerified {
                     skipConcealedAlert = true
@@ -2758,7 +2763,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     performOpenURL(message, url, progress)
                 } else {
                     progress?.set(.single(false))
-                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
+                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution)
                 }
             }
         }, shareCurrentLocation: { [weak self] in
@@ -3365,7 +3370,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     items.append(ActionSheetButtonItem(title: url.title, color: .accent, action: { [weak actionSheet] in
                                         actionSheet?.dismissAnimated()
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction?.openUrl(url.url, false, false, message, nil)
+                                            strongSelf.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url.url, concealed: false, external: false, message: message))
                                         }
                                     }))
                                 }
@@ -3444,7 +3449,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, openSearch: {
         }, setupReply: { [weak self] messageId in
-            self?.interfaceInteraction?.setupReplyMessage(messageId, { _ in })
+            self?.interfaceInteraction?.setupReplyMessage(messageId, { _, _ in })
         }, canSetupReply: { [weak self] message in
             if !message.flags.contains(.Incoming) {
                 if !message.flags.intersection([.Failed, .Sending, .Unsent]).isEmpty {
@@ -4609,7 +4614,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .join(_, joinHash):
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
-                self.controllerInteraction?.openUrl(url, false, false, nil, nil)
+                self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: false))
             }
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
             guard let self else {
@@ -8645,20 +8650,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     messageId: message.id,
                                     quote: nil
                                 ))
-                            }).updatedSearch(nil).updatedShowCommands(false) }, completion: completion)
+                            }).updatedSearch(nil).updatedShowCommands(false) }, completion: { t in
+                                completion(t, {})
+                            })
                             strongSelf.updateItemNodesSearchTextHighlightStates()
                             strongSelf.chatDisplayNode.ensureInputViewFocused()
                         } else {
-                            completion(.immediate)
+                            completion(.immediate, {})
                         }
                     }, alertAction: {
-                        completion(.immediate)
+                        completion(.immediate, {})
                     }, delay: true)
                 } else {
-                    completion(.immediate)
+                    let replySubject = ChatInterfaceState.ReplyMessageSubject(
+                        messageId: messageId,
+                        quote: nil
+                    )
+                    completion(.immediate, {
+                        guard let self else {
+                            return
+                        }
+                        moveReplyMessageToAnotherChat(selfController: self, replySubject: replySubject)
+                    })
                 }
             } else {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil) }) }, completion: completion)
+                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil) }) }, completion: { t in
+                    completion(t, {})
+                })
             }
         }, setupEditMessage: { [weak self] messageId, completion in
             if let strongSelf = self, strongSelf.isNodeLoaded {
@@ -17970,10 +17988,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, commit: @escaping () -> Void = {}) {
+    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, commit: @escaping () -> Void = {}) {
         self.commitPurposefulAction()
         
-        if let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {
+        if allowInlineWebpageResolution, let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {
             if content.instantPage != nil {
                 if let navigationController = self.navigationController as? NavigationController {
                     switch instantPageType(of: content) {

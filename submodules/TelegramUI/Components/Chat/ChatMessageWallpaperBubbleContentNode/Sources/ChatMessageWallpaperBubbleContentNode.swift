@@ -461,11 +461,11 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.statusOverlayNode.alpha > 0.0 {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         } else if self.mediaBackgroundNode.frame.contains(point) {
-            return .openMessage
+            return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
 }

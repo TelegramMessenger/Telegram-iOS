@@ -513,26 +513,26 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (attributeText, fullText) = self.labelNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed, activate: nil)
+                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
+                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return .textMention(peerName)
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                return .botCommand(botCommand)
+                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return .hashtag(hashtag.peerName, hashtag.hashtag)
+                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             }
         }
         
         if self.buttonNode.frame.contains(point) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if let backgroundNode = self.backgroundNode, backgroundNode.frame.contains(point) {
-            return .openMessage
+            return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else if self.mediaBackgroundNode.frame.contains(point) {
-            return .openMessage
+            return ChatMessageBubbleContentTapAction(content: .openMessage)
         } else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
     

@@ -753,7 +753,7 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
                     if url.hasPrefix("tg://") {
                         concealed = false
                     }
-                    item.controllerInteraction.openUrl(url, concealed, nil, nil, nil)
+                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: concealed))
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
