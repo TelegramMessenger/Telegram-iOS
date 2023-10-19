@@ -22,6 +22,7 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 import TranslateUI
+import ChatControllerInteraction
 
 private enum PinnedMessageAnimation {
     case slideToTop
@@ -858,7 +859,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                         if url.hasPrefix("tg://") {
                             isConcealed = false
                         }
-                        controllerInteraction.openUrl(url, isConcealed, nil, nil, nil)
+                        controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: isConcealed))
                     case .requestMap:
                         controllerInteraction.shareCurrentLocation()
                     case .requestPhone:

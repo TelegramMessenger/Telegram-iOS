@@ -1392,8 +1392,8 @@ public final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode,
             toggleMessagesSelection: { messageId, selected in
                 chatControllerInteraction.toggleMessagesSelection(messageId, selected)
             },
-            openUrl: { url, param1, param2, message in
-                chatControllerInteraction.openUrl(url, param1, param2, message, nil)
+            openUrl: { url, concealed, external, message in
+                chatControllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: concealed, external: external, message: message))
             },
             openInstantPage: { message, data in
                 chatControllerInteraction.openInstantPage(message, data)

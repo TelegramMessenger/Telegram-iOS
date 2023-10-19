@@ -567,12 +567,12 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.dateAndStatusNode.supernode != nil, let _ = self.dateAndStatusNode.hitTest(self.view.convert(point, to: self.dateAndStatusNode.view), with: nil) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
 
     @objc private func buttonPressed() {

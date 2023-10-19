@@ -262,7 +262,7 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         } else if self.bounds.contains(point), let item = self.item {
             var isVideo = false
             for media in item.message.media {
@@ -270,9 +270,9 @@ public class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     isVideo = isVideoValue
                 }
             }
-            return .call(peerId: item.message.id.peerId, isVideo: isVideo)
+            return ChatMessageBubbleContentTapAction(content: .call(peerId: item.message.id.peerId, isVideo: isVideo))
         } else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
 }

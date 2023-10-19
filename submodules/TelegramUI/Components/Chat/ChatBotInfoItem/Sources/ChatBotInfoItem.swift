@@ -170,13 +170,13 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
         recognizer.tapActionAtPoint = { [weak self] point in
             if let strongSelf = self {
                 let tapAction = strongSelf.tapActionAtPoint(point, gesture: .tap, isEstimating: true)
-                switch tapAction {
-                    case .none:
-                        break
-                    case .ignore:
-                        return .fail
-                    case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
-                        return .waitForSingleTap
+                switch tapAction.content {
+                case .none:
+                    break
+                case .ignore:
+                    return .fail
+                case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
+                    return .waitForSingleTap
                 }
             }
             
@@ -427,20 +427,20 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed, activate: nil)
+                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
+                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return .textMention(peerName)
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                return .botCommand(botCommand)
+                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return .hashtag(hashtag.peerName, hashtag.hashtag)
+                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             } else {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
         } else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
     
@@ -449,49 +449,49 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
             case .ended:
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
-                        case .tap:
-                            let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
-                            switch tapAction {
-                                case .none, .ignore:
-                                    break
-                                case let .url(url, concealed, activate):
-                                    self.item?.controllerInteraction.openUrl(url, concealed, nil, nil, activate?())
-                                case let .peerMention(peerId, _, _):
-                                    if let item = self.item {
-                                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-                                        |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
-                                            if let peer = peer {
-                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
-                                            }
-                                        })
+                    case .tap:
+                        let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
+                        switch tapAction.content {
+                        case .none, .ignore:
+                            break
+                        case let .url(url):
+                            self.item?.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url.url, concealed: url.concealed, progress: tapAction.activate?()))
+                        case let .peerMention(peerId, _, _):
+                            if let item = self.item {
+                                let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                         |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                                    if let peer = peer {
+                                        self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                     }
-                                case let .textMention(name):
-                                    self.item?.controllerInteraction.openPeerMention(name)
-                                case let .botCommand(command):
-                                    self.item?.controllerInteraction.sendBotCommand(nil, command)
-                                case let .hashtag(peerName, hashtag):
-                                    self.item?.controllerInteraction.openHashtag(peerName, hashtag)
-                                default:
-                                    break
+                                })
+                            }
+                        case let .textMention(name):
+                            self.item?.controllerInteraction.openPeerMention(name)
+                        case let .botCommand(command):
+                            self.item?.controllerInteraction.sendBotCommand(nil, command)
+                        case let .hashtag(peerName, hashtag):
+                            self.item?.controllerInteraction.openHashtag(peerName, hashtag)
+                        default:
+                            break
                             }
                         case .longTap, .doubleTap:
                             if let item = self.item, self.backgroundNode.frame.contains(location) {
                                 let tapAction = self.tapActionAtPoint(location, gesture: gesture, isEstimating: false)
-                                switch tapAction {
-                                    case .none, .ignore:
-                                        break
-                                    case let .url(url, _, _):
-                                        item.controllerInteraction.longTap(.url(url), nil)
-                                    case let .peerMention(peerId, mention, _):
-                                        item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
-                                    case let .textMention(name):
-                                        item.controllerInteraction.longTap(.mention(name), nil)
-                                    case let .botCommand(command):
-                                        item.controllerInteraction.longTap(.command(command), nil)
-                                    case let .hashtag(_, hashtag):
-                                        item.controllerInteraction.longTap(.hashtag(hashtag), nil)
-                                    default:
-                                        break
+                                switch tapAction.content {
+                                case .none, .ignore:
+                                    break
+                                case let .url(url):
+                                    item.controllerInteraction.longTap(.url(url.url), nil)
+                                case let .peerMention(peerId, mention, _):
+                                    item.controllerInteraction.longTap(.peerMention(peerId, mention), nil)
+                                case let .textMention(name):
+                                    item.controllerInteraction.longTap(.mention(name), nil)
+                                case let .botCommand(command):
+                                    item.controllerInteraction.longTap(.command(command), nil)
+                                case let .hashtag(_, hashtag):
+                                    item.controllerInteraction.longTap(.hashtag(hashtag), nil)
+                                default:
+                                    break
                                 }
                             }
                         default:

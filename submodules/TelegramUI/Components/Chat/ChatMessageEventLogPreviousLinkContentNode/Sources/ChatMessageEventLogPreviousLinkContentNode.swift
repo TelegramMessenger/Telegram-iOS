@@ -95,7 +95,7 @@ public final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubble
              }
              }*/
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func updateHiddenMedia(_ media: [Media]?) -> Bool {

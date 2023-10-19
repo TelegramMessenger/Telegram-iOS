@@ -98,7 +98,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _, _ in
-        }, openUrl: { _, _, _, _, _ in
+        }, openUrl: { _ in
         }, shareCurrentLocation: {
         }, shareAccountContact: {
         }, sendBotCommand: { _, _ in

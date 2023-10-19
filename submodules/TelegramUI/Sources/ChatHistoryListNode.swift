@@ -206,7 +206,7 @@ extension ListMessageItemInteraction {
         }, toggleMessagesSelection: { messageId, selected in
             controllerInteraction.toggleMessagesSelection(messageId, selected)
         }, openUrl: { url, param1, param2, message in
-            controllerInteraction.openUrl(url, param1, param2, message, nil)
+            controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: param1, external: param2, message: message))
         }, openInstantPage: { message, data in
             controllerInteraction.openInstantPage(message, data)
         }, longTap: { action, message in

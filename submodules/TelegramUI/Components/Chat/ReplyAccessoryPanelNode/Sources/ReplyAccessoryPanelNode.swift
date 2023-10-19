@@ -18,6 +18,8 @@ import AnimationCache
 import MultiAnimationRenderer
 import AccessoryPanelNode
 import TelegramNotices
+import AppBundle
+import CompositeTextNode
 
 public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -29,8 +31,8 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     
     public let closeButton: HighlightableButtonNode
     public let lineNode: ASImageNode
-    public let iconNode: ASImageNode
-    public let titleNode: ImmediateTextNode
+    public let iconView: UIImageView
+    public let titleNode: CompositeTextNode
     public let textNode: ImmediateTextNodeWithEntities
     public let imageNode: TransformImageNode
     
@@ -64,15 +66,16 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = false
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
+        self.iconView = UIImageView()
+        if quote != nil {
+            self.iconView.image = UIImage(bundleImageName: "Chat/Input/Accessory Panels/ReplyQuoteIcon")?.withRenderingMode(.alwaysTemplate)
+        } else {
+            self.iconView.image = UIImage(bundleImageName: "Chat/Input/Accessory Panels/ReplySettingsIcon")?.withRenderingMode(.alwaysTemplate)
+        }
+        self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
         
-        self.titleNode = ImmediateTextNode()
-        self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.displaysAsynchronously = false
-        self.titleNode.insets = UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0)
+        self.titleNode = CompositeTextNode()
+        self.titleNode.imageTintColor = theme.chat.inputPanel.panelControlAccentColor
         
         self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 1
@@ -103,7 +106,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.lineNode)
-        self.addSubnode(self.iconNode)
+        self.view.addSubview(self.iconView)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.imageNode)
@@ -114,7 +117,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             if let strongSelf = self {
                 if messageView.message == nil {
                     Queue.mainQueue().justDispatch {
-                        strongSelf.interfaceInteraction?.setupReplyMessage(nil, { _ in })
+                        strongSelf.interfaceInteraction?.setupReplyMessage(nil, { _, _ in })
                     }
                     return
                 }
@@ -235,27 +238,61 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     }
                 }
                 
-                var titleText: String
-                if let quote = strongSelf.quote {
-                    //TODO:localize
-                    titleText = "Reply to quote by \(authorName)"
+                var titleText: [CompositeTextNode.Component] = []
+                if let peer = message?.peers[strongSelf.messageId.peerId] as? TelegramChannel, case .broadcast = peer.info {
+                    let icon: UIImage?
+                    icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
                     
+                    if let _ = strongSelf.quote {
+                        if let icon {
+                            let string = "Reply to Quote by "
+                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                            titleText.append(.icon(icon))
+                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                        }
+                    } else {
+                        if let icon {
+                            let string = "Reply to "
+                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                            titleText.append(.icon(icon))
+                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                        }
+                    }
+                } else {
+                    if let _ = strongSelf.quote {
+                        //TODO:localize
+                        let string = "Reply to Quote by \(authorName)"
+                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                    } else {
+                        let string = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
+                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                        strongSelf.textNode.attributedText = messageText
+                    }
+                    
+                    if strongSelf.messageId.peerId != strongSelf.chatPeerId {
+                        if let peer = message?.peers[strongSelf.messageId.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
+                            let icon: UIImage?
+                            if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
+                            } else {
+                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")?.withRenderingMode(.alwaysTemplate)
+                            }
+                            if let icon {
+                                titleText.append(.icon(icon))
+                                titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                            }
+                        }
+                    }
+                }
+                
+                if let quote = strongSelf.quote {
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
                     let quoteText = stringWithAppliedEntities(trimToLineCount(quote.text, lineCount: 1), entities: quote.entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: message)
                     
                     strongSelf.textNode.attributedText = quoteText
-                } else {
-                    titleText = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
-                    strongSelf.textNode.attributedText = messageText
                 }
                 
-                if strongSelf.messageId.peerId != strongSelf.chatPeerId {
-                    if let peer = message?.peers[strongSelf.messageId.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
-                        titleText += " in \(peer.debugDisplayTitle)"
-                    }
-                }
-                
-                strongSelf.titleNode.attributedText = NSAttributedString(string: titleText, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)
+                strongSelf.titleNode.components = titleText
                                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
@@ -329,11 +366,11 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override public func animateIn() {
-        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+        self.iconView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
     }
     
     override public func animateOut() {
-        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+        self.iconView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
     override public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
@@ -347,11 +384,9 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
             
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
-            self.iconNode.image = PresentationResourcesChat.chatInputPanelReplyIconImage(theme)
+            self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
             
-            if let text = self.titleNode.attributedText?.string {
-                self.titleNode.attributedText = NSAttributedString(string: text, font: Font.medium(15.0), textColor: self.theme.chat.inputPanel.panelControlAccentColor)
-            }
+            self.titleNode.imageTintColor = theme.chat.inputPanel.panelControlAccentColor
             
             if let text = self.textNode.attributedText?.string {
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.textIsOptions ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
@@ -387,8 +422,8 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         }
         
-        if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
+        if let icon = self.iconView.image {
+            self.iconView.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         var imageTextInset: CGFloat = 0.0
@@ -399,9 +434,9 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.imageNode.frame = CGRect(origin: CGPoint(x: leftInset + 9.0, y: 8.0), size: CGSize(width: 35.0, height: 35.0))
         }
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
+        let titleSize = self.titleNode.update(constrainedSize: CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))
         if self.titleNode.supernode == self {
-            self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset - self.titleNode.insets.left, y: 7.0 - self.titleNode.insets.top), size: titleSize)
+            self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + textLineInset + imageTextInset, y: 7.0), size: titleSize)
         }
         
         let textSize = self.textNode.updateLayout(CGSize(width: bounds.size.width - leftInset - textLineInset - rightInset - textRightInset - imageTextInset, height: bounds.size.height))

@@ -221,10 +221,10 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         if self.interactiveFileNode.hasTapAction(at: self.view.convert(point, to: self.interactiveFileNode.view)) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)
     }

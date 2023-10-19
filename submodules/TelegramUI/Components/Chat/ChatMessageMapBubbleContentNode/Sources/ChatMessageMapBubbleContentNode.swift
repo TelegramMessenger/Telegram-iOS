@@ -505,7 +505,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {

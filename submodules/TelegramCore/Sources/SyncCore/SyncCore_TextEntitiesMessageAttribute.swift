@@ -331,7 +331,7 @@ public func messageTextEntitiesInRange(entities: [MessageTextEntity], range: NSR
         }
         if entity.range.overlaps(range) {
             var mappedRange = entity.range.clamped(to: range)
-            mappedRange = (entity.range.lowerBound - range.lowerBound) ..< (entity.range.upperBound - range.lowerBound)
+            mappedRange = (mappedRange.lowerBound - range.lowerBound) ..< (mappedRange.upperBound - range.lowerBound)
             result.append(MessageTextEntity(range: mappedRange, type: entity.type))
         }
     }

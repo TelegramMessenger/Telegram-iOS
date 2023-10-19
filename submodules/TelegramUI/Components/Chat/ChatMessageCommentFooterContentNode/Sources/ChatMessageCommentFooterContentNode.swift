@@ -410,9 +410,9 @@ public final class ChatMessageCommentFooterContentNode: ChatMessageBubbleContent
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.buttonNode.frame.contains(point) {
-            return .ignore
+            return ChatMessageBubbleContentTapAction(content: .ignore)
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {

@@ -25,6 +25,7 @@ import ChatMessageBubbleContentNode
 import ShimmeringLinkNode
 import ChatMessageItemCommon
 import TextLoadingEffect
+import ChatControllerInteraction
 
 private final class CachedChatMessageText {
     let text: String
@@ -72,7 +73,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var linkPreviewOptionsDisposable: Disposable?
     private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
     
-    private var quoteHighlightingNodes: [LinkHighlightingNode] = []
+    private var quoteHighlightingNode: LinkHighlightingNode?
     
     private var linkProgressRange: NSRange?
     private var linkProgressView: TextLoadingEffectView?
@@ -113,7 +114,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.textAccessibilityOverlayNode)
         
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
-            self?.item?.controllerInteraction.openUrl(url, false, false, nil, nil)
+            self?.item?.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: false))
         }
         
         self.statusNode.reactionSelected = { [weak self] value in
@@ -678,14 +679,14 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if case .tap = gesture {
         } else {
             if let item = self.item, let subject = item.associatedData.subject, case .messageOptions = subject {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
         }
         
         let textNodeFrame = self.textNode.textNode.frame
         if let (index, attributes) = self.textNode.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler)], !(self.dustNode?.isRevealed ?? true)  {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             } else if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 var urlRange: NSRange?
@@ -693,7 +694,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     urlRange = urlRangeValue
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed, activate: { [weak self] in
+                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)), activate: { [weak self] in
                     guard let self else {
                         return nil
                     }
@@ -721,23 +722,23 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     return promise
                 })
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
+                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return .textMention(peerName)
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                return .botCommand(botCommand)
+                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return .hashtag(hashtag.peerName, hashtag.hashtag)
+                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             } else if let timecode = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Timecode)] as? TelegramTimecode {
-                return .timecode(timecode.time, timecode.text)
+                return ChatMessageBubbleContentTapAction(content: .timecode(timecode.time, timecode.text))
             } else if let bankCard = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BankCard)] as? String {
-                return .bankCard(bankCard)
+                return ChatMessageBubbleContentTapAction(content: .bankCard(bankCard))
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
-                return .copy(pre)
+                return ChatMessageBubbleContentTapAction(content: .copy(pre))
             } else if let code = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Code)] as? String {
-                return .copy(code)
+                return ChatMessageBubbleContentTapAction(content: .copy(code))
             } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
-                return .customEmoji(file)
+                return ChatMessageBubbleContentTapAction(content: .customEmoji(file))
             } else {
                 if let item = self.item, item.message.text.count == 1, !item.presentationData.largeEmoji {
                     let (emoji, fitz) = item.message.text.basicEmoji
@@ -749,19 +750,19 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     
                     if let emojiFile = emojiFile {
-                        return .largeEmoji(emoji, fitz, emojiFile)
+                        return ChatMessageBubbleContentTapAction(content: .largeEmoji(emoji, fitz, emojiFile))
                     } else {
-                        return .none
+                        return ChatMessageBubbleContentTapAction(content: .none)
                     }
                 } else {
-                    return .none
+                    return ChatMessageBubbleContentTapAction(content: .none)
                 }
             }
         } else {
             if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
     
@@ -941,43 +942,75 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    public func updateQuoteTextHighlightState(text: String?, animated: Bool) {
-        guard let item = self.item else {
-            return
+    public func animateQuoteTextHighlightIn(sourceFrame: CGRect, transition: ContainedViewLayoutTransition) -> CGRect? {
+        if let quoteHighlightingNode = self.quoteHighlightingNode {
+            var currentRect = CGRect()
+            for rect in quoteHighlightingNode.rects {
+                if currentRect.isEmpty {
+                    currentRect = rect
+                } else {
+                    currentRect = currentRect.union(rect)
+                }
+            }
+            if !currentRect.isEmpty {
+                currentRect = currentRect.insetBy(dx: -quoteHighlightingNode.inset, dy: -quoteHighlightingNode.inset)
+                let innerRect = currentRect.offsetBy(dx: quoteHighlightingNode.frame.minX, dy: quoteHighlightingNode.frame.minY)
+                
+                quoteHighlightingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08, delay: 0.1)
+                
+                let fromScale = CGPoint(x: sourceFrame.width / innerRect.width, y: sourceFrame.height / innerRect.height)
+                
+                var fromTransform = CATransform3DIdentity
+                let fromOffset = CGPoint(x: sourceFrame.midX - innerRect.midX, y: sourceFrame.midY - innerRect.midY)
+                
+                fromTransform = CATransform3DTranslate(fromTransform, fromOffset.x, fromOffset.y, 0.0)
+                
+                fromTransform = CATransform3DTranslate(fromTransform, -quoteHighlightingNode.bounds.width * 0.5 + currentRect.midX, -quoteHighlightingNode.bounds.height * 0.5 + currentRect.midY, 0.0)
+                fromTransform = CATransform3DScale(fromTransform, fromScale.x, fromScale.y, 1.0)
+                fromTransform = CATransform3DTranslate(fromTransform, quoteHighlightingNode.bounds.width * 0.5 - currentRect.midX, quoteHighlightingNode.bounds.height * 0.5 - currentRect.midY, 0.0)
+                
+                quoteHighlightingNode.transform = fromTransform
+                transition.updateTransform(node: quoteHighlightingNode, transform: CGAffineTransformIdentity)
+                
+                return currentRect.offsetBy(dx: quoteHighlightingNode.frame.minX, dy: quoteHighlightingNode.frame.minY)
+            }
         }
-        var rectsSet: [[CGRect]] = []
+        return nil
+    }
+    
+    public func updateQuoteTextHighlightState(text: String?, color: UIColor, animated: Bool) {
+        var rectsSet: [CGRect] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
             let nsString = string as NSString
             let range = nsString.range(of: text)
             if range.location != NSNotFound {
                 if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
-                    rectsSet = [rects]
+                    rectsSet = rects
                 }
             }
         }
-        for i in 0 ..< rectsSet.count {
-            let rects = rectsSet[i]
+        if !rectsSet.isEmpty {
+            let rects = rectsSet
             let textHighlightNode: LinkHighlightingNode
-            if i < self.quoteHighlightingNodes.count {
-                textHighlightNode = self.quoteHighlightingNodes[i]
+            if let current = self.quoteHighlightingNode {
+                textHighlightNode = current
             } else {
-                textHighlightNode = LinkHighlightingNode(color: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.linkHighlightColor : item.presentationData.theme.theme.chat.message.outgoing.linkHighlightColor)
-                self.quoteHighlightingNodes.append(textHighlightNode)
+                textHighlightNode = LinkHighlightingNode(color: color)
+                self.quoteHighlightingNode = textHighlightNode
                 self.insertSubnode(textHighlightNode, belowSubnode: self.textNode.textNode)
             }
             textHighlightNode.frame = self.textNode.textNode.frame
             textHighlightNode.updateRects(rects)
-        }
-        for i in (rectsSet.count ..< self.quoteHighlightingNodes.count).reversed() {
-            let node = self.quoteHighlightingNodes[i]
-            self.quoteHighlightingNodes.remove(at: i)
-            
-            if animated {
-                node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
-                    node?.removeFromSupernode()
-                })
-            } else {
-                node.removeFromSupernode()
+        } else {
+            if let quoteHighlightingNode = self.quoteHighlightingNode {
+                self.quoteHighlightingNode = nil
+                if animated {
+                    quoteHighlightingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak quoteHighlightingNode] _ in
+                        quoteHighlightingNode?.removeFromSupernode()
+                    })
+                } else {
+                    quoteHighlightingNode.removeFromSupernode()
+                }
             }
         }
     }

@@ -1608,17 +1608,17 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
-                return .url(url: url, concealed: concealed, activate: nil)
+                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: url, concealed: concealed)))
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
-                return .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false)
+                return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return .textMention(peerName)
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
-                return .botCommand(botCommand)
+                return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return .hashtag(hashtag.peerName, hashtag.hashtag)
+                return ChatMessageBubbleContentTapAction(content: .hashtag(hashtag.peerName, hashtag.hashtag))
             } else {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
         } else {
             var isBotChat: Bool = false
@@ -1629,7 +1629,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             for optionNode in self.optionNodes {
                 if optionNode.frame.contains(point), case .tap = gesture {
                     if optionNode.isUserInteractionEnabled {
-                        return .ignore
+                        return ChatMessageBubbleContentTapAction(content: .ignore)
                     } else if let result = optionNode.currentResult, let item = self.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace), let poll = self.poll, let option = optionNode.option, !isBotChat {
                         switch poll.publicity {
                         case .anonymous:
@@ -1648,7 +1648,7 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                     string = item.presentationData.strings.MessagePoll_QuizCount(result.count)
                                 }
                             }
-                            return .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0))
+                            return ChatMessageBubbleContentTapAction(content: .tooltip(string, optionNode, optionNode.bounds.offsetBy(dx: 0.0, dy: 10.0)))
                         case .public:
                             var hasNonZeroVoters = false
                             if let voters = poll.results.voters {
@@ -1661,24 +1661,24 @@ public class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             if hasNonZeroVoters {
                                 if !isEstimating {
-                                    return .openPollResults(option.opaqueIdentifier)
+                                    return ChatMessageBubbleContentTapAction(content: .openPollResults(option.opaqueIdentifier))
                                 }
-                                return .openMessage
+                                return ChatMessageBubbleContentTapAction(content: .openMessage)
                             }
                         }
                     }
                 }
             }
             if self.buttonNode.isUserInteractionEnabled, !self.buttonNode.isHidden, self.buttonNode.frame.contains(point) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             if self.avatarsNode.isUserInteractionEnabled, !self.avatarsNode.isHidden, self.avatarsNode.frame.contains(point) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             if self.solutionButtonNode.isUserInteractionEnabled, !self.solutionButtonNode.isHidden, !self.solutionButtonNode.alpha.isZero, self.solutionButtonNode.frame.contains(point) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
     }
     

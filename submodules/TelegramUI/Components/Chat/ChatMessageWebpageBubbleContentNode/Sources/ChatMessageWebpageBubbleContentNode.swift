@@ -18,6 +18,7 @@ import ChatMessageItemCommon
 import WallpaperPreviewMedia
 import ChatMessageInteractiveMediaNode
 import ChatMessageAttachedContentNode
+import ChatControllerInteraction
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
@@ -52,6 +53,15 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     } else if content.type == "telegram_theme" {
                         item.controllerInteraction.openTheme(item.message)
                         return
+                    } else {
+                        if content.title != nil || content.text != nil {
+                            var isConcealed = true
+                            if item.message.text.contains(content.url) {
+                                isConcealed = false
+                            }
+                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed))
+                            return
+                        }
                     }
                 }
                 let openChatMessageMode: ChatControllerInteractionOpenMessageMode
@@ -90,7 +100,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             if item.message.text.contains(webpage.url) {
                                 isConcealed = false
                             }
-                            item.controllerInteraction.openUrl(webpage.url, isConcealed, nil, nil, nil)
+                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: webpage.url, concealed: isConcealed))
                         }
                     }
                 }
@@ -103,13 +113,13 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
         }
         self.contentNode.defaultContentAction = { [weak self] in
             guard let self, let item = self.item, let webPage = self.webPage, case let .Loaded(content) = webPage.content else {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
             var isConcealed = true
             if item.message.text.contains(content.url) {
                 isConcealed = false
             }
-            return .url(url: content.url, concealed: isConcealed, activate: nil)
+            return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)))
         }
     }
     
@@ -501,22 +511,22 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         guard let item = self.item else {
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
         if self.bounds.contains(point) {
             let contentNodeFrame = self.contentNode.frame
             let result = self.contentNode.tapActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY), gesture: gesture, isEstimating: isEstimating)
 
             if item.message.adAttribute != nil {
-                if case .none = result {
+                if case .none = result.content {
                     if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
-                        return .ignore
+                        return ChatMessageBubbleContentTapAction(content: .ignore)
                     }
                 }
                 return result
             }
 
-            switch result {
+            switch result.content {
                 case .none:
                     break
                 case let .textMention(value):
@@ -527,9 +537,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                         switch websiteType(of: content.websiteName) {
                             case .twitter:
-                                return .url(url: "https://twitter.com/\(mention)", concealed: false, activate: nil)
+                                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: "https://twitter.com/\(mention)", concealed: false)))
                             case .instagram:
-                                return .url(url: "https://instagram.com/\(mention)", concealed: false, activate: nil)
+                                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: "https://instagram.com/\(mention)", concealed: false)))
                             default:
                                 break
                         }
@@ -542,9 +552,9 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                         switch websiteType(of: content.websiteName) {
                             case .twitter:
-                                return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false, activate: nil)
+                                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false)))
                             case .instagram:
-                                return .url(url: "https://instagram.com/explore/tags/\(hashtag)", concealed: false, activate: nil)
+                                return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: "https://instagram.com/explore/tags/\(hashtag)", concealed: false)))
                             default:
                                 break
                         }
@@ -557,22 +567,22 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                 if content.instantPage != nil {
                     switch websiteType(of: content.websiteName) {
                         case .instagram, .twitter:
-                            return .none
+                            return ChatMessageBubbleContentTapAction(content: .none)
                         default:
-                            return .instantPage
+                            return ChatMessageBubbleContentTapAction(content: .instantPage)
                     }
                 } else if content.type == "telegram_background" {
-                    return .wallpaper
+                    return ChatMessageBubbleContentTapAction(content: .wallpaper)
                 } else if content.type == "telegram_theme" {
-                    return .theme
+                    return ChatMessageBubbleContentTapAction(content: .theme)
                 }
             }
             if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
-            return .none
+            return ChatMessageBubbleContentTapAction(content: .none)
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
     
     override public func updateHiddenMedia(_ media: [Media]?) -> Bool {

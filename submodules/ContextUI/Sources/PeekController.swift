@@ -126,4 +126,8 @@ public final class PeekController: ViewController, ContextControllerProtocol {
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }
+    
+    public func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
+        self.dismiss(completion: completion)
+    }
 }

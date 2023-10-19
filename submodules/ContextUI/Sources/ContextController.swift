@@ -22,6 +22,7 @@ public protocol ContextControllerProtocol: ViewController {
     var getOverlayViews: (() -> [UIView])? { get set }
 
     func dismiss(completion: (() -> Void)?)
+    func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?)
     
     func getActionsMinHeight() -> ContextController.ActionsHeight?
     func setItems(_ items: Signal<ContextController.Items, NoError>, minHeight: ContextController.ActionsHeight?, animated: Bool)
@@ -2601,7 +2602,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
         }
     }
     
-    private func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
+    public func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
         if viewTreeContainsFirstResponder(view: self.view) {
             self.dismissOnInputClose = (result, completion)
             self.view.endEditing(true)

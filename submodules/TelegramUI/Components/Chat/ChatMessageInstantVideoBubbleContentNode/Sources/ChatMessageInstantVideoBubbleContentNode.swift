@@ -414,18 +414,18 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if !self.interactiveFileNode.isHidden {
             if self.interactiveFileNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveFileNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveFileNode.dateAndStatusNode.view), with: nil) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             if self.interactiveFileNode.hasTapAction(at: self.view.convert(point, to: self.interactiveFileNode.view)) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
         }
         if !self.interactiveVideoNode.isHidden {
             if self.interactiveVideoNode.dateAndStatusNode.supernode != nil, let _ = self.interactiveVideoNode.dateAndStatusNode.hitTest(self.view.convert(point, to: self.interactiveVideoNode.dateAndStatusNode.view), with: nil) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
             if let audioTranscriptionButton = self.interactiveVideoNode.audioTranscriptionButton, let _ = audioTranscriptionButton.hitTest(self.view.convert(point, to: audioTranscriptionButton), with: nil) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             }
         }
         return super.tapActionAtPoint(point, gesture: gesture, isEstimating: isEstimating)

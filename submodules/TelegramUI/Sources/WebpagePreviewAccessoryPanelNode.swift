@@ -9,6 +9,7 @@ import AccountContext
 import TelegramStringFormatting
 import ChatPresentationInterfaceState
 import AccessoryPanelNode
+import AppBundle
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
@@ -18,7 +19,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     
     let closeButton: HighlightableButtonNode
     let lineNode: ASImageNode
-    let iconNode: ASImageNode
+    let iconView: UIImageView
     let titleNode: TextNode
     private var titleString: NSAttributedString?
     
@@ -46,10 +47,9 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.lineNode.displaysAsynchronously = false
         self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = false
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
+        self.iconView = UIImageView()
+        self.iconView.image = UIImage(bundleImageName: "Chat/Input/Accessory Panels/LinkSettingsIcon")?.withRenderingMode(.alwaysTemplate)
+        self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -63,7 +63,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         self.addSubnode(self.closeButton)
         
         self.addSubnode(self.lineNode)
-        self.addSubnode(self.iconNode)
+        self.view.addSubview(self.iconView)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
         
@@ -75,11 +75,11 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     }
     
     override func animateIn() {
-        self.iconNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
+        self.iconView.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
     }
     
     override func animateOut() {
-        self.iconNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
+        self.iconView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
     }
     
     override public func didLoad() {
@@ -101,7 +101,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 
                 self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
                 self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
-                self.iconNode.image = PresentationResourcesChat.chatInputPanelWebpageIconImage(theme)
+                self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
             }
             
             if let text = self.titleString?.string {
@@ -194,8 +194,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
         
         self.lineNode.frame = CGRect(origin: CGPoint(x: leftInset, y: 8.0), size: CGSize(width: 2.0, height: bounds.size.height - 10.0))
         
-        if let icon = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
+        if let icon = self.iconView.image {
+            self.iconView.frame = CGRect(origin: CGPoint(x: 7.0 + inset, y: 10.0), size: icon.size)
         }
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)

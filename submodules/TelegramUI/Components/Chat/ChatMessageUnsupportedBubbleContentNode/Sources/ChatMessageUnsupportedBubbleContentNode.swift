@@ -94,11 +94,11 @@ public final class ChatMessageUnsupportedBubbleContentNode: ChatMessageBubbleCon
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
         if self.bounds.contains(point) {
             if self.buttonNode.frame.contains(point) {
-                return .ignore
+                return ChatMessageBubbleContentTapAction(content: .ignore)
             } else {
-                return .none
+                return ChatMessageBubbleContentTapAction(content: .none)
             }
         }
-        return .none
+        return ChatMessageBubbleContentTapAction(content: .none)
     }
 }

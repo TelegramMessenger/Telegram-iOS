@@ -90,6 +90,24 @@ public final class ChatControllerInteraction {
         case groupParticipant(storyStats: PeerStoryStats?, avatarHeaderNode: ASDisplayNode?)
     }
     
+    public struct OpenUrl {
+        public var url: String
+        public var concealed: Bool
+        public var external: Bool?
+        public var message: Message?
+        public var allowInlineWebpageResolution: Bool
+        public var progress: Promise<Bool>?
+        
+        public init(url: String, concealed: Bool, external: Bool? = nil, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil) {
+            self.url = url
+            self.concealed = concealed
+            self.external = external
+            self.message = message
+            self.allowInlineWebpageResolution = allowInlineWebpageResolution
+            self.progress = progress
+        }
+    }
+    
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String) -> Void
@@ -113,7 +131,7 @@ public final class ChatControllerInteraction {
     public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     public let activateSwitchInline: (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void
-    public let openUrl: (String, Bool, Bool?, Message?, Promise<Bool>?) -> Void
+    public let openUrl: (OpenUrl) -> Void
     public let shareCurrentLocation: () -> Void
     public let shareAccountContact: () -> Void
     public let sendBotCommand: (MessageId?, String) -> Void
@@ -227,7 +245,7 @@ public final class ChatControllerInteraction {
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String, ReplyMarkupButtonAction.PeerTypes?) -> Void,
-        openUrl: @escaping (String, Bool, Bool?, Message?, Promise<Bool>?) -> Void,
+        openUrl: @escaping (OpenUrl) -> Void,
         shareCurrentLocation: @escaping () -> Void,
         shareAccountContact: @escaping () -> Void,
         sendBotCommand: @escaping (MessageId?, String) -> Void,

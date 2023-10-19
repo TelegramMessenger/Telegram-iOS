@@ -2779,11 +2779,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, requestMessageActionCallback: { _, _, _, _ in
         }, requestMessageActionUrlAuth: { _, _ in
         }, activateSwitchInline: { _, _, _ in
-        }, openUrl: { [weak self] url, concealed, external, _, _ in
+        }, openUrl: { [weak self] url in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.openUrl(url: url, concealed: concealed, external: external ?? false)
+            strongSelf.openUrl(url: url.url, concealed: url.concealed, external: url.external ?? false)
         }, shareCurrentLocation: {
         }, shareAccountContact: {
         }, sendBotCommand: { _, _ in
