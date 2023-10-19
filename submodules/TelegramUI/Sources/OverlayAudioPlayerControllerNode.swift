@@ -203,7 +203,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         
         let source: ChatHistoryListSource
         if let playlistLocation = playlistLocation as? PeerMessagesPlaylistLocation, case let .custom(messages, at, loadMore) = playlistLocation {
-            source = .custom(messages: messages, messageId: at, loadMore: loadMore)
+            source = .custom(messages: messages, messageId: at, quote: nil, loadMore: loadMore)
             self.isGlobalSearch = true
         } else {
             source = .default

@@ -5382,10 +5382,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
                                 if case .reply = info {
                                     //TODO:localize
+                                    let titleContent: ChatTitleContent
                                     if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
-                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Quote", subtitleText, false)
+                                        titleContent = .custom("Reply to Quote", subtitleText, false)
                                     } else {
-                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Message", subtitleText, false)
+                                        titleContent = .custom("Reply to Message", subtitleText, false)
+                                    }
+                                    if strongSelf.chatTitleView?.titleContent != titleContent {
+                                        if strongSelf.chatTitleView?.titleContent != nil {
+                                            strongSelf.chatTitleView?.animateLayoutTransition()
+                                        }
+                                        strongSelf.chatTitleView?.titleContent = titleContent
                                     }
                                 } else if case .link = info {
                                     //TODO:localize
