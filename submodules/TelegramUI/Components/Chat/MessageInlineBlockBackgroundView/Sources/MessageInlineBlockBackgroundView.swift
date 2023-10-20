@@ -661,6 +661,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 } else {
                     progressBackgroundContentsView = UIImageView()
                     progressBackgroundContentsView.image = generateProgressTemplateImage()
+                    self.progressBackgroundContentsView = progressBackgroundContentsView
                     self.insertSubview(progressBackgroundContentsView, aboveSubview: self.backgroundView)
                     progressBackgroundContentsView.tintColor = primaryColor
                 }
@@ -700,7 +701,9 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 if let progressBackgroundContentsView = self.progressBackgroundContentsView {
                     self.progressBackgroundContentsView = nil
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
-                    transition.updateAlpha(layer: progressBackgroundContentsView.layer, alpha: 0.0)
+                    transition.updateAlpha(layer: progressBackgroundContentsView.layer, alpha: 0.0, completion: { [weak progressBackgroundContentsView] _ in
+                        progressBackgroundContentsView?.removeFromSuperview()
+                    })
                 }
                 self.progressBackgroundMaskContainer = nil
                 self.progressBackgroundGradientView = nil
