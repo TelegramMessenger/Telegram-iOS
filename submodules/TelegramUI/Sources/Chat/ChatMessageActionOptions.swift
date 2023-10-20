@@ -823,25 +823,19 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         return ContextController.Items(id: AnyHashable(linkOptions.url), content: .list(items))
     }
     
+    var webpageCache: [String: TelegramMediaWebpage] = [:]
     chatController.performOpenURL = { [weak selfController] message, url, progress in
         guard let selfController else {
             return
         }
         
         if let (updatedUrlPreviewUrl, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewUrl {
-            progress?.set(.single(true))
-            let _ = (signal
-            |> afterDisposed {
+            if let webpage = webpageCache[updatedUrlPreviewUrl] {
                 progress?.set(.single(false))
-            }
-            |> deliverOnMainQueue).start(next: { [weak selfController] result in
-                guard let selfController else {
-                    return
-                }
                 
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
                     if state.interfaceState.editMessage != nil {
-                        if let webpage = result(nil), var urlPreview = state.editingUrlPreview {
+                        if var urlPreview = state.editingUrlPreview {
                             urlPreview.url = updatedUrlPreviewUrl
                             urlPreview.webPage = webpage
                             
@@ -850,7 +844,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                             return state
                         }
                     } else {
-                        if let webpage = result(nil), var urlPreview = state.urlPreview {
+                        if var urlPreview = state.urlPreview {
                             urlPreview.url = updatedUrlPreviewUrl
                             urlPreview.webPage = webpage
                             
@@ -860,7 +854,42 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                         }
                     }
                 })
-            })
+            } else {
+                progress?.set(.single(true))
+                let _ = (signal
+                |> afterDisposed {
+                    progress?.set(.single(false))
+                }
+                |> deliverOnMainQueue).start(next: { [weak selfController] result in
+                    guard let selfController else {
+                        return
+                    }
+                    
+                    selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
+                        if state.interfaceState.editMessage != nil {
+                            if let webpage = result(nil), var urlPreview = state.editingUrlPreview {
+                                urlPreview.url = updatedUrlPreviewUrl
+                                urlPreview.webPage = webpage
+                                webpageCache[updatedUrlPreviewUrl] = webpage
+                                
+                                return state.updatedEditingUrlPreview(urlPreview)
+                            } else {
+                                return state
+                            }
+                        } else {
+                            if let webpage = result(nil), var urlPreview = state.urlPreview {
+                                urlPreview.url = updatedUrlPreviewUrl
+                                urlPreview.webPage = webpage
+                                webpageCache[updatedUrlPreviewUrl] = webpage
+                                
+                                return state.updatedUrlPreview(urlPreview)
+                            } else {
+                                return state
+                            }
+                        }
+                    })
+                })
+            }
         }
     }
     

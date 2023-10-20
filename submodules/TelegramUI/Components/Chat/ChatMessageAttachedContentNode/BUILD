@@ -39,6 +39,7 @@ swift_library(
         "//submodules/TelegramUI/Components/WallpaperPreviewMedia",
         "//submodules/TelegramUI/Components/Chat/ChatMessageAttachedContentButtonNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessagePollBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/MessageInlineBlockBackgroundView",
     ],
     visibility = [
         "//visibility:public",
