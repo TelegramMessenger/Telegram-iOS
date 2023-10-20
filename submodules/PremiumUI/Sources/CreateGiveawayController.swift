@@ -325,7 +325,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .header(_, title, text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(title + text), sectionId: self.section)
         case let .createGiveaway(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: .blue, name: "Premium/Giveaway"), title: title, subtitle: subtitle, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: .blue, name: "Premium/Giveaway"), title: title, subtitle: subtitle, isSelected: isSelected, sectionId: self.section, action: {
                 arguments.updateState { state in
                     var updatedState = state
                     updatedState.mode = .giveaway
@@ -333,7 +333,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 }
             })
         case let .awardUsers(_, title, subtitle, isSelected):
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: .violet, name: "Media Editor/Privacy/SelectedUsers"), title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: .violet, name: "Media Editor/Privacy/SelectedUsers"), title: title, subtitle: subtitle, subtitleActive: true, isSelected: isSelected, sectionId: self.section, action: {
                 var openSelection = false
                 arguments.updateState { state in
                     var updatedState = state
@@ -361,7 +361,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             default:
                 color = .blue
             }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: GiftOptionItem.Icon(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(prepaidGiveaway.quantity), sectionId: self.section, action: nil)
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(prepaidGiveaway.quantity), sectionId: self.section, action: nil)
         case let .subscriptionsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .subscriptions(_, value):
@@ -1056,7 +1056,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         
         let stateContext = ShareWithPeersScreen.StateContext(
             context: context,
-            subject: .channels(exclude: Set([peerId])),
+            subject: .channels(exclude: Set([peerId]), searchQuery: nil),
             initialPeerIds: Set(state.channels.filter { $0 != peerId })
         )
         let _ = (stateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).startStandalone(next: { _ in

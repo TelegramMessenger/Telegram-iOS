@@ -43,6 +43,11 @@ public final class PeerListItemComponent: Component {
         case editing(isSelected: Bool, isTinted: Bool)
     }
     
+    public enum SelectionPosition: Equatable {
+        case left
+        case right
+    }
+    
     public enum SubtitleAccessory: Equatable {
         case none
         case checks
@@ -101,6 +106,8 @@ public final class PeerListItemComponent: Component {
     let rightAccessory: RightAccessory
     let reaction: Reaction?
     let selectionState: SelectionState
+    let selectionPosition: SelectionPosition
+    let isEnabled: Bool
     let hasNext: Bool
     let action: (EnginePeer) -> Void
     let contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)?
@@ -121,6 +128,8 @@ public final class PeerListItemComponent: Component {
         rightAccessory: RightAccessory = .none,
         reaction: Reaction? = nil,
         selectionState: SelectionState,
+        selectionPosition: SelectionPosition = .left,
+        isEnabled: Bool = true,
         hasNext: Bool,
         action: @escaping (EnginePeer) -> Void,
         contextAction: ((EnginePeer, ContextExtractedContentContainingView, ContextGesture) -> Void)? = nil,
@@ -140,6 +149,8 @@ public final class PeerListItemComponent: Component {
         self.rightAccessory = rightAccessory
         self.reaction = reaction
         self.selectionState = selectionState
+        self.selectionPosition = selectionPosition
+        self.isEnabled = isEnabled
         self.hasNext = hasNext
         self.action = action
         self.contextAction = contextAction
@@ -187,6 +198,12 @@ public final class PeerListItemComponent: Component {
             return false
         }
         if lhs.selectionState != rhs.selectionState {
+            return false
+        }
+        if lhs.selectionPosition != rhs.selectionPosition {
+            return false
+        }
+        if lhs.isEnabled != rhs.isEnabled {
             return false
         }
         if lhs.hasNext != rhs.hasNext {
@@ -411,6 +428,8 @@ public final class PeerListItemComponent: Component {
             self.component = component
             self.state = state
             
+            self.containerButton.alpha = component.isEnabled ? 1.0 : 0.3
+            
             self.avatarButtonView.isUserInteractionEnabled = component.storyStats != nil && component.openStories != nil
             
             let labelData: (String, Bool)
@@ -457,9 +476,17 @@ public final class PeerListItemComponent: Component {
             var avatarLeftInset: CGFloat = component.sideInset + 10.0
             
             if case let .editing(isSelected, isTinted) = component.selectionState {
-                leftInset += 44.0
-                avatarLeftInset += 44.0
                 let checkSize: CGFloat = 22.0
+                let checkOriginX: CGFloat
+                switch component.selectionPosition {
+                case .left:
+                    leftInset += 44.0
+                    avatarLeftInset += 44.0
+                    checkOriginX = floor((54.0 - checkSize) * 0.5)
+                case .right:
+                    rightInset += 44.0
+                    checkOriginX = availableSize.width - 11.0 - checkSize
+                }
                 
                 let checkLayer: CheckLayer
                 if let current = self.checkLayer {
@@ -484,7 +511,7 @@ public final class PeerListItemComponent: Component {
                     checkLayer.setSelected(isSelected, animated: false)
                     checkLayer.setNeedsDisplay()
                 }
-                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: floor((54.0 - checkSize) * 0.5), y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
+                transition.setFrame(layer: checkLayer, frame: CGRect(origin: CGPoint(x: checkOriginX, y: floor((height - verticalInset * 2.0 - checkSize) / 2.0)), size: CGSize(width: checkSize, height: checkSize)))
             } else {
                 if let checkLayer = self.checkLayer {
                     self.checkLayer = nil

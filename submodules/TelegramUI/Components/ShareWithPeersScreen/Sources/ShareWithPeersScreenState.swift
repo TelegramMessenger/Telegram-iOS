@@ -4,6 +4,7 @@ import TelegramCore
 import AccountContext
 import TelegramUIPreferences
 import TemporaryCachedPeerDataManager
+import Postbox
 
 public extension ShareWithPeersScreen {
     final class State {
@@ -48,7 +49,7 @@ public extension ShareWithPeersScreen {
             case contacts(base: EngineStoryPrivacy.Base)
             case contactsSearch(query: String, onlyContacts: Bool)
             case members(peerId: EnginePeer.Id, searchQuery: String?)
-            case channels(exclude: Set<EnginePeer.Id>)
+            case channels(exclude: Set<EnginePeer.Id>, searchQuery: String?)
         }
         
         var stateValue: State?
@@ -584,7 +585,7 @@ public extension ShareWithPeersScreen {
                 self.stateDisposable = combinedDisposable
                 
                 self.listControl = disposableAndLoadMoreControl.1
-            case let .channels(excludePeerIds):
+            case let .channels(excludePeerIds, searchQuery):
                 self.stateDisposable = (combineLatest(
                     context.engine.messages.chatList(group: .root, count: 500) |> take(1),
                     context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init)))
@@ -627,11 +628,22 @@ public extension ShareWithPeersScreen {
                             existingIds.insert(peerId)
                         }
                     }
-
+                 
+                    let queryTokens = stringIndexTokens(searchQuery ?? "", transliteration: .combined)
+                    func peerMatchesTokens(peer: EnginePeer, tokens: [ValueBoxKey]) -> Bool {
+                        if matchStringIndexTokens(peer.indexName._asIndexName().indexTokens, with: queryTokens) {
+                            return true
+                        }
+                        return false
+                    }
+                    
                     var peers: [EnginePeer] = []
                     peers = chatList.items.filter { peer in
                         if let peer = peer.renderedPeer.peer {
                             if excludePeerIds.contains(peer.id) {
+                                return false
+                            }
+                            if let _ = searchQuery, !peerMatchesTokens(peer: peer, tokens: queryTokens) {
                                 return false
                             }
                             if self.initialPeerIds.contains(peer.id) {

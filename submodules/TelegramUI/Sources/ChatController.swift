@@ -17413,6 +17413,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     return .text
                                 })
                             })
+                        } else {
+                            self.playShakeAnimation()
                         }
                     case let .withBotStartPayload(botStart):
                         self.updateChatPresentationInterfaceState(animated: true, interactive: true, {

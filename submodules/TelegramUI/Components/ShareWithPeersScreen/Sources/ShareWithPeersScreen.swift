@@ -836,7 +836,7 @@ final class ShareWithPeersScreenComponent: Component {
             guard let stateValue = self.effectiveStateValue else {
                 return
             }
-                        
+            
             var topOffset = -self.scrollView.bounds.minY + itemLayout.topInset
             topOffset = max(0.0, topOffset)
             transition.setTransform(layer: self.backgroundView.layer, transform: CATransform3DMakeTranslation(0.0, topOffset + itemLayout.containerInset, 0.0))
@@ -1082,7 +1082,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.impact(.light)
                                         } else {
                                             self.postingAvailabilityDisposable.set((component.context.engine.messages.checkStoriesUploadAvailability(target: .peer(peer.id))
-                                            |> deliverOnMainQueue).start(next: { [weak self] status in
+                                                                                    |> deliverOnMainQueue).start(next: { [weak self] status in
                                                 guard let self, let component = self.component else {
                                                     return
                                                 }
@@ -1106,7 +1106,7 @@ final class ShareWithPeersScreenComponent: Component {
                                                                 previousController.dismiss()
                                                             }
                                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                                            let controller = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, boosted: false), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak navigationController] in
+                                                            let controller = component.context.sharedContext.makePremiumLimitController(context: component.context, subject: .storiesChannelBoost(peer: peer, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0), count: Int32(status.boosts), forceDark: true, cancel: {}, action: { [weak navigationController] in
                                                                 UIPasteboard.general.string = link
                                                                 
                                                                 if let previousController = navigationController?.viewControllers.reversed().first(where: { $0 is ShareWithPeersScreen}) as? ShareWithPeersScreen {
@@ -1397,7 +1397,7 @@ final class ShareWithPeersScreenComponent: Component {
                                 subtitle = nil
                             }
                         }
-                          
+                        
                         let isSelected = self.selectedPeers.contains(peer.id) || self.selectedGroups.contains(peer.id)
                         let _ = visibleItem.update(
                             transition: itemTransition,
@@ -1671,7 +1671,21 @@ final class ShareWithPeersScreenComponent: Component {
             }
             
             let fadeTransition = Transition.easeInOut(duration: 0.25)
-            if let searchStateContext = self.searchStateContext, case let .contactsSearch(query, _) = searchStateContext.subject, let value = searchStateContext.stateValue, value.peers.isEmpty {
+            
+            var searchQuery: String?
+            var searchResultsAreEmpty = false
+            if let searchStateContext = self.searchStateContext, let value = searchStateContext.stateValue {
+                if case let .contactsSearch(query, _) = searchStateContext.subject {
+                    searchQuery = query
+                } else if case let .members(_, query) = searchStateContext.subject {
+                    searchQuery = query
+                } else if case let .channels(_, query) = searchStateContext.subject {
+                    searchQuery = query
+                }
+                searchResultsAreEmpty = value.peers.isEmpty
+            }
+            
+            if let searchQuery, searchResultsAreEmpty {
                 let sideInset: CGFloat = 44.0
                 let emptyAnimationHeight = 148.0
                 let topInset: CGFloat = topOffset + itemLayout.containerInset + 40.0
@@ -1695,7 +1709,7 @@ final class ShareWithPeersScreenComponent: Component {
                     transition: .immediate,
                     component: AnyComponent(
                         MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: environment.strings.Contacts_Search_NoResultsQueryDescription(query).string, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
+                            text: .plain(NSAttributedString(string: environment.strings.Contacts_Search_NoResultsQueryDescription(searchQuery).string, font: Font.regular(15.0), textColor: environment.theme.list.itemSecondaryTextColor)),
                             horizontalAlignment: .center,
                             maximumNumberOfLines: 0
                         )
@@ -2041,15 +2055,28 @@ final class ShareWithPeersScreenComponent: Component {
                     containerSize: CGSize(width: containerWidth, height: 1000.0)
                 )
                 
-                if !self.navigationTextFieldState.text.isEmpty {
+                let searchQuery = self.navigationTextFieldState.text
+                if !searchQuery.isEmpty {
                     var onlyContacts = false
                     if component.initialPrivacy.base == .closeFriends || component.initialPrivacy.base == .contacts {
                         onlyContacts = true
                     }
-                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == .contactsSearch(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts) {
+                    
+                    let searchSubject: ShareWithPeersScreen.StateContext.Subject
+                    switch component.stateContext.subject {
+                    case let .channels(exclude, _):
+                        searchSubject = .channels(exclude: exclude, searchQuery: searchQuery)
+                    case let .members(peerId, _):
+                        searchSubject = .members(peerId: peerId, searchQuery: searchQuery)
+                    default:
+                        searchSubject = .contactsSearch(query: searchQuery, onlyContacts: onlyContacts)
+                    }
+                    
+                    
+                    if let searchStateContext = self.searchStateContext, searchStateContext.subject == searchSubject {
                     } else {
                         self.searchStateDisposable?.dispose()
-                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: .contactsSearch(query: self.navigationTextFieldState.text, onlyContacts: onlyContacts), editing: false)
+                        let searchStateContext = ShareWithPeersScreen.StateContext(context: component.context, subject: searchSubject)
                         var applyState = false
                         self.searchStateDisposable = (searchStateContext.ready |> filter { $0 } |> take(1) |> deliverOnMainQueue).start(next: { [weak self] _ in
                             guard let self else {

@@ -186,6 +186,7 @@ final class EmojiPickerItemNode: ListViewItemNode {
                                 strings: item.strings,
                                 deviceMetrics: .iPhone14ProMax,
                                 emojiContent: item.emojiContent,
+                                backgroundIconColor: item.backgroundIconColor,
                                 backgroundColor: item.theme.list.itemBlocksBackgroundColor,
                                 separatorColor: item.theme.list.itemBlocksSeparatorColor
                             )
@@ -221,6 +222,7 @@ private final class EmojiSelectionComponent: Component {
     public let strings: PresentationStrings
     public let deviceMetrics: DeviceMetrics
     public let emojiContent: EmojiPagerContentComponent
+    public let backgroundIconColor: UIColor
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
     
@@ -229,6 +231,7 @@ private final class EmojiSelectionComponent: Component {
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
         emojiContent: EmojiPagerContentComponent,
+        backgroundIconColor: UIColor,
         backgroundColor: UIColor,
         separatorColor: UIColor
     ) {
@@ -236,6 +239,7 @@ private final class EmojiSelectionComponent: Component {
         self.strings = strings
         self.deviceMetrics = deviceMetrics
         self.emojiContent = emojiContent
+        self.backgroundIconColor = backgroundIconColor
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
     }
@@ -251,6 +255,9 @@ private final class EmojiSelectionComponent: Component {
             return false
         }
         if lhs.emojiContent != rhs.emojiContent {
+            return false
+        }
+        if lhs.backgroundIconColor != rhs.backgroundIconColor {
             return false
         }
         if lhs.backgroundColor != rhs.backgroundColor {
@@ -338,7 +345,8 @@ private final class EmojiSelectionComponent: Component {
                     displayBottomPanel: false,
                     isExpanded: true,
                     clipContentToTopPanel: false,
-                    useExternalSearchContainer: false
+                    useExternalSearchContainer: false,
+                    customTintColor: component.backgroundIconColor
                 )),
                 environment: {},
                 containerSize: availableSize

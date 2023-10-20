@@ -393,13 +393,18 @@ public func PeerNameColorScreen(
             title: buttonTitle,
             locked: isLocked,
             action: {
-                if isPremium {
+                if !isLocked {
                     let state = stateValue.with { $0 }
                                         
                     let nameColor = state.updatedNameColor ?? peer?.nameColor
                     let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer?.backgroundEmojiId
                     
-                    let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                    switch subject {
+                    case .account:
+                        let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                    case let .channel(peerId):
+                        let _ = context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                    }
                     
                     dismissImpl?()
                 } else {

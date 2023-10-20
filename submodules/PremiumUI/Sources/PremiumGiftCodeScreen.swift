@@ -130,6 +130,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             let theme = environment.theme
             let strings = environment.strings
             let dateTimeFormat = environment.dateTimeFormat
+            let accountContext = context.component.context
             
             let state = context.state
             let giftCode = component.giftCode
@@ -239,7 +240,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     Button(
                         content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
                         action: {
-                            if let peer = fromPeer {
+                            if let peer = fromPeer, peer.id != accountContext.account.peerId {
                                 component.openPeer(peer)
                                 Queue.mainQueue().after(1.0, {
                                     component.cancel(false)
@@ -258,7 +259,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         Button(
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
                             action: {
-                                if let peer = toPeer {
+                                if let peer = toPeer, peer.id != accountContext.account.peerId {
                                     component.openPeer(peer)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
@@ -309,7 +310,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                                 component.openMessage(messageId)
                             }
                             Queue.mainQueue().after(1.0) {
-                                component.cancel(true)
+                                component.cancel(false)
                             }
                         }
                     )
@@ -479,11 +480,15 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                         giftCode: context.component.giftCode,
                         action: context.component.action,
                         cancel: { animate in
-                            animateOut.invoke(Action { _ in
-                                if let controller = controller() {
-                                    controller.dismiss(completion: nil)
-                                }
-                            })
+                            if animate {
+                                animateOut.invoke(Action { _ in
+                                    if let controller = controller() {
+                                        controller.dismiss(completion: nil)
+                                    }
+                                })
+                            } else if let controller = controller() {
+                                controller.dismiss(animated: false, completion: nil)
+                            }
                         },
                         openPeer: context.component.openPeer,
                         openMessage: context.component.openMessage,

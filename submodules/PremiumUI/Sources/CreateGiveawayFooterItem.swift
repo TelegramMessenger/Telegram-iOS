@@ -75,21 +75,6 @@ final class CreateGiveawayFooterItemNode: ItemListControllerFooterItemNode {
     private func updateItem() {
         self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
-        
-        
-//        if self.item.isLoading != self.currentIsLoading {
-//            self.currentIsLoading = self.item.isLoading
-//            
-//            if self.currentIsLoading {
-//                self.buttonNode.transitionToProgress()
-//            } else {
-//                self.buttonNode.transitionFromProgress()
-//            }
-//        }
-        
-//        self.buttonNode.pressed = { [weak self] in
-//            self?.item.action()
-//        }
     }
     
     override func updateBackgroundAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {

@@ -47,7 +47,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
     private var giveaway: TelegramMediaGiveaway?
     
     private let buttonNode: ChatMessageAttachedContentButtonNode
-    private let channelButton: PeerButtonNode
+    private let channelButtons: PeerButtonsStackNode
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -95,7 +95,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         self.badgeTextNode = TextNode()
         
         self.buttonNode = ChatMessageAttachedContentButtonNode()
-        self.channelButton = PeerButtonNode()
+        self.channelButtons = PeerButtonsStackNode()
         
         super.init()
         
@@ -107,7 +107,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
         self.addSubnode(self.dateTitleNode)
         self.addSubnode(self.dateTextNode)
         self.addSubnode(self.buttonNode)
-        self.addSubnode(self.channelButton)
+        self.addSubnode(self.channelButtons)
         self.addSubnode(self.animationNode)
         self.addSubnode(self.badgeBackgroundNode)
         self.addSubnode(self.badgeTextNode)
@@ -128,6 +128,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             }
             
             item.controllerInteraction.openMessageReactionContextMenu(item.topMessage, sourceView, gesture, value)
+        }
+        
+        self.channelButtons.openPeer = { [weak self] peer in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
         }
     }
     
@@ -185,7 +192,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
 
         let makeButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.buttonNode)
         
-        let makeChannelLayout = PeerButtonNode.asyncLayout(self.channelButton)
+        let makeChannelsLayout = PeerButtonsStackNode.asyncLayout(self.channelButtons)
                 
         let currentItem = self.item
         
@@ -207,12 +214,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 incoming = false
             }
             
+            let backgroundColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first! : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill.first!
             let textColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
             let accentColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
             
             var updatedBadgeImage: UIImage?
             if themeUpdated {
-                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: .white, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
+                updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
             }
             
             let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 1)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: .white)
@@ -413,13 +421,18 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 maxContentWidth = max(maxContentWidth, dateTitleLayout.size.width)
                 maxContentWidth = max(maxContentWidth, dateTextLayout.size.width)
                 maxContentWidth = max(maxContentWidth, buttonWidth)
-                maxContentWidth += 30.0
-                
-                var channelPeer: EnginePeer?
-                if let channelPeerId = giveaway?.channelPeerIds.first, let peer = item.message.peers[channelPeerId] {
-                    channelPeer = EnginePeer(peer)
+
+                var channelPeers: [EnginePeer] = []
+                if let channelPeerIds = giveaway?.channelPeerIds {
+                    for peerId in channelPeerIds {
+                        if let peer = item.message.peers[peerId] {
+                            channelPeers.append(EnginePeer(peer))
+                        }
+                    }
                 }
-                let (_, continueChannelLayout) = makeChannelLayout(item.context, maxContentWidth - 30.0, channelPeer, accentColor, accentColor.withAlphaComponent(0.1))
+                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 250.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
+                maxContentWidth = max(maxContentWidth, channelsWidth)
+                maxContentWidth += 30.0
                 
                 let contentWidth = maxContentWidth + layoutConstants.text.bubbleInsets.right * 2.0
                 
@@ -427,7 +440,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     let (buttonSize, buttonApply) = continueLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0, 33.0)
                     let buttonSpacing: CGFloat = 4.0
                     
-                    let (channelButtonSize, channelButtonApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
+                    let (channelButtonsSize, channelButtonsApply) = continueChannelLayout(boundingWidth - layoutConstants.text.bubbleInsets.right * 2.0)
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
@@ -436,7 +449,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     if countriesTextLayout.size.height > 0.0 {
                         layoutSize.height += countriesTextLayout.size.height + 7.0
                     }
-                    layoutSize.height += channelButtonSize.height
+                    layoutSize.height += channelButtonsSize.height
                     
                     if let statusSizeAndApply = statusSizeAndApply {
                         layoutSize.height += statusSizeAndApply.0.height - 4.0
@@ -462,7 +475,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             let _ = countriesTextApply()
                             let _ = dateTitleApply()
                             let _ = dateTextApply()
-                            let _ = channelButtonApply()
+                            let _ = channelButtonsApply()
                             let _ = buttonApply(animation)
                             
                             let smallSpacing: CGFloat = 2.0
@@ -493,8 +506,8 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                             strongSelf.participantsTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - participantsTextLayout.size.width) / 2.0), y: originY), size: participantsTextLayout.size)
                             originY += participantsTextLayout.size.height + smallSpacing * 2.0 + 3.0
                             
-                            strongSelf.channelButton.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - channelButtonSize.width) / 2.0), y: originY), size: channelButtonSize)
-                            originY += channelButtonSize.height
+                            strongSelf.channelButtons.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layoutSize.width - channelButtonsSize.width) / 2.0), y: originY), size: channelButtonsSize)
+                            originY += channelButtonsSize.height
                             
                             if countriesTextLayout.size.height > 0.0 {
                                 originY += smallSpacing * 2.0 + 3.0
@@ -566,6 +579,9 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
     }
     
     override public func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture, isEstimating: Bool) -> ChatMessageBubbleContentTapAction {
+        if self.channelButtons.frame.contains(point) {
+            return ChatMessageBubbleContentTapAction(content: .ignore)
+        }
         if self.buttonNode.frame.contains(point) {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
@@ -578,10 +594,6 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
     @objc private func buttonPressed() {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
-            self.buttonNode.startShimmering()
-            Queue.mainQueue().after(0.75) {
-                self.buttonNode.stopShimmering()
-            }
         }
     }
     
@@ -597,6 +609,126 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             return result
         }
         return super.hitTest(point, with: event)
+    }
+}
+
+private final class PeerButtonsStackNode: ASDisplayNode {
+    var buttonNodes: [PeerButtonNode] = []
+    var openPeer: (EnginePeer) -> Void = { _ in }
+    
+    static func asyncLayout(_ current: PeerButtonsStackNode) -> (_ context: AccountContext, _ width: CGFloat, _ peers: [EnginePeer], _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonsStackNode)) {
+        let currentChannelButtons = current.buttonNodes.isEmpty ? nil : current.buttonNodes
+        let maybeMakeChannelButtons = current.buttonNodes.map(PeerButtonNode.asyncLayout)
+        
+        return { context, width, peers, titleColor, backgroundColor in
+            let targetNode = current
+            
+            var buttonNodes: [PeerButtonNode] = []
+            let makeChannelButtonLayouts: [(_ context: AccountContext, _ width: CGFloat, _ peer: EnginePeer?, _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonNode))]
+            if let currentChannelButtons {
+                buttonNodes = currentChannelButtons
+                makeChannelButtonLayouts = maybeMakeChannelButtons
+            } else {
+                for _ in peers {
+                    buttonNodes.append(PeerButtonNode())
+                }
+                makeChannelButtonLayouts = buttonNodes.map(PeerButtonNode.asyncLayout)
+            }
+            
+            var maxWidth = 0.0
+            let buttonHeight: CGFloat = 24.0
+            let horizontalButtonSpacing: CGFloat = 4.0
+            let verticalButtonSpacing: CGFloat = 6.0
+     
+            var sizes: [CGSize] = []
+            var groups: [[Int]] = []
+            var currentGroup: [Int] = []
+            
+            var buttonContinues: [(CGFloat) -> (CGSize, () -> PeerButtonNode)] = []
+            for i in 0 ..< makeChannelButtonLayouts.count {
+                let peer = peers[i]
+                let makeChannelButtonLayout = makeChannelButtonLayouts[i]
+                
+                let (buttonWidth, buttonContinue) = makeChannelButtonLayout(context, width, peer, titleColor, backgroundColor)
+                sizes.append(CGSize(width: buttonWidth, height: buttonHeight))
+                buttonContinues.append(buttonContinue)
+                
+                var itemsWidth: CGFloat = 0.0
+                for j in currentGroup {
+                    itemsWidth += sizes[j].width
+                }
+                itemsWidth += buttonWidth
+                itemsWidth += CGFloat(currentGroup.count) * horizontalButtonSpacing
+                
+                if itemsWidth > width {
+                    groups.append(currentGroup)
+                    currentGroup = []
+                }
+                currentGroup.append(i)
+            }
+            if !currentGroup.isEmpty {
+                groups.append(currentGroup)
+            }
+            
+            var rowWidths: [CGFloat] = []
+            for group in groups {
+                var rowWidth: CGFloat = 0.0
+                for i in group {
+                    let buttonSize = sizes[i]
+                    rowWidth += buttonSize.width
+                }
+                rowWidth += CGFloat(currentGroup.count) * horizontalButtonSpacing
+                
+                if rowWidth > maxWidth {
+                    maxWidth = rowWidth
+                }
+                rowWidths.append(rowWidth)
+            }
+            
+            var frames: [CGRect] = []
+            var originY: CGFloat = 0.0
+            for i in 0 ..< groups.count {
+                let rowWidth = rowWidths[i]
+                var originX = floorToScreenPixels((maxWidth - rowWidth) / 2.0)
+                
+                for i in groups[i] {
+                    let buttonSize = sizes[i]
+                    frames.append(CGRect(origin: CGPoint(x: originX, y: originY), size: buttonSize))
+                    originX += buttonSize.width + horizontalButtonSpacing
+                }
+                originY += buttonHeight + verticalButtonSpacing
+            }
+            
+            return (maxWidth, { _ in
+                var buttonLayoutsAndApply: [(CGSize, () -> PeerButtonNode)] = []
+                for buttonApply in buttonContinues {
+                    buttonLayoutsAndApply.append(buttonApply(maxWidth))
+                }
+                
+                return (CGSize(width: maxWidth, height: originY - verticalButtonSpacing), {
+                    targetNode.buttonNodes = buttonNodes
+                    
+                    for i in 0 ..< buttonNodes.count {
+                        let peer = peers[i]
+                        let buttonNode = buttonNodes[i]
+                        buttonNode.pressed = { [weak targetNode] in
+                            targetNode?.openPeer(peer)
+                        }
+                        if buttonNode.supernode == nil {
+                            targetNode.addSubnode(buttonNode)
+                        }
+                        let frame = frames[i]
+                        buttonNode.frame = frame
+                    }
+                    
+                    for (_, apply) in buttonLayoutsAndApply {
+                        let _ = apply()
+                    }
+
+                    return targetNode
+                })
+            })
+        }
     }
 }
 

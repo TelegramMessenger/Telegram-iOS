@@ -723,7 +723,7 @@ private final class LimitSheetContent: CombinedComponent {
         var premiumLimits: EngineConfiguration.UserLimits
         var isPremium = false
         
-        var boosted = false
+        var myBoostCount: Int32 = 0
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         var cachedChevronImage: (UIImage, PresentationTheme)?
@@ -1045,7 +1045,7 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
                 }
                 buttonAnimationName = nil
-            case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, boosted):
+            case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount):
                 if link == nil, !isCurrent, state.initialized {
                     peerShortcutChild = peerShortcut.update(
                         component: Button(
@@ -1054,7 +1054,7 @@ private final class LimitSheetContent: CombinedComponent {
                                     context: component.context,
                                     theme: environment.theme,
                                     peer: peer,
-                                    badge: "X2"
+                                    badge: myBoostCount > 0 ? "\(myBoostCount)" : nil
                                 )
                             ),
                             action: {
@@ -1098,11 +1098,11 @@ private final class LimitSheetContent: CombinedComponent {
                     )
                 }
                 
-                if boosted && state.boosted != boosted {
-                    state.boosted = boosted
+                if myBoostCount > 0 && state.myBoostCount != myBoostCount {
+                    state.myBoostCount = myBoostCount
                     boostUpdated = true
                 }
-                useAlternateText = boosted
+                useAlternateText = myBoostCount > 0
                 
                 iconName = "Premium/Boost"
                 badgeText = "\(component.count)"
@@ -1157,7 +1157,7 @@ private final class LimitSheetContent: CombinedComponent {
                 
                 premiumTitle = ""
                 
-                if boosted {
+                if myBoostCount > 0 {
                     let prefixString = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannelText
                     
                     let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
@@ -1205,6 +1205,10 @@ private final class LimitSheetContent: CombinedComponent {
             if case .folders = subject, !state.isPremium {
                 reachedMaximumLimit = false
             }
+            if case .storiesChannelBoost = component.subject {
+                reachedMaximumLimit = false
+            }
+            
             
             let contentSize: CGSize
             if state.initialized {
@@ -1648,7 +1652,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, boosted: Bool)
+        case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32)
     }
     
     private let context: AccountContext
@@ -1742,8 +1746,7 @@ private final class PeerShortcutComponent: Component {
         private let avatarNode: AvatarNode
         private let text = ComponentView<Empty>()
         
-        private let badgeBackground = UIView()
-        private let badgeText = ComponentView<Empty>()
+        private let badge = ComponentView<Empty>()
         
         private var component: PeerShortcutComponent?
         private weak var state: EmptyComponentState?
@@ -1756,12 +1759,8 @@ private final class PeerShortcutComponent: Component {
             self.backgroundView.clipsToBounds = true
             self.backgroundView.layer.cornerRadius = 16.0
             
-            self.badgeBackground.clipsToBounds = true
-            self.badgeBackground.backgroundColor = UIColor(rgb: 0x9671ff)
-            
             self.addSubview(self.backgroundView)
             self.addSubnode(self.avatarNode)
-            self.addSubview(self.badgeBackground)
         }
         
         required init?(coder: NSCoder) {
@@ -1803,35 +1802,26 @@ private final class PeerShortcutComponent: Component {
             }
             
             if let badge = component.badge {
-                let badgeSize = self.badgeText.update(
+                let badgeSize = self.badge.update(
                     transition: .immediate,
                     component: AnyComponent(
-                        MultilineTextComponent(
-                            text: .plain(NSAttributedString(string: badge, font: Font.with(size: 11.0, design: .round, weight: .bold), textColor: .white, paragraphAlignment: .left))
-                        )
+                        BoostIconComponent(text: badge)
                     ),
                     environment: {},
                     containerSize: availableSize
                 )
-                if let view = self.badgeText.view {
+                if let view = self.badge.view {
                     if view.superview == nil {
                         self.addSubview(view)
                     }
                     
-                    let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width - badgeSize.width / 2.0), y: -2.0), size: badgeSize)
-                    view.frame = textFrame
-                    
-                    let backgroundFrame = textFrame.insetBy(dx: -5.0, dy: -3.0)
-                    self.badgeBackground.frame = backgroundFrame
-                    self.badgeBackground.layer.cornerRadius = backgroundFrame.height / 2.0
-                    
-                    self.badgeBackground.isHidden = false
+                    let badgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width - badgeSize.width / 2.0), y: -5.0), size: badgeSize)
+                    view.frame = badgeFrame
                 }
             } else {
-                if let view = self.badgeText.view {
+                if let view = self.badge.view {
                     view.removeFromSuperview()
                 }
-                self.badgeBackground.isHidden = true
             }
             
             self.backgroundView.frame = CGRect(origin: .zero, size: size)
@@ -1845,6 +1835,97 @@ private final class PeerShortcutComponent: Component {
     }
 
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+public final class BoostIconComponent: Component {
+    let text: String
+
+    public init(text: String) {
+        self.text = text
+    }
+
+    public static func ==(lhs: BoostIconComponent, rhs: BoostIconComponent) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        return true
+    }
+
+    public final class View: UIView {
+        private let badgeBackground = UIView()
+        private let badgeIcon: UIImageView
+        private let badgeText = ComponentView<Empty>()
+        
+        private var component: BoostIconComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            self.badgeIcon = UIImageView(image: UIImage(bundleImageName: "Premium/BoostButtonIcon"))
+            
+            super.init(frame: frame)
+                                                
+            self.badgeBackground.clipsToBounds = true
+            self.badgeBackground.backgroundColor = UIColor(rgb: 0x9671ff)
+            
+            self.addSubview(self.badgeBackground)
+            self.addSubview(self.badgeIcon)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: BoostIconComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+                                    
+            let textSize = self.badgeText.update(
+                transition: .immediate,
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.text, font: Font.with(size: 10.0, design: .round, weight: .bold), textColor: .white, paragraphAlignment: .left))
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let spacing: CGFloat = 2.0
+            var totalWidth = textSize.width + spacing
+            var iconSize = CGSize()
+            if let icon = self.badgeIcon.image {
+                iconSize = CGSize(width: icon.size.width * 0.9, height: icon.size.height * 0.9)
+                totalWidth += icon.size.width
+            }
+            
+            let size = CGSize(width: totalWidth + 8.0, height: 19.0)
+            
+            let iconFrame = CGRect(x: floorToScreenPixels((size.width - totalWidth) / 2.0 + 1.0), y: 4.0 + UIScreenPixel, width: iconSize.width, height: iconSize.height)
+            self.badgeIcon.frame = iconFrame
+            
+            let textFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + spacing, y: 4.0), size: textSize)
+            
+            if let view = self.badgeText.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                view.frame = textFrame
+            }
+            
+            self.badgeBackground.frame = CGRect(origin: .zero, size: size)
+            self.badgeBackground.layer.cornerRadius = size.height / 2.0
+                        
+            return size
+        }
+    }
+
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

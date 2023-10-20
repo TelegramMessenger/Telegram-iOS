@@ -835,8 +835,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }), nil)
                 }
             })
-        case let .boost(peerId, status, myBoostsStatus):
-            let _ = myBoostsStatus
+        case let .boost(peerId, status, myBoostStatus):
+            let _ = myBoostStatus
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
                 forceDark = true
@@ -847,9 +847,21 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return
                 }
                 
-                var isBoosted = false
-                if status.boostedByMe {
-                    isBoosted = true
+                var myBoostCount: Int32 = 0
+                var availableBoosts: [MyBoostStatus.Boost] = []
+                var occupiedBoosts: [MyBoostStatus.Boost] = []
+                if let myBoostStatus {
+                    for boost in myBoostStatus.boosts {
+                        if let boostPeer = boost.peer {
+                            if boostPeer.id == peer.id {
+                                myBoostCount += 1
+                            } else {
+                                occupiedBoosts.append(boost)
+                            }
+                        } else {
+                            availableBoosts.append(boost)
+                        }
+                    }
                 }
                 
                 var isCurrent = false
@@ -861,22 +873,19 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 var currentLevelBoosts = Int32(status.currentLevelBoosts)
                 var nextLevelBoosts = status.nextLevelBoosts.flatMap(Int32.init)
                 
-                if isBoosted && status.boosts == currentLevelBoosts {
+                if myBoostCount > 0 && status.boosts == currentLevelBoosts {
                     currentLevel = max(0, currentLevel - 1)
                     nextLevelBoosts = currentLevelBoosts
                     currentLevelBoosts = max(0, currentLevelBoosts - 1)
                 }
                 
-                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: isBoosted)
-                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, boosted: true)
-                let nextCount = Int32(status.boosts + 1)
+                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount)
+                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)
+                var nextCount = Int32(status.boosts + 1)
                 
                 var updateImpl: (() -> Void)?
                 var dismissImpl: (() -> Void)?
                 let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), forceDark: forceDark, action: {
-                    if isBoosted {
-                        return true
-                    }
                     let dismiss = false
                     updateImpl?()
                     
@@ -945,8 +954,23 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 updateImpl = { [weak controller] in
                     if let _ = status.nextLevelBoosts {
-                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: []).startStandalone()
-                        controller?.updateSubject(nextSubject, count: nextCount)
+                        if let availableBoost = availableBoosts.first {
+                            let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot]).startStandalone()
+                            controller?.updateSubject(nextSubject, count: nextCount)
+                            
+                            availableBoosts.removeFirst()
+                            nextCount += 1
+                        } else if !occupiedBoosts.isEmpty, let myBoostStatus {
+                            let replaceController = ReplaceBoostScreen(context: context, peerId: peerId, myBoostStatus: myBoostStatus, replaceBoosts: { slots in
+                                let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: slots).startStandalone()
+                                
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "\(slots.count) boosts are reassigned from 1 other channel.", timeout: nil), elevatedLayout: true, position: .bottom, action: { _ in return true })
+                                (navigationController?.viewControllers.last as? ViewController)?.present(undoController, in: .window(.root))
+                            })
+                            dismissImpl?()
+                            navigationController?.pushViewController(replaceController)
+                        }
                     } else {
                         dismissImpl?()
                     }
@@ -974,7 +998,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             let _ = context.engine.payments.applyPremiumGiftCode(slug: slug).startStandalone()
                         },
                         openPeer: { peer in
-                            openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                            if peer.id != context.account.peerId {
+                                openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                            }
                         },
                         openMessage: { messageId in
                             let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))

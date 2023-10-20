@@ -67,7 +67,7 @@ final class ApplyColorFooterItemNode: ItemListControllerFooterItemNode {
         super.init()
         
         self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.separatorNode)
+//        self.addSubnode(self.separatorNode)
         self.addSubnode(self.buttonNode)
         
         self.updateItem()

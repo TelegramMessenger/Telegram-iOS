@@ -5898,7 +5898,10 @@ public final class EmojiPagerContentComponent: Component {
                                 self.visibleItemSelectionLayers[itemId] = itemSelectionLayer
                             }
                             
-                            if case .accent = item.tintMode {
+                            if case let .custom(color) = item.tintMode {
+                                itemSelectionLayer.backgroundColor = color.withMultipliedAlpha(0.1).cgColor
+                                itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
+                            } else if case .accent = item.tintMode {
                                 itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
                                 itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
                             } else {

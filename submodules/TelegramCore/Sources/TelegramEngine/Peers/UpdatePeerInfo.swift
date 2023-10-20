@@ -97,7 +97,7 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
     let accountPeerId = account.peerId
     
     return account.postbox.transaction { transaction -> Signal<Peer, NoError> in
-        guard let peer = transaction.getPeer(account.peerId) as? TelegramChannel else {
+        guard let peer = transaction.getPeer(peerId) as? TelegramChannel else {
             return .complete()
         }
         updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId)], update: { _, updated in

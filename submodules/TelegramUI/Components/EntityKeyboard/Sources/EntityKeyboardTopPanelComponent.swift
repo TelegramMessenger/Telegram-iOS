@@ -281,6 +281,7 @@ final class EntityKeyboardIconTopPanelComponent: Component {
     let icon: Icon
     let theme: PresentationTheme
     let useAccentColor: Bool
+    let customTintColor: UIColor?
     let title: String
     let pressed: () -> Void
     
@@ -288,12 +289,14 @@ final class EntityKeyboardIconTopPanelComponent: Component {
         icon: Icon,
         theme: PresentationTheme,
         useAccentColor: Bool,
+        customTintColor: UIColor?,
         title: String,
         pressed: @escaping () -> Void
     ) {
         self.icon = icon
         self.theme = theme
         self.useAccentColor = useAccentColor
+        self.customTintColor = customTintColor
         self.title = title
         self.pressed = pressed
     }
@@ -306,6 +309,9 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             return false
         }
         if lhs.useAccentColor != rhs.useAccentColor {
+            return false
+        }
+        if lhs.customTintColor != rhs.customTintColor {
             return false
         }
         if lhs.title != rhs.title {
@@ -383,14 +389,18 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             self.component = component
             
             let color: UIColor
-            if itemEnvironment.isHighlighted {
-                if component.useAccentColor {
-                    color = component.theme.list.itemAccentColor
-                } else {
-                    color = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
-                }
+            if let customTintColor = component.customTintColor {
+                color = customTintColor
             } else {
-                color = component.theme.chat.inputMediaPanel.panelIconColor
+                if itemEnvironment.isHighlighted {
+                    if component.useAccentColor {
+                        color = component.theme.list.itemAccentColor
+                    } else {
+                        color = component.theme.chat.inputMediaPanel.panelHighlightedIconColor
+                    }
+                } else {
+                    color = component.theme.chat.inputMediaPanel.panelIconColor
+                }
             }
             
             if self.iconView.tintColor != color {
@@ -1192,6 +1202,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
     
     let id: AnyHashable
     let theme: PresentationTheme
+    let customTintColor: UIColor?
     let items: [Item]
     let containerSideInset: CGFloat
     let defaultActiveItemId: AnyHashable?
@@ -1203,6 +1214,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
     init(
         id: AnyHashable,
         theme: PresentationTheme,
+        customTintColor: UIColor?,
         items: [Item],
         containerSideInset: CGFloat,
         defaultActiveItemId: AnyHashable? = nil,
@@ -1213,6 +1225,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
     ) {
         self.id = id
         self.theme = theme
+        self.customTintColor = customTintColor
         self.items = items
         self.containerSideInset = containerSideInset
         self.defaultActiveItemId = defaultActiveItemId
@@ -1227,6 +1240,9 @@ public final class EntityKeyboardTopPanelComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.customTintColor != rhs.customTintColor {
             return false
         }
         if lhs.items != rhs.items {
@@ -1847,8 +1863,12 @@ public final class EntityKeyboardTopPanelComponent: Component {
         }
         
         func update(component: EntityKeyboardTopPanelComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
-            if self.component?.theme !== component.theme {
-                self.highlightedIconBackgroundView.backgroundColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor
+            if self.component?.theme !== component.theme || self.component?.customTintColor != component.customTintColor {
+                if let customTintColor = component.customTintColor {
+                    self.highlightedIconBackgroundView.backgroundColor = customTintColor.withAlphaComponent(0.1)
+                } else {
+                    self.highlightedIconBackgroundView.backgroundColor = component.theme.chat.inputMediaPanel.panelHighlightedIconBackgroundColor
+                }
             }
             self.component = component
             self.state = state

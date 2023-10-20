@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import ComponentFlow
 import SwiftSignalKit
 import Postbox
 import TelegramCore
@@ -12,23 +13,16 @@ import AccountContext
 import AvatarNode
 
 public final class GiftOptionItem: ListViewItem, ItemListItem {
-    public struct Icon: Equatable {
+    public enum Icon: Equatable {
         public enum Color {
             case blue
             case green
             case red
             case violet
         }
-        public let color: Color
-        public let name: String
         
-        public init(
-            color: Color,
-            name: String
-        ) {
-            self.color = color
-            self.name = name
-        }
+        case peer(EnginePeer)
+        case image(color: Color, name: String)
     }
     
     public enum Font {
@@ -60,6 +54,7 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     let icon: Icon?
     let title: String
     let titleFont: Font
+    let titleBadge: String?
     let subtitle: String?
     let subtitleFont: SubtitleFont
     let subtitleActive: Bool
@@ -69,12 +64,13 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, context: AccountContext, icon: Icon? = nil, title: String, titleFont: Font = .regular, titleBadge: String? = nil, subtitle: String?, subtitleFont: SubtitleFont = .regular, subtitleActive: Bool = false, label: Label? = nil, badge: String? = nil, isSelected: Bool? = nil, sectionId: ItemListSectionId, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
         self.context = context
         self.title = title
         self.titleFont = titleFont
+        self.titleBadge = titleBadge
         self.subtitle = subtitle
         self.subtitleFont = subtitleFont
         self.subtitleActive = subtitleActive
@@ -146,7 +142,9 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
     }
     
     fileprivate var iconNode: ASImageNode?
+    fileprivate var avatarNode: AvatarNode?
     private let titleNode: TextNode
+    private let titleBadge = ComponentView<Empty>()
     private let statusNode: TextNode
     private var statusArrowNode: ASImageNode?
     
@@ -282,7 +280,10 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             }
             
             let verticalInset: CGFloat = 10.0
-            let titleSpacing: CGFloat = 2.0
+            var titleSpacing: CGFloat = 2.0
+            if case .bold = item.titleFont {
+                titleSpacing = 0.0
+            }
             
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let separatorHeight = UIScreenPixel
@@ -331,37 +332,72 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                     
+                    let iconUpdated = currentItem?.icon != item.icon
+                    
                     let iconSize = CGSize(width: 40.0, height: 40.0)
                     if let icon = item.icon {
-                        let iconNode: ASImageNode
-                        
-                        if let current = strongSelf.iconNode {
-                            iconNode = current
-                        } else {
-                            iconNode = ASImageNode()
-                            iconNode.displaysAsynchronously = false
-                            strongSelf.addSubnode(iconNode)
-                            
-                            strongSelf.iconNode = iconNode
-                        }
-                        
-                        let colors: [UIColor]
-                        switch icon.color {
-                        case .blue:
-                            colors = [UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x71d4fc)]
-                        case .green:
-                            colors = [UIColor(rgb: 0x54cb68), UIColor(rgb: 0xa0de7e)]
-                        case .red:
-                            colors = [UIColor(rgb: 0xff516a), UIColor(rgb: 0xff885e)]
-                        case .violet:
-                            colors = [UIColor(rgb: 0xd569ec), UIColor(rgb: 0xe0a2f3)]
-                        }
-                        if iconNode.image == nil {
-                            iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: icon.name), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors)
-                        }
-                        
                         let iconFrame = CGRect(origin: CGPoint(x: leftInset - 3.0 + editingOffset, y: floorToScreenPixels((layout.contentSize.height - iconSize.height) / 2.0)), size: iconSize)
-                        iconNode.frame = iconFrame
+                        
+                        switch icon {
+                        case let .peer(peer):
+                            if let iconNode = strongSelf.iconNode {
+                                strongSelf.iconNode = nil
+                                iconNode.removeFromSupernode()
+                            }
+                            
+                            let avatarNode: AvatarNode
+                            if let current = strongSelf.avatarNode {
+                                avatarNode = current
+                            } else {
+                                avatarNode = AvatarNode(font: avatarPlaceholderFont(size: floor(40.0 * 16.0 / 37.0)))
+                                strongSelf.addSubnode(avatarNode)
+                                
+                                strongSelf.avatarNode = avatarNode
+                            }
+                            avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer)
+                            avatarNode.frame = iconFrame
+                        case let .image(color, name):
+                            if let avatarNode = strongSelf.avatarNode {
+                                strongSelf.avatarNode = nil
+                                avatarNode.removeFromSupernode()
+                            }
+                            
+                            let iconNode: ASImageNode
+                            if let current = strongSelf.iconNode {
+                                iconNode = current
+                            } else {
+                                iconNode = ASImageNode()
+                                iconNode.displaysAsynchronously = false
+                                strongSelf.addSubnode(iconNode)
+                                
+                                strongSelf.iconNode = iconNode
+                            }
+                            
+                            let colors: [UIColor]
+                            switch color {
+                            case .blue:
+                                colors = [UIColor(rgb: 0x2a9ef1), UIColor(rgb: 0x71d4fc)]
+                            case .green:
+                                colors = [UIColor(rgb: 0x54cb68), UIColor(rgb: 0xa0de7e)]
+                            case .red:
+                                colors = [UIColor(rgb: 0xff516a), UIColor(rgb: 0xff885e)]
+                            case .violet:
+                                colors = [UIColor(rgb: 0xd569ec), UIColor(rgb: 0xe0a2f3)]
+                            }
+                            if iconNode.image == nil || iconUpdated {
+                                iconNode.image = generateAvatarImage(size: iconSize, icon: generateTintedImage(image: UIImage(bundleImageName: name), color: .white), iconScale: 1.0, cornerRadius: 20.0, color: .blue, customColors: colors)
+                            }
+                            iconNode.frame = iconFrame
+                        }
+                    } else {
+                        if let avatarNode = strongSelf.avatarNode {
+                            strongSelf.avatarNode = nil
+                            avatarNode.removeFromSupernode()
+                        }
+                        if let iconNode = strongSelf.iconNode {
+                            strongSelf.iconNode = nil
+                            iconNode.removeFromSupernode()
+                        }
                     }
                     
                     if let selectableControlSizeAndApply = selectableControlSizeAndApply {
@@ -445,7 +481,8 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         titleVerticalOriginY = floorToScreenPixels((contentSize.height - titleLayout.size.height) / 2.0)
                     }
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: titleVerticalOriginY), size: titleLayout.size))
+                    let titleFrame = CGRect(origin: CGPoint(x: leftInset + editingOffset + avatarInset, y: titleVerticalOriginY), size: titleLayout.size)
+                    transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                     
                     var badgeOffset: CGFloat = 0.0
                     if badgeLayout.size.width > 0.0 {
@@ -528,6 +565,29 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: strongSelf.backgroundNode.frame.height + UIScreenPixel + UIScreenPixel))
                     
                     strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    
+                    if let badge = item.titleBadge {
+                        let badgeSize = strongSelf.titleBadge.update(
+                            transition: .immediate,
+                            component: AnyComponent(
+                                BoostIconComponent(text: badge)
+                            ),
+                            environment: {},
+                            containerSize: CGSize(width: params.width, height: 100.0)
+                        )
+                        if let view = strongSelf.titleBadge.view {
+                            if view.superview == nil {
+                                strongSelf.view.addSubview(view)
+                            }
+                            
+                            let badgeFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - badgeSize.height / 2.0) - 1.0), size: badgeSize)
+                            view.frame = badgeFrame
+                        }
+                    } else {
+                        if let view = strongSelf.titleBadge.view {
+                            view.removeFromSuperview()
+                        }
+                    }
                 }
             })
         }
