@@ -8377,9 +8377,9 @@ public extension Api.functions.photos {
                 }
 }
 public extension Api.functions.premium {
-                static func applyBoost(flags: Int32, slots: [Int32]?, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func applyBoost(flags: Int32, slots: [Int32]?, peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.premium.MyBoosts>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(407618489)
+                    buffer.appendInt32(1803396934)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(slots!.count))
@@ -8387,11 +8387,11 @@ public extension Api.functions.premium {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }}
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "premium.applyBoost", parameters: [("flags", String(describing: flags)), ("slots", String(describing: slots)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "premium.applyBoost", parameters: [("flags", String(describing: flags)), ("slots", String(describing: slots)), ("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.premium.MyBoosts? in
                         let reader = BufferReader(buffer)
-                        var result: Api.Bool?
+                        var result: Api.premium.MyBoosts?
                         if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                            result = Api.parse(reader, signature: signature) as? Api.premium.MyBoosts
                         }
                         return result
                     })

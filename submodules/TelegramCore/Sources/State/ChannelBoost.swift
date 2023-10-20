@@ -96,13 +96,13 @@ func _internal_getChannelBoostStatus(account: Account, peerId: PeerId) -> Signal
     }
 }
 
-func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32]) -> Signal<Bool, NoError> {
+func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32]) -> Signal<MyBoostStatus?, NoError> {
     return account.postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> mapToSignal { inputPeer -> Signal<Bool, NoError> in
+    |> mapToSignal { inputPeer -> Signal<MyBoostStatus?, NoError> in
         guard let inputPeer = inputPeer else {
-            return .single(false)
+            return .complete()
         }
         var flags: Int32 = 0
         if !slots.isEmpty {
@@ -110,14 +110,18 @@ func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32
         }
         
         return account.network.request(Api.functions.premium.applyBoost(flags: flags, slots: !slots.isEmpty ? slots : nil, peer: inputPeer))
-        |> `catch` { error -> Signal<Api.Bool, NoError> in
-            return .single(.boolFalse)
+        |> map (Optional.init)
+        |> `catch` { error -> Signal<Api.premium.MyBoosts?, NoError> in
+            return .complete()
         }
-        |> map { result -> Bool in
-            if case .boolTrue = result {
-                return true
+        |> mapToSignal { result -> Signal<MyBoostStatus?, NoError> in
+            if let result = result {
+                return account.postbox.transaction { transaction -> MyBoostStatus? in
+                    return MyBoostStatus(apiMyBoostStatus: result, accountPeerId: account.peerId, transaction: transaction)
+                }
+            } else {
+                return .single(nil)
             }
-            return false
         }
     }
 }
@@ -133,24 +137,7 @@ func _internal_getMyBoostStatus(account: Account) -> Signal<MyBoostStatus?, NoEr
             return .single(nil)
         }
         return account.postbox.transaction { transaction -> MyBoostStatus? in
-            var boostsResult: [MyBoostStatus.Boost] = []
-            switch result {
-            case let .myBoosts(myBoosts, chats, users):
-                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
-                updatePeers(transaction: transaction, accountPeerId: account.peerId, peers: parsedPeers)
-                for boost in myBoosts {
-                    let _ = boost
-                    switch boost {
-                    case let .myBoost(_, slot, peer, date, expires, cooldownUntilDate):
-                        var boostPeer: EnginePeer?
-                        if let peerId = peer?.peerId, let peer = transaction.getPeer(peerId) {
-                            boostPeer = EnginePeer(peer)
-                        }
-                        boostsResult.append(MyBoostStatus.Boost(slot: slot, peer: boostPeer, date: date, expires: expires, cooldownUntil: cooldownUntilDate))
-                    }
-                }
-            }
-            return MyBoostStatus(boosts: boostsResult)
+            return MyBoostStatus(apiMyBoostStatus: result, accountPeerId: account.peerId, transaction: transaction)
         }
     }
 }
@@ -159,6 +146,7 @@ private final class ChannelBoostersContextImpl {
     private let queue: Queue
     private let account: Account
     private let peerId: PeerId
+    private let gift: Bool
     private let disposable = MetaDisposable()
     private let updateDisposables = DisposableSet()
     private var isLoadingMore: Bool = false
@@ -172,21 +160,22 @@ private final class ChannelBoostersContextImpl {
     
     let state = Promise<ChannelBoostersContext.State>()
     
-    init(queue: Queue, account: Account, peerId: PeerId) {
+    init(queue: Queue, account: Account, peerId: PeerId, gift: Bool) {
         self.queue = queue
         self.account = account
         self.peerId = peerId
+        self.gift = gift
                 
         self.count = 0
             
         self.isLoadingMore = true
         self.disposable.set((account.postbox.transaction { transaction -> (peers: [ChannelBoostersContext.State.Boost], count: Int32, canLoadMore: Bool)? in
             let cachedResult = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedChannelBoosts, key: CachedChannelBoosters.key(peerId: peerId)))?.get(CachedChannelBoosters.self)
-            if let cachedResult = cachedResult {
+            if let cachedResult = cachedResult, !gift {
                 var result: [ChannelBoostersContext.State.Boost] = []
                 for boost in cachedResult.boosts {
                     let peer = boost.peerId.flatMap { transaction.getPeer($0) }
-                    result.append(ChannelBoostersContext.State.Boost(flags: ChannelBoostersContext.State.Boost.Flags(rawValue: boost.flags), id: boost.id, peer: peer.flatMap { EnginePeer($0) }, date: boost.date, expires: boost.expires))
+                    result.append(ChannelBoostersContext.State.Boost(flags: ChannelBoostersContext.State.Boost.Flags(rawValue: boost.flags), id: boost.id, peer: peer.flatMap { EnginePeer($0) }, date: boost.date, expires: boost.expires, multiplier: boost.multiplier))
                 }
                 return (result, cachedResult.count, true)
             } else {
@@ -229,6 +218,7 @@ private final class ChannelBoostersContextImpl {
         let account = self.account
         let accountPeerId = account.peerId
         let peerId = self.peerId
+        let gift = self.gift
         let populateCache = self.populateCache
         
         if self.loadedFromCache {
@@ -244,7 +234,10 @@ private final class ChannelBoostersContextImpl {
                 let offset = lastOffset ?? ""
                 let limit: Int32 = lastOffset == nil ? 25 : 50
                 
-                let flags: Int32 = 0
+                var flags: Int32 = 0
+                if gift {
+                    flags |= (1 << 0)
+                }
                 let signal = account.network.request(Api.functions.premium.getBoostsList(flags: flags, peer: inputPeer, offset: offset, limit: limit))
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<Api.premium.BoostsList?, NoError> in
@@ -261,7 +254,7 @@ private final class ChannelBoostersContextImpl {
                             var resultBoosts: [ChannelBoostersContext.State.Boost] = []
                             for boost in boosts {
                                 switch boost {
-                                case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug):
+                                case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug, multiplier):
                                     let _ = giveawayMessageId
                                     let _ = usedGiftSlug
                                     var boostFlags: ChannelBoostersContext.State.Boost.Flags = []
@@ -281,7 +274,7 @@ private final class ChannelBoostersContextImpl {
                                     if (flags & (1 << 3)) != 0 {
                                         boostFlags.insert(.isUnclaimed)
                                     }
-                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires))
+                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1))
                                 }
                             }
                             if populateCache {
@@ -363,6 +356,7 @@ public final class ChannelBoostersContext {
             public var peer: EnginePeer?
             public var date: Int32
             public var expires: Int32
+            public var multiplier: Int32
         }
         public var boosts: [Boost]
         public var isLoadingMore: Bool
@@ -390,10 +384,10 @@ public final class ChannelBoostersContext {
         }
     }
     
-    public init(account: Account, peerId: PeerId) {
+    public init(account: Account, peerId: PeerId, gift: Bool) {
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return ChannelBoostersContextImpl(queue: queue, account: account, peerId: peerId)
+            return ChannelBoostersContextImpl(queue: queue, account: account, peerId: peerId, gift: gift)
         })
     }
     
@@ -423,6 +417,7 @@ private final class CachedChannelBoosters: Codable {
             case peerId
             case date
             case expires
+            case multiplier
         }
         
         var flags: Int32
@@ -430,13 +425,15 @@ private final class CachedChannelBoosters: Codable {
         var peerId: EnginePeer.Id?
         var date: Int32
         var expires: Int32
+        var multiplier: Int32
         
-        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32) {
+        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32, multiplier: Int32) {
             self.flags = flags
             self.id = id
             self.peerId = peerId
             self.date = date
             self.expires = expires
+            self.multiplier = multiplier
         }
 
         init(from decoder: Decoder) throws {
@@ -447,6 +444,7 @@ private final class CachedChannelBoosters: Codable {
             self.peerId = try container.decodeIfPresent(Int64.self, forKey: .peerId).flatMap { EnginePeer.Id($0) }
             self.date = try container.decode(Int32.self, forKey: .date)
             self.expires = try container.decode(Int32.self, forKey: .expires)
+            self.multiplier = try container.decode(Int32.self, forKey: .multiplier)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -457,6 +455,7 @@ private final class CachedChannelBoosters: Codable {
             try container.encodeIfPresent(self.peerId?.toInt64(), forKey: .peerId)
             try container.encode(self.date, forKey: .date)
             try container.encode(self.expires, forKey: .expires)
+            try container.encode(self.multiplier, forKey: .multiplier)
         }
     }
     
@@ -470,7 +469,7 @@ private final class CachedChannelBoosters: Codable {
     }
     
     init(boosts: [ChannelBoostersContext.State.Boost], count: Int32) {
-        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires) }
+        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires, multiplier: $0.multiplier) }
         self.count = count
     }
     
@@ -486,5 +485,27 @@ private final class CachedChannelBoosters: Codable {
 
         try container.encode(self.boosts, forKey: .boosts)
         try container.encode(self.count, forKey: .count)
+    }
+}
+
+extension MyBoostStatus {
+    init(apiMyBoostStatus: Api.premium.MyBoosts, accountPeerId: PeerId, transaction: Transaction) {
+        var boostsResult: [MyBoostStatus.Boost] = []
+        switch apiMyBoostStatus {
+        case let .myBoosts(myBoosts, chats, users):
+            let parsedPeers = AccumulatedPeers(transaction: transaction, chats: chats, users: users)
+            updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
+            for boost in myBoosts {
+                switch boost {
+                case let .myBoost(_, slot, peer, date, expires, cooldownUntilDate):
+                    var boostPeer: EnginePeer?
+                    if let peerId = peer?.peerId, let peer = transaction.getPeer(peerId) {
+                        boostPeer = EnginePeer(peer)
+                    }
+                    boostsResult.append(MyBoostStatus.Boost(slot: slot, peer: boostPeer, date: date, expires: expires, cooldownUntil: cooldownUntilDate))
+                }
+            }
+        }
+        self.boosts = boostsResult
     }
 }

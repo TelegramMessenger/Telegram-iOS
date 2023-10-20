@@ -1238,7 +1238,7 @@ public extension Api {
 }
 public extension Api {
     indirect enum ChatInvite: TypeConstructorDescription {
-        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32?)
+        case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?, color: Int32)
         case chatInviteAlready(chat: Api.Chat)
         case chatInvitePeek(chat: Api.Chat, expires: Int32)
     
@@ -1246,7 +1246,7 @@ public extension Api {
     switch self {
                 case .chatInvite(let flags, let title, let about, let photo, let participantsCount, let participants, let color):
                     if boxed {
-                        buffer.appendInt32(808708181)
+                        buffer.appendInt32(-840897472)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -1258,7 +1258,7 @@ public extension Api {
                     for item in participants! {
                         item.serialize(buffer, true)
                     }}
-                    if Int(flags) & Int(1 << 10) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
+                    serializeInt32(color, buffer: buffer, boxed: false)
                     break
                 case .chatInviteAlready(let chat):
                     if boxed {
@@ -1305,16 +1305,16 @@ public extension Api {
                 _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
             } }
             var _7: Int32?
-            if Int(_1!) & Int(1 << 10) != 0 {_7 = reader.readInt32() }
+            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 5) == 0) || _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 4) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 10) == 0) || _7 != nil
+            let _c7 = _7 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6, color: _7)
+                return Api.ChatInvite.chatInvite(flags: _1!, title: _2!, about: _3, photo: _4!, participantsCount: _5!, participants: _6, color: _7!)
             }
             else {
                 return nil
