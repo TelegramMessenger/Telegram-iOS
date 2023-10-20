@@ -65,7 +65,13 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
     if linkColor.argb == baseColor.argb {
         underlineAllLinks = true
     }
-    var fontAttributes: [NSRange: ChatTextFontAttributes] = [:]
+    
+    var fontAttributeMask: [ChatTextFontAttributes] = Array(repeating: [], count: string.length)
+    let addFontAttributes: (NSRange, ChatTextFontAttributes) -> Void = { range, attributes in
+        for i in range.lowerBound ..< range.upperBound {
+            fontAttributeMask[i].formUnion(attributes)
+        }
+    }
     
     for i in 0 ..< entities.count {
         if skipEntity {
@@ -125,17 +131,9 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: url, range: range)
                 }
             case .Bold:
-                if let fontAttribute = fontAttributes[range] {
-                    fontAttributes[range] = fontAttribute.union(.bold)
-                } else {
-                    fontAttributes[range] = .bold
-                }
+                addFontAttributes(range, .bold)
             case .Italic:
-                if let fontAttribute = fontAttributes[range] {
-                    fontAttributes[range] = fontAttribute.union(.italic)
-                } else {
-                    fontAttributes[range] = .italic
-                }
+                addFontAttributes(range, .italic)
             case .Mention:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -214,11 +212,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
             case .BlockQuote:
-                if let fontAttribute = fontAttributes[range] {
-                    fontAttributes[range] = fontAttribute.union(.blockQuote)
-                } else {
-                    fontAttributes[range] = .blockQuote
-                }
+                addFontAttributes(range, .blockQuote)
                 
                 string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(title: nil, color: baseQuoteTintColor), range: range)
             case .BankCard:
@@ -263,71 +257,45 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 break
         }
         
-        var addedAttributes: [(NSRange, ChatTextFontAttributes)] = []
-        func addFont(ranges: [NSRange], fontAttributes: ChatTextFontAttributes) {
-            for range in ranges {
-                var font: UIFont?
-                
-                var fontAttributes = fontAttributes
-                let initialFontAttributes = fontAttributes
-                var isQuote = false
-                if fontAttributes.contains(.blockQuote) {
-                    isQuote = true
-                    fontAttributes.remove(.blockQuote)
-                }
-                if fontAttributes == [.bold, .italic] {
-                    font = boldItalicFont
-                } else if fontAttributes == [.bold] {
-                    font = boldFont
-                    addedAttributes.append((range, initialFontAttributes))
-                } else if fontAttributes == [.italic] {
-                    font = italicFont
-                    addedAttributes.append((range, initialFontAttributes))
-                } else {
-                    font = baseFont
-                }
-                
-                if adjustQuoteFontSize, let fontValue = font, isQuote {
-                    font = fontValue.withSize(round(fontValue.pointSize * 0.8235294117647058))
-                }
-                
-                if let font = font {
-                    string.addAttribute(NSAttributedString.Key.font, value: font, range: range)
-                }
-            }
-        }
-        
-        for (range, fontAttributes) in fontAttributes {
-            var ranges = [range]
+        func setFont(range: NSRange, fontAttributes: ChatTextFontAttributes) {
+            var font: UIFont
+            
+            var isQuote = false
             var fontAttributes = fontAttributes
-            if fontAttributes != [.bold, .italic] {
-                for (existingRange, existingAttributes) in addedAttributes {
-                    if let intersection = existingRange.intersection(range) {
-                        if intersection.length == range.length {
-                            if existingAttributes == .bold || existingAttributes == .italic {
-                                fontAttributes.insert(existingAttributes)
-                            }
-                        } else {
-                            var fontAttributes = fontAttributes
-                            if existingAttributes == .bold || existingAttributes == .italic {
-                                fontAttributes.insert(existingAttributes)
-                            }
-                            addFont(ranges: [intersection], fontAttributes: fontAttributes)
-                            
-                            ranges = []
-                            if range.upperBound > existingRange.lowerBound {
-                                ranges.append(NSRange(location: range.lowerBound, length: existingRange.lowerBound - range.lowerBound))
-                            }
-                            if range.upperBound > existingRange.upperBound {
-                                ranges.append(NSRange(location: existingRange.upperBound, length: range.upperBound - existingRange.upperBound))
-                            }
-                        }
-                        break
-                    }
-                }
+            if fontAttributes.contains(.blockQuote) {
+                fontAttributes.remove(.blockQuote)
+                isQuote = true
+            }
+            if fontAttributes == [.bold, .italic] {
+                font = boldItalicFont
+            } else if fontAttributes == [.bold] {
+                font = boldFont
+            } else if fontAttributes == [.italic] {
+                font = italicFont
+            } else if fontAttributes == [.monospace] {
+                font = fixedFont
+            } else {
+                font = baseFont
             }
             
-            addFont(ranges: ranges, fontAttributes: fontAttributes)
+            if adjustQuoteFontSize, isQuote {
+                font = font.withSize(round(font.pointSize * 0.8235294117647058))
+            }
+            
+            string.addAttribute(.font, value: font, range: range)
+        }
+        
+        var currentAttributeSpan: (startIndex: Int, attributes: ChatTextFontAttributes)?
+        for i in 0 ..< fontAttributeMask.count {
+            if fontAttributeMask[i] != currentAttributeSpan?.attributes {
+                if let currentAttributeSpan {
+                    setFont(range: NSRange(location: currentAttributeSpan.startIndex, length: i - currentAttributeSpan.startIndex), fontAttributes: currentAttributeSpan.attributes)
+                }
+                currentAttributeSpan = (i, fontAttributeMask[i])
+            }
+        }
+        if let currentAttributeSpan {
+            setFont(range: NSRange(location: currentAttributeSpan.startIndex, length: fontAttributeMask.count - currentAttributeSpan.startIndex), fontAttributes: currentAttributeSpan.attributes)
         }
     }
     return string

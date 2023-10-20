@@ -3858,8 +3858,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
-                                return .action({
-                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
+                                return .action({ [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    var progress: Promise<Bool>?
+                                    if let replyInfoNode = self.replyInfoNode {
+                                        progress = replyInfoNode.makeProgress()
+                                    }
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text, progress: progress))
                                 })
                             } else if let attribute = attribute as? ReplyStoryAttribute {
                                 return .action({

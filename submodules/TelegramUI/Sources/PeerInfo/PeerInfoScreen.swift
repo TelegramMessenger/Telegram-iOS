@@ -4516,7 +4516,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openUrl(url: String, concealed: Bool, external: Bool, forceExternal: Bool = false, commit: @escaping () -> Void = {}) {
-        openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, concealed: concealed, present: { [weak self] c in
+        let _ = openUserGeneratedUrl(context: self.context, peerId: self.peerId, url: url, concealed: concealed, present: { [weak self] c in
             self?.controller?.present(c, in: .window(.root))
         }, openResolved: { [weak self] tempResolved in
             guard let strongSelf = self else {

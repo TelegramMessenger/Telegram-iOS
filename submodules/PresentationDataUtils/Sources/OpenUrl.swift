@@ -6,33 +6,53 @@ import AccountContext
 import OverlayStatusController
 import UrlWhitelist
 
-public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void) {
+public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: String, concealed: Bool, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, present: @escaping (ViewController) -> Void, openResolved: @escaping (ResolvedUrl) -> Void, progress: Promise<Bool>? = nil) -> Disposable {
     var concealed = concealed
     
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
-    let openImpl: () -> Void = {
+    let openImpl: () -> Disposable = {
         let disposable = MetaDisposable()
         var cancelImpl: (() -> Void)?
-        let progressSignal = Signal<Never, NoError> { subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
-                cancelImpl?()
-            }))
-            present(controller)
-            return ActionDisposable { [weak controller] in
-                Queue.mainQueue().async() {
-                    controller?.dismiss()
+        let progressSignal: Signal<Never, NoError>
+        
+        if let progress {
+            progressSignal = Signal<Never, NoError> { subscriber in
+                progress.set(.single(true))
+                return ActionDisposable {
+                    progress.set(.single(false))
                 }
             }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.05, queue: Queue.mainQueue())
+        } else {
+            progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                present(controller)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.1, queue: Queue.mainQueue())
         }
-        |> runOn(Queue.mainQueue())
-        |> delay(0.15, queue: Queue.mainQueue())
         let progressDisposable = progressSignal.start()
         
         cancelImpl = {
             disposable.dispose()
         }
-        disposable.set((context.sharedContext.resolveUrl(context: context, peerId: peerId, url: url, skipUrlAuth: skipUrlAuth)
+        
+        var resolveSignal: Signal<ResolvedUrl, NoError>
+        resolveSignal = context.sharedContext.resolveUrl(context: context, peerId: peerId, url: url, skipUrlAuth: skipUrlAuth)
+        #if DEBUG
+        resolveSignal = resolveSignal |> delay(2.0, queue: .mainQueue())
+        #endif
+        
+        disposable.set((resolveSignal
         |> afterDisposed {
             Queue.mainQueue().async {
                 progressDisposable.dispose()
@@ -42,6 +62,10 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
             progressDisposable.dispose()
             openResolved(result)
         }))
+        
+        return ActionDisposable {
+            cancelImpl?()
+        }
     }
     
     let (parsedString, parsedConcealed) = parseUrl(url: url, wasConcealed: concealed)
@@ -55,10 +79,12 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
         }
         var displayUrl = rawDisplayUrl
         displayUrl = displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
+        let disposable = MetaDisposable()
         present(textAlertController(context: context, title: nil, text: presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-            openImpl()
+            disposable.set(openImpl())
         })]))
+        return disposable
     } else {
-        openImpl()
+        return openImpl()
     }
 }

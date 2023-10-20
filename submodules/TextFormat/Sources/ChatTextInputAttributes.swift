@@ -57,17 +57,40 @@ public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttrib
     return result
 }
 
-public struct ChatTextFontAttributes: OptionSet {
-    public var rawValue: Int32 = 0
+public struct ChatTextFontAttributes: OptionSet, Hashable, Sequence {
+    public var rawValue: UInt32 = 0
     
-    public init(rawValue: Int32) {
+    public init(rawValue: UInt32) {
         self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
     }
     
     public static let bold = ChatTextFontAttributes(rawValue: 1 << 0)
     public static let italic = ChatTextFontAttributes(rawValue: 1 << 1)
     public static let monospace = ChatTextFontAttributes(rawValue: 1 << 2)
     public static let blockQuote = ChatTextFontAttributes(rawValue: 1 << 3)
+    
+    public func makeIterator() -> AnyIterator<ChatTextFontAttributes> {
+        var index = 0
+        return AnyIterator { () -> ChatTextFontAttributes? in
+            while index < 31 {
+                let currentTags = self.rawValue >> UInt32(index)
+                let tag = ChatTextFontAttributes(rawValue: 1 << UInt32(index))
+                index += 1
+                if currentTags == 0 {
+                    break
+                }
+                
+                if (currentTags & 1) != 0 {
+                    return tag
+                }
+            }
+            return nil
+        }
+    }
 }
 
 public func textAttributedStringForStateText(_ stateText: NSAttributedString, fontSize: CGFloat, textColor: UIColor, accentTextColor: UIColor, writingDirection: NSWritingDirection?, spoilersRevealed: Bool, availableEmojis: Set<String>, emojiViewProvider: ((ChatTextInputTextCustomEmojiAttribute) -> UIView)?) -> NSAttributedString {
