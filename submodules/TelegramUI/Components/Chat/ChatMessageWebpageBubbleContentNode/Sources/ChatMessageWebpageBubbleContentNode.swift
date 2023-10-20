@@ -54,12 +54,17 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         item.controllerInteraction.openTheme(item.message)
                         return
                     } else {
-                        if content.title != nil || content.text != nil {
+                        if content.embedUrl == nil && (content.title != nil || content.text != nil) {
                             var isConcealed = true
                             if item.message.text.contains(content.url) {
                                 isConcealed = false
                             }
-                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed))
+                            if let attribute = item.message.webpagePreviewAttribute {
+                                if attribute.isSafe {
+                                    isConcealed = false
+                                }
+                            }
+                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
                             return
                         }
                     }
@@ -100,6 +105,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             if item.message.text.contains(webpage.url) {
                                 isConcealed = false
                             }
+                            if let attribute = item.message.webpagePreviewAttribute {
+                                if attribute.isSafe {
+                                    isConcealed = false
+                                }
+                            }
                             item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: webpage.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
                         }
                     }
@@ -118,6 +128,11 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
             var isConcealed = true
             if item.message.text.contains(content.url) {
                 isConcealed = false
+            }
+            if let attribute = item.message.webpagePreviewAttribute {
+                if attribute.isSafe {
+                    isConcealed = false
+                }
             }
             return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)), activate: { [weak self] in
                 guard let self else {

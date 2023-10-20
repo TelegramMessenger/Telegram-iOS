@@ -742,9 +742,15 @@ final class WatchLocationHandler: WatchRequestHandler {
                 |> mapToSignal({ context -> Signal<[ChatContextResultMessage], NoError> in
                     if let context = context {
                         return context.engine.peers.resolvePeerByName(name: "foursquare")
+                        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                            guard case let .result(result) = result else {
+                                return .complete()
+                            }
+                            return .single(result)
+                        }
                         |> take(1)
                         |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
-                            guard let peer = peer else {
+                            guard let peer = peer?._asPeer() else {
                                 return .single(nil)
                             }
                             return context.engine.messages.requestChatContextResults(botId: peer.id, peerId: context.account.peerId, query: "", location: .single((args.coordinate.latitude, args.coordinate.longitude)), offset: "")

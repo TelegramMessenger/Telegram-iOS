@@ -956,7 +956,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 currentRect = currentRect.insetBy(dx: -quoteHighlightingNode.inset, dy: -quoteHighlightingNode.inset)
                 let innerRect = currentRect.offsetBy(dx: quoteHighlightingNode.frame.minX, dy: quoteHighlightingNode.frame.minY)
                 
-                quoteHighlightingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08, delay: 0.1)
+                quoteHighlightingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, delay: 0.04)
                 
                 let fromScale = CGPoint(x: sourceFrame.width / innerRect.width, y: sourceFrame.height / innerRect.height)
                 

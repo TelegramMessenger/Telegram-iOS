@@ -426,8 +426,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                 return false
                             }
                             if let attribute = attribute as? ReplyMessageAttribute {
-                                if !forwardedMessageIds.contains(attribute.messageId) || hideNames {
-                                    return false
+                                if attribute.quote != nil {
+                                } else {
+                                    if !forwardedMessageIds.contains(attribute.messageId) || hideNames {
+                                        return false
+                                    }
                                 }
                             }
                             if attribute is ReplyMarkupMessageAttribute {
@@ -535,7 +538,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     attributes.append(TextEntitiesMessageAttribute(entities: options.messageEntities))
                     
-                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !options.linkBelowText, forceLargeMedia: options.largeMedia, isManuallyAdded: true))
+                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !options.linkBelowText, forceLargeMedia: options.largeMedia, isManuallyAdded: true, isSafe: false))
                     
                     if let replyMessage {
                         associatedMessages[replyMessage.id] = replyMessage
@@ -3436,7 +3439,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
                                 } else {
                                     webpage = urlPreview.webPage
-                                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true))
+                                    attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true, isSafe: false))
                                 }
                             }
                             

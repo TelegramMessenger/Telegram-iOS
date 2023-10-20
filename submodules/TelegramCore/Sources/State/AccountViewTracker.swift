@@ -408,7 +408,10 @@ public final class AccountViewTracker {
                 for messageId in addedMessageIds {
                     if self.webpageDisposables[messageId] == nil {
                         if let (_, url) = localWebpages[messageId] {
-                            self.webpageDisposables[messageId] = (webpagePreview(account: account, url: url) |> mapToSignal { webpage -> Signal<Void, NoError> in
+                            self.webpageDisposables[messageId] = (webpagePreview(account: account, url: url) |> mapToSignal { result -> Signal<Void, NoError> in
+                                guard case let .result(webpage) = result else {
+                                    return .complete()
+                                }
                                 return account.postbox.transaction { transaction -> Void in
                                     if let webpage = webpage {
                                         transaction.updateMessage(messageId, update: { currentMessage in

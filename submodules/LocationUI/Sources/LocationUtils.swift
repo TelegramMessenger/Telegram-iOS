@@ -49,7 +49,12 @@ public func nearbyVenues(context: AccountContext, story: Bool = false, latitude:
     return botUsername
     |> mapToSignal { botUsername in
         return context.engine.peers.resolvePeerByName(name: botUsername)
-        |> take(1)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
         |> mapToSignal { peer -> Signal<ChatContextResultCollection?, NoError> in
             guard let peer = peer else {
                 return .single(nil)

@@ -591,227 +591,277 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
     return nil
 }
 
-private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolvedUrl?, NoError> {
+private enum ResolveInternalUrlResult {
+    case progress
+    case result(ResolvedUrl?)
+}
+
+private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl) -> Signal<ResolveInternalUrlResult, NoError> {
     switch url {
         case let .phone(phone, attach, startAttach):
             return context.engine.peers.resolvePeerByPhone(phone: phone)
-            |> take(1)
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+            |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 if let peer = peer?._asPeer() {
                     if let attach = attach {
                         return context.engine.peers.resolvePeerByName(name: attach)
-                        |> take(1)
-                        |> map { botPeer -> ResolvedUrl? in
-                            if let botPeer = botPeer?._asPeer() {
-                                return .peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false)))
-                            } else {
-                                return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                        |> map { result -> ResolveInternalUrlResult in
+                            switch result {
+                            case .progress:
+                                return .progress
+                            case let .result(botPeer):
+                                if let botPeer = botPeer?._asPeer() {
+                                    return .result(.peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false))))
+                                } else {
+                                    return .result(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                }
                             }
                         }
                     } else {
-                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                        return .single(.result(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))))
                     }
                 } else {
-                    return .single(.peer(nil, .info))
+                    return .single(.result(.peer(nil, .info)))
                 }
             }
         case let .peer(reference, parameter):
-            let resolvedPeer: Signal<Peer?, NoError>
+            let resolvedPeer: Signal<ResolvePeerResult, NoError>
             switch reference {
             case let .name(name):
                 resolvedPeer = context.engine.peers.resolvePeerByName(name: name)
-                |> take(1)
-                |> mapToSignal { peer -> Signal<Peer?, NoError> in
-                    return .single(peer?._asPeer())
+                |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
+                    switch result {
+                    case .progress:
+                        return .single(.progress)
+                    case let .result(peer):
+                        return .single(.result(peer))
+                    }
                 }
             case let .id(id):
                 if id.namespace == Namespaces.Peer.CloudChannel {
                     resolvedPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
-                    |> mapToSignal { peer -> Signal<Peer?, NoError> in
-                        let foundPeer: Signal<Peer?, NoError>
+                    |> mapToSignal { peer -> Signal<ResolvePeerResult, NoError> in
+                        let foundPeer: Signal<ResolvePeerResult, NoError>
                         if let peer = peer {
-                            foundPeer = .single(peer._asPeer())
+                            foundPeer = .single(.result(peer))
                         } else {
-                            foundPeer = TelegramEngine(account: context.account).peers.findChannelById(channelId: id.id._internalGetInt64Value())
-                            |> map { peer -> Peer? in
-                                return peer?._asPeer()
-                            }
+                            foundPeer = .single(.progress) |> then(context.engine.peers.findChannelById(channelId: id.id._internalGetInt64Value())
+                            |> map { peer -> ResolvePeerResult in
+                                return .result(peer)
+                            })
                         }
                         return foundPeer
                     }
                 } else {
-                    resolvedPeer = .single(nil)
+                    resolvedPeer = .single(.result(nil))
                 }
             }
         
             return resolvedPeer
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+            |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                guard case let .result(peer) = result else {
+                    return .single(.progress)
+                }
+                
                 if let peer = peer {
                     if let parameter = parameter {
                         switch parameter {
                             case let .botStart(payload):
-                                return .single(.botStart(peer: peer, payload: payload))
+                                return .single(.result(.botStart(peer: peer._asPeer(), payload: payload)))
                             case let .groupBotStart(payload, adminRights):
-                                return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
+                                return .single(.result(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights)))
                             case let .gameStart(game):
-                                return .single(.gameStart(peerId: peer.id, game: game))
+                                return .single(.result(.gameStart(peerId: peer.id, game: game)))
                             case let .attachBotStart(name, payload):
                                 return context.engine.peers.resolvePeerByName(name: name)
-                                |> take(1)
-                                |> mapToSignal { botPeer -> Signal<Peer?, NoError> in
-                                    return .single(botPeer?._asPeer())
-                                }
-                                |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
-                                    if let botPeer = botPeer {
-                                        return .single(.peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
-                                    } else {
-                                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                |> mapToSignal { botPeerResult -> Signal<ResolveInternalUrlResult, NoError> in
+                                    switch botPeerResult {
+                                    case .progress:
+                                        return .single(.progress)
+                                    case let .result(botPeer):
+                                        if let botPeer = botPeer {
+                                            return .single(.result(.peer(peer._asPeer(), .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false)))))
+                                        } else {
+                                            return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
+                                        }
                                     }
                                 }
                             case let .appStart(name, payload):
-                                return context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
+                                return .single(.progress) |> then(context.engine.messages.getBotApp(botId: peer.id, shortName: name, cached: false)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<BotApp?, NoError> in
                                     return .single(nil)
                                 }
-                                |> take(1)
-                                |> mapToSignal { botApp -> Signal<ResolvedUrl?, NoError> in
+                                |> mapToSignal { botApp -> Signal<ResolveInternalUrlResult, NoError> in
                                     if let botApp {
-                                        return .single(.peer(peer, .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false))))
+                                        return .single(.result(.peer(peer._asPeer(), .withBotApp(ChatControllerInitialBotAppStart(botApp: botApp, payload: payload, justInstalled: false)))))
                                     } else {
-                                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                        return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                     }
-                                }
+                                })
                             case let .channelMessage(id, timecode):
-                                if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                                     let messageId = MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id)
                                     return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
                                     |> take(1)
-                                    |> mapToSignal { messages -> Signal<ResolvedUrl?, NoError> in
-                                        if let threadId = messages.first?.threadId {
-                                            return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
-                                            |> map { info -> ResolvedUrl? in
-                                                if let _ = info {
-                                                    return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
-                                                } else {
-                                                    return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                    |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                                        switch result {
+                                        case .progress:
+                                            return .single(.progress)
+                                        case let .result(messages):
+                                            if let threadId = messages.first?.threadId {
+                                                return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
+                                                |> map { result -> ResolveInternalUrlResult in
+                                                    switch result {
+                                                    case .progress:
+                                                        return .progress
+                                                    case let .result(info):
+                                                        if let _ = info {
+                                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                        } else {
+                                                            return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                                        }
+                                                    }
                                                 }
+                                            } else {
+                                                return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                                             }
-                                        } else {
-                                            return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                         }
                                     }
                                 } else {
-                                    return .single(.channelMessage(peer: peer, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
+                                    return .single(.result(.channelMessage(peer: peer._asPeer(), messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode)))
                                 }
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
                             
-                                if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                                     return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(replyThreadMessageId.id))
-                                    |> map { info -> ResolvedUrl? in
-                                        if let _ = info {
-                                            return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: replyThreadMessageId.id)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId))
-                                        } else {
-                                            return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                    |> map { result -> ResolveInternalUrlResult in
+                                        switch result {
+                                        case .progress:
+                                            return .progress
+                                        case let .result(info):
+                                            if let _ = info {
+                                                return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: replyThreadMessageId.id)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId)))
+                                            } else {
+                                                return .result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                            }
                                         }
                                     }
                                 } else {
-                                    return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
+                                    return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                                     |> map(Optional.init)
                                     |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                         return .single(nil)
                                     }
-                                    |> map { result -> ResolvedUrl? in
+                                    |> map { result -> ResolveInternalUrlResult in
                                         guard let result = result else {
-                                            return .channelMessage(peer: peer, messageId: replyThreadMessageId, timecode: nil)
+                                            return .result(.channelMessage(peer: peer._asPeer(), messageId: replyThreadMessageId, timecode: nil))
                                         }
-                                        return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
-                                    }
+                                        return .result(.replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId)))
+                                    })
                                 }
                             case let .voiceChat(invite):
-                                return .single(.joinVoiceChat(peer.id, invite))
+                                return .single(.result(.joinVoiceChat(peer.id, invite)))
                             case let .story(id):
-                                return context.engine.messages.refreshStories(peerId: peer.id, ids: [id])
-                                |> map { _ -> ResolvedUrl? in
+                                return .single(.progress) |> then(context.engine.messages.refreshStories(peerId: peer.id, ids: [id])
+                                |> map { _ -> ResolveInternalUrlResult in
                                 }
-                                |> then(.single(.story(peerId: peer.id, id: id)))
+                                |> then(.single(.result(.story(peerId: peer.id, id: id)))))
                             case .boost:
-                                return combineLatest(
+                                return .single(.progress) |> then(combineLatest(
                                     context.engine.peers.getChannelBoostStatus(peerId: peer.id),
                                     context.engine.peers.getMyBoostStatus()
                                 )
-                                |> map { boostStatus, myBoostStatus -> ResolvedUrl? in
-                                    return .boost(peerId: peer.id, status: boostStatus, myBoostStatus: myBoostStatus)
-                                }
+                                |> map { boostStatus, myBoostStatus -> ResolveInternalUrlResult in
+                                    return .result(.boost(peerId: peer.id, status: boostStatus, myBoostStatus: myBoostStatus))
+                                })
                         }
                     } else {
-                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                        return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                     }
                 } else {
-                    return .single(.peer(nil, .info))
+                    return .single(.result(.peer(nil, .info)))
                 }
             }
         case let .peerId(peerId):
             return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+            |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                    return .single(.result(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))))
                 } else {
-                    return .single(.inaccessiblePeer)
+                    return .single(.result(.inaccessiblePeer))
                 }
             }
         case let .contactToken(token):
-            return context.engine.peers.importContactToken(token: token)
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+        return .single(.progress) |> then(context.engine.peers.importContactToken(token: token)
+            |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer._asPeer(), .info))
+                    return .single(.result(.peer(peer._asPeer(), .info)))
                 } else {
-                    return .single(.peer(nil, .info))
+                    return .single(.result(.peer(nil, .info)))
                 }
-            }
+            })
         case let .privateMessage(messageId, threadId, timecode):
             return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+            |> mapToSignal { peer -> Signal<ResolveInternalUrlResult, NoError> in
                 let foundPeer: Signal<EnginePeer?, NoError>
                 if let peer = peer {
                     foundPeer = .single(peer)
                 } else {
-                    foundPeer = TelegramEngine(account: context.account).peers.findChannelById(channelId: messageId.peerId.id._internalGetInt64Value())
+                    foundPeer = context.engine.peers.findChannelById(channelId: messageId.peerId.id._internalGetInt64Value())
                 }
-                return foundPeer
-                |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
+                return .single(.progress) |> then(foundPeer
+                |> mapToSignal { foundPeer -> Signal<ResolveInternalUrlResult, NoError> in
                     if let foundPeer = foundPeer {
                         if case let .channel(channel) = foundPeer, channel.flags.contains(.isForum) {
                             if let threadId = threadId {
                                 return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(threadId))
-                                |> map { info -> ResolvedUrl? in
-                                    if let _ = info {
-                                        return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
-                                    } else {
-                                        return .peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                |> map { result -> ResolveInternalUrlResult in
+                                    switch result {
+                                    case .progress:
+                                        return .progress
+                                    case let .result(info):
+                                        if let _ = info {
+                                            return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                        } else {
+                                            return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                        }
                                     }
                                 }
                             } else {
                                 return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
-                                |> take(1)
-                                |> mapToSignal { messages -> Signal<ResolvedUrl?, NoError> in
-                                    if let threadId = messages.first?.threadId {
-                                        return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
-                                        |> map { info -> ResolvedUrl? in
-                                            if let _ = info {
-                                                return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
-                                            } else {
-                                                return .peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                                    switch result {
+                                    case .progress:
+                                        return .single(.progress)
+                                    case let .result(messages):
+                                        if let threadId = messages.first?.threadId {
+                                            return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
+                                            |> map { result -> ResolveInternalUrlResult in
+                                                switch result {
+                                                case .progress:
+                                                    return .progress
+                                                case let .result(info):
+                                                    if let _ = info {
+                                                        return .result(.replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId))
+                                                    } else {
+                                                        return .result(.peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                                    }
+                                                }
                                             }
-                                        }
-                                    } else {
-                                        return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(messageId.id))
-                                        |> map { info -> ResolvedUrl? in
-                                            if let _ = info {
-                                                return .replyThread(messageId: messageId)
-                                            } else {
-                                                return .peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                        } else {
+                                            return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(messageId.id))
+                                            |> map { result -> ResolveInternalUrlResult in
+                                                switch result {
+                                                case .progress:
+                                                    return .progress
+                                                case let .result(info):
+                                                    if let _ = info {
+                                                        return .result(.replyThread(messageId: messageId))
+                                                    } else {
+                                                        return .result(.peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -819,60 +869,67 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             }
                         } else if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
-                            return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
+                            return .single(.progress) |> then(context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)
                             |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
                                 return .single(nil)
                             }
-                            |> map { result -> ResolvedUrl? in
+                            |> map { result -> ResolveInternalUrlResult in
                                 guard let result = result else {
-                                    return .channelMessage(peer: foundPeer._asPeer(), messageId: replyThreadMessageId, timecode: timecode)
+                                    return .result(.channelMessage(peer: foundPeer._asPeer(), messageId: replyThreadMessageId, timecode: timecode))
                                 }
-                                return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
-                            }
+                                return .result(.replyThreadMessage(replyThreadMessage: result, messageId: messageId))
+                            })
                         } else {
-                            return .single(.peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode), peekData: nil)))
+                            return .single(.result(.peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: timecode), peekData: nil))))
                         }
                     } else {
-                        return .single(.inaccessiblePeer)
+                        return .single(.result(.inaccessiblePeer))
                     }
-                }
+                })
             }
         case let .stickerPack(name, type):
-            return .single(.stickerPack(name: name, type: type))
+            return .single(.result(.stickerPack(name: name, type: type)))
         case let .chatFolder(slug):
-            return .single(.chatFolder(slug: slug))
+            return .single(.result(.chatFolder(slug: slug)))
         case let .invoice(slug):
-            return context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
+            return .single(.progress) |> then(context.engine.payments.fetchBotPaymentInvoice(source: .slug(slug))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<TelegramMediaInvoice?, NoError> in
                 return .single(nil)
             }
-            |> map { invoice -> ResolvedUrl? in
+            |> map { invoice -> ResolveInternalUrlResult in
                 guard let invoice = invoice else {
-                    return .invoice(slug: slug, invoice: nil)
+                    return .result(.invoice(slug: slug, invoice: nil))
                 }
-                return .invoice(slug: slug, invoice: invoice)
-            }
+                return .result(.invoice(slug: slug, invoice: invoice))
+            })
         case let .join(link):
-            return .single(.join(link))
+            return .single(.result(.join(link)))
         case let .localization(identifier):
-            return .single(.localization(identifier))
+            return .single(.result(.localization(identifier)))
         case let .proxy(host, port, username, password, secret):
-            return .single(.proxy(host: host, port: port, username: username, password: password, secret: secret))
+            return .single(.result(.proxy(host: host, port: port, username: username, password: password, secret: secret)))
         case let .internalInstantView(url):
             return resolveInstantViewUrl(account: context.account, url: url)
-            |> map(Optional.init)
+            |> map { result in
+                switch result {
+                case .progress:
+                    return .progress
+                case let .result(result):
+                    return .result(result)
+                }
+            }
         case let .confirmationCode(code):
-            return .single(.confirmationCode(code))
+            return .single(.result(.confirmationCode(code)))
         case let .cancelAccountReset(phone, hash):
-            return .single(.cancelAccountReset(phone: phone, hash: hash))
+            return .single(.result(.cancelAccountReset(phone: phone, hash: hash)))
         case let .share(url, text, to):
-            return .single(.share(url: url, text: text, to: to))
+            return .single(.result(.share(url: url, text: text, to: to)))
         case let .wallpaper(parameter):
-            return .single(.wallpaper(parameter))
+            return .single(.result(.wallpaper(parameter)))
         case let .theme(slug):
-            return .single(.theme(slug))
+            return .single(.result(.theme(slug)))
         case let .startAttach(name, payload, chooseValue):
             var choose: ResolvedBotChoosePeerTypes = []
             if let chooseValue = chooseValue?.lowercased() {
@@ -891,19 +948,20 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 }
             }
             return context.engine.peers.resolvePeerByName(name: name)
-            |> take(1)
-            |> mapToSignal { peer -> Signal<Peer?, NoError> in
-                return .single(peer?._asPeer())
-            }
-            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
-                if let peer = peer {
-                    return .single(.startAttach(peerId: peer.id, payload: payload, choose: !choose.isEmpty ? choose : nil))
-                } else {
-                    return .single(.inaccessiblePeer)
+            |> mapToSignal { result -> Signal<ResolveInternalUrlResult, NoError> in
+                switch result {
+                case .progress:
+                    return .single(.progress)
+                case let .result(peer):
+                    if let peer = peer {
+                        return .single(.result(.startAttach(peerId: peer.id, payload: payload, choose: !choose.isEmpty ? choose : nil)))
+                    } else {
+                        return .single(.result(.inaccessiblePeer))
+                    }
                 }
             }
         case let .premiumGiftCode(slug):
-            return .single(.premiumGiftCode(slug: slug))
+            return .single(.result(.premiumGiftCode(slug: slug)))
     }
 }
 
@@ -1020,13 +1078,13 @@ private struct UrlHandlingConfiguration {
     }
 }
 
-public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError> {
+public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolveUrlResult, NoError> {
     let schemes = ["http://", "https://", ""]
     
     return ApplicationSpecificNotice.getSecretChatLinkPreviews(accountManager: context.sharedContext.accountManager)
-    |> mapToSignal { linkPreviews -> Signal<ResolvedUrl, NoError> in
+    |> mapToSignal { linkPreviews -> Signal<ResolveUrlResult, NoError> in
         return context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.App(), TelegramEngine.EngineData.Item.Configuration.Links())
-        |> mapToSignal { appConfiguration, linksConfiguration -> Signal<ResolvedUrl, NoError> in
+        |> mapToSignal { appConfiguration, linksConfiguration -> Signal<ResolveUrlResult, NoError> in
             let urlHandlingConfiguration = UrlHandlingConfiguration.with(appConfiguration: appConfiguration)
             
             var skipUrlAuth = skipUrlAuth
@@ -1052,7 +1110,7 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     components.queryItems = queryItems
                     url = components.url?.absoluteString ?? url
                 } else if !skipUrlAuth && urlHandlingConfiguration.urlAuthDomains.contains(host) {
-                    return .single(.urlAuth(url))
+                    return .single(.result(.urlAuth(url)))
                 }
             }
             
@@ -1067,15 +1125,20 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     if url.lowercased().hasPrefix(basePrefix) {
                         if let internalUrl = parseInternalUrl(query: String(url[basePrefix.endIndex...])) {
                             return resolveInternalUrl(context: context, url: internalUrl)
-                            |> map { resolved -> ResolvedUrl in
-                                if let resolved = resolved {
-                                    return resolved
-                                } else {
-                                    return .externalUrl(url)
+                            |> map { result -> ResolveUrlResult in
+                                switch result {
+                                case .progress:
+                                    return .progress
+                                case let .result(resolved):
+                                    if let resolved = resolved {
+                                        return .result(resolved)
+                                    } else {
+                                        return .result(.externalUrl(url))
+                                    }
                                 }
                             }
                         } else {
-                            return .single(.externalUrl(url))
+                            return .single(.result(.externalUrl(url)))
                         }
                     }
                 }
@@ -1088,33 +1151,38 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
                     }
                 }
             }
-            return .single(.externalUrl(url))
+            return .single(.result(.externalUrl(url)))
         }
     }
 }
 
-public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolveUrlResult, NoError> {
     return webpagePreview(account: account, url: url)
-    |> mapToSignal { webpage -> Signal<ResolvedUrl, NoError> in
-        if let webpage = webpage {
-            if case let .Loaded(content) = webpage.content {
-                if content.instantPage != nil {
-                    var anchorValue: String?
-                    if let anchorRange = url.range(of: "#") {
-                        let anchor = url[anchorRange.upperBound...]
-                        if !anchor.isEmpty {
-                            anchorValue = String(anchor)
+    |> mapToSignal { result -> Signal<ResolveUrlResult, NoError> in
+        switch result {
+        case .progress:
+            return .single(.progress)
+        case let .result(webpage):
+            if let webpage = webpage {
+                if case let .Loaded(content) = webpage.content {
+                    if content.instantPage != nil {
+                        var anchorValue: String?
+                        if let anchorRange = url.range(of: "#") {
+                            let anchor = url[anchorRange.upperBound...]
+                            if !anchor.isEmpty {
+                                anchorValue = String(anchor)
+                            }
                         }
+                        return .single(.result(.instantView(webpage, anchorValue)))
+                    } else {
+                        return .single(.result(.externalUrl(url)))
                     }
-                    return .single(.instantView(webpage, anchorValue))
                 } else {
-                    return .single(.externalUrl(url))
+                    return .complete()
                 }
             } else {
-                return .complete()
+                return .single(.result(.externalUrl(url)))
             }
-        } else {
-            return .single(.externalUrl(url))
         }
     }
 }

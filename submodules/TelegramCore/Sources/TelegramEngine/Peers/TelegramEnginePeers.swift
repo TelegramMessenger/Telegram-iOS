@@ -114,14 +114,19 @@ public extension TelegramEngine {
             return _internal_inactiveChannelList(network: self.account.network)
         }
 
-        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<EnginePeer?, NoError> {
+        public func resolvePeerByName(name: String, ageLimit: Int32 = 2 * 60 * 60 * 24) -> Signal<ResolvePeerResult, NoError> {
             return _internal_resolvePeerByName(account: self.account, name: name, ageLimit: ageLimit)
-            |> mapToSignal { peerId -> Signal<EnginePeer?, NoError> in
-                guard let peerId = peerId else {
-                    return .single(nil)
-                }
-                return self.account.postbox.transaction { transaction -> EnginePeer? in
-                    return transaction.getPeer(peerId).flatMap(EnginePeer.init)
+            |> mapToSignal { result -> Signal<ResolvePeerResult, NoError> in
+                switch result {
+                case .progress:
+                    return .single(.progress)
+                case let .result(peerId):
+                    guard let peerId = peerId else {
+                        return .single(.result(nil))
+                    }
+                    return self.account.postbox.transaction { transaction -> ResolvePeerResult in
+                        return .result(transaction.getPeer(peerId).flatMap(EnginePeer.init))
+                    }
                 }
             }
         }
@@ -1005,7 +1010,7 @@ public extension TelegramEngine {
             return _internal_createForumChannelTopic(account: self.account, peerId: id, title: title, iconColor: iconColor, iconFileId: iconFileId)
         }
         
-        public func fetchForumChannelTopic(id: EnginePeer.Id, threadId: Int64) -> Signal<EngineMessageHistoryThread.Info?, NoError> {
+        public func fetchForumChannelTopic(id: EnginePeer.Id, threadId: Int64) -> Signal<FetchForumChannelTopicResult, NoError> {
             return _internal_fetchForumChannelTopic(account: self.account, peerId: id, threadId: threadId)
         }
         

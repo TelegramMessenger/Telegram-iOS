@@ -240,6 +240,12 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             let chatPeer = peer
             let contextBot = context.engine.peers.resolvePeerByName(name: addressName)
+            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
@@ -512,7 +518,14 @@ func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: Acco
         let detectedUrl = detectUrls(inputText).first
         if detectedUrl != currentQuery {
             if let detectedUrl = detectedUrl {
-                return (detectedUrl, webpagePreview(account: context.account, url: detectedUrl) |> map { value in
+                return (detectedUrl, webpagePreview(account: context.account, url: detectedUrl)
+                |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
+                    guard case let .result(result) = result else {
+                        return .complete()
+                    }
+                    return .single(result)
+                }
+                |> map { value in
                     return { _ in return value }
                 })
             } else {

@@ -2772,7 +2772,12 @@ final class StoryItemSetContainerSendMessage {
             self.resolvePeerByNameDisposable.set(nil)
         }
         disposable.set((resolveSignal
-        |> take(1)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
         |> mapToSignal { peer -> Signal<Peer?, NoError> in
             return .single(peer?._asPeer())
         }
@@ -2805,6 +2810,12 @@ final class StoryItemSetContainerSendMessage {
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
             resolveSignal = component.context.engine.peers.resolvePeerByName(name: peerName)
+            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
                 if let peer = peer {
                     return .single(peer._asPeer())

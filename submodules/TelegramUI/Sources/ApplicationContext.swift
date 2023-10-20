@@ -487,7 +487,14 @@ final class AuthorizedApplicationContext {
                     |> deliverOnMainQueue).start(completed: {
                         controller?.dismiss()
                         if let strongSelf = self, let botName = botName {
-                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
+                            strongSelf.termsOfServiceProceedToBotDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: botName, ageLimit: 10)
+                            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                                guard case let .result(result) = result else {
+                                    return .complete()
+                                }
+                                return .single(result)
+                            }
+                            |> deliverOnMainQueue).start(next: { peer in
                                 if let strongSelf = self, let peer = peer {
                                     self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peer.id)))
                                 }

@@ -2029,6 +2029,12 @@ public final class StickerPackScreenImpl: ViewController {
             }
             
             strongSelf.openMentionDisposable.set((strongSelf.context.engine.peers.resolvePeerByName(name: mention)
+            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
                 if let peer = peer {
                     return .single(peer._asPeer())

@@ -4599,6 +4599,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.resolvePeerByNameDisposable = disposable
         }
         var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
         
         var cancelImpl: (() -> Void)?
         let presentationData = self.presentationData
@@ -4655,6 +4661,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         var resolveSignal: Signal<Peer?, NoError>
         if let peerName = peerName {
             resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
+            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             |> mapToSignal { peer -> Signal<Peer?, NoError> in
                 return .single(peer?._asPeer())
             }
@@ -8674,7 +8686,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         
         let context = self.context
         let navigationController = self.controller?.navigationController as? NavigationController
-        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername) |> deliverOnMainQueue).startStrict(next: { [weak controller] peer in
+        self.tipsPeerDisposable.set((self.context.engine.peers.resolvePeerByName(name: self.presentationData.strings.Settings_TipsUsername)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
+        |> deliverOnMainQueue).startStrict(next: { [weak controller] peer in
             controller?.dismiss()
             if let peer = peer, let navigationController = navigationController {
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))

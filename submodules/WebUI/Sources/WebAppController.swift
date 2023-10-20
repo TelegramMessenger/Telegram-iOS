@@ -812,6 +812,12 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             self.webView?.lastTouchTimestamp = nil
                             if tryInstantView {
                                 let _ = (resolveInstantViewUrl(account: self.context.account, url: url)
+                                |> mapToSignal { result -> Signal<ResolvedUrl, NoError> in
+                                    guard case let .result(result) = result else {
+                                        return .complete()
+                                    }
+                                    return .single(result)
+                                }
                                 |> deliverOnMainQueue).start(next: { [weak self] result in
                                     guard let strongSelf = self else {
                                         return

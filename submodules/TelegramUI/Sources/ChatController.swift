@@ -3974,7 +3974,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
                     let quoteText = (message.text as NSString).substring(with: nsRange)
-                    quoteData = EngineMessageReplyQuote(text: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), media: nil)
+                    
+                    let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: strongSelf.context.currentAppConfiguration.with({ $0 })))
+                    if !trimmedText.string.isEmpty {
+                        quoteData = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+                    }
                     
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(
                         messageId: message.id,
@@ -9038,7 +9042,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         disableUrlPreview = true
                     } else {
                         webpage = urlPreview.webPage
-                        webpagePreviewAttribute = WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true)
+                        webpagePreviewAttribute = WebpagePreviewMessageAttribute(leadingPreview: !urlPreview.positionBelowText, forceLargeMedia: urlPreview.largeMedia, isManuallyAdded: true, isSafe: false)
                     }
                 }
                 
@@ -9103,7 +9107,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         if let currentMessage = currentMessage {
                             let currentEntities = currentMessage.textEntitiesAttribute?.entities ?? []
-                            let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true)
+                            let currentWebpagePreviewAttribute = currentMessage.webpagePreviewAttribute ?? WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: nil, isManuallyAdded: true, isSafe: false)
                             
                             if currentMessage.text != text.string || currentEntities != entities || updatingMedia || webpagePreviewAttribute != currentWebpagePreviewAttribute || disableUrlPreview {
                                 strongSelf.context.account.pendingUpdateMessageManager.add(messageId: editMessage.messageId, text: text.string, media: media, entities: entitiesAttribute, inlineStickers: inlineStickers, webpagePreviewAttribute: webpagePreviewAttribute, disableUrlPreview: disableUrlPreview)
@@ -16803,6 +16807,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let _ = (combineLatest(
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)),
                     self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
+                    |> mapToSignal { result -> Signal<[Message], NoError> in
+                        guard case let .result(result) = result else {
+                            return .complete()
+                        }
+                        return .single(result)
+                    }
                 )
                 |> deliverOnMainQueue).startStandalone(next: { [weak self] peer, messages in
                     guard let self, let peer = peer else {
@@ -17566,6 +17576,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.resolvePeerByNameDisposable = disposable
             }
             var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
+            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
@@ -17627,6 +17643,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = self.context.engine.peers.resolvePeerByName(name: peerName)
+                |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                    guard case let .result(result) = result else {
+                        return .complete()
+                    }
+                    return .single(result)
+                }
                 |> mapToSignal { peer -> Signal<Peer?, NoError> in
                     if let peer = peer {
                         return .single(peer._asPeer())

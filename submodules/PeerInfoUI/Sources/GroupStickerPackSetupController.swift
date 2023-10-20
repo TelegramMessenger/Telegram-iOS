@@ -392,7 +392,14 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
     }, updateSearchText: { text in
         searchText.set(text)
     }, openStickersBot: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers") |> deliverOnMainQueue).start(next: { peer in
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "stickers")
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
+        |> deliverOnMainQueue).start(next: { peer in
             if let peer = peer {
                 dismissImpl?()
                 navigateToChatControllerImpl?(peer.id)

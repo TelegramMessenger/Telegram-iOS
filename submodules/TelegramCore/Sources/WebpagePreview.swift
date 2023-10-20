@@ -5,13 +5,18 @@ import TelegramApi
 import MtProtoKit
 
 
-public func webpagePreview(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<TelegramMediaWebpage?, NoError> {
+public enum WebpagePreviewResult {
+    case progress
+    case result(TelegramMediaWebpage?)
+}
+
+public func webpagePreview(account: Account, url: String, webpageId: MediaId? = nil) -> Signal<WebpagePreviewResult, NoError> {
     return webpagePreviewWithProgress(account: account, url: url)
-    |> mapToSignal { next -> Signal<TelegramMediaWebpage?, NoError> in
+    |> mapToSignal { next -> Signal<WebpagePreviewResult, NoError> in
         if case let .result(result) = next {
-            return .single(result)
+            return .single(.result(result))
         } else {
-            return .complete()
+            return .single(.progress)
         }
     }
 }

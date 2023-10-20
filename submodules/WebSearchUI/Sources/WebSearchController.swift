@@ -490,8 +490,11 @@ public final class WebSearchController: ViewController {
         
         let context = self.context
         let contextBot = self.context.engine.peers.resolvePeerByName(name: name)
-        |> mapToSignal { peer -> Signal<EnginePeer?, NoError> in
-            return .single(peer)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
         }
         |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
             if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {

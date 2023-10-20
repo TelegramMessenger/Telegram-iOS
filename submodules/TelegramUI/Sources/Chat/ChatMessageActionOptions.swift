@@ -267,6 +267,16 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
             f(.default)
         })))
         
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Remove Forward", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+            f(.default)
+            
+            guard let selfController else {
+                return
+            }
+            selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(nil).withoutSelectionState() }) })
+        })))
+        
         return items
     }
     
@@ -338,8 +348,13 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 guard let textSelection = contentNode.getCurrentTextSelection() else {
                     return
                 }
+                var quote: EngineMessageReplyQuote?
+                let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
+                if !trimmedText.string.isEmpty {
+                    quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+                }
                 
-                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities, media: nil))).withoutSelectionState() }) })
+                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })
                 
                 f(.default)
             })))
@@ -381,7 +396,13 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                                     return
                                 }
                                 
-                                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: EngineMessageReplyQuote(text: textSelection.text, entities: textSelection.entities, media: nil))).withoutSelectionState() }) })
+                                var quote: EngineMessageReplyQuote?
+                                let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
+                                if !trimmedText.string.isEmpty {
+                                    quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+                                }
+                                
+                                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })
                                 
                                 f(.default)
                             })))
@@ -423,6 +444,17 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 var replySubject = replySubject
                 replySubject.quote = nil
                 selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject).withoutSelectionState() }).updatedSearch(nil) })
+            })))
+        } else {
+            items.append(.action(ContextMenuActionItem(text: "Remove Reply", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+                f(.default)
+                
+                guard let selfController else {
+                    return
+                }
+                var replySubject = replySubject
+                replySubject.quote = nil
+                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(nil).withoutSelectionState() }).updatedSearch(nil) })
             })))
         }
         

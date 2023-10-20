@@ -990,7 +990,14 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
         pushControllerImpl?(controller)
     }, openChannelExample: {
-        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov") |> deliverOnMainQueue).start(next: { peer in
+        resolveDisposable.set((context.engine.peers.resolvePeerByName(name: "durov")
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
+        |> deliverOnMainQueue).start(next: { peer in
             if let peer = peer {
                 navigateToChatControllerImpl?(peer.id)
             }

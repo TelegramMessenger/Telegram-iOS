@@ -66,21 +66,26 @@ public class ChatMessageBackground: ASDisplayNode {
     private var hasWallpaper: Bool?
     private var graphics: PrincipalThemeEssentialGraphics?
     private var maskMode: Bool?
-    private let imageNode: ASImageNode
     private let outlineImageNode: ASImageNode
     private weak var backgroundNode: WallpaperBackgroundNode?
+    
+    private var imageFrame: CGRect?
+    private var imageView: UIImageView?
+    private var imageViewImage: UIImage?
+    
+    public var customHighlightColor: UIColor? {
+        didSet {
+            self.imageView?.tintColor = self.customHighlightColor
+        }
+    }
     
     public var backgroundFrame: CGRect = .zero
     
     public var hasImage: Bool {
-        self.imageNode.image != nil
+        self.imageViewImage != nil
     }
     
     public override init() {
-        self.imageNode = ASImageNode()
-        self.imageNode.displaysAsynchronously = false
-        self.imageNode.displayWithoutProcessing = true
-        
         self.outlineImageNode = ASImageNode()
         self.outlineImageNode.displaysAsynchronously = false
         self.outlineImageNode.displayWithoutProcessing = true
@@ -89,16 +94,39 @@ public class ChatMessageBackground: ASDisplayNode {
                 
         self.isUserInteractionEnabled = false
         self.addSubnode(self.outlineImageNode)
-        self.addSubnode(self.imageNode)
+    }
+    
+    override public func didLoad() {
+        super.didLoad()
+        
+        let imageView = UIImageView()
+        self.imageView = imageView
+        self.view.addSubview(imageView)
+        
+        imageView.image = self.imageViewImage
+        imageView.tintColor = self.customHighlightColor
+        
+        if let imageFrame = self.imageFrame {
+            imageView.frame = imageFrame
+        }
     }
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
+        let imageFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+        self.imageFrame = imageFrame
+        if let imageView = self.imageView {
+            transition.updateFrame(view: imageView, frame: imageFrame)
+        }
         transition.updateFrame(node: self.outlineImageNode, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0))
     }
     
     public func updateLayout(size: CGSize, transition: ListViewItemUpdateAnimation) {
-        transition.animator.updateFrame(layer: self.imageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
+        let imageFrame = CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0)
+        self.imageFrame = imageFrame
+        if let imageView = self.imageView {
+            transition.animator.updateFrame(layer: imageView.layer, frame: imageFrame, completion: nil)
+        }
+        
         transition.animator.updateFrame(layer: self.outlineImageNode.layer, frame: CGRect(origin: CGPoint(), size: size).insetBy(dx: -1.0, dy: -1.0), completion: nil)
     }
     
@@ -217,13 +245,11 @@ public class ChatMessageBackground: ASDisplayNode {
         }
         
         let outlineImage: UIImage?
-        var isIncoming = false
         if hasWallpaper {
             switch type {
             case .none:
                 outlineImage = nil
             case let .incoming(mergeType):
-                isIncoming = true
                 switch mergeType {
                 case .None:
                     outlineImage = graphics.chatMessageBackgroundIncomingOutlineImage
@@ -267,38 +293,38 @@ public class ChatMessageBackground: ASDisplayNode {
         }
         
         if let previousType = previousType, previousType != .none, type == .none {
-            if transition.isAnimated {
+            if transition.isAnimated, let imageView = self.imageView {
                 let tempLayer = CALayer()
-                tempLayer.contents = self.imageNode.layer.contents
-                tempLayer.contentsScale = self.imageNode.layer.contentsScale
-                tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
-                tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
-                tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
+                tempLayer.contents = imageView.layer.contents
+                tempLayer.contentsScale = imageView.layer.contentsScale
+                tempLayer.rasterizationScale = imageView.layer.rasterizationScale
+                tempLayer.contentsGravity = imageView.layer.contentsGravity
+                tempLayer.contentsCenter = imageView.layer.contentsCenter
                 
-                tempLayer.frame = self.imageNode.frame
-                self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
+                tempLayer.frame = imageView.frame
+                self.layer.insertSublayer(tempLayer, above: imageView.layer)
                 transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                     tempLayer?.removeFromSuperlayer()
                 })
             }
-        } else if transition.isAnimated {
-            if let previousContents = self.imageNode.layer.contents {
+        } else if transition.isAnimated, let imageView = self.imageView {
+            if let previousContents = imageView.layer.contents {
                 if let image = image {
                     if (previousContents as AnyObject) !== image.cgImage {
-                        self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                        imageView.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
                     }
                 } else {
                     let tempLayer = CALayer()
-                    tempLayer.contents = self.imageNode.layer.contents
-                    tempLayer.contentsScale = self.imageNode.layer.contentsScale
-                    tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
-                    tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
-                    tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
-                    tempLayer.compositingFilter = self.imageNode.layer.compositingFilter
+                    tempLayer.contents = imageView.layer.contents
+                    tempLayer.contentsScale = imageView.layer.contentsScale
+                    tempLayer.rasterizationScale = imageView.layer.rasterizationScale
+                    tempLayer.contentsGravity = imageView.layer.contentsGravity
+                    tempLayer.contentsCenter = imageView.layer.contentsCenter
+                    tempLayer.compositingFilter = imageView.layer.compositingFilter
                     
-                    tempLayer.frame = self.imageNode.frame
+                    tempLayer.frame = imageView.frame
                     
-                    self.imageNode.supernode?.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
+                    imageView.superview?.layer.insertSublayer(tempLayer, above: imageView.layer)
                     transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                         tempLayer?.removeFromSuperlayer()
                     })
@@ -306,26 +332,17 @@ public class ChatMessageBackground: ASDisplayNode {
             }
         }
         
-        self.imageNode.image = image
-        if highlighted && maskMode, let backdropNode = self.backdropNode, backdropNode.hasImage && isIncoming {
-            self.imageNode.layer.compositingFilter = "overlayBlendMode"
-            self.imageNode.alpha = 1.0
-            
-            backdropNode.addSubnode(self.imageNode)
-        } else {
-            self.imageNode.layer.compositingFilter = nil
-            self.imageNode.alpha = 1.0
-            
-            if self.imageNode.supernode != self {
-                self.addSubnode(self.imageNode)
-            }
+        self.imageViewImage = image
+        if let imageView = self.imageView {
+            imageView.image = image
         }
+        
         self.outlineImageNode.image = outlineImage
     }
 
     public func animateFrom(sourceView: UIView, transition: CombinedTransition) {
         if transition.isAnimated {
-            self.imageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            self.imageView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             self.outlineImageNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
 
             self.view.addSubview(sourceView)
@@ -334,9 +351,11 @@ public class ChatMessageBackground: ASDisplayNode {
                 sourceView?.removeFromSuperview()
             })
 
-            transition.animateFrame(layer: self.imageNode.layer, from: sourceView.frame)
+            if let imageView = imageView {
+                transition.animateFrame(layer: imageView.layer, from: sourceView.frame)
+                transition.updateFrame(layer: sourceView.layer, frame: CGRect(origin: imageView.frame.origin, size: CGSize(width: imageView.frame.width - 7.0, height: imageView.frame.height)))
+            }
             transition.animateFrame(layer: self.outlineImageNode.layer, from: sourceView.frame)
-            transition.updateFrame(layer: sourceView.layer, frame: CGRect(origin: self.imageNode.frame.origin, size: CGSize(width: self.imageNode.frame.width - 7.0, height: self.imageNode.frame.height)))
         }
     }
 }

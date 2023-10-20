@@ -72,17 +72,20 @@ public class WebpagePreviewMessageAttribute: MessageAttribute, Equatable {
     public let leadingPreview: Bool
     public let forceLargeMedia: Bool?
     public let isManuallyAdded: Bool
+    public let isSafe: Bool
     
-    public init(leadingPreview: Bool, forceLargeMedia: Bool?, isManuallyAdded: Bool) {
+    public init(leadingPreview: Bool, forceLargeMedia: Bool?, isManuallyAdded: Bool, isSafe: Bool) {
         self.leadingPreview = leadingPreview
         self.forceLargeMedia = forceLargeMedia
         self.isManuallyAdded = isManuallyAdded
+        self.isSafe = isSafe
     }
     
     required public init(decoder: PostboxDecoder) {
         self.leadingPreview = decoder.decodeBoolForKey("lp", orElse: false)
         self.forceLargeMedia = decoder.decodeOptionalBoolForKey("lm")
         self.isManuallyAdded = decoder.decodeBoolForKey("ma", orElse: false)
+        self.isSafe = decoder.decodeBoolForKey("sf", orElse: false)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -93,6 +96,7 @@ public class WebpagePreviewMessageAttribute: MessageAttribute, Equatable {
             encoder.encodeNil(forKey: "lm")
         }
         encoder.encodeBool(self.isManuallyAdded, forKey: "ma")
+        encoder.encodeBool(self.isSafe, forKey: "sf")
     }
     
     public static func ==(lhs: WebpagePreviewMessageAttribute, rhs: WebpagePreviewMessageAttribute) -> Bool {
@@ -103,6 +107,9 @@ public class WebpagePreviewMessageAttribute: MessageAttribute, Equatable {
             return false
         }
         if lhs.isManuallyAdded != rhs.isManuallyAdded {
+            return false
+        }
+        if lhs.isSafe != rhs.isSafe {
             return false
         }
         return true
