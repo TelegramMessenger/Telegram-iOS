@@ -55,6 +55,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var backgroundView: UIImageView?
     private var lineDashView: UIImageView?
     
+    private let transformContainer: ASDisplayNode
     private var title: TextNodeWithEntities?
     private var subtitle: TextNodeWithEntities?
     private var text: TextNodeWithEntities?
@@ -105,10 +106,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     }
     
     override public init() {
+        self.transformContainer = ASDisplayNode()
         self.statusNode = ChatMessageDateAndStatusNode()
         
         super.init()
         
+        self.addSubnode(self.transformContainer)
         self.addSubnode(self.statusNode)
     }
     
@@ -760,6 +763,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         self.media = mediaAndFlags?.0
                         self.theme = presentationData.theme
                         
+                        animation.animator.updateFrame(layer: self.transformContainer.layer, frame: CGRect(origin: CGPoint(), size: actualSize), completion: nil)
+                        
                         if displayLine {
                             let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: actualSize.width - backgroundInsets.left - backgroundInsets.right, height: actualSize.height - backgroundInsets.top - backgroundInsets.bottom))
                             
@@ -772,7 +777,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme, dashedOutgoing: !incoming && secondaryColor != nil)
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
-                                self.view.insertSubview(backgroundView, at: 0)
+                                self.transformContainer.view.insertSubview(backgroundView, at: 0)
                             }
                             
                             backgroundView.tintColor = mainColor
@@ -785,7 +790,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme, incoming: incoming))
                                     lineDashView.clipsToBounds = true
                                     self.lineDashView = lineDashView
-                                    self.view.insertSubview(lineDashView, aboveSubview: backgroundView)
+                                    self.transformContainer.view.insertSubview(lineDashView, aboveSubview: backgroundView)
                                 }
                                 lineDashView.tintColor = secondaryColor
                                 lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 12.0, height: backgroundFrame.height))
@@ -825,7 +830,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 inlineMedia = TransformImageNode()
                                 inlineMedia.contentAnimations = .subsequentUpdates
                                 self.inlineMedia = inlineMedia
-                                self.addSubnode(inlineMedia)
+                                self.transformContainer.addSubnode(inlineMedia)
                                 
                                 inlineMedia.frame = inlineMediaFrame
                                 
@@ -876,7 +881,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.title?.textNode.removeFromSupernode()
                                 self.title = title
                                 title.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(title.textNode)
+                                self.transformContainer.addSubnode(title.textNode)
                                 
                                 title.textNode.frame = titleFrame
                             } else {
@@ -905,7 +910,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.subtitle?.textNode.removeFromSupernode()
                                 self.subtitle = subtitle
                                 subtitle.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(subtitle.textNode)
+                                self.transformContainer.addSubnode(subtitle.textNode)
                                 
                                 subtitle.textNode.frame = subtitleFrame
                             } else {
@@ -934,7 +939,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.text?.textNode.removeFromSupernode()
                                 self.text = text
                                 text.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(text.textNode)
+                                self.transformContainer.addSubnode(text.textNode)
                                 
                                 text.textNode.frame = textFrame
                             } else {
@@ -970,7 +975,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                                 contentMedia.visibility = self.visibility != .none
                                 
-                                self.addSubnode(contentMedia)
+                                self.transformContainer.addSubnode(contentMedia)
                                 
                                 contentMedia.frame = contentMediaFrame
                                 
@@ -999,7 +1004,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if self.actionButton !== actionButton {
                                 self.actionButton?.removeFromSupernode()
                                 self.actionButton = actionButton
-                                self.addSubnode(actionButton)
+                                self.transformContainer.addSubnode(actionButton)
                                 actionButton.frame = actionButtonFrame
                                 
                                 actionButton.pressed = { [weak self] in
@@ -2067,7 +2072,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             } else {
                 linkHighlightingNode = LinkHighlightingNode(color: message.effectivelyIncoming(context.account.peerId) ? theme.theme.chat.message.incoming.linkHighlightColor : theme.theme.chat.message.outgoing.linkHighlightColor)
                 self.linkHighlightingNode = linkHighlightingNode
-                self.insertSubnode(linkHighlightingNode, belowSubnode: text.textNode)
+                self.transformContainer.insertSubnode(linkHighlightingNode, belowSubnode: text.textNode)
             }
             linkHighlightingNode.frame = text.textNode.frame
             linkHighlightingNode.updateRects(rects)
@@ -2114,7 +2119,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         let transition: ContainedViewLayoutTransition = .animated(duration: self.isHighlighted ? 0.3 : 0.2, curve: .easeInOut)
         let scale: CGFloat = self.isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
-        transition.updateSublayerTransformScale(node: self, scale: scale, beginWithCurrentState: true)
+        transition.updateSublayerTransformScale(node: self.transformContainer, scale: scale, beginWithCurrentState: true)
     }
     
     public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
