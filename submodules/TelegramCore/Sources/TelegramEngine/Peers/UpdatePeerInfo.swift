@@ -95,29 +95,37 @@ public enum UpdatePeerNameColorAndEmojiError {
 
 func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
     let accountPeerId = account.peerId
-    return account.postbox.transaction { transaction -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
-        if let peer = transaction.getPeer(peerId) {
-            if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
-                let flags: Int32 = (1 << 0)
-                return account.network.request(Api.functions.channels.updateColor(flags: flags, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
-                    |> mapError { _ -> UpdatePeerNameColorAndEmojiError in
-                        return .generic
+    
+    return account.postbox.transaction { transaction -> Signal<Peer, NoError> in
+        guard let peer = transaction.getPeer(account.peerId) as? TelegramChannel else {
+            return .complete()
+        }
+        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId)], update: { _, updated in
+            return updated
+        })
+        return .single(peer)
+    }
+    |> switchToLatest
+    |> castError(UpdatePeerNameColorAndEmojiError.self)
+    |> mapToSignal { peer -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
+        if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
+            let flags: Int32 = (1 << 0)
+            return account.network.request(Api.functions.channels.updateColor(flags: flags, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
+            |> mapError { _ -> UpdatePeerNameColorAndEmojiError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
+                account.stateManager.addUpdates(result)
+                
+                return account.postbox.transaction { transaction -> Void in
+                    if let apiChat = apiUpdatesGroups(result).first {
+                        let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
+                        updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
                     }
-                    |> mapToSignal { result -> Signal<Void, UpdatePeerNameColorAndEmojiError> in
-                        account.stateManager.addUpdates(result)
-                        
-                        return account.postbox.transaction { transaction -> Void in
-                            if let apiChat = apiUpdatesGroups(result).first {
-                                let parsedPeers = AccumulatedPeers(transaction: transaction, chats: [apiChat], users: [])
-                                updatePeers(transaction: transaction, accountPeerId: accountPeerId, peers: parsedPeers)
-                            }
-                        } |> mapError { _ -> UpdatePeerNameColorAndEmojiError in }
-                    }
-            } else {
-                return .fail(.generic)
+                } |> mapError { _ -> UpdatePeerNameColorAndEmojiError in }
             }
         } else {
             return .fail(.generic)
         }
-    } |> mapError { _ -> UpdatePeerNameColorAndEmojiError in } |> switchToLatest
+    }
 }

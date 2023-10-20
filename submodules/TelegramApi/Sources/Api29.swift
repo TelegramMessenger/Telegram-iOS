@@ -70,13 +70,13 @@ public extension Api.premium {
     switch self {
                 case .boostsStatus(let flags, let level, let currentLevelBoosts, let boosts, let giftBoosts, let nextLevelBoosts, let premiumAudience, let boostUrl, let prepaidGiveaways, let myBoostSlots):
                     if boxed {
-                        buffer.appendInt32(1029548774)
+                        buffer.appendInt32(1230586490)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(level, buffer: buffer, boxed: false)
                     serializeInt32(currentLevelBoosts, buffer: buffer, boxed: false)
                     serializeInt32(boosts, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 3) != 0 {serializeInt32(giftBoosts!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(giftBoosts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(nextLevelBoosts!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {premiumAudience!.serialize(buffer, true)}
                     serializeString(boostUrl, buffer: buffer, boxed: false)
@@ -111,7 +111,7 @@ public extension Api.premium {
             var _4: Int32?
             _4 = reader.readInt32()
             var _5: Int32?
-            if Int(_1!) & Int(1 << 3) != 0 {_5 = reader.readInt32() }
+            if Int(_1!) & Int(1 << 4) != 0 {_5 = reader.readInt32() }
             var _6: Int32?
             if Int(_1!) & Int(1 << 0) != 0 {_6 = reader.readInt32() }
             var _7: Api.StatsPercentValue?
@@ -132,7 +132,7 @@ public extension Api.premium {
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            let _c5 = (Int(_1!) & Int(1 << 4) == 0) || _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
             let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
             let _c8 = _8 != nil

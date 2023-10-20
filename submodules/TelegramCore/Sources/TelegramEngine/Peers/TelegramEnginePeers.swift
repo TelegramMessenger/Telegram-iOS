@@ -715,7 +715,7 @@ public extension TelegramEngine {
             return _internal_updateBotAbout(account: self.account, peerId: peerId, about: about)
         }
         
-        public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
+        public func updatePeerNameColorAndEmoji(peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
             return _internal_updatePeerNameColorAndEmoji(account: self.account, peerId: peerId, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId)
         }
         
@@ -1206,7 +1206,7 @@ public extension TelegramEngine {
             return _internal_getMyBoostStatus(account: self.account)
         }
 
-        public func applyChannelBoost(peerId: EnginePeer.Id, slots: [Int32]) -> Signal<Bool, NoError> {
+        public func applyChannelBoost(peerId: EnginePeer.Id, slots: [Int32]) -> Signal<MyBoostStatus?, NoError> {
             return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
     }
