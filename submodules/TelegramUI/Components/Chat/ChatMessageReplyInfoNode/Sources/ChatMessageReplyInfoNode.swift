@@ -32,7 +32,7 @@ private let channelIcon: UIImage = {
     return generateImage(CGSize(width: sourceImage.size.width + 4.0, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         UIGraphicsPushContext(context)
-        sourceImage.draw(at: CGPoint(x: 2.0, y: 2.0))
+        sourceImage.draw(at: CGPoint(x: 2.0, y: 1.0 + UIScreenPixel))
         UIGraphicsPopContext()
     })!.precomposed().withRenderingMode(.alwaysTemplate)
 }()
@@ -42,7 +42,7 @@ private let groupIcon: UIImage = {
     return generateImage(CGSize(width: sourceImage.size.width + 3.0, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         UIGraphicsPushContext(context)
-        sourceImage.draw(at: CGPoint(x: 3.0, y: 1.0))
+        sourceImage.draw(at: CGPoint(x: 3.0, y: 1.0 - UIScreenPixel))
         UIGraphicsPopContext()
     })!.precomposed().withRenderingMode(.alwaysTemplate)
 }()
@@ -388,7 +388,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 var text: String
                 var messageEntities: [MessageTextEntity]
                 
-                if let quote = arguments.quote {
+                if let quote = arguments.quote, !quote.text.isEmpty {
                     text = quote.text
                     messageEntities = quote.entities
                 } else {

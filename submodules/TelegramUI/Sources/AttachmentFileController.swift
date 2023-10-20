@@ -246,6 +246,12 @@ func makeAttachmentFileControllerImpl(context: AccountContext, updatedPresentati
         },
         send: { message in
             let _ = (context.engine.messages.getMessagesLoadIfNecessary([message.id], strategy: .cloud(skipLocal: true))
+            |> mapToSignal { result -> Signal<[Message], NoError> in
+                guard case let .result(result) = result else {
+                    return .complete()
+                }
+                return .single(result)
+            }
             |> deliverOnMainQueue).startStandalone(next: { messages in
                 if let message = messages.first, let file = message.media.first(where: { $0 is TelegramMediaFile }) as? TelegramMediaFile {
                     send(.message(message: MessageReference(message), media: file))

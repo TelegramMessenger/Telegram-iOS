@@ -24,7 +24,6 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
                 }
             }
             |> runOn(Queue.mainQueue())
-            |> delay(0.05, queue: Queue.mainQueue())
         } else {
             progressSignal = Signal<Never, NoError> { subscriber in
                 let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
@@ -38,18 +37,18 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
                 }
             }
             |> runOn(Queue.mainQueue())
-            |> delay(0.1, queue: Queue.mainQueue())
         }
-        let progressDisposable = progressSignal.start()
+        let progressDisposable = MetaDisposable()
+        var didStartProgress = false
         
         cancelImpl = {
             disposable.dispose()
         }
         
-        var resolveSignal: Signal<ResolvedUrl, NoError>
-        resolveSignal = context.sharedContext.resolveUrl(context: context, peerId: peerId, url: url, skipUrlAuth: skipUrlAuth)
+        var resolveSignal: Signal<ResolveUrlResult, NoError>
+        resolveSignal = context.sharedContext.resolveUrlWithProgress(context: context, peerId: peerId, url: url, skipUrlAuth: skipUrlAuth)
         #if DEBUG
-        resolveSignal = resolveSignal |> delay(2.0, queue: .mainQueue())
+        //resolveSignal = .single(.progress) |> then(resolveSignal |> delay(2.0, queue: .mainQueue()))
         #endif
         
         disposable.set((resolveSignal
@@ -59,8 +58,16 @@ public func openUserGeneratedUrl(context: AccountContext, peerId: PeerId?, url: 
             }
         }
         |> deliverOnMainQueue).start(next: { result in
-            progressDisposable.dispose()
-            openResolved(result)
+            switch result {
+            case .progress:
+                if !didStartProgress {
+                    didStartProgress = true
+                    progressDisposable.set(progressSignal.start())
+                }
+            case let .result(result):
+                progressDisposable.dispose()
+                openResolved(result)
+            }
         }))
         
         return ActionDisposable {

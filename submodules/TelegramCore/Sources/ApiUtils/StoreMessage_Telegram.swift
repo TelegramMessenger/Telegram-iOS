@@ -307,6 +307,7 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
 struct ParsedMessageWebpageAttributes {
     var forceLargeMedia: Bool?
     var isManuallyAdded: Bool
+    var isSafe: Bool
 }
 
 func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerId: PeerId) -> (media: Media?, expirationTimer: Int32?, nonPremium: Bool?, hasSpoiler: Bool?, webpageAttributes: ParsedMessageWebpageAttributes?) {
@@ -352,7 +353,8 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 
                 return (mediaWebpage, nil, nil, nil, ParsedMessageWebpageAttributes(
                     forceLargeMedia: webpageForceLargeMedia,
-                    isManuallyAdded: (flags & (1 << 3)) != 0
+                    isManuallyAdded: (flags & (1 << 3)) != 0,
+                    isSafe: (flags & (1 << 4)) != 0
                 ))
             }
         case .messageMediaUnsupported:
@@ -708,7 +710,7 @@ extension StoreMessage {
                             let leadingPreview = (flags & (1 << 27)) != 0
                             
                             if let webpageAttributes {
-                                attributes.append(WebpagePreviewMessageAttribute(leadingPreview: leadingPreview, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded))
+                                attributes.append(WebpagePreviewMessageAttribute(leadingPreview: leadingPreview, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded, isSafe: webpageAttributes.isSafe))
                             }
                         }
                     }

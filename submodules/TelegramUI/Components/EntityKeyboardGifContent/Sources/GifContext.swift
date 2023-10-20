@@ -55,6 +55,12 @@ public func paneGifSearchForQuery(context: AccountContext, query: String, offset
     |> mapToSignal { searchBots -> Signal<EnginePeer?, NoError> in
         let botName = searchBots.gifBotUsername ?? "gif"
         return context.engine.peers.resolvePeerByName(name: botName)
+        |> mapToSignal { result in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
     }
     |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
         if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {

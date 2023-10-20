@@ -296,6 +296,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             let resolveSignal: Signal<Peer?, NoError>
             if let peerName = peerName {
                 resolveSignal = strongSelf.context.engine.peers.resolvePeerByName(name: peerName)
+                |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                    guard case let .result(result) = result else {
+                        return .complete()
+                    }
+                    return .single(result)
+                }
                 |> mapToSignal { peer -> Signal<Peer?, NoError> in
                     return .single(peer?._asPeer())
                 }
@@ -824,7 +830,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     
     private func openPeerMention(_ name: String) {
         self.navigationActionDisposable.set((self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
-        |> take(1)
+        |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
         |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {

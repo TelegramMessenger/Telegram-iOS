@@ -232,7 +232,7 @@ private final class LineView: UIView {
                     dashBackgroundView.layer.add(animation, forKey: "progress")
                 }
             } else {
-                let phaseDuration: Double = 0.8
+                let phaseDuration: Double = 1.0
                 if self.backgroundView.layer.animation(forKey: "progress") == nil {
                     let animation = self.backgroundView.layer.makeAnimation(from: 0.0 as NSNumber, to: -params.size.height as NSNumber, keyPath: "position.y", timingFunction: kCAMediaTimingFunctionSpring, duration: phaseDuration * 0.5, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: false, additive: true)
                     animation.repeatCount = 1.0

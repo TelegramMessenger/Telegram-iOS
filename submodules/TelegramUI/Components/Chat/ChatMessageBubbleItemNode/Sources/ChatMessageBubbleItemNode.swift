@@ -572,6 +572,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var appliedForwardInfo: (Peer?, String?)?
     private var disablesComments = true
     
+    private var authorNameColor: UIColor?
+    
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     
     private var replyRecognizer: ChatSwipeToReplyRecognizer?
@@ -1854,6 +1856,18 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
             }
         }
+        
+        if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
+            authorNameColor = (peer as Peer).nameColor?.color
+        } else if let effectiveAuthor = effectiveAuthor {
+            let nameColor: UIColor
+            if incoming {
+                nameColor = (effectiveAuthor.nameColor ?? .blue).color
+            } else {
+                nameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+            }
+            authorNameColor = nameColor
+        }
                 
         if initialDisplayHeader && displayAuthorInfo {
             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
@@ -2696,6 +2710,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 nameNodeSizeApply: nameNodeSizeApply,
                 contentOrigin: contentOrigin,
                 nameNodeOriginY: nameNodeOriginY,
+                authorNameColor: authorNameColor,
                 layoutConstants: layoutConstants,
                 currentCredibilityIcon: currentCredibilityIcon,
                 adminNodeSizeApply: adminNodeSizeApply,
@@ -2747,6 +2762,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         nameNodeSizeApply: (CGSize, () -> TextNode?),
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
+        authorNameColor: UIColor?,
         layoutConstants: ChatMessageItemLayoutConstants,
         currentCredibilityIcon: EmojiStatusComponent.Content?,
         adminNodeSizeApply: (CGSize, () -> TextNode?),
@@ -2785,6 +2801,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
         strongSelf.updateAccessibilityData(accessibilityData)
         strongSelf.disablesComments = disablesComments
+        
+        strongSelf.authorNameColor = authorNameColor
         
         strongSelf.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         strongSelf.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
@@ -4499,6 +4517,26 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         self.mainContextSourceNode.contentNode.insertSubnode(backgroundHighlightNode, aboveSubnode: self.backgroundNode)
                         self.backgroundHighlightNode = backgroundHighlightNode
                         
+                        let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
+                        let incoming: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.incoming.bubble.withWallpaper
+                        let outgoing: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.outgoing.bubble.withWallpaper
+                        
+                        let highlightColor: UIColor
+                        if item.message.effectivelyIncoming(item.context.account.peerId) {
+                            if let authorNameColor = self.authorNameColor {
+                                highlightColor = authorNameColor.withMultipliedAlpha(0.2)
+                            } else {
+                                highlightColor = incoming.highlightedFill
+                            }
+                        } else {
+                            if let authorNameColor = self.authorNameColor {
+                                highlightColor = authorNameColor.withMultipliedAlpha(0.2)
+                            } else {
+                                highlightColor = outgoing.highlightedFill
+                            }
+                        }
+                        
+                        backgroundHighlightNode.customHighlightColor = highlightColor
                         backgroundHighlightNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: true, hasWallpaper: false, transition: .immediate, backgroundNode: nil)
                         
                         backgroundHighlightNode.frame = self.backgroundNode.frame
@@ -4511,17 +4549,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 }
                                 
                                 if let highlightedState = self.highlightedState, let quote = highlightedState.quote {
-                                    let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
-                                    let incoming: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.incoming.bubble.withWallpaper
-                                    let outgoing: PresentationThemeBubbleColorComponents = !hasWallpaper ? item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper : item.presentationData.theme.theme.chat.message.outgoing.bubble.withWallpaper
-                                    
-                                    let highlightColor: UIColor
-                                    if item.message.effectivelyIncoming(item.context.account.peerId) {
-                                        highlightColor = incoming.highlightedFill
-                                    } else {
-                                        highlightColor = outgoing.highlightedFill
-                                    }
-                                    
                                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                                     
                                     var quoteFrame: CGRect?
@@ -4552,7 +4579,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                         
                                         backgroundHighlightNode.updateLayout(size: quoteFrame.size, transition: transition)
                                         transition.updateFrame(node: backgroundHighlightNode, frame: quoteFrame)
-                                        backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.1, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
+                                        backgroundHighlightNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, delay: 0.05, removeOnCompletion: false, completion: { [weak backgroundHighlightNode] _ in
                                             backgroundHighlightNode?.removeFromSupernode()
                                         })
                                     }

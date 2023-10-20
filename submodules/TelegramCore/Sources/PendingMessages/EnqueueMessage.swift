@@ -190,38 +190,38 @@ private func convertForwardedMediaForSecretChat(_ media: Media) -> Media {
 private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAttribute]) -> [MessageAttribute] {
     return attributes.filter { attribute in
         switch attribute {
-            case _ as TextEntitiesMessageAttribute:
-                return true
-            case _ as InlineBotMessageAttribute:
-                return true
-            case _ as OutgoingMessageInfoAttribute:
-                return false
-            case _ as OutgoingContentInfoMessageAttribute:
-                return true
-            case _ as ReplyMarkupMessageAttribute:
-                return true
-            case _ as OutgoingChatContextResultMessageAttribute:
-                return true
-            case _ as AutoremoveTimeoutMessageAttribute:
-                return true
-            case _ as NotificationInfoMessageAttribute:
-                return true
-            case _ as OutgoingScheduleInfoMessageAttribute:
-                return true
-            case _ as EmbeddedMediaStickersMessageAttribute:
-                return true
-            case _ as EmojiSearchQueryMessageAttribute:
-                return true
-            case _ as ForwardOptionsMessageAttribute:
-                return true
-            case _ as SendAsMessageAttribute:
-                return true
-            case _ as MediaSpoilerMessageAttribute:
-                return true
-            case _ as WebpagePreviewMessageAttribute:
-                return true
-            default:
-                return false
+        case _ as TextEntitiesMessageAttribute:
+            return true
+        case _ as InlineBotMessageAttribute:
+            return true
+        case _ as OutgoingMessageInfoAttribute:
+            return false
+        case _ as OutgoingContentInfoMessageAttribute:
+            return true
+        case _ as ReplyMarkupMessageAttribute:
+            return true
+        case _ as OutgoingChatContextResultMessageAttribute:
+            return true
+        case _ as AutoremoveTimeoutMessageAttribute:
+            return true
+        case _ as NotificationInfoMessageAttribute:
+            return true
+        case _ as OutgoingScheduleInfoMessageAttribute:
+            return true
+        case _ as EmbeddedMediaStickersMessageAttribute:
+            return true
+        case _ as EmojiSearchQueryMessageAttribute:
+            return true
+        case _ as ForwardOptionsMessageAttribute:
+            return true
+        case _ as SendAsMessageAttribute:
+            return true
+        case _ as MediaSpoilerMessageAttribute:
+            return true
+        case _ as WebpagePreviewMessageAttribute:
+            return true
+        default:
+            return false
         }
     }
 }
@@ -244,6 +244,9 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as MediaSpoilerMessageAttribute:
                 return true
             case let attribute as ReplyMessageAttribute:
+                if attribute.quote != nil {
+                    return true
+                }
                 if let forwardedMessageIds = forwardedMessageIds {
                     return forwardedMessageIds.contains(attribute.messageId)
                 } else {

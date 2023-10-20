@@ -53,6 +53,12 @@ private func cachedInternalInstantPage(context: AccountContext, url: String) -> 
     return cachedInstantPage(engine: context.engine, url: cachedUrl)
     |> mapToSignal { cachedInstantPage -> Signal<ResolvedUrl, NoError> in
         let updated = resolveInstantViewUrl(account: context.account, url: url)
+        |> mapToSignal { result -> Signal<ResolvedUrl, NoError> in
+            guard case let .result(result) = result else {
+                return .complete()
+            }
+            return .single(result)
+        }
         |> afterNext { result in
             if case let .instantView(webPage, _) = result, case let .Loaded(content) = webPage.content, let instantPage = content.instantPage {
                 if instantPage.isComplete {
