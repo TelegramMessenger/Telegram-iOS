@@ -722,8 +722,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             actualSize.height += textBottomSpacing
                             
                             if let (_, inlineMediaSize) = inlineMediaAndSize {
-                                if actualSize.height < insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset {
-                                    actualSize.height = insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
+                                if actualSize.height < backgroundInsets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset {
+                                    actualSize.height = backgroundInsets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
                                 }
                             }
                         case .media:

@@ -38,6 +38,18 @@ private func rtfStringWithAppliedEntities(_ text: String, entities: [MessageText
     }
 }
 
+struct AppSpecificPasteboardString: Codable {
+    var text: String
+    var entities: [MessageTextEntity]
+}
+
+private func appSpecificStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> Data {
+    guard let data = try? JSONEncoder().encode(AppSpecificPasteboardString(text: text, entities: entities)) else {
+        return Data()
+    }
+    return data
+}
+
 private func chatInputStateString(attributedString: NSAttributedString) -> NSAttributedString? {
     let string = NSMutableAttributedString(string: attributedString.string)
     attributedString.enumerateAttributes(in: NSRange(location: 0, length: attributedString.length), options: [], using: { attributes, range, _ in
@@ -100,12 +112,20 @@ public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.D
     return nil
 }
 
+public func chatInputStateStringFromAppSpecificString(data: Data) -> NSAttributedString? {
+    guard let string = try? JSONDecoder().decode(AppSpecificPasteboardString.self, from: data) else {
+        return nil
+    }
+    return chatInputStateStringWithAppliedEntities(string.text, entities: string.entities)
+}
+
 public func storeMessageTextInPasteboard(_ text: String, entities: [MessageTextEntity]?) {
     var items: [String: Any] = [:]
     items[kUTTypeUTF8PlainText as String] = text
     
     if let entities = entities {
         items[kUTTypeRTF as String] = rtfStringWithAppliedEntities(text, entities: entities)
+        items["private.telegramtext"] = appSpecificStringWithAppliedEntities(text, entities: entities)
     }
     UIPasteboard.general.items = [items]
 }
