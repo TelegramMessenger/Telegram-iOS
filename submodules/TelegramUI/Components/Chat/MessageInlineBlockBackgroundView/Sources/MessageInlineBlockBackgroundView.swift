@@ -28,43 +28,64 @@ private func addRoundedRectPath(context: CGContext, rect: CGRect, radius: CGFloa
     context.restoreGState()
 }
 
-private func generateTemplateImage(isMonochrome: Bool) -> UIImage {
+private func generateBackgroundTemplateImage(addStripe: Bool) -> UIImage {
     return generateImage(CGSize(width: radius * 2.0 + 4.0, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        //context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
         addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(), size: size), radius: radius)
         context.clip()
         
         context.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(UIColor.white.withAlphaComponent(isMonochrome ? 0.2 : 1.0).cgColor)
-        context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
+        if addStripe {
+            context.setFillColor(UIColor.white.withMultipliedAlpha(0.2).cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
+        }
     })!.stretchableImage(withLeftCapWidth: Int(radius) + 2, topCapHeight: Int(radius) + 3).withRenderingMode(.alwaysTemplate)
 }
 
-private let plainTemplateImage: UIImage = {
-    return generateTemplateImage(isMonochrome: false)
-}()
-
-private let monochromePatternTemplateImage: UIImage = {
-    return generateTemplateImage(isMonochrome: true)
-}()
-
-private func generateDashBackgroundTemplateImage() -> UIImage {
+private func generateProgressTemplateImage() -> UIImage {
     return generateImage(CGSize(width: radius * 2.0 + 4.0, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
-        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerRadius: radius).cgPath)
+        addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(), size: size), radius: radius)
         context.clip()
         
-        context.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
+        context.setFillColor(UIColor.white.withMultipliedAlpha(0.4).cgColor)
         context.fill(CGRect(origin: CGPoint(), size: size))
         
-        context.setFillColor(UIColor.white.withAlphaComponent(0.2).cgColor)
+        context.setFillColor(UIColor.white.withMultipliedAlpha(0.7).cgColor)
         context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
+        
+        context.resetClip()
+        
+        let borderWidth: CGFloat = 1.5
+        addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(), size: size).insetBy(dx: borderWidth * 0.5, dy: borderWidth * 0.5), radius: radius)
+        context.setStrokeColor(UIColor.white.withAlphaComponent(0.7).cgColor)
+        context.strokePath()
+        
     })!.stretchableImage(withLeftCapWidth: Int(radius) + 2, topCapHeight: Int(radius) + 3).withRenderingMode(.alwaysTemplate)
+}
+
+private let backgroundSolidTemplateImage: UIImage = {
+    return generateBackgroundTemplateImage(addStripe: true)
+}()
+
+private let backgroundDashTemplateImage: UIImage = {
+    return generateBackgroundTemplateImage(addStripe: false)
+}()
+
+private func generateDashBackgroundTemplateImage() -> UIImage {
+    return generateImage(CGSize(width: lineWidth, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        context.addPath(UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: CGSize(width: radius * 2.0, height: size.height)), cornerRadius: radius).cgPath)
+        context.clip()
+        
+        context.setFillColor(UIColor.white.withAlphaComponent(1.0).cgColor)
+        context.fill(CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)))
+    })!.stretchableImage(withLeftCapWidth: 0, topCapHeight: Int(radius) + 3).withRenderingMode(.alwaysTemplate)
 }
 
 private let dashBackgroundTemplateImage: UIImage = {
@@ -103,6 +124,35 @@ private let dashMonochromeTemplateImage: UIImage = {
     return generateDashTemplateImage(isMonochrome: true)
 }()
 
+private func generateGradient(gradientWidth: CGFloat, baseAlpha: CGFloat) -> UIImage {
+    return generateImage(CGSize(width: gradientWidth, height: 16.0), opaque: false, scale: 1.0, rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        
+        let foregroundColor = UIColor(white: 1.0, alpha: min(1.0, baseAlpha * 4.0))
+        
+        if let shadowImage = UIImage(named: "Stories/PanelGradient") {
+            UIGraphicsPushContext(context)
+            
+            for i in 0 ..< 2 {
+                let shadowFrame = CGRect(origin: CGPoint(x: CGFloat(i) * (size.width * 0.5), y: 0.0), size: CGSize(width: size.width * 0.5, height: size.height))
+                
+                context.saveGState()
+                context.translateBy(x: shadowFrame.midX, y: shadowFrame.midY)
+                context.rotate(by: CGFloat(i == 0 ? 1.0 : -1.0) * CGFloat.pi * 0.5)
+                let adjustedRect = CGRect(origin: CGPoint(x: -shadowFrame.height * 0.5, y: -shadowFrame.width * 0.5), size: CGSize(width: shadowFrame.height, height: shadowFrame.width))
+                
+                context.clip(to: adjustedRect, mask: shadowImage.cgImage!)
+                context.setFillColor(foregroundColor.cgColor)
+                context.fill(adjustedRect)
+                
+                context.restoreGState()
+            }
+            
+            UIGraphicsPopContext()
+        }
+    })!.withRenderingMode(.alwaysTemplate)
+}
+
 private final class PatternContentsTarget: MultiAnimationRenderTarget {
     private let imageUpdated: () -> Void
     
@@ -119,6 +169,165 @@ private final class PatternContentsTarget: MultiAnimationRenderTarget {
     override func transitionToContents(_ contents: AnyObject, didLoop: Bool) {
         self.contents = contents
         self.imageUpdated()
+    }
+}
+
+private final class LineView: UIView {
+    private let backgroundView: UIImageView
+    private var dashBackgroundView: UIImageView?
+    
+    private var params: Params?
+    private var isAnimating: Bool = false
+    
+    private struct Params: Equatable {
+        var size: CGSize
+        var primaryColor: UIColor
+        var secondaryColor: UIColor?
+        var displayProgress: Bool
+        
+        init(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, displayProgress: Bool) {
+            self.size = size
+            self.primaryColor = primaryColor
+            self.secondaryColor = secondaryColor
+            self.displayProgress = displayProgress
+        }
+    }
+    
+    override init(frame: CGRect) {
+        self.backgroundView = UIImageView()
+        self.backgroundView.image = dashBackgroundTemplateImage
+        
+        super.init(frame: frame)
+        
+        self.layer.cornerRadius = radius
+        if #available(iOS 13.0, *) {
+            self.layer.cornerCurve = .circular
+        }
+        
+        self.addSubview(self.backgroundView)
+    }
+    
+    required init(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func updateAnimations() {
+        guard let params = self.params else {
+            return
+        }
+        
+        if params.displayProgress {
+            if let dashBackgroundView = self.dashBackgroundView {
+                if dashBackgroundView.layer.animation(forKey: "progress") == nil {
+                    let animation = dashBackgroundView.layer.makeAnimation(from: 18.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+                    animation.repeatCount = 1.0
+                    self.isAnimating = true
+                    animation.completion = { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        self.isAnimating = false
+                        self.updateAnimations()
+                    }
+                    dashBackgroundView.layer.add(animation, forKey: "progress")
+                }
+            } else {
+                let phaseDuration: Double = 0.8
+                if self.backgroundView.layer.animation(forKey: "progress") == nil {
+                    let animation = self.backgroundView.layer.makeAnimation(from: 0.0 as NSNumber, to: -params.size.height as NSNumber, keyPath: "position.y", timingFunction: kCAMediaTimingFunctionSpring, duration: phaseDuration * 0.5, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: false, additive: true)
+                    animation.repeatCount = 1.0
+                    self.isAnimating = true
+                    animation.completion = { [weak self] _ in
+                        guard let self else {
+                            return
+                        }
+                        
+                        let animation = self.backgroundView.layer.makeAnimation(from: params.size.height as NSNumber, to: 0.0 as NSNumber, keyPath: "position.y", timingFunction: kCAMediaTimingFunctionSpring, duration: phaseDuration * 0.5, delay: self.params?.displayProgress == true ? 0.1 : 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+                        animation.repeatCount = 1.0
+                        self.isAnimating = true
+                        animation.completion = { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isAnimating = false
+                            self.updateAnimations()
+                        }
+                        self.backgroundView.layer.add(animation, forKey: "progress")
+                    }
+                    self.backgroundView.layer.add(animation, forKey: "progress")
+                }
+            }
+        }
+        
+        if self.isAnimating && self.dashBackgroundView == nil {
+            self.backgroundView.backgroundColor = params.primaryColor
+            self.backgroundView.layer.masksToBounds = true
+            self.backgroundView.layer.cornerRadius = radius * 0.5
+        } else {
+            self.backgroundView.backgroundColor = nil
+            self.backgroundView.layer.masksToBounds = false
+        }
+        
+        self.layer.masksToBounds = params.secondaryColor != nil || self.isAnimating
+    }
+    
+    func update(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, displayProgress: Bool, animation: ListViewItemUpdateAnimation) {
+        let params = Params(
+            size: size,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            displayProgress: displayProgress
+        )
+        if self.params == params {
+            return
+        }
+        let previousParams = self.params
+        self.params = params
+        
+        let _ = previousParams
+        
+        
+        self.backgroundView.tintColor = primaryColor
+        
+        if let secondaryColor {
+            let dashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -18.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
+            
+            let dashBackgroundView: UIImageView
+            if let current = self.dashBackgroundView {
+                dashBackgroundView = current
+                
+                animation.animator.updateFrame(layer: dashBackgroundView.layer, frame: dashBackgroundFrame, completion: nil)
+            } else {
+                dashBackgroundView = UIImageView()
+                self.dashBackgroundView = dashBackgroundView
+                self.addSubview(dashBackgroundView)
+                
+                dashBackgroundView.frame = dashBackgroundFrame
+            }
+            
+            if secondaryColor.alpha == 0.0 {
+                self.backgroundView.alpha = 0.2
+                dashBackgroundView.image = dashMonochromeTemplateImage
+                dashBackgroundView.tintColor = primaryColor
+            } else {
+                self.backgroundView.alpha = 1.0
+                dashBackgroundView.image = dashOpaqueTemplateImage
+                dashBackgroundView.tintColor = secondaryColor
+            }
+        } else {
+            if let dashBackgroundView = self.dashBackgroundView {
+                self.dashBackgroundView = nil
+                dashBackgroundView.removeFromSuperview()
+            }
+            
+            self.backgroundView.alpha = 1.0
+        }
+        
+        self.layer.masksToBounds = params.secondaryColor != nil || self.isAnimating
+        
+        animation.animator.updateFrame(layer: self.backgroundView.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: lineWidth, height: size.height)), completion: nil)
+        
+        self.updateAnimations()
     }
 }
 
@@ -158,6 +367,20 @@ public final class MessageInlineBlockBackgroundView: UIView {
         var secondaryColor: UIColor?
         var pattern: Pattern?
         var displayProgress: Bool
+        
+        init(
+            size: CGSize,
+            primaryColor: UIColor,
+            secondaryColor: UIColor?,
+            pattern: Pattern?,
+            displayProgress: Bool
+        ) {
+            self.size = size
+            self.primaryColor = primaryColor
+            self.secondaryColor = secondaryColor
+            self.pattern = pattern
+            self.displayProgress = displayProgress
+        }
     }
 
     private var params: Params?
@@ -171,11 +394,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                         primaryColor: params.primaryColor,
                         secondaryColor: params.secondaryColor,
                         pattern: params.pattern,
-                        animation: .System(duration: 0.2, transition: ControlledTransition(
-                            duration: 0.2,
-                            curve: .easeInOut,
-                            interactive: false
-                        ))
+                        animation: .None
                     )
                 }
             }
@@ -183,7 +402,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
     }
     
     private let backgroundView: UIImageView
-    private var dashView: UIImageView?
+    private var lineView: LineView
     private var hierarchyTrackingLayer: HierarchyTrackingLayer?
     
     private var patternContentsTarget: PatternContentsTarget?
@@ -192,13 +411,19 @@ public final class MessageInlineBlockBackgroundView: UIView {
     private var patternFileDisposable: Disposable?
     private var patternImage: UIImage?
     private var patternImageDisposable: Disposable?
+    
+    private var progressBackgroundContentsView: UIImageView?
+    private var progressBackgroundMaskContainer: UIView?
+    private var progressBackgroundGradientView: UIImageView?
 
     override public init(frame: CGRect) {
         self.backgroundView = UIImageView()
+        self.lineView = LineView()
         
         super.init(frame: frame)
         
         self.addSubview(self.backgroundView)
+        self.addSubview(self.lineView)
     }
     
     required public init?(coder: NSCoder) {
@@ -211,6 +436,27 @@ public final class MessageInlineBlockBackgroundView: UIView {
     }
     
     private func updateAnimations() {
+        guard let hierarchyTrackingLayer = self.hierarchyTrackingLayer, hierarchyTrackingLayer.isInHierarchy else {
+            return
+        }
+        guard let params = self.params else {
+            return
+        }
+        guard let progressBackgroundGradientView = self.progressBackgroundGradientView else {
+            return
+        }
+        let gradientWidth = progressBackgroundGradientView.bounds.width
+        
+        if progressBackgroundGradientView.layer.animation(forKey: "shimmer") != nil {
+            return
+        }
+
+        let duration: Double = 1.0
+        let animation = progressBackgroundGradientView.layer.makeAnimation(from: 0.0 as NSNumber, to: (params.size.width + gradientWidth + params.size.width * 0.1) as NSNumber, keyPath: "position.x", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: duration, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+        animation.repeatCount = Float.infinity
+        progressBackgroundGradientView.layer.add(animation, forKey: "shimmer")
+        
+        self.lineView.updateAnimations()
     }
     
     private func loadPatternFromFile() {
@@ -277,37 +523,12 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.layerTintColor = primaryColor.cgColor
             }
             
-            if let secondaryColor = params.secondaryColor {
-                self.backgroundView.tintColor = params.primaryColor
-                
-                if self.dashView == nil {
-                    let dashView = UIImageView()
-                    dashView.layer.cornerRadius = radius
-                    if #available(iOS 13.0, *) {
-                        dashView.layer.cornerCurve = .circular
-                    }
-                    self.dashView = dashView
-                    self.addSubview(dashView)
-                }
-                
-                if secondaryColor.alpha == 0.0 {
-                    self.backgroundView.image = monochromePatternTemplateImage
-                    self.dashView?.image = dashMonochromeTemplateImage
-                    self.dashView?.tintColor = primaryColor
-                } else {
-                    self.backgroundView.image = plainTemplateImage
-                    self.dashView?.image = dashOpaqueTemplateImage
-                    self.dashView?.tintColor = secondaryColor
-                }
+            if params.secondaryColor != nil {
+                self.backgroundView.image = backgroundDashTemplateImage
             } else {
-                self.backgroundView.image = plainTemplateImage
-                self.backgroundView.tintColor = params.primaryColor
-                
-                if let dashView = self.dashView {
-                    self.dashView = dashView
-                    dashView.removeFromSuperview()
-                }
+                self.backgroundView.image = backgroundSolidTemplateImage
             }
+            self.backgroundView.tintColor = params.primaryColor
         }
         
         if previousParams?.pattern != params.pattern {
@@ -360,15 +581,19 @@ public final class MessageInlineBlockBackgroundView: UIView {
             }
         }
         
-        self.dashView?.layer.masksToBounds = params.pattern == nil && params.secondaryColor != nil
-        
         animation.animator.updateFrame(layer: self.backgroundView.layer, frame: CGRect(origin: CGPoint(), size: size), completion: nil)
-        if let dashView = self.dashView {
-            animation.animator.updateFrame(layer: dashView.layer, frame: CGRect(origin: CGPoint(), size: CGSize(width: radius * 2.0, height: size.height)), completion: nil)
-        }
+        
+        let lineFrame = CGRect(origin: CGPoint(), size: CGSize(width: radius * 2.0, height: size.height))
+        self.lineView.update(
+            size: lineFrame.size,
+            primaryColor: params.primaryColor,
+            secondaryColor: params.secondaryColor,
+            displayProgress: params.displayProgress,
+            animation: animation
+        )
+        animation.animator.updateFrame(layer: lineView.layer, frame: lineFrame, completion: nil)
         
         if params.pattern != nil {
-            
             var maxIndex = 0
             
             struct Placement {
@@ -408,7 +633,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.frame = CGRect(origin: CGPoint(x: size.width - placement.position.x / 3.0 - itemSize.width * 0.5, y: placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
                 var alphaFraction = abs(placement.position.x) / 400.0
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
-                patternContentLayer.opacity = 0.5 * Float(1.0 - alphaFraction)
+                patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)
                 
                 maxIndex += 1
             }
@@ -424,6 +649,79 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.removeFromSuperlayer()
             }
             self.patternContentLayers.removeAll()
+        }
+        
+        let gradientWidth: CGFloat = min(300.0, max(200.0, size.width * 0.9))
+        
+        if previousParams?.displayProgress != params.displayProgress {
+            if params.displayProgress {
+                let progressBackgroundContentsView: UIImageView
+                if let current = self.progressBackgroundContentsView {
+                    progressBackgroundContentsView = current
+                } else {
+                    progressBackgroundContentsView = UIImageView()
+                    progressBackgroundContentsView.image = generateProgressTemplateImage()
+                    self.insertSubview(progressBackgroundContentsView, aboveSubview: self.backgroundView)
+                    progressBackgroundContentsView.tintColor = primaryColor
+                }
+                
+                let progressBackgroundMaskContainer: UIView
+                if let current = self.progressBackgroundMaskContainer {
+                    progressBackgroundMaskContainer = current
+                } else {
+                    progressBackgroundMaskContainer = UIView()
+                    self.progressBackgroundMaskContainer = progressBackgroundMaskContainer
+                    progressBackgroundContentsView.mask = progressBackgroundMaskContainer
+                }
+                
+                let progressBackgroundGradientView: UIImageView
+                if let current = self.progressBackgroundGradientView {
+                    progressBackgroundGradientView = current
+                } else {
+                    progressBackgroundGradientView = UIImageView()
+                    self.progressBackgroundGradientView = progressBackgroundGradientView
+                    progressBackgroundMaskContainer.addSubview(progressBackgroundGradientView)
+                    progressBackgroundGradientView.image = generateGradient(gradientWidth: 100.0, baseAlpha: 0.5)
+                }
+                
+                progressBackgroundContentsView.frame = CGRect(origin: CGPoint(), size: size)
+                progressBackgroundMaskContainer.frame = CGRect(origin: CGPoint(), size: size)
+                progressBackgroundGradientView.frame = CGRect(origin: CGPoint(x: -gradientWidth, y: 0.0), size: CGSize(width: gradientWidth, height: size.height))
+                
+                if self.hierarchyTrackingLayer == nil {
+                    let hierarchyTrackingLayer = HierarchyTrackingLayer()
+                    self.hierarchyTrackingLayer = hierarchyTrackingLayer
+                    self.layer.addSublayer(hierarchyTrackingLayer)
+                    hierarchyTrackingLayer.isInHierarchyUpdated = { [weak self] _ in
+                        self?.updateAnimations()
+                    }
+                }
+            } else {
+                if let progressBackgroundContentsView = self.progressBackgroundContentsView {
+                    self.progressBackgroundContentsView = nil
+                    let transition = ContainedViewLayoutTransition.animated(duration: 0.15, curve: .easeInOut)
+                    transition.updateAlpha(layer: progressBackgroundContentsView.layer, alpha: 0.0)
+                }
+                self.progressBackgroundMaskContainer = nil
+                self.progressBackgroundGradientView = nil
+                
+                if let hierarchyTrackingLayer = self.hierarchyTrackingLayer {
+                    self.hierarchyTrackingLayer = nil
+                    hierarchyTrackingLayer.isInHierarchyUpdated = nil
+                    hierarchyTrackingLayer.removeFromSuperlayer()
+                }
+            }
+        } else {
+            if let progressBackgroundContentsView = self.progressBackgroundContentsView {
+                animation.animator.updateFrame(layer: progressBackgroundContentsView.layer, frame: CGRect(origin: CGPoint(), size: size), completion: nil)
+                progressBackgroundContentsView.tintColor = primaryColor
+            }
+            if let progressBackgroundMaskContainer = self.progressBackgroundMaskContainer {
+                animation.animator.updateFrame(layer: progressBackgroundMaskContainer.layer, frame: CGRect(origin: CGPoint(), size: size), completion: nil)
+            }
+            if let progressBackgroundGradientView = self.progressBackgroundGradientView {
+                animation.animator.updateFrame(layer: progressBackgroundGradientView.layer, frame: CGRect(origin: CGPoint(x: -gradientWidth, y: 0.0), size: CGSize(width: gradientWidth, height: size.height)), completion: nil)
+            }
         }
         
         self.updateAnimations()

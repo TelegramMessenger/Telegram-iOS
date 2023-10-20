@@ -76,10 +76,12 @@ public protocol ChatMessageTransitionProtocol: ASDisplayNode {
 public struct NavigateToMessageParams {
     public var timestamp: Double?
     public var quote: String?
+    public var progress: Promise<Bool>?
     
-    public init(timestamp: Double?, quote: String?) {
+    public init(timestamp: Double?, quote: String?, progress: Promise<Bool>? = nil) {
         self.timestamp = timestamp
         self.quote = quote
+        self.progress = progress
     }
 }
 

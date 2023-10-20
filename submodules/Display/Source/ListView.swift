@@ -2932,7 +2932,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if let index = itemNode.index, index == scrollToItem.index {
                     let insets = self.insets// updateSizeAndInsets?.insets ?? self.insets
                     
-                    let offset: CGFloat
+                    var offset: CGFloat
                     switch scrollToItem.position {
                         case let .bottom(additionalOffset):
                             offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom + additionalOffset
@@ -2944,10 +2944,17 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 offset = insets.top + floor(((self.visibleSize.height - insets.bottom - insets.top) - itemNode.frame.size.height) / 2.0) - itemNode.apparentFrame.minY
                             } else {
                                 switch overflow {
-                                    case .top:
-                                        offset = insets.top - itemNode.apparentFrame.minY
-                                    case .bottom:
-                                        offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY
+                                case .top:
+                                    offset = insets.top - itemNode.apparentFrame.minY
+                                case .bottom:
+                                    offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY
+                                case let .custom(getOverflow):
+                                    let overflow = getOverflow(itemNode)
+                                    offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY
+                                    offset += floor(overflow - (self.visibleSize.height - insets.bottom - insets.top) * 0.5)
+                                    //offset += 100.0
+                                    
+                                    //offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + getOverflow(itemNode)
                                 }
                             }
                         case .visible:

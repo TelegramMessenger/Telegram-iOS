@@ -487,8 +487,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     return (messages, Int32(messages.count), false)
                 }
-                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
-            case .reply:
+                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: nil, loadMore: nil)
+            case let .reply(reply):
                 let messages = combineLatest(context.account.postbox.messagesAtIds(messageIds), context.account.postbox.loadedPeerWithId(context.account.peerId))
                 |> map { messages, accountPeer -> ([Message], Int32, Bool) in
                     var messages = messages
@@ -501,7 +501,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     return (messages, Int32(messages.count), false)
                 }
-                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
+                source = .custom(messages: messages, messageId: messageIds.first ?? MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: reply.quote?.text, loadMore: nil)
             case let .link(link):
                 let messages = link.options
                 |> mapToSignal { options -> Signal<(ChatControllerSubject.LinkOptions, Peer, Message?), NoError> in
@@ -576,7 +576,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     return ([message], 1, false)
                 }
-                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), loadMore: nil)
+                source = .custom(messages: messages, messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: nil, loadMore: nil)
             }
         } else {
             source = .default

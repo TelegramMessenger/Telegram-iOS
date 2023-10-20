@@ -2762,8 +2762,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let performOpenURL = strongSelf.performOpenURL {
                     performOpenURL(message, url, progress)
                 } else {
-                    progress?.set(.single(false))
-                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution)
+                    strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message, allowInlineWebpageResolution: urlData.allowInlineWebpageResolution, progress: progress)
                 }
             }
         }, shareCurrentLocation: { [weak self] in
@@ -5382,10 +5381,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
                                 if case .reply = info {
                                     //TODO:localize
+                                    let titleContent: ChatTitleContent
                                     if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
-                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Quote", subtitleText, false)
+                                        titleContent = .custom("Reply to Quote", subtitleText, false)
                                     } else {
-                                        strongSelf.chatTitleView?.titleContent = .custom("Reply to Message", subtitleText, false)
+                                        titleContent = .custom("Reply to Message", subtitleText, false)
+                                    }
+                                    if strongSelf.chatTitleView?.titleContent != titleContent {
+                                        if strongSelf.chatTitleView?.titleContent != nil {
+                                            strongSelf.chatTitleView?.animateLayoutTransition()
+                                        }
+                                        strongSelf.chatTitleView?.titleContent = titleContent
                                     }
                                 } else if case .link = info {
                                     //TODO:localize
@@ -16888,7 +16894,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if case let .id(messageId, params) = messageLocation, params.timestamp != nil {
                             self.scheduledScrollToMessageId = (messageId, params)
                         }
+                        var progress: Promise<Bool>?
+                        if case let .id(_, params) = messageLocation {
+                            progress = params.progress
+                        }
                         self.loadingMessage.set(.single(statusSubject) |> delay(0.1, queue: .mainQueue()))
+                        
                         let searchLocation: ChatHistoryInitialSearchLocation
                         switch messageLocation {
                         case let .id(id, _):
@@ -16902,9 +16913,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 searchLocation = .index(.absoluteUpperBound())
                             }
                         }
-                        let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
+                        var historyView: Signal<ChatHistoryViewUpdate, NoError>
+                        historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: nil), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
                         
-                        let signal = historyView
+                        var signal: Signal<(MessageIndex?, Bool), NoError>
+                        signal = historyView
                         |> mapToSignal { historyView -> Signal<(MessageIndex?, Bool), NoError> in
                             switch historyView {
                                 case .Loading:
@@ -16925,11 +16938,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return SignalTakeAction(passthrough: true, complete: !index.1)
                         })
                         
+                        #if DEBUG
+                        signal = .single((nil, true)) |> then(signal |> delay(2.0, queue: .mainQueue()))
+                        #endif
+                        
                         var cancelImpl: (() -> Void)?
                         let presentationData = self.presentationData
                         let displayTime = CACurrentMediaTime()
                         let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                            if case .generic = statusSubject {
+                            if let progress {
+                                progress.set(.single(true))
+                                return ActionDisposable {
+                                    Queue.mainQueue().async() {
+                                        progress.set(.single(false))
+                                    }
+                                }
+                            } else if case .generic = statusSubject {
                                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     if CACurrentMediaTime() - displayTime > 1.5 {
                                         cancelImpl?()
@@ -17006,21 +17030,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     let historyView = preloadedChatHistoryViewForLocation(ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: searchLocation, quote: quote), count: 50, highlight: true), id: 0), context: self.context, chatLocation: self.chatLocation, subject: self.subject, chatLocationContextHolder: self.chatLocationContextHolder, fixedCombinedReadStates: nil, tagMask: nil, additionalData: [])
-                    let signal = historyView
-                        |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
-                            switch historyView {
-                                case .Loading:
-                                    return .complete()
-                                case let .HistoryView(view, _, _, _, _, _, _):
-                                    for entry in view.entries {
-                                        if entry.message.id == messageLocation.messageId {
-                                            return .single(entry.message.index)
-                                        }
+                    var signal: Signal<MessageIndex?, NoError>
+                    signal = historyView
+                    |> mapToSignal { historyView -> Signal<MessageIndex?, NoError> in
+                        switch historyView {
+                            case .Loading:
+                                return .complete()
+                            case let .HistoryView(view, _, _, _, _, _, _):
+                                for entry in view.entries {
+                                    if entry.message.id == messageLocation.messageId {
+                                        return .single(entry.message.index)
                                     }
-                                    return .single(nil)
-                            }
+                                }
+                                return .single(nil)
                         }
-                        |> take(1)
+                    }
+                    |> take(1)
+                    
                     self.messageIndexDisposable.set((signal |> deliverOnMainQueue).startStrict(next: { [weak self] index in
                         if let strongSelf = self {
                             if let index = index {
@@ -17988,7 +18014,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, contentContext: nil)
     }
     
-    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, commit: @escaping () -> Void = {}) {
+    func openUrl(_ url: String, concealed: Bool, forceExternal: Bool = false, skipUrlAuth: Bool = false, skipConcealedAlert: Bool = false, message: Message? = nil, allowInlineWebpageResolution: Bool = false, progress: Promise<Bool>? = nil, commit: @escaping () -> Void = {}) {
         self.commitPurposefulAction()
         
         if allowInlineWebpageResolution, let message, let webpage = message.media.first(where: { $0 is TelegramMediaWebpage }) as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.url == url {
@@ -17998,22 +18024,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     case .album:
                         break
                     default:
+                        progress?.set(.single(false))
                         self.context.sharedContext.openChatInstantPage(context: self.context, message: message, sourcePeerType: nil, navigationController: navigationController)
                         return
                     }
                 }
             } else if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
+                progress?.set(.single(false))
                 let _ = self.controllerInteraction?.openMessage(message, .default)
                 return
             }
         }
         
-        let _ = self.presentVoiceMessageDiscardAlert(action: {
-            openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
+        let _ = self.presentVoiceMessageDiscardAlert(action: { [weak self] in
+            guard let self else {
+                return
+            }
+            let disposable = openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in
                 self?.openResolved(result: resolved, sourceMessageId: message?.id, forceExternal: forceExternal, concealed: concealed, commit: commit)
-            })
+            }, progress: progress)
+            self.navigationActionDisposable.set(disposable)
         }, performAction: true)
     }
     

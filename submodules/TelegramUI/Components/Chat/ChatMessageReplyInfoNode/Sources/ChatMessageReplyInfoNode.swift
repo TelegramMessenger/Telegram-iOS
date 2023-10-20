@@ -130,6 +130,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     private var previousMediaReference: AnyMediaReference?
     private var expiredStoryIconView: UIImageView?
     
+    private var currentProgressDisposable: Disposable?
+    
     override public init() {
         self.backgroundView = MessageInlineBlockBackgroundView(frame: CGRect())
         
@@ -142,6 +144,24 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.contentNode)
+    }
+    
+    deinit {
+        self.currentProgressDisposable?.dispose()
+    }
+    
+    public func makeProgress() -> Promise<Bool> {
+        let progress = Promise<Bool>()
+        self.currentProgressDisposable?.dispose()
+        self.currentProgressDisposable = (progress.get()
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] hasProgress in
+            guard let self else {
+                return
+            }
+            self.backgroundView.displayProgress = hasProgress
+        })
+        return progress
     }
     
     public static func asyncLayout(_ maybeNode: ChatMessageReplyInfoNode?) -> (_ arguments: Arguments) -> (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode) {

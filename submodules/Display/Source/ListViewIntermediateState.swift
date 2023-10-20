@@ -2,9 +2,33 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 
-public enum ListViewCenterScrollPositionOverflow {
+public enum ListViewCenterScrollPositionOverflow: Equatable {
     case top
     case bottom
+    case custom((ListViewItemNode) -> CGFloat)
+    
+    public static func ==(lhs: ListViewCenterScrollPositionOverflow, rhs: ListViewCenterScrollPositionOverflow) -> Bool {
+        switch lhs {
+        case .top:
+            if case .top = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .bottom:
+            if case .bottom = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .custom:
+            if case .custom = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
 }
 
 public enum ListViewScrollPosition: Equatable {
@@ -301,10 +325,10 @@ struct ListViewState {
                                 offset = self.insets.top + floor((contentAreaHeight - node.frame.size.height) / 2.0) - node.frame.minY
                             } else {
                                 switch overflow {
-                                    case .top:
-                                        offset = self.insets.top - node.frame.minY
-                                    case .bottom:
-                                        offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
+                                case .top:
+                                    offset = self.insets.top - node.frame.minY
+                                case .bottom, .custom:
+                                    offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
                                 }
                             }
                         case .visible:

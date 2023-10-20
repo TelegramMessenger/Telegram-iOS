@@ -978,6 +978,33 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
+    public func getQuoteRect(quote: String) -> CGRect? {
+        var rectsSet: [CGRect] = []
+        if !quote.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {
+            let nsString = string as NSString
+            let range = nsString.range(of: quote)
+            if range.location != NSNotFound {
+                if let rects = cachedLayout.rangeRects(in: range)?.rects, !rects.isEmpty {
+                    rectsSet = rects
+                }
+            }
+        }
+        if !rectsSet.isEmpty {
+            var currentRect = CGRect()
+            for rect in rectsSet {
+                if currentRect.isEmpty {
+                    currentRect = rect
+                } else {
+                    currentRect = currentRect.union(rect)
+                }
+            }
+            
+            return currentRect.offsetBy(dx: self.textNode.textNode.frame.minX, dy: self.textNode.textNode.frame.minY)
+        }
+        
+        return nil
+    }
+    
     public func updateQuoteTextHighlightState(text: String?, color: UIColor, animated: Bool) {
         var rectsSet: [CGRect] = []
         if let text = text, !text.isEmpty, let cachedLayout = self.textNode.textNode.cachedLayout, let string = cachedLayout.attributedString?.string {

@@ -417,7 +417,7 @@ private var nextClientId: Int32 = 1
 
 public enum ChatHistoryListSource {
     case `default`
-    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, loadMore: (() -> Void)?)
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, quote: String?, loadMore: (() -> Void)?)
 }
 
 public final class ChatHistoryListNode: ListView, ChatHistoryNode {
@@ -1083,7 +1083,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyViewUpdate: Signal<(ChatHistoryViewUpdate, Int, ChatHistoryLocationInput?, ClosedRange<Int32>?), NoError>
         var isFirstTime = true
         var updateAllOnEachVersion = false
-        if case let .custom(messages, at, _) = self.source {
+        if case let .custom(messages, at, quote, _) = self.source {
             updateAllOnEachVersion = true
             historyViewUpdate = messages
             |> map { messages, _, hasMore in
@@ -1097,7 +1097,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 let scrollPosition: ChatHistoryViewScrollPosition?
                 if isFirstTime, let messageIndex = messages.first(where: { $0.id == at })?.index {
-                    scrollPosition = .index(subject: MessageHistoryScrollToSubject(index: .message(messageIndex), quote: nil), position: .center(.bottom), directionHint: .Down, animated: false, highlight: false, displayLink: false)
+                    scrollPosition = .index(subject: MessageHistoryScrollToSubject(index: .message(messageIndex), quote: quote), position: .center(.bottom), directionHint: .Down, animated: false, highlight: false, displayLink: false)
                     isFirstTime = false
                 } else {
                     scrollPosition = nil

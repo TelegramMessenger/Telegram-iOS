@@ -100,7 +100,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                             if item.message.text.contains(webpage.url) {
                                 isConcealed = false
                             }
-                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: webpage.url, concealed: isConcealed))
+                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: webpage.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
                         }
                     }
                 }
@@ -119,7 +119,12 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
             if item.message.text.contains(content.url) {
                 isConcealed = false
             }
-            return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)))
+            return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)), activate: { [weak self] in
+                guard let self else {
+                    return nil
+                }
+                return self.contentNode.makeProgress()
+            })
         }
     }
     

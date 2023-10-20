@@ -28,6 +28,7 @@ import ChatMessageInteractiveFileNode
 import ChatMessageInteractiveMediaNode
 import WallpaperPreviewMedia
 import ChatMessageAttachedContentButtonNode
+import MessageInlineBlockBackgroundView
 
 public enum ChatMessageAttachedContentActionIcon {
     case instant
@@ -52,9 +53,9 @@ public struct ChatMessageAttachedContentNodeMediaFlags: OptionSet {
 }
 
 public final class ChatMessageAttachedContentNode: ASDisplayNode {
-    private var backgroundView: UIImageView?
-    private var lineDashView: UIImageView?
+    private var backgroundView: MessageInlineBlockBackgroundView?
     
+    private let transformContainer: ASDisplayNode
     private var title: TextNodeWithEntities?
     private var subtitle: TextNodeWithEntities?
     private var text: TextNodeWithEntities?
@@ -83,6 +84,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     public var activateAction: (() -> Void)?
     public var requestUpdateLayout: (() -> Void)?
     
+    private var currentProgressDisposable: Disposable?
+    
     public var defaultContentAction: () -> ChatMessageBubbleContentTapAction = { return ChatMessageBubbleContentTapAction(content: .none) }
     
     public var visibility: ListViewItemNodeVisibility = .none {
@@ -105,10 +108,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     }
     
     override public init() {
+        self.transformContainer = ASDisplayNode()
         self.statusNode = ChatMessageDateAndStatusNode()
         
         super.init()
         
+        self.addSubnode(self.transformContainer)
         self.addSubnode(self.statusNode)
     }
     
@@ -121,6 +126,20 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     }
     
     public typealias AsyncLayout = (_ presentationData: ChatPresentationData, _ automaticDownloadSettings: MediaAutoDownloadSettings, _ associatedData: ChatMessageItemAssociatedData, _ attributes: ChatMessageEntryAttributes, _ context: AccountContext, _ controllerInteraction: ChatControllerInteraction, _ message: Message, _ messageRead: Bool, _ chatLocation: ChatLocation, _ title: String?, _ subtitle: NSAttributedString?, _ text: String?, _ entities: [MessageTextEntity]?, _ media: (Media, ChatMessageAttachedContentNodeMediaFlags)?, _ mediaBadge: String?, _ actionIcon: ChatMessageAttachedContentActionIcon?, _ actionTitle: String?, _ displayLine: Bool, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ constrainedSize: CGSize, _ animationCache: AnimationCache, _ animationRenderer: MultiAnimationRenderer) -> (CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void)))
+    
+    public func makeProgress() -> Promise<Bool> {
+        let progress = Promise<Bool>()
+        self.currentProgressDisposable?.dispose()
+        self.currentProgressDisposable = (progress.get()
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] hasProgress in
+            guard let self else {
+                return
+            }
+            self.backgroundView?.displayProgress = hasProgress
+        })
+        return progress
+    }
     
     public func asyncLayout() -> AsyncLayout {
         let makeTitleLayout = TextNodeWithEntities.asyncLayout(self.title)
@@ -164,31 +183,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             if !incoming {
                 mainColor = messageTheme.accentTextColor
                 if let _ = author?.nameColor?.dashColors.1 {
-                    secondaryColor = messageTheme.accentTextColor
+                    secondaryColor = .clear
                 }
             } else {
                 var authorNameColor: UIColor?
-//                if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(message.id.peerId.namespace), author?.id.namespace == Namespaces.Peer.CloudUser {
-                    authorNameColor = author?.nameColor?.color
-                    secondaryColor = author?.nameColor?.dashColors.1
-                    
-//                    if let rawAuthorNameColor = authorNameColor {
-//                        var dimColors = false
-//                        switch presentationData.theme.theme.name {
-//                            case .builtin(.nightAccent), .builtin(.night):
-//                                dimColors = true
-//                            default:
-//                                break
-//                        }
-//                        if dimColors {
-//                            var hue: CGFloat = 0.0
-//                            var saturation: CGFloat = 0.0
-//                            var brightness: CGFloat = 0.0
-//                            rawAuthorNameColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: nil)
-//                            authorNameColor = UIColor(hue: hue, saturation: saturation * 0.7, brightness: min(1.0, brightness * 1.2), alpha: 1.0)
-//                        }
-//                    }
-//                }
+                authorNameColor = author?.nameColor?.color
+                secondaryColor = author?.nameColor?.dashColors.1
                 
                 if let authorNameColor {
                     mainColor = authorNameColor
@@ -760,42 +760,23 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         self.media = mediaAndFlags?.0
                         self.theme = presentationData.theme
                         
+                        animation.animator.updateFrame(layer: self.transformContainer.layer, frame: CGRect(origin: CGPoint(), size: actualSize), completion: nil)
+                        
                         if displayLine {
                             let backgroundFrame = CGRect(origin: CGPoint(x: backgroundInsets.left, y: backgroundInsets.top), size: CGSize(width: actualSize.width - backgroundInsets.left - backgroundInsets.right, height: actualSize.height - backgroundInsets.top - backgroundInsets.bottom))
                             
-                            let backgroundView: UIImageView
+                            let backgroundView: MessageInlineBlockBackgroundView
                             if let current = self.backgroundView {
                                 backgroundView = current
                                 animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
                             } else {
-                                backgroundView = UIImageView()
-                                backgroundView.image = PresentationResourcesChat.chatReplyBackgroundTemplateImage(presentationData.theme.theme, dashedOutgoing: !incoming && secondaryColor != nil)
+                                backgroundView = MessageInlineBlockBackgroundView()
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
-                                self.view.insertSubview(backgroundView, at: 0)
+                                self.transformContainer.view.insertSubview(backgroundView, at: 0)
                             }
                             
-                            backgroundView.tintColor = mainColor
-                            
-                            if let secondaryColor {
-                                let lineDashView: UIImageView
-                                if let current = self.lineDashView {
-                                    lineDashView = current
-                                } else {
-                                    lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(presentationData.theme.theme, incoming: incoming))
-                                    lineDashView.clipsToBounds = true
-                                    self.lineDashView = lineDashView
-                                    self.view.insertSubview(lineDashView, aboveSubview: backgroundView)
-                                }
-                                lineDashView.tintColor = secondaryColor
-                                lineDashView.frame = CGRect(origin: backgroundFrame.origin, size: CGSize(width: 12.0, height: backgroundFrame.height))
-                                lineDashView.layer.cornerRadius = 6.0
-                            } else {
-                                if let lineDashView = self.lineDashView {
-                                    self.lineDashView = nil
-                                    lineDashView.removeFromSuperview()
-                                }
-                            }
+                            backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: animation)
                         } else {
                             if let backgroundView = self.backgroundView {
                                 self.backgroundView = nil
@@ -825,7 +806,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 inlineMedia = TransformImageNode()
                                 inlineMedia.contentAnimations = .subsequentUpdates
                                 self.inlineMedia = inlineMedia
-                                self.addSubnode(inlineMedia)
+                                self.transformContainer.addSubnode(inlineMedia)
                                 
                                 inlineMedia.frame = inlineMediaFrame
                                 
@@ -876,7 +857,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.title?.textNode.removeFromSupernode()
                                 self.title = title
                                 title.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(title.textNode)
+                                self.transformContainer.addSubnode(title.textNode)
                                 
                                 title.textNode.frame = titleFrame
                             } else {
@@ -905,7 +886,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.subtitle?.textNode.removeFromSupernode()
                                 self.subtitle = subtitle
                                 subtitle.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(subtitle.textNode)
+                                self.transformContainer.addSubnode(subtitle.textNode)
                                 
                                 subtitle.textNode.frame = subtitleFrame
                             } else {
@@ -934,7 +915,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 self.text?.textNode.removeFromSupernode()
                                 self.text = text
                                 text.textNode.layer.anchorPoint = CGPoint()
-                                self.addSubnode(text.textNode)
+                                self.transformContainer.addSubnode(text.textNode)
                                 
                                 text.textNode.frame = textFrame
                             } else {
@@ -970,7 +951,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                                 contentMedia.visibility = self.visibility != .none
                                 
-                                self.addSubnode(contentMedia)
+                                self.transformContainer.addSubnode(contentMedia)
                                 
                                 contentMedia.frame = contentMediaFrame
                                 
@@ -999,7 +980,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if self.actionButton !== actionButton {
                                 self.actionButton?.removeFromSupernode()
                                 self.actionButton = actionButton
-                                self.addSubnode(actionButton)
+                                self.transformContainer.addSubnode(actionButton)
                                 actionButton.frame = actionButtonFrame
                                 
                                 actionButton.pressed = { [weak self] in
@@ -2067,7 +2048,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             } else {
                 linkHighlightingNode = LinkHighlightingNode(color: message.effectivelyIncoming(context.account.peerId) ? theme.theme.chat.message.incoming.linkHighlightColor : theme.theme.chat.message.outgoing.linkHighlightColor)
                 self.linkHighlightingNode = linkHighlightingNode
-                self.insertSubnode(linkHighlightingNode, belowSubnode: text.textNode)
+                self.transformContainer.insertSubnode(linkHighlightingNode, belowSubnode: text.textNode)
             }
             linkHighlightingNode.frame = text.textNode.frame
             linkHighlightingNode.updateRects(rects)
@@ -2114,7 +2095,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         
         let transition: ContainedViewLayoutTransition = .animated(duration: self.isHighlighted ? 0.3 : 0.2, curve: .easeInOut)
         let scale: CGFloat = self.isHighlighted ? ((self.bounds.width - 5.0) / self.bounds.width) : 1.0
-        transition.updateSublayerTransformScale(node: self, scale: scale, beginWithCurrentState: true)
+        transition.updateSublayerTransformScale(node: self.transformContainer, scale: scale, beginWithCurrentState: true)
     }
     
     public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {

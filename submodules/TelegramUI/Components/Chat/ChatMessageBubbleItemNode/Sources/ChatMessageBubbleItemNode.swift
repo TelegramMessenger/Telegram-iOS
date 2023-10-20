@@ -3858,8 +3858,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
-                                return .action({
-                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
+                                return .action({ [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    var progress: Promise<Bool>?
+                                    if let replyInfoNode = self.replyInfoNode {
+                                        progress = replyInfoNode.makeProgress()
+                                    }
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text, progress: progress))
                                 })
                             } else if let attribute = attribute as? ReplyStoryAttribute {
                                 return .action({
@@ -4951,6 +4958,17 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         if let statusNode = self.mosaicStatusNode {
             return statusNode
+        }
+        return nil
+    }
+    
+    public func getQuoteRect(quote: String) -> CGRect? {
+        for contentNode in self.contentNodes {
+            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                if let result = contentNode.getQuoteRect(quote: quote) {
+                    return contentNode.view.convert(result, to: self.view)
+                }
+            }
         }
         return nil
     }
