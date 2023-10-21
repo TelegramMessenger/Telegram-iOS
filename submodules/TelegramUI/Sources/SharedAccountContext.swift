@@ -1555,6 +1555,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, activateAdAction: { _ in
         }, openRequestedPeerSelection: { _, _, _ in
         }, saveMediaToFiles: { _ in
+        }, openNoAdsDemo: {
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

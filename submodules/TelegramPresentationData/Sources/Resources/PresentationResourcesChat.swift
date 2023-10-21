@@ -1350,4 +1350,30 @@ public struct PresentationResourcesChat {
             })?.resizableImage(withCapInsets: .zero, resizingMode: .tile).withRenderingMode(.alwaysTemplate)
         })
     }
+    
+    public static func chatBubbleCloseIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleCloseIcon.rawValue, { theme in
+            return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                
+                let color = theme.chat.message.incoming.secondaryTextColor
+                context.setAlpha(color.alpha)
+                context.setBlendMode(.copy)
+                
+                context.setStrokeColor(theme.chat.message.incoming.secondaryTextColor.withAlphaComponent(1.0).cgColor)
+                context.setLineWidth(1.0 + UIScreenPixel)
+                context.setLineCap(.round)
+                
+                let bounds = CGRect(origin: .zero, size: size).insetBy(dx: 1.0 + UIScreenPixel, dy: 1.0 + UIScreenPixel)
+                
+                context.move(to: CGPoint(x: bounds.minX, y: bounds.minY))
+                context.addLine(to: CGPoint(x: bounds.maxX, y: bounds.maxY))
+                context.strokePath()
+                
+                context.move(to: CGPoint(x: bounds.maxX, y: bounds.minY))
+                context.addLine(to: CGPoint(x: bounds.minX, y: bounds.maxY))
+                context.strokePath()
+            })
+        })
+    }
 }
