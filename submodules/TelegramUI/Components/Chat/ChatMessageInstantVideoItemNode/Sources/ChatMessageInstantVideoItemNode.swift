@@ -236,8 +236,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
             return false
         }
         if let item = self.item {
-            replyRecognizer.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            let _ = item
+            replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         }
         self.replyRecognizer = replyRecognizer
         self.view.addGestureRecognizer(replyRecognizer)
@@ -646,8 +647,8 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                     strongSelf.appliedCurrentlyPlaying = isPlaying
                     strongSelf.appliedAutomaticDownload = automaticDownload
                     
-                    strongSelf.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-                    strongSelf.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+                    strongSelf.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+                    strongSelf.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
                     
                     strongSelf.updateAccessibilityData(accessibilityData)
                                         
