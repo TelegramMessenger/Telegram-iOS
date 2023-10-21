@@ -169,7 +169,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         
         if canHideNames {
             items.append(.action(ContextMenuActionItem(text: hideNames ? (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames) : (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames), icon: { theme in
-                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: !hideNames ? "Chat/Context Menu/UserCrossed" : "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
@@ -188,7 +188,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         
         if hasCaptions {
             items.append(.action(ContextMenuActionItem(text: hideCaptions ? presentationData.strings.Conversation_ForwardOptions_ShowCaption : presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
-                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: !hideCaptions ? "Chat/Context Menu/CaptionHide" : "Chat/Context Menu/CaptionShow"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
@@ -710,10 +710,10 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         }
         var items: [ContextMenuItem] = []
         
-        if "".isEmpty {
+        do {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: linkOptions.linkBelowText ? "Move Up" : "Move Down", icon: { theme in
-                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: linkOptions.linkBelowText ? "Chat/Context Menu/MoveUp" : "Chat/Context Menu/MoveDown"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {
@@ -736,7 +736,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         if case let .Loaded(content) = linkOptions.webpage.content, let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? "Shrink Photo" : "Enlarge Photo", icon: { theme in
-                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: !linkOptions.largeMedia ? "Chat/Context Menu/ImageEnlarge" : "Chat/Context Menu/ImageShrink"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {

@@ -146,6 +146,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         let makeSubtitleLayout = TextNodeWithEntities.asyncLayout(self.subtitle)
         let makeTextLayout = TextNodeWithEntities.asyncLayout(self.text)
         let makeContentMedia = ChatMessageInteractiveMediaNode.asyncLayout(self.contentMedia)
+        let makeContentFile = ChatMessageInteractiveFileNode.asyncLayout(self.contentFile)
         let makeActionButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.actionButton)
         let makeStatusLayout = self.statusNode.asyncLayout()
         
@@ -299,7 +300,6 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             var maxWidth: CGFloat = .greatestFiniteMagnitude
             
             let contentMediaContinueLayout: ((CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode)))?
-            
             let inlineMediaAndSize: (TelegramMediaImage, CGSize)?
             
             if let contentMediaValue {
@@ -340,7 +340,37 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 inlineMediaAndSize = nil
             }
             
-            let _ = contentFileValue
+            let contentFileContinueLayout: ChatMessageInteractiveFileNode.ContinueLayout?
+            if let contentFileValue {
+                let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: contentFileValue)
+                
+                let (_, refineLayout) = makeContentFile(ChatMessageInteractiveFileNode.Arguments(
+                    context: context,
+                    presentationData: presentationData,
+                    message: message,
+                    topMessage: message,
+                    associatedData: associatedData,
+                    chatLocation: chatLocation,
+                    attributes: attributes,
+                    isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
+                    forcedIsEdited: false,
+                    file: contentFileValue,
+                    automaticDownload: automaticDownload,
+                    incoming: incoming,
+                    isRecentActions: false,
+                    forcedResourceStatus: associatedData.forcedResourceStatus,
+                    dateAndStatusType: nil,
+                    displayReactions: false,
+                    messageSelection: nil,
+                    isAttachedContentBlock: true,
+                    layoutConstants: layoutConstants,
+                    constrainedSize: CGSize(width: constrainedSize.width - insets.left - insets.right, height: constrainedSize.height),
+                    controllerInteraction: controllerInteraction
+                ))
+                contentFileContinueLayout = refineLayout
+            } else {
+                contentFileContinueLayout = nil
+            }
             
             return (maxWidth, { constrainedSize, position in
                 enum ContentLayoutOrderItem {
@@ -348,6 +378,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     case subtitle
                     case text
                     case media
+                    case file
                     case actionButton
                 }
                 var contentLayoutOrder: [ContentLayoutOrderItem] = []
@@ -377,6 +408,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     } else {
                         contentLayoutOrder.append(.media)
                     }
+                }
+                if contentFileContinueLayout != nil {
+                    contentLayoutOrder.append(.file)
                 }
                 if !isPreview, actionTitle != nil {
                     contentLayoutOrder.append(.actionButton)
@@ -440,7 +474,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             
                             remainingCutoutHeight -= textLayoutAndApplyValue.0.size.height
                         }
-                    case .media, .actionButton:
+                    case .media, .file, .actionButton:
                         break
                     }
                 }
@@ -504,6 +538,15 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     contentMediaFinalizeLayout = finalizeImageLayout
                 } else {
                     contentMediaFinalizeLayout = nil
+                }
+                
+                let contentFileFinalizeLayout: ChatMessageInteractiveFileNode.FinalizeLayout?
+                if let contentFileContinueLayout {
+                    let (refinedWidth, finalizeFileLayout) = contentFileContinueLayout(CGSize(width: constrainedSize.width, height: constrainedSize.height))
+                    actualWidth = max(actualWidth, refinedWidth)
+                    contentFileFinalizeLayout = finalizeFileLayout
+                } else {
+                    contentFileFinalizeLayout = nil
                 }
                 
                 var edited = false
@@ -588,6 +631,14 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         contentMediaSizeAndApply = nil
                     }
                     
+                    let contentFileSizeAndApply: (CGSize, ChatMessageInteractiveFileNode.Apply)?
+                    if let contentFileFinalizeLayout {
+                        let (size, apply) = contentFileFinalizeLayout(resultingWidth - insets.left - insets.right)
+                        contentFileSizeAndApply = (size, apply)
+                    } else {
+                        contentFileSizeAndApply = nil
+                    }
+                    
                     let actionButtonSizeAndApply: ((CGSize, (ListViewItemUpdateAnimation) -> ChatMessageAttachedContentButtonNode))?
                     if let (_, actionButtonFinalizeLayout) = actionButtonMinWidthAndFinalizeLayout {
                         let (size, apply) = actionButtonFinalizeLayout(resultingWidth - insets.left - insets.right, 36.0)
@@ -627,7 +678,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let (titleLayout, _) = titleLayoutAndApply {
                                 if i == 0 {
                                     actualSize.height += textTopSpacing
-                                } else if contentLayoutOrder[i - 1] == .media {
+                                } else if contentLayoutOrder[i - 1] == .media || contentLayoutOrder[i - 1] == .file {
                                     actualSize.height += textContentMediaSpacing
                                 }
                                 
@@ -644,7 +695,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     actualSize.height += textTopSpacing
                                 } else if contentLayoutOrder[i - 1] == .title {
                                     actualSize.height += titleTextSpacing
-                                } else if contentLayoutOrder[i - 1] == .media {
+                                } else if contentLayoutOrder[i - 1] == .media || contentLayoutOrder[i - 1] == .file {
                                     actualSize.height += textContentMediaSpacing
                                 }
                                 
@@ -661,7 +712,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     actualSize.height += textTopSpacing
                                 } else if contentLayoutOrder[i - 1] == .title || contentLayoutOrder[i - 1] == .subtitle {
                                     actualSize.height += titleTextSpacing
-                                } else if contentLayoutOrder[i - 1] == .media {
+                                } else if contentLayoutOrder[i - 1] == .media || contentLayoutOrder[i - 1] == .file {
                                     actualSize.height += textContentMediaSpacing
                                 }
                                 
@@ -687,13 +738,28 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 
                                 actualSize.height += contentMediaSize.height
                             }
+                        case .file:
+                            if let (contentFileSize, _) = contentFileSizeAndApply {
+                                if i == 0 {
+                                    actualSize.height += contentMediaTopSpacing
+                                } else if contentLayoutOrder[i - 1] == .title || contentLayoutOrder[i - 1] == .subtitle || contentLayoutOrder[i - 1] == .text {
+                                    actualSize.height += textContentMediaSpacing
+                                }
+                                
+                                contentDisplayOrder.append(ContentDisplayOrderItem(
+                                    item: item,
+                                    offsetY: actualSize.height
+                                ))
+                                
+                                actualSize.height += contentFileSize.height
+                            }
                         case .actionButton:
                             if let (actionButtonSize, _) = actionButtonSizeAndApply {
                                 if i != 0 {
                                     switch contentLayoutOrder[i - 1] {
                                     case .title, .subtitle, .text:
                                         actualSize.height += textButtonSpacing
-                                    case .media:
+                                    case .media, .file:
                                         actualSize.height += contentMediaButtonSpacing
                                     default:
                                         break
@@ -726,7 +792,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                     actualSize.height = backgroundInsets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
                                 }
                             }
-                        case .media:
+                        case .media, .file:
                             actualSize.height += contentMediaBottomSpacing
                         case .actionButton:
                             actualSize.height += buttonBottomSpacing
@@ -968,6 +1034,43 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 animation.animator.updateAlpha(layer: contentMedia.layer, alpha: 0.0, completion: nil)
                                 animation.animator.updateScale(layer: contentMedia.layer, scale: 0.01, completion: { [weak contentMedia] _ in
                                     contentMedia?.removeFromSupernode()
+                                })
+                            }
+                        }
+                        
+                        if let item = contentDisplayOrder.first(where: { $0.item == .file }), let (contentFileSize, contentFileApply) = contentFileSizeAndApply {
+                            let contentFileFrame = CGRect(origin: CGPoint(x: insets.left, y: item.offsetY), size: contentFileSize)
+                            
+                            let contentFile = contentFileApply(synchronousLoads, animation, applyInfo)
+                            if self.contentFile !== contentFile {
+                                self.contentFile?.removeFromSupernode()
+                                self.contentFile = contentFile
+                                
+                                contentFile.activateLocalContent = { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.openMedia?(.default)
+                                }
+                                contentFile.visibility = self.visibility != .none
+                                
+                                self.transformContainer.addSubnode(contentFile)
+                                
+                                contentFile.frame = contentFileFrame
+                                
+                                contentFile.alpha = 0.0
+                                animation.animator.updateAlpha(layer: contentFile.layer, alpha: 1.0, completion: nil)
+                                animation.animator.animateScale(layer: contentFile.layer, from: 0.01, to: 1.0, completion: nil)
+                            } else {
+                                animation.animator.updateFrame(layer: contentFile.layer, frame: contentFileFrame, completion: nil)
+                            }
+                        } else {
+                            if let contentFile = self.contentFile {
+                                self.contentFile = nil
+                                
+                                animation.animator.updateAlpha(layer: contentFile.layer, alpha: 0.0, completion: nil)
+                                animation.animator.updateScale(layer: contentFile.layer, scale: 0.01, completion: { [weak contentFile] _ in
+                                    contentFile?.removeFromSupernode()
                                 })
                             }
                         }

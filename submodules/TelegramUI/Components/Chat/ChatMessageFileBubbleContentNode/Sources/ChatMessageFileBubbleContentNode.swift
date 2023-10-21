@@ -148,6 +148,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
                 dateAndStatusType: statusType,
                 displayReactions: true,
                 messageSelection: item.message.groupingKey != nil ? selection : nil,
+                isAttachedContentBlock: false,
                 layoutConstants: layoutConstants,
                 constrainedSize: CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height),
                 controllerInteraction: item.controllerInteraction
