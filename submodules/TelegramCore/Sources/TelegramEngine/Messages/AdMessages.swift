@@ -36,8 +36,37 @@ private class AdMessagesHistoryContextImpl {
             }
             
             struct Invite: Equatable, Codable {
+                enum CodingKeys: String, CodingKey {
+                    case title
+                    case joinHash
+                    case nameColor
+                }
+                
                 var title: String
                 var joinHash: String
+                var nameColor: PeerNameColor?
+                
+                init(title: String, joinHash: String, nameColor: PeerNameColor? = nil) {
+                    self.title = title
+                    self.joinHash = joinHash
+                    self.nameColor = nameColor
+                }
+                
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: CodingKeys.self)
+                   
+                    self.title = try container.decode(String.self, forKey: .title)
+                    self.joinHash = try container.decode(String.self, forKey: .joinHash)
+                    self.nameColor = try container.decodeIfPresent(Int32.self, forKey: .nameColor).flatMap { PeerNameColor(rawValue: $0) }
+                }
+                
+                func encode(to encoder: Encoder) throws {
+                    var container = encoder.container(keyedBy: CodingKeys.self)
+                   
+                    try container.encode(self.title, forKey: .title)
+                    try container.encode(self.joinHash, forKey: .joinHash)
+                    try container.encodeIfPresent(self.nameColor?.rawValue, forKey: .nameColor)
+                }
             }
             
             struct WebPage: Equatable, Codable {
@@ -265,7 +294,7 @@ private class AdMessagesHistoryContextImpl {
                     defaultBannedRights: nil,
                     usernames: [],
                     storiesHidden: nil,
-                    nameColor: nil,
+                    nameColor: invite.nameColor,
                     backgroundEmojiId: nil
                 )
             case let .webPage(webPage):
@@ -286,7 +315,7 @@ private class AdMessagesHistoryContextImpl {
                     defaultBannedRights: nil,
                     usernames: [],
                     storiesHidden: nil,
-                    nameColor: nil,
+                    nameColor: .blue,
                     backgroundEmojiId: nil
                 )
             }
@@ -522,24 +551,26 @@ private class AdMessagesHistoryContextImpl {
                                         let _ = flags
                                         let _ = participantsCount
                                         let _ = participants
-                                        let _ = nameColor
                                         
                                         target = .invite(CachedMessage.Target.Invite(
                                             title: title,
-                                            joinHash: chatInviteHash
+                                            joinHash: chatInviteHash,
+                                            nameColor: PeerNameColor(rawValue: nameColor)
                                         ))
                                     case let .chatInvitePeek(chat, _):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
-                                                joinHash: chatInviteHash
+                                                joinHash: chatInviteHash,
+                                                nameColor: peer.nameColor
                                             ))
                                         }
                                     case let .chatInviteAlready(chat):
                                         if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                             target = .invite(CachedMessage.Target.Invite(
                                                 title: peer.debugDisplayTitle,
-                                                joinHash: chatInviteHash
+                                                joinHash: chatInviteHash,
+                                                nameColor: peer.nameColor
                                             ))
                                         }
                                     }

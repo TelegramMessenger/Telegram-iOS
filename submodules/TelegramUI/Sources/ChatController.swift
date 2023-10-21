@@ -4881,6 +4881,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }))
             })
+        }, openNoAdsDemo: { [weak self] in
+            guard let self else {
+                return
+            }
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = PremiumDemoScreen(context: self.context, subject: .noAds, action: {
+                let controller = PremiumIntroScreen(context: self.context, source: .ads)
+                replaceImpl?(controller)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            self.push(controller)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

@@ -515,7 +515,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                         }
                     }
-                        
+                                                
                     let (buttonWidth, continueLayout) = makeActionButtonLayout(
                         maxContentsWidth,
                         buttonIconImage,
@@ -523,7 +523,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         actionTitle,
                         mainColor,
                         false,
-                        false
+                        message.adAttribute != nil
                     )
                     actionButtonMinWidthAndFinalizeLayout = (buttonWidth, continueLayout)
                     actualWidth = max(actualWidth, buttonWidth)
@@ -588,9 +588,17 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 
                 let maxStatusContentWidth: CGFloat = constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right
                 
-                var actionButtonTrailingContentWidth: CGFloat?
-                if !displayLine, let (actionButtonMinWidth, _) = actionButtonMinWidthAndFinalizeLayout {
-                    actionButtonTrailingContentWidth = actionButtonMinWidth
+                var trailingContentWidth: CGFloat?
+                if let _ = message.adAttribute, let (textLayout, _) = textLayoutAndApply {
+                    if textLayout.hasRTL {
+                        trailingContentWidth = 10000.0
+                    } else {
+                        trailingContentWidth = textLayout.trailingLineWidth
+                    }
+                } else {
+                    if !displayLine, let (actionButtonMinWidth, _) = actionButtonMinWidthAndFinalizeLayout {
+                        trailingContentWidth = actionButtonMinWidth
+                    }
                 }
                 
                 let statusLayoutAndContinue = makeStatusLayout(ChatMessageDateAndStatusNode.Arguments(
@@ -601,7 +609,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     dateText: dateText,
                     type: statusType,
                     layoutInput: .trailingContent(
-                        contentWidth: actionButtonTrailingContentWidth,
+                        contentWidth: trailingContentWidth,
                         reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions), preferAdditionalInset: false)
                     ),
                     constrainedSize: CGSize(width: maxStatusContentWidth, height: CGFloat.greatestFiniteMagnitude),
@@ -1076,7 +1084,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                         
                         if let item = contentDisplayOrder.first(where: { $0.item == .actionButton }), let (actionButtonSize, actionButtonApply) = actionButtonSizeAndApply {
-                            let actionButtonFrame = CGRect(origin: CGPoint(x: insets.left, y: item.offsetY), size: actionButtonSize)
+                            var actionButtonFrame = CGRect(origin: CGPoint(x: insets.left, y: item.offsetY), size: actionButtonSize)
+                            if let _ = message.adAttribute {
+                                actionButtonFrame.origin.y += statusSizeAndApply.0.height
+                            }
                             
                             let actionButton = actionButtonApply(animation)
                             
@@ -1096,35 +1107,43 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 animation.animator.updateFrame(layer: actionButton.layer, frame: actionButtonFrame, completion: nil)
                             }
                             
-                            let separatorFrame = CGRect(origin: CGPoint(x: actionButtonFrame.minX, y: actionButtonFrame.minY - 1.0), size: CGSize(width: actionButtonFrame.width, height: UIScreenPixel))
-                            
-                            let actionButtonSeparator: SimpleLayer
-                            if let current = self.actionButtonSeparator {
-                                actionButtonSeparator = current
-                                animation.animator.updateFrame(layer: actionButtonSeparator, frame: separatorFrame, completion: nil)
+                            if let _ = message.adAttribute {
+                                
                             } else {
-                                actionButtonSeparator = SimpleLayer()
-                                self.actionButtonSeparator = actionButtonSeparator
-                                self.layer.addSublayer(actionButtonSeparator)
-                                actionButtonSeparator.frame = separatorFrame
+                                let separatorFrame = CGRect(origin: CGPoint(x: actionButtonFrame.minX, y: actionButtonFrame.minY - 1.0), size: CGSize(width: actionButtonFrame.width, height: UIScreenPixel))
+                                
+                                let actionButtonSeparator: SimpleLayer
+                                if let current = self.actionButtonSeparator {
+                                    actionButtonSeparator = current
+                                    animation.animator.updateFrame(layer: actionButtonSeparator, frame: separatorFrame, completion: nil)
+                                } else {
+                                    actionButtonSeparator = SimpleLayer()
+                                    self.actionButtonSeparator = actionButtonSeparator
+                                    self.layer.addSublayer(actionButtonSeparator)
+                                    actionButtonSeparator.frame = separatorFrame
+                                }
+                                
+                                actionButtonSeparator.backgroundColor = mainColor.withMultipliedAlpha(0.2).cgColor
                             }
-                            
-                            actionButtonSeparator.backgroundColor = mainColor.withMultipliedAlpha(0.2).cgColor
                         } else {
                             if let actionButton = self.actionButton {
                                 self.actionButton = nil
                                 actionButton.removeFromSupernode()
                             }
-                            if let actionButtonSeparator = self.actionButtonSeparator {
-                                self.actionButtonSeparator = nil
-                                actionButtonSeparator.removeFromSuperlayer()
-                            }
+                        }
+                        
+                        if self.actionButton == nil, let actionButtonSeparator = self.actionButtonSeparator {
+                            self.actionButtonSeparator = nil
+                            actionButtonSeparator.removeFromSuperlayer()
                         }
                         
                         do {
                             statusSizeAndApply.1(animation)
                             
-                            let statusFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - statusSizeAndApply.0.width, y: actualSize.height - layoutConstants.text.bubbleInsets.bottom - statusSizeAndApply.0.height), size: statusSizeAndApply.0)
+                            var statusFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - statusSizeAndApply.0.width, y: actualSize.height - layoutConstants.text.bubbleInsets.bottom - statusSizeAndApply.0.height), size: statusSizeAndApply.0)
+                            if let _ = message.adAttribute, let (actionButtonSize, _) = actionButtonSizeAndApply {
+                                statusFrame.origin.y -= actionButtonSize.height + statusBackgroundSpacing
+                            }
                             animation.animator.updateFrame(layer: self.statusNode.layer, frame: statusFrame, completion: nil)
                             
                             self.statusNode.reactionSelected = { [weak self] value in

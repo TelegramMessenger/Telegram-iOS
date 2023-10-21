@@ -538,6 +538,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var adminBadgeNode: TextNode?
     private var credibilityIconView: ComponentHostView<Empty>?
     private var credibilityIconComponent: EmojiStatusComponent?
+    private var closeButtonNode: HighlightTrackingButtonNode?
+    private var closeIconNode: ASImageNode?
+    
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     public var forwardInfoReferenceNode: ASDisplayNode? {
         return self.forwardInfoNode
@@ -1028,6 +1031,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     }
                     
                     return .fail
+                }
+
+                if let closeButtonNode = strongSelf.closeButtonNode {
+                    if let _ = closeButtonNode.hitTest(strongSelf.view.convert(point, to: closeButtonNode.view), with: nil) {
+                        return .fail
+                    }
                 }
                 
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
@@ -2965,6 +2974,55 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.adminBadgeNode?.removeFromSupernode()
                 strongSelf.adminBadgeNode = nil
             }
+            
+            if let _ = item.message.adAttribute {
+                let buttonNode: HighlightTrackingButtonNode
+                let iconNode: ASImageNode
+                if let currentButton = strongSelf.closeButtonNode, let currentIcon = strongSelf.closeIconNode {
+                    buttonNode = currentButton
+                    iconNode = currentIcon
+                } else {
+                    buttonNode = HighlightTrackingButtonNode()
+                    iconNode = ASImageNode()
+                    iconNode.displaysAsynchronously = false
+                    iconNode.isUserInteractionEnabled = false
+                    
+                    buttonNode.addTarget(strongSelf, action: #selector(strongSelf.closeButtonPressed), forControlEvents: .touchUpInside)
+                    buttonNode.highligthedChanged = { [weak iconNode] highlighted in
+                        guard let iconNode else {
+                            return
+                        }
+                        if highlighted {
+                            iconNode.layer.removeAnimation(forKey: "opacity")
+                            iconNode.alpha = 0.4
+                        } else {
+                            iconNode.alpha = 1.0
+                            iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                        }
+                    }
+                    
+                    strongSelf.clippingNode.addSubnode(buttonNode)
+                    strongSelf.clippingNode.addSubnode(iconNode)
+                    
+                    strongSelf.closeButtonNode = buttonNode
+                    strongSelf.closeIconNode = iconNode
+                }
+                               
+                iconNode.image = PresentationResourcesChat.chatBubbleCloseIcon(item.presentationData.theme.theme)
+                
+                let closeButtonSize = CGSize(width: 32.0, height: 32.0)
+                let closeIconSize = CGSize(width: 12.0, height: 12.0)
+                let closeButtonFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - closeButtonSize.width, y: layoutConstants.bubble.contentInsets.top), size: closeButtonSize)
+                let closeButtonIconFrame = CGRect(origin: CGPoint(x: contentUpperRightCorner.x - layoutConstants.text.bubbleInsets.left - closeIconSize.width + 1.0, y: layoutConstants.bubble.contentInsets.top + nameNodeOriginY + 2.0), size: closeIconSize)
+                
+                animation.animator.updateFrame(layer: buttonNode.layer, frame: closeButtonFrame, completion: nil)
+                animation.animator.updateFrame(layer: iconNode.layer, frame: closeButtonIconFrame, completion: nil)
+            } else {
+                strongSelf.closeButtonNode?.removeFromSupernode()
+                strongSelf.closeButtonNode = nil
+                strongSelf.closeIconNode?.removeFromSupernode()
+                strongSelf.closeIconNode = nil
+            }
         } else {
             if animation.isAnimated {
                 if let nameNode = strongSelf.nameNode {
@@ -4231,7 +4289,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
             return nil
         }
-        
+
         if let threadInfoNode = self.threadInfoNode, let result = threadInfoNode.hitTest(self.view.convert(point, to: threadInfoNode.view), with: event) {
             return result
         }
@@ -4634,6 +4692,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 }
                 item.controllerInteraction.openMessageShareMenu(item.message.id)
             }
+        }
+    }
+    
+    @objc private func closeButtonPressed() {
+        if let item = self.item {
+            item.controllerInteraction.openNoAdsDemo()
         }
     }
     
