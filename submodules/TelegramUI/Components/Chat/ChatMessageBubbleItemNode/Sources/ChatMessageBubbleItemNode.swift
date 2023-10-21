@@ -1150,8 +1150,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
 
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         if let item = self.item {
-            replyRecognizer.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            let _ = item
+            replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         }
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
@@ -2804,8 +2805,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         strongSelf.authorNameColor = authorNameColor
         
-        strongSelf.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-        strongSelf.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        strongSelf.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        strongSelf.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         
         var animation = animation
         if strongSelf.mainContextSourceNode.isExtractedToContextPreview {
@@ -3555,6 +3556,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 if useDisplayLinkAnimations {
+                    strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
                     let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
                         if let strongSelf = strongSelf {
                             strongSelf.backgroundNode.frame = frame
@@ -3569,6 +3571,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                             strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
                             strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
                         }
+                    }, completed: { [weak strongSelf] _ in
+                        guard let strongSelf else {
+                            return
+                        }
+                        strongSelf.clippingNode.clipsToBounds = false
                     })
                     strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
                 } else {

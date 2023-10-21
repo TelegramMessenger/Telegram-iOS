@@ -168,91 +168,68 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         let hideCaptions = forwardOptions.hideCaptions
         
         if canHideNames {
-            items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames, icon: { theme in
-                if hideNames {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
+            items.append(.action(ContextMenuActionItem(text: hideNames ? (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames) : (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames), icon: { theme in
+                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
-                    updated.hideNames = false
-                    updated.hideCaptions = false
-                    updated.unhideNamesOnCaptionChange = false
+                    if hideNames {
+                        updated.hideNames = false
+                        updated.hideCaptions = false
+                        updated.unhideNamesOnCaptionChange = false
+                    } else {
+                        updated.hideNames = true
+                        updated.unhideNamesOnCaptionChange = false
+                    }
                     return updated
                 })
             })))
-            
-            items.append(.action(ContextMenuActionItem(text: uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames, icon: { theme in
-                if hideNames {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                } else {
-                    return nil
-                }
-            }, action: { [weak selfController] _, f in
-                selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
-                    var updated = current
-                    updated.hideNames = true
-                    updated.unhideNamesOnCaptionChange = false
-                    return updated
-                })
-            })))
-            
-            items.append(.separator)
         }
         
         if hasCaptions {
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ShowCaption, icon: { theme in
-                if hideCaptions {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
+            items.append(.action(ContextMenuActionItem(text: hideCaptions ? presentationData.strings.Conversation_ForwardOptions_ShowCaption : presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
+                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
-                    updated.hideCaptions = false
-                    if canHideNames {
-                        if updated.unhideNamesOnCaptionChange {
-                            updated.unhideNamesOnCaptionChange = false
-                            updated.hideNames = false
+                    if hideCaptions {
+                        updated.hideCaptions = false
+                        if canHideNames {
+                            if updated.unhideNamesOnCaptionChange {
+                                updated.unhideNamesOnCaptionChange = false
+                                updated.hideNames = false
+                            }
+                        }
+                    } else {
+                        updated.hideCaptions = true
+                        if canHideNames {
+                            if !updated.hideNames {
+                                updated.hideNames = true
+                                updated.unhideNamesOnCaptionChange = true
+                            }
                         }
                     }
                     return updated
                 })
             })))
-            
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
-                if hideCaptions {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                } else {
-                    return nil
-                }
-            }, action: { [weak selfController] _, f in
-                selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
-                    var updated = current
-                    updated.hideCaptions = true
-                    if canHideNames {
-                        if !updated.hideNames {
-                            updated.hideNames = true
-                            updated.unhideNamesOnCaptionChange = true
-                        }
-                    }
-                    return updated
-                })
-            })))
-            
+        }
+        
+        if !items.isEmpty {
             items.append(.separator)
         }
         
-        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ChangeRecipient, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptions_ChangeRecipient, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
             selfController?.interfaceInteraction?.forwardCurrentForwardMessages()
             
             f(.default)
         })))
         
-        items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, f in
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+        })))
+        
+        /*items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, f in
             guard let selfController else {
                 return
             }
@@ -265,10 +242,10 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
             selfController.controllerInteraction?.sendCurrentMessage(false)
             
             f(.default)
-        })))
+        })))*/
         
         //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Remove Forward", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+        items.append(.action(ContextMenuActionItem(text: "Do Not Forward", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
             f(.default)
             
             guard let selfController else {
@@ -422,7 +399,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         }
         
         //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
+        items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
             f(.default)
             
             guard let selfController else {
@@ -432,6 +409,12 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 return
             }
             moveReplyMessageToAnotherChat(selfController: selfController, replySubject: replySubject)
+        })))
+        
+        items.append(.separator)
+        
+        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
         })))
         
         if replySubject.quote != nil {
@@ -446,7 +429,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject).withoutSelectionState() }).updatedSearch(nil) })
             })))
         } else {
-            items.append(.action(ContextMenuActionItem(text: "Remove Reply", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+            items.append(.action(ContextMenuActionItem(text: "Do Not Reply", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
                 f(.default)
                 
                 guard let selfController else {
@@ -729,50 +712,21 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         
         if "".isEmpty {
             //TODO:localize
-            
-            items.append(.action(ContextMenuActionItem(text: "Above the Message", icon: { theme in
-                if linkOptions.linkBelowText {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
+            items.append(.action(ContextMenuActionItem(text: linkOptions.linkBelowText ? "Move Up" : "Move Down", icon: { theme in
+                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {
                         guard var urlPreview = state.editingUrlPreview else {
                             return state
                         }
-                        urlPreview.positionBelowText = false
+                        urlPreview.positionBelowText = !urlPreview.positionBelowText
                         return state.updatedEditingUrlPreview(urlPreview)
                     } else {
                         guard var urlPreview = state.urlPreview else {
                             return state
                         }
-                        urlPreview.positionBelowText = false
-                        return state.updatedUrlPreview(urlPreview)
-                    }
-                })
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: "Below the Message", icon: { theme in
-                if !linkOptions.linkBelowText {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
-            }, action: { [weak selfController] _, f in
-                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    if state.interfaceState.editMessage != nil {
-                        guard var urlPreview = state.editingUrlPreview else {
-                            return state
-                        }
-                        urlPreview.positionBelowText = true
-                        return state.updatedEditingUrlPreview(urlPreview)
-                    } else {
-                        guard var urlPreview = state.urlPreview else {
-                            return state
-                        }
-                        urlPreview.positionBelowText = true
+                        urlPreview.positionBelowText = !urlPreview.positionBelowText
                         return state.updatedUrlPreview(urlPreview)
                     }
                 })
@@ -780,55 +734,30 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         }
         
         if case let .Loaded(content) = linkOptions.webpage.content, let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
-            if !items.isEmpty {
-                items.append(.separator)
-            }
-            
             //TODO:localize
-            
-            items.append(.action(ContextMenuActionItem(text: "Smaller Media", icon: { theme in
-                if linkOptions.largeMedia {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
+            items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? "Shrink Photo" : "Enlarge Photo", icon: { theme in
+                return nil//generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {
                         guard var urlPreview = state.editingUrlPreview else {
                             return state
                         }
-                        urlPreview.largeMedia = false
+                        if let largeMedia = urlPreview.largeMedia {
+                            urlPreview.largeMedia = !largeMedia
+                        } else {
+                            urlPreview.largeMedia = false
+                        }
                         return state.updatedEditingUrlPreview(urlPreview)
                     } else {
                         guard var urlPreview = state.urlPreview else {
                             return state
                         }
-                        urlPreview.largeMedia = false
-                        return state.updatedUrlPreview(urlPreview)
-                    }
-                })
-            })))
-            
-            items.append(.action(ContextMenuActionItem(text: "Larger Media", icon: { theme in
-                if !linkOptions.largeMedia {
-                    return nil
-                } else {
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
-                }
-            }, action: { [weak selfController] _, f in
-                selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
-                    if state.interfaceState.editMessage != nil {
-                        guard var urlPreview = state.editingUrlPreview else {
-                            return state
+                        if let largeMedia = urlPreview.largeMedia {
+                            urlPreview.largeMedia = !largeMedia
+                        } else {
+                            urlPreview.largeMedia = false
                         }
-                        urlPreview.largeMedia = true
-                        return state.updatedEditingUrlPreview(urlPreview)
-                    } else {
-                        guard var urlPreview = state.urlPreview else {
-                            return state
-                        }
-                        urlPreview.largeMedia = true
                         return state.updatedUrlPreview(urlPreview)
                     }
                 })
@@ -840,7 +769,12 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         }
         
         //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Remove Link Preview", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController, weak chatController] c, f in
+        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+        })))
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Do Not Preview", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController, weak chatController] c, f in
             guard let selfController else {
                 return
             }

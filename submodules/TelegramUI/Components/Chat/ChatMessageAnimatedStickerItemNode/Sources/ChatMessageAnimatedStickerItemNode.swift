@@ -303,7 +303,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         if let item = self.item {
-            replyRecognizer.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            let _ = item
+            replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
             self.view.disablesInteractiveTransitionGestureRecognizer = true
         }
         replyRecognizer.shouldBegin = { [weak self] in
@@ -367,9 +368,9 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     
     private var setupTimestamp: Double?
     private func setupNode(item: ChatMessageItem) {
-        self.replyRecognizer?.allowBothDirections = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+        self.replyRecognizer?.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         if self.isNodeLoaded {
-            self.view.disablesInteractiveTransitionGestureRecognizer = !item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
+            self.view.disablesInteractiveTransitionGestureRecognizer = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
         }
         
         guard self.animationNode == nil else {
