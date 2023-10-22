@@ -155,6 +155,7 @@ public final class ChatControllerInteraction {
     public let openSearch: () -> Void
     public let setupReply: (MessageId) -> Void
     public let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
+    public let canSendMessages: () -> Bool
     public let navigateToFirstDateMessage: (Int32, Bool) -> Void
     public let requestRedeliveryOfFailedMessages: (MessageId) -> Void
     public let addContact: (String) -> Void
@@ -203,6 +204,7 @@ public final class ChatControllerInteraction {
     public let dismissTextInput: () -> Void
     public let scrollToMessageId: (MessageIndex) -> Void
     public let navigateToStory: (Message, StoryId) -> Void
+    public let attemptedNavigationToPrivateQuote: (Peer?) -> Void
     
     public var canPlayMedia: Bool = false
     public var hiddenMedia: [MessageId: [Media]] = [:]
@@ -270,6 +272,7 @@ public final class ChatControllerInteraction {
         openSearch: @escaping () -> Void,
         setupReply: @escaping (MessageId) -> Void,
         canSetupReply: @escaping (Message) -> ChatControllerInteractionSwipeAction,
+        canSendMessages: @escaping () -> Bool,
         navigateToFirstDateMessage: @escaping(Int32, Bool) ->Void,
         requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void,
         addContact: @escaping (String) -> Void,
@@ -317,6 +320,7 @@ public final class ChatControllerInteraction {
         dismissTextInput: @escaping () -> Void,
         scrollToMessageId: @escaping (MessageIndex) -> Void,
         navigateToStory: @escaping (Message, StoryId) -> Void,
+        attemptedNavigationToPrivateQuote: @escaping (Peer?) -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
@@ -367,6 +371,7 @@ public final class ChatControllerInteraction {
         self.openSearch = openSearch
         self.setupReply = setupReply
         self.canSetupReply = canSetupReply
+        self.canSendMessages = canSendMessages
         self.navigateToFirstDateMessage = navigateToFirstDateMessage
         self.requestRedeliveryOfFailedMessages = requestRedeliveryOfFailedMessages
         self.addContact = addContact
@@ -414,6 +419,7 @@ public final class ChatControllerInteraction {
         self.dismissTextInput = dismissTextInput
         self.scrollToMessageId = scrollToMessageId
         self.navigateToStory = navigateToStory
+        self.attemptedNavigationToPrivateQuote = attemptedNavigationToPrivateQuote
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

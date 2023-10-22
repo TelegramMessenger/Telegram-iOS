@@ -3448,7 +3448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, openSearch: {
         }, setupReply: { [weak self] messageId in
-            self?.interfaceInteraction?.setupReplyMessage(messageId, { _, _ in })
+            self?.interfaceInteraction?.setupReplyMessage(messageId, { _, f in f() })
         }, canSetupReply: { [weak self] message in
             if !message.flags.contains(.Incoming) {
                 if !message.flags.intersection([.Failed, .Sending, .Unsent]).isEmpty {
@@ -3471,6 +3471,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             return .none
+        }, canSendMessages: { [weak self] in
+            guard let self else {
+                return false
+            }
+            return canSendMessagesToChat(self.presentationInterfaceState)
         }, navigateToFirstDateMessage: { [weak self] timestamp, alreadyThere in
             guard let strongSelf = self else {
                 return
@@ -5011,6 +5016,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 )
                 self.push(storyContainerScreen)
             })
+        }, attemptedNavigationToPrivateQuote: { [weak self] peer in
+            guard let self else {
+                return
+            }
+            //TODO:localize
+            let text: String
+            if let peer = peer as? TelegramChannel {
+                if case .broadcast = peer.info {
+                    text = "This quote is from a private channel"
+                } else {
+                    text = "This quote is from a private group"
+                }
+            } else if peer is TelegramGroup {
+                text = "This quote is from a private group"
+            } else {
+                text = "This quote is from a private chat"
+            }
+            self.controllerInteraction?.displayUndo(.info(title: nil, text: text, timeout: nil))
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
@@ -10547,78 +10570,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             strongSelf.window?.presentInGlobalOverlay(slowmodeTooltipController)
         }, displaySendMessageOptions: { [weak self] node, gesture in
-            if let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let textInputView = strongSelf.chatDisplayNode.textInputView(), let layout = strongSelf.validLayout {
-                let previousSupportedOrientations = strongSelf.supportedOrientations
-                if layout.size.width > layout.size.height {
-                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .landscape)
-                } else {
-                    strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
-                }
-                
-                let _ = ApplicationSpecificNotice.incrementChatMessageOptionsTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).startStandalone()
-                
-                var hasEntityKeyboard = false
-                if case .media = strongSelf.presentationInterfaceState.inputMode {
-                    hasEntityKeyboard = true
-                }
-                
-                let _ = (strongSelf.context.account.viewTracker.peerView(peerId)
-                |> take(1)
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] peerView in
-                    guard let strongSelf = self, let peer = peerViewMainPeer(peerView) else {
-                        return
-                    }
-                    var sendWhenOnlineAvailable = false
-                    if let presence = peerView.peerPresences[peer.id] as? TelegramUserPresence, case let .present(until) = presence.status {
-                        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-                        if currentTime > until {
-                            sendWhenOnlineAvailable = true
-                        }
-                    }
-                    if peer.id.namespace == Namespaces.Peer.CloudUser && peer.id.id._internalGetInt64Value() == 777000 {
-                        sendWhenOnlineAvailable = false
-                    }
-                    
-                    if sendWhenOnlineAvailable {
-                        let _ = ApplicationSpecificNotice.incrementSendWhenOnlineTip(accountManager: strongSelf.context.sharedContext.accountManager, count: 4).startStandalone()
-                    }
-                    
-                    let controller = ChatSendMessageActionSheetController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: strongSelf.presentationInterfaceState.chatLocation.peerId, forwardMessageIds: strongSelf.presentationInterfaceState.interfaceState.forwardMessageIds, hasEntityKeyboard: hasEntityKeyboard, gesture: gesture, sourceSendButton: node, textInputView: textInputView, canSendWhenOnline: sendWhenOnlineAvailable, completion: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.supportedOrientations = previousSupportedOrientations
-                        }
-                    }, sendMessage: { [weak self] mode in
-                        if let strongSelf = self {
-                            switch mode {
-                            case .generic:
-                                strongSelf.controllerInteraction?.sendCurrentMessage(false)
-                            case .silently:
-                                strongSelf.controllerInteraction?.sendCurrentMessage(true)
-                            case .whenOnline:
-                                strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleWhenOnlineTimestamp) { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, saveInterfaceState: strongSelf.presentationInterfaceState.subject != .scheduledMessages, {
-                                            $0.updatedInterfaceState { $0.withUpdatedReplyMessageSubject(nil).withUpdatedForwardMessageIds(nil).withUpdatedForwardOptionsState(nil).withUpdatedComposeInputState(ChatTextInputState(inputText: NSAttributedString(string: ""))) }
-                                        })
-                                        strongSelf.openScheduledMessages()
-                                    }
-                                }
-                            }
-                        }
-                    }, schedule: { [weak self] in
-                        if let strongSelf = self {
-                            strongSelf.controllerInteraction?.scheduleCurrentMessage()
-                        }
-                    })
-                    controller.emojiViewProvider = strongSelf.chatDisplayNode.textInputPanelNode?.emojiViewProvider
-                    strongSelf.sendMessageActionsController = controller
-                    if layout.isNonExclusive {
-                        strongSelf.present(controller, in: .window(.root))
-                    } else {
-                        strongSelf.presentInGlobalOverlay(controller, with: nil)
-                    }
-                })
+            guard let self else {
+                return
             }
+            chatMessageDisplaySendMessageOptions(selfController: self, node: node, gesture: gesture)
         }, openScheduledMessages: { [weak self] in
             if let strongSelf = self {
                 strongSelf.openScheduledMessages()

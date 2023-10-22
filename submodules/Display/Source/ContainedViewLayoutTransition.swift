@@ -738,7 +738,11 @@ public extension ContainedViewLayoutTransition {
             case .immediate:
                 layer.removeAnimation(forKey: "position")
                 layer.removeAnimation(forKey: "bounds")
-                layer.frame = frame
+                if let view = layer.delegate as? UIView {
+                    view.frame = frame
+                } else {
+                    layer.frame = frame
+                }
                 if let completion = completion {
                     completion(true)
                 }

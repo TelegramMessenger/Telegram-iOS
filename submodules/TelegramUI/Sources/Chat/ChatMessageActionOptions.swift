@@ -15,6 +15,7 @@ import ChatMessageTextBubbleContentNode
 import TextFormat
 import ChatMessageItemView
 import ChatMessageBubbleItemNode
+import TelegramNotices
 
 private enum OptionsId: Hashable {
     case reply
@@ -286,12 +287,16 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         return .complete()
     }
     
-    let items = selfController.context.account.postbox.messagesAtIds([replySubject.messageId])
+    let items = combineLatest(queue: .mainQueue(),
+        selfController.context.account.postbox.messagesAtIds([replySubject.messageId]),
+        ApplicationSpecificNotice.getReplyQuoteTextSelectionTips(accountManager: selfController.context.sharedContext.accountManager)
+    )
     |> deliverOnMainQueue
-    |> map { [weak selfController, weak chatController] messages -> [ContextMenuItem] in
+    |> map { [weak selfController, weak chatController] messages, quoteTextSelectionTips -> ContextController.Items in
         guard let selfController, let chatController else {
-            return []
+            return ContextController.Items(content: .list([]))
         }
+        
         var items: [ContextMenuItem] = []
         
         if replySubject.quote != nil {
@@ -398,18 +403,21 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             })))
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
-            f(.default)
-            
-            guard let selfController else {
-                return
-            }
-            guard let replySubject = selfController.presentationInterfaceState.interfaceState.replyMessageSubject else {
-                return
-            }
-            moveReplyMessageToAnotherChat(selfController: selfController, replySubject: replySubject)
-        })))
+        if selfController.presentationInterfaceState.copyProtectionEnabled || messages.first?.isCopyProtected() == true {
+        } else {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
+                f(.default)
+                
+                guard let selfController else {
+                    return
+                }
+                guard let replySubject = selfController.presentationInterfaceState.interfaceState.replyMessageSubject else {
+                    return
+                }
+                moveReplyMessageToAnotherChat(selfController: selfController, replySubject: replySubject)
+            })))
+        }
         
         items.append(.separator)
         
@@ -441,14 +449,17 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             })))
         }
         
-        return items
+        var tip: ContextController.Tip?
+        if quoteTextSelectionTips <= 3, let message = messages.first, !message.text.isEmpty {
+            tip = .quoteSelection
+        }
+        
+        return ContextController.Items(content: .list(items), tip: tip)
     }
     
-    var tip: ContextController.Tip?
-    if "".isEmpty {
-        tip = .quoteSelection
-    }
-    return items |> map { ContextController.Items(content: .list($0), tip: tip) }
+    let _ = ApplicationSpecificNotice.incrementReplyQuoteTextSelectionTips(accountManager: selfController.context.sharedContext.accountManager).startStandalone()
+    
+    return items
 }
 
 private func chatReplyOptions(selfController: ChatControllerImpl, sourceNode: ASDisplayNode, getContextController: @escaping () -> ContextController?, selectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>) -> ContextController.Source? {

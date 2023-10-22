@@ -184,6 +184,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case chatReplyOptionsTip = 50
     case displayStoryInteractionGuide = 51
     case dismissedPremiumAppIconsBadge = 52
+    case replyQuoteTextSelectionTip = 53
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -448,6 +449,10 @@ private struct ApplicationSpecificNoticeKeys {
     
     static func dismissedPremiumAppIconsBadge() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.dismissedPremiumAppIconsBadge.key)
+    }
+    
+    static func replyQuoteTextSelectionTip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.replyQuoteTextSelectionTip.key)
     }
 }
 
@@ -921,6 +926,30 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.chatTextSelectionTip(), entry)
+            }
+        }
+    }
+    
+    public static func getReplyQuoteTextSelectionTips(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.replyQuoteTextSelectionTip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+    
+    public static func incrementReplyQuoteTextSelectionTips(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.replyQuoteTextSelectionTip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.replyQuoteTextSelectionTip(), entry)
             }
         }
     }

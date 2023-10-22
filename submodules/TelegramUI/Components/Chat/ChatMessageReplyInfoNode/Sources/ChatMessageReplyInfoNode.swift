@@ -215,6 +215,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             case .standalone:
                 let serviceColor = serviceMessageColorComponents(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper)
                 titleColor = serviceColor.primaryText
+                if dashSecondaryColor != nil {
+                    secondaryColor = .clear
+                }
                 
                 mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText
                 dustColor = titleColor
@@ -457,7 +460,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                             imageDimensions = representation.dimensions.cgSize
                         }
                         break
-                    } else if let file = media as? TelegramMediaFile, file.isVideo && !file.isVideoSticker {
+                    } else if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         updatedMediaReference = .message(message: MessageReference(message), media: file)
                         
                         if let dimensions = file.dimensions {
@@ -527,14 +530,12 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var textCutoutWidth: CGFloat = 0.0
             if arguments.quote != nil || arguments.replyForward?.quote != nil {
                 additionalTitleWidth += 10.0
-                if case .bubble = arguments.type {
-                    maxTitleNumberOfLines = 2
-                    maxTextNumberOfLines = 5
-                    if imageTextInset != 0.0 {
-                        adjustedConstrainedTextSize.width += imageTextInset
-                        textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset + 6.0, height: 10.0))
-                        textCutoutWidth = imageTextInset + 6.0
-                    }
+                maxTitleNumberOfLines = 2
+                maxTextNumberOfLines = 5
+                if imageTextInset != 0.0 {
+                    adjustedConstrainedTextSize.width += imageTextInset
+                    textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset + 6.0, height: 10.0))
+                    textCutoutWidth = imageTextInset + 6.0
                 }
             }
             
@@ -723,10 +724,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     node.contentNode.view.insertSubview(node.backgroundView, at: 0)
                 }
                 
-                var backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height + 2.0))
-                if case .standalone = arguments.type {
-                    backgroundFrame.size.height -= 1.0
-                }
+                let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: realSize.width, height: realSize.height))
                 
                 node.backgroundView.frame = backgroundFrame
                 
@@ -748,30 +746,6 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     pattern: pattern,
                     animation: animation
                 )
-                
-                let _ = secondaryColor
-                /*if let secondaryColor {
-                    let lineDashView: UIImageView
-                    if let current = node.lineDashView {
-                        lineDashView = current
-                    } else {
-                        lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme, incoming: isIncoming))
-                        lineDashView.clipsToBounds = true
-                        node.lineDashView = lineDashView
-                        node.contentNode.view.addSubview(lineDashView)
-                    }
-                    lineDashView.tintColor = secondaryColor
-                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 12.0, height: backgroundFrame.height))
-                    lineDashView.layer.cornerRadius = 6.0
-                    if #available(iOS 13.0, *) {
-                        lineDashView.layer.cornerCurve = .continuous
-                    }
-                } else {
-                    if let lineDashView = node.lineDashView {
-                        node.lineDashView = nil
-                        lineDashView.removeFromSuperview()
-                    }
-                }*/
                 
                 if arguments.quote != nil || arguments.replyForward?.quote != nil {
                     let quoteIconView: UIImageView

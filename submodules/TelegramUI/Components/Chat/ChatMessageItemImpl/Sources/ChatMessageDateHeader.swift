@@ -436,7 +436,7 @@ private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
 private let maxVideoLoopCount = 3
 
-public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode {
+public final class ChatMessageAvatarHeaderNodeImpl: ListViewItemHeaderNode, ChatMessageAvatarHeaderNode {
     private let context: AccountContext
     private var presentationData: ChatPresentationData
     private let controllerInteraction: ChatControllerInteraction

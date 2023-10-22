@@ -999,8 +999,10 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                     
+                    var replyBackgroundFrame: CGRect?
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
                         let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        replyBackgroundFrame = replyInfoFrame
                         
                         let replyInfoNode = replyInfoApply(replyInfoFrame.size, false, animation)
                         if strongSelf.replyInfoNode == nil {
@@ -1015,8 +1017,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        let replyBackgroundFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 4.0) : (width - messageInfoSize.width - bubbleEdgeInset)) - 4.0, y: 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
+                    if let replyBackgroundNode = strongSelf.replyBackgroundNode, let replyBackgroundFrame {
+                        let replyBackgroundFrame = replyBackgroundFrame
                         animation.animator.updateFrame(layer: replyBackgroundNode.layer, frame: replyBackgroundFrame, completion: nil)
                         
                         let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
@@ -1293,6 +1295,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                             return
                                         } else if let attribute = attribute as? ReplyStoryAttribute {
                                             item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                            return
+                                        } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                                            item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                                             return
                                         }
                                     }

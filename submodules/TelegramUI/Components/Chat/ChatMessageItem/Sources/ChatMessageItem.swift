@@ -101,7 +101,6 @@ public enum ChatMessageMerge: Int32 {
 
 public protocol ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     func updateSelectionState(animated: Bool)
-    func updateSublayerTransformOffset(layer: CALayer, offset: CGPoint)
 }
 
 public protocol ChatMessageItem: ListViewItem {

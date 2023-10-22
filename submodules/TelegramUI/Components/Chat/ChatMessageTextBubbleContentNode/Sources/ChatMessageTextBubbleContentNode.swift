@@ -1108,13 +1108,18 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let enableCopy = !item.associatedData.isCopyProtectionEnabled && !item.message.isCopyProtected()
                 textSelectionNode.enableCopy = enableCopy
                 
-                let enableQuote = true
+                var enableQuote = !item.message.text.isEmpty
                 var enableOtherActions = true
                 if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                     enableOtherActions = false
                 } else if item.controllerInteraction.canSetupReply(item.message) == .reply {
                     enableOtherActions = false
                 }
+                
+                if !item.controllerInteraction.canSendMessages() && !enableCopy {
+                    enableQuote = false
+                }
+                
                 textSelectionNode.enableQuote = enableQuote
                 textSelectionNode.enableTranslate = enableOtherActions
                 textSelectionNode.enableShare = enableOtherActions

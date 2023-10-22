@@ -738,14 +738,21 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         var textFrame = self.textFieldFrame
         textFrame.origin = CGPoint(x: 13.0, y: 6.0 - UIScreenPixel)
         textFrame.size.height = self.textInputView.contentSize.height
-        textFrame.size.width -= self.textInputView.textContainerInset.right
+        if let textInputView = self.textInputView as? ChatInputTextView {
+            textFrame.size.width -= textInputView.defaultTextContainerInset.right
+        } else {
+            textFrame.size.width -= self.textInputView.textContainerInset.right
+        }
         
         if self.textInputView.isRTL {
             textFrame.origin.x -= messageOriginDelta
         }
         
         self.fromMessageTextNode.frame = textFrame
+        self.fromMessageTextNode.updateLayout(size: textFrame.size)
+        
         self.toMessageTextNode.frame = textFrame
+        self.toMessageTextNode.updateLayout(size: textFrame.size)
     }
     
     @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {

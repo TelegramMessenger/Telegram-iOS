@@ -3955,6 +3955,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 return .action({
                                     item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
                                 })
+                            } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                                return .action({
+                                    item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
+                                })
                             }
                         }
                     }
@@ -4158,6 +4162,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                 } else if let attribute = attribute as? ReplyStoryAttribute {
                                     return .action({
                                         item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                                    })
+                                } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                                    return .action({
+                                        item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                                     })
                                 }
                             }
