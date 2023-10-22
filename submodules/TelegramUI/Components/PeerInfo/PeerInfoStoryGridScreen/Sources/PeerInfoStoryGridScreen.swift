@@ -117,7 +117,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                     
                     environment.controller()?.present(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .info(title: nil, text: text, timeout: nil),
+                        content: .info(title: nil, text: text, timeout: nil, customUndoText: nil),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
                         action: { _ in return false }
@@ -361,7 +361,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 let title: String = presentationData.strings.StoryList_TooltipStoriesSavedToProfile(Int32(selectedCount))
                                 environment.controller()?.present(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .info(title: nil, text: title, timeout: nil),
+                                    content: .info(title: nil, text: title, timeout: nil, customUndoText: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { _ in return false }
@@ -384,7 +384,7 @@ final class PeerInfoStoryGridScreenComponent: Component {
                                 
                                 environment.controller()?.present(UndoOverlayController(
                                     presentationData: presentationData,
-                                    content: .info(title: title, text: text, timeout: nil),
+                                    content: .info(title: title, text: text, timeout: nil, customUndoText: nil),
                                     elevatedLayout: false,
                                     animateInAsReplacement: false,
                                     action: { _ in return false }

@@ -35,6 +35,8 @@ public extension PeerNameColor {
             return (UIColor(rgb: 0x27ACCE), UIColor(rgb: 0x82E8D6))
         case .blueDash:
             return (UIColor(rgb: 0x3391D4), UIColor(rgb: 0x7DD3F0))
+        case .pinkDash:
+            return (UIColor(rgb: 0xdd4371), UIColor(rgb: 0xffbe9f))
         }
     }
 }

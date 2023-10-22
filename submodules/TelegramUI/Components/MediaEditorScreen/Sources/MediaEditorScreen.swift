@@ -4248,7 +4248,8 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 content = .info(
                     title: presentationData.strings.Story_Editor_TooltipReachedReactionLimitTitle,
                     text: presentationData.strings.Story_Editor_TooltipReachedReactionLimitText(value).string,
-                    timeout: nil
+                    timeout: nil,
+                    customUndoText: nil
                 )
             } else {
                 let value = presentationData.strings.Story_Editor_TooltipPremiumReactionLimitValue(premiumLimits.maxStoriesSuggestedReactions)

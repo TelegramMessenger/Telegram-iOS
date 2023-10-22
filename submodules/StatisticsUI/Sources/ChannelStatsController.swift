@@ -786,10 +786,17 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 entries.append(.boosterTabs(presentationData.theme, "\(boostsCount) Boosts", "\(giftsCount) Gifts", state.giftsSelected))
             }
             
-            if let boostersState {
+            let selectedState: ChannelBoostersContext.State?
+            if state.giftsSelected {
+                selectedState = giftsState
+            } else {
+                selectedState = boostersState
+            }
+            
+            if let selectedState {
                 var boosterIndex: Int32 = 0
                 
-                var boosters: [ChannelBoostersContext.State.Boost] = boostersState.boosts
+                var boosters: [ChannelBoostersContext.State.Boost] = selectedState.boosts
                 var effectiveExpanded = state.boostersExpanded
                 if boosters.count > maxUsersDisplayedLimit && !state.boostersExpanded {
                     boosters = Array(boosters.prefix(Int(maxUsersDisplayedLimit)))
@@ -803,7 +810,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 }
                 
                 if !effectiveExpanded {
-                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.PeopleNearby_ShowMorePeople(Int32(boostersState.count) - maxUsersDisplayedLimit)))
+                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.PeopleNearby_ShowMorePeople(Int32(selectedState.count) - maxUsersDisplayedLimit)))
                 }
             }
             
@@ -939,7 +946,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         pushImpl?(controller)
     },
     updateGiftsSelected: { selected in
-        updateState { $0.withUpdatedGiftsSelected(selected) }
+        updateState { $0.withUpdatedGiftsSelected(selected).withUpdatedBoostersExpanded(false) }
     })
     
     let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
