@@ -57,6 +57,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         public let dateAndStatusType: ChatMessageDateAndStatusType?
         public let displayReactions: Bool
         public let messageSelection: Bool?
+        public let isAttachedContentBlock: Bool
         public let layoutConstants: ChatMessageItemLayoutConstants
         public let constrainedSize: CGSize
         public let controllerInteraction: ChatControllerInteraction
@@ -79,6 +80,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             dateAndStatusType: ChatMessageDateAndStatusType?,
             displayReactions: Bool,
             messageSelection: Bool?,
+            isAttachedContentBlock: Bool,
             layoutConstants: ChatMessageItemLayoutConstants,
             constrainedSize: CGSize,
             controllerInteraction: ChatControllerInteraction
@@ -100,6 +102,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             self.dateAndStatusType = dateAndStatusType
             self.displayReactions = displayReactions
             self.messageSelection = messageSelection
+            self.isAttachedContentBlock = isAttachedContentBlock
             self.layoutConstants = layoutConstants
             self.constrainedSize = constrainedSize
             self.controllerInteraction = controllerInteraction
@@ -745,7 +748,14 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let controlAreaWidth: CGFloat
                 
                 if hasThumbnail {
-                    let currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
+                    let currentIconFrame: CGRect
+                    if arguments.isAttachedContentBlock {
+                        currentIconFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 59.0, height: 59.0))
+                        controlAreaWidth = 71.0
+                    } else {
+                        currentIconFrame = CGRect(origin: CGPoint(x: -1.0, y: -7.0), size: CGSize(width: 74.0, height: 74.0))
+                        controlAreaWidth = 86.0
+                    }
                     iconFrame = currentIconFrame
                     progressFrame = CGRect(
                         origin: CGPoint(
@@ -754,13 +764,20 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         ),
                         size: CGSize(width: progressDiameter, height: progressDiameter)
                     )
-                    controlAreaWidth = 86.0
                 } else {
-                    progressFrame = CGRect(
-                        origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
-                        size: CGSize(width: progressDiameter, height: progressDiameter)
-                    )
-                    controlAreaWidth = progressFrame.maxX + 8.0
+                    if arguments.isAttachedContentBlock {
+                        progressFrame = CGRect(
+                            origin: CGPoint(x: 3.0, y: 0.0),
+                            size: CGSize(width: progressDiameter, height: progressDiameter)
+                        )
+                        controlAreaWidth = progressFrame.maxX + 8.0
+                    } else {
+                        progressFrame = CGRect(
+                            origin: CGPoint(x: 3.0, y: isVoice ? -3.0 : 0.0),
+                            size: CGSize(width: progressDiameter, height: progressDiameter)
+                        )
+                        controlAreaWidth = progressFrame.maxX + 8.0
+                    }
                 }
                 
                 var statusSuggestedWidthAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> Void))?
@@ -864,7 +881,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let normHeight: CGFloat
                     if hasThumbnail {
-                        normHeight = 64.0
+                        if arguments.isAttachedContentBlock {
+                            normHeight = 58.0
+                        } else {
+                            normHeight = 64.0
+                        }
                     } else {
                         normHeight = 44.0
                     }
@@ -1707,7 +1728,11 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         self.fetchingCompactTextNode.frame = CGRect(origin: self.descriptionNode.frame.origin, size: fetchingCompactSize)
     }
     
-    public static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> (Arguments) -> (CGFloat, (CGSize) -> (CGFloat, (CGFloat) -> (CGSize, (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> ChatMessageInteractiveFileNode))) {
+    public typealias Apply = (Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> ChatMessageInteractiveFileNode
+    public typealias FinalizeLayout = (CGFloat) -> (CGSize, Apply)
+    public typealias ContinueLayout = (CGSize) -> (CGFloat, FinalizeLayout)
+    public typealias AsyncLayout = (Arguments) -> (CGFloat, ContinueLayout)
+    public static func asyncLayout(_ node: ChatMessageInteractiveFileNode?) -> AsyncLayout {
         let currentAsyncLayout = node?.asyncLayout()
         
         return { arguments in

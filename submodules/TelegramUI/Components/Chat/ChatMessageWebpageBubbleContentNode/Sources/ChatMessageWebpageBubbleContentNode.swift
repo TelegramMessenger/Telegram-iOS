@@ -55,17 +55,28 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         return
                     } else {
                         if content.embedUrl == nil && (content.title != nil || content.text != nil) {
-                            var isConcealed = true
-                            if item.message.text.contains(content.url) {
-                                isConcealed = false
-                            }
-                            if let attribute = item.message.webpagePreviewAttribute {
-                                if attribute.isSafe {
-                                    isConcealed = false
+                            var shouldOpenUrl = true
+                            if let file = content.file {
+                                if !file.isVideo, !file.isVideoSticker, !file.isAnimated, !file.isAnimatedSticker, !file.isSticker, !file.isMusic {
+                                    shouldOpenUrl = false
+                                } else if file.isMusic || file.isVoice {
+                                    shouldOpenUrl = false
                                 }
                             }
-                            item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
-                            return
+                            
+                            if shouldOpenUrl {
+                                var isConcealed = true
+                                if item.message.text.contains(content.url) {
+                                    isConcealed = false
+                                }
+                                if let attribute = item.message.webpagePreviewAttribute {
+                                    if attribute.isSafe {
+                                        isConcealed = false
+                                    }
+                                }
+                                item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
+                                return
+                            }
                         }
                     }
                 }
