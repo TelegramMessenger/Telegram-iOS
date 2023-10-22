@@ -1425,15 +1425,24 @@ private final class NotificationServiceHandler {
                                                 }
                                             }
                                         }
+                                        
+                                        let wasDisplayed = stateManager.postbox.transaction { transaction -> Bool in
+                                            if let messageId {
+                                                return _internal_getMessageNotificationWasDisplayed(transaction: transaction, id: messageId)
+                                            } else {
+                                                return false
+                                            }
+                                        }
 
                                         Logger.shared.log("NotificationService \(episode)", "Will fetch media")
                                         let _ = (combineLatest(queue: queue,
                                             fetchMediaSignal
                                             |> timeout(10.0, queue: queue, alternate: .single(nil)),
                                             fetchNotificationSoundSignal
-                                            |> timeout(10.0, queue: queue, alternate: .single(nil))
+                                            |> timeout(10.0, queue: queue, alternate: .single(nil)),
+                                            wasDisplayed
                                         )
-                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData in
+                                        |> deliverOn(queue)).start(next: { mediaData, notificationSoundData, wasDisplayed in
                                             guard let strongSelf = self, let stateManager = strongSelf.stateManager else {
                                                 completed()
                                                 return
@@ -1527,6 +1536,15 @@ private final class NotificationServiceHandler {
 
                                                 Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
 
+                                                if wasDisplayed {
+                                                    content = NotificationContent(isLockedMessage: nil)
+                                                    Logger.shared.log("NotificationService \(episode)", "Was already displayed, skipping content")
+                                                } else if let messageId {
+                                                    let _ = (stateManager.postbox.transaction { transaction -> Void in
+                                                        _internal_setMessageNotificationWasDisplayed(transaction: transaction, id: messageId)
+                                                    }).start()
+                                                }
+                                                
                                                 updateCurrentContent(content)
 
                                                 completed()
