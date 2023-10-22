@@ -8362,6 +8362,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             case .channelBoostRequired:
                 self.postingAvailabilityDisposable?.dispose()
                 
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+                
                 self.postingAvailabilityDisposable = combineLatest(
                     queue: Queue.mainQueue(),
                     self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: self.peerId)),
@@ -8387,12 +8389,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             if let self {
                                 self.openStats(boosts: true, boostStatus: status)
                             }
-                        }, openGift: { [weak self] in
+                        }, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
                             if let self {
                                 let controller = createGiveawayController(context: self.context, peerId: self.peerId, subject: .generic)
                                 self.controller?.push(controller)
                             }
-                        })
+                        } : nil)
                         navigationController.pushViewController(controller)
                     }
                     

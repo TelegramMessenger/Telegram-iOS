@@ -663,7 +663,7 @@ private struct ChannelStatsControllerState: Equatable {
 }
 
 
-private func channelStatsControllerEntries(state: ChannelStatsControllerState, peer: EnginePeer?, data: ChannelStats?, messages: [Message]?, interactions: [MessageId: ChannelStatsMessageInteractions]?, boostData: ChannelBoostStatus?, boostersState: ChannelBoostersContext.State?, giftsState: ChannelBoostersContext.State?, presentationData: PresentationData) -> [StatsEntry] {
+private func channelStatsControllerEntries(state: ChannelStatsControllerState, peer: EnginePeer?, data: ChannelStats?, messages: [Message]?, interactions: [MessageId: ChannelStatsMessageInteractions]?, boostData: ChannelBoostStatus?, boostersState: ChannelBoostersContext.State?, giftsState: ChannelBoostersContext.State?, presentationData: PresentationData, giveawayAvailable: Bool) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     switch state.section {
@@ -822,8 +822,10 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostLink(presentationData.theme, boostData.url))
             entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
             
-            entries.append(.gifts(presentationData.theme, "Get Boosts via Gifts"))
-            entries.append(.giftsInfo(presentationData.theme, "Get more boosts for your channel by gifting Premium to your subscribers."))
+            if giveawayAvailable {
+                entries.append(.gifts(presentationData.theme, "Get Boosts via Gifts"))
+                entries.append(.giftsInfo(presentationData.theme, "Get more boosts for your channel by gifting Premium to your subscribers."))
+            }
         }
     }
     
@@ -836,6 +838,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
+    
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     var openMessageStatsImpl: ((MessageId) -> Void)?
     var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
@@ -998,11 +1002,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             map[interactions.messageId] = interactions
             return map
         }
-        
-        
-        
+                
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .sectionControl([presentationData.strings.Stats_Statistics, presentationData.strings.Stats_Boosts], state.section == .boosts ? 1 : 0), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(state: state, peer: peer, data: data, messages: messages, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelStatsControllerEntries(state: state, peer: peer, data: data, messages: messages, interactions: interactions, boostData: boostData, boostersState: boostersState, giftsState: giftsState, presentationData: presentationData, giveawayAvailable: premiumConfiguration.giveawayGiftsPurchaseAvailable), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

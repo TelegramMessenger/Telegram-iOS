@@ -442,7 +442,7 @@ public func PeerNameColorScreen(
                             }
                             updateState { state in
                                 var updatedState = state
-                                updatedState.inProgress = true
+                                updatedState.inProgress = false
                                 return updatedState
                             }
                         }, completed: {

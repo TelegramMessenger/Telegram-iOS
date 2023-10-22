@@ -1439,7 +1439,7 @@ private final class LimitSheetContent: CombinedComponent {
                 )
                 
                 var additionalContentHeight: CGFloat = 0.0
-                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject, link != nil {
+                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject, link != nil, let openGift = component.openGift {
                     let orText = orText.update(
                         component: MultilineTextComponent(text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
                         availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
@@ -1477,7 +1477,6 @@ private final class LimitSheetContent: CombinedComponent {
                     if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {
                         giftAttributedString.addAttribute(.attachment, value: chevronImage, range: NSRange(range, in: giftAttributedString.string))
                     }
-                    let openGift = component.openGift
                     let giftText = giftText.update(
                         component: BalancedTextComponent(
                             text: .plain(giftAttributedString),
@@ -1485,15 +1484,11 @@ private final class LimitSheetContent: CombinedComponent {
                             maximumNumberOfLines: 0,
                             lineSpacing: 0.1,
                             highlightColor: linkColor.withAlphaComponent(0.2),
-                            highlightAction: { attributes in
-                                if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
-                                    return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
-                                } else {
-                                    return nil
-                                }
+                            highlightAction: { _ in
+                                return nil
                             },
                             tapAction: { _, _ in
-                                openGift?()
+                                openGift()
                             }
                         ),
                         availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
@@ -1517,7 +1512,9 @@ private final class LimitSheetContent: CombinedComponent {
                     if link != nil {
                         height += 66.0
                         
-                        height += 100.0
+                        if let _ = component.openGift {
+                            height += 100.0
+                        }
                     } else {
                         if isCurrent {
                             height -= 53.0
