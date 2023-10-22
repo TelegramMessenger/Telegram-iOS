@@ -1697,6 +1697,12 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         self.view.disablesInteractiveModalDismiss = true
     }
     
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        }
+    }
+    
     public func updateSubject(_ subject: Subject, count: Int32) {
         let component = LimitSheetComponent(context: self.context, subject: subject, count: count, cancel: {}, action: {
             return true

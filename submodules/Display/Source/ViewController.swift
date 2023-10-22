@@ -571,7 +571,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
-    public func replace(with controller: ViewController) {
+    open func replace(with controller: ViewController) {
         if let navigationController = self.navigationController as? NavigationController {
             var controllers = navigationController.viewControllers
             controllers.removeAll(where: { $0 === self })

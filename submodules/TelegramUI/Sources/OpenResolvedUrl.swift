@@ -934,7 +934,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }
                 }
                 dismissImpl = { [weak controller] in
-                    controller?.dismiss()
+                    controller?.dismissAnimated()
                 }
             })
         case let .premiumGiftCode(slug):

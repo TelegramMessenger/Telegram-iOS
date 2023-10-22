@@ -1262,6 +1262,17 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         self.view.disablesInteractiveModalDismiss = true
     }
     
+    public override func replace(with controller: ViewController) {
+        self.dismissAnimated()
+        super.replace(with: controller)
+    }
+    
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        }
+    }
+    
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
