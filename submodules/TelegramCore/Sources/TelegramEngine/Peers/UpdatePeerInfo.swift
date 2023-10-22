@@ -91,6 +91,7 @@ func _internal_updatePeerDescription(account: Account, peerId: PeerId, descripti
 
 public enum UpdatePeerNameColorAndEmojiError {
     case generic
+    case channelBoostRequired
 }
 
 func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.Id, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdatePeerNameColorAndEmojiError> {
@@ -111,7 +112,10 @@ func _internal_updatePeerNameColorAndEmoji(account: Account, peerId: EnginePeer.
         if let peer = peer as? TelegramChannel, let inputChannel = apiInputChannel(peer) {
             let flags: Int32 = (1 << 0)
             return account.network.request(Api.functions.channels.updateColor(flags: flags, channel: inputChannel, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
-            |> mapError { _ -> UpdatePeerNameColorAndEmojiError in
+            |> mapError { error -> UpdatePeerNameColorAndEmojiError in
+                if error.errorDescription.hasPrefix("BOOSTS_REQUIRED") {
+                    return .channelBoostRequired
+                }
                 return .generic
             }
             |> mapToSignal { result -> Signal<Void, UpdatePeerNameColorAndEmojiError> in

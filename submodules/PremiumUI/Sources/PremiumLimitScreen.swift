@@ -1471,7 +1471,7 @@ private final class LimitSheetContent: CombinedComponent {
                         state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, environment.theme)
                     }
                     
-                    let giftString = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()"
+                    let giftString = environment.strings.Premium_BoostByGiftDescription
                     let giftAttributedString = parseMarkdownIntoAttributedString(giftString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                     
                     if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {

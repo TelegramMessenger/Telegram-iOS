@@ -748,31 +748,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     pattern: pattern,
                     animation: animation
                 )
-                
-                let _ = secondaryColor
-                /*if let secondaryColor {
-                    let lineDashView: UIImageView
-                    if let current = node.lineDashView {
-                        lineDashView = current
-                    } else {
-                        lineDashView = UIImageView(image: PresentationResourcesChat.chatReplyLineDashTemplateImage(arguments.presentationData.theme.theme, incoming: isIncoming))
-                        lineDashView.clipsToBounds = true
-                        node.lineDashView = lineDashView
-                        node.contentNode.view.addSubview(lineDashView)
-                    }
-                    lineDashView.tintColor = secondaryColor
-                    lineDashView.frame = CGRect(origin: .zero, size: CGSize(width: 12.0, height: backgroundFrame.height))
-                    lineDashView.layer.cornerRadius = 6.0
-                    if #available(iOS 13.0, *) {
-                        lineDashView.layer.cornerCurve = .continuous
-                    }
-                } else {
-                    if let lineDashView = node.lineDashView {
-                        node.lineDashView = nil
-                        lineDashView.removeFromSuperview()
-                    }
-                }*/
-                
+                                
                 if arguments.quote != nil || arguments.replyForward?.quote != nil {
                     let quoteIconView: UIImageView
                     if let current = node.quoteIconView {

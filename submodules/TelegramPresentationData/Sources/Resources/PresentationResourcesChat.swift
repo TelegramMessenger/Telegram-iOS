@@ -1319,38 +1319,6 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatReplyLineDashTemplateImage(_ theme: PresentationTheme, incoming: Bool) -> UIImage? {
-        let key: PresentationResourceKey = incoming ? .chatReplyLineDashTemplateIncomingImage : .chatReplyLineDashTemplateOutgoingImage
-        return theme.image(key.rawValue, { theme in
-            let radius: CGFloat = 3.0
-            let offset: CGFloat = incoming ? 5.0 : -3.0
-            
-            return generateImage(CGSize(width: 12.0, height: radius * 6.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                                
-                context.move(to: CGPoint(x: radius, y: offset))
-                context.addLine(to: CGPoint(x: radius, y: offset + radius * 3.0))
-                context.addLine(to: CGPoint(x: 0.0, y: offset + radius * 4.0))
-                context.addLine(to: CGPoint(x: 0.0, y: offset + radius))
-                context.closePath()
-                
-                context.setFillColor(UIColor.white.cgColor)
-                context.fillPath()
-                
-                if !incoming {
-                    context.move(to: CGPoint(x: radius, y: size.height + offset))
-                    context.addLine(to: CGPoint(x: radius, y: size.height + offset + radius * 3.0))
-                    context.addLine(to: CGPoint(x: 0.0, y: size.height + offset + radius * 4.0))
-                    context.addLine(to: CGPoint(x: 0.0, y: size.height + offset + radius))
-                    context.closePath()
-                    
-                    context.setFillColor(UIColor.white.cgColor)
-                    context.fillPath()
-                }
-            })?.resizableImage(withCapInsets: .zero, resizingMode: .tile).withRenderingMode(.alwaysTemplate)
-        })
-    }
-    
     public static func chatBubbleCloseIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleCloseIcon.rawValue, { theme in
             return generateImage(CGSize(width: 12.0, height: 12.0), rotatedContext: { size, context in

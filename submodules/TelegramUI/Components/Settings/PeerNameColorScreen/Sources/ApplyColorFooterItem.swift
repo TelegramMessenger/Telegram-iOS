@@ -12,18 +12,20 @@ final class ApplyColorFooterItem: ItemListControllerFooterItem {
     let theme: PresentationTheme
     let title: String
     let locked: Bool
+    let inProgress: Bool
     let action: () -> Void
     
-    init(theme: PresentationTheme, title: String, locked: Bool, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, title: String, locked: Bool, inProgress: Bool, action: @escaping () -> Void) {
         self.theme = theme
         self.title = title
         self.locked = locked
+        self.inProgress = inProgress
         self.action = action
     }
     
     func isEqual(to: ItemListControllerFooterItem) -> Bool {
         if let item = to as? ApplyColorFooterItem {
-            return self.theme === item.theme && self.title == item.title && self.locked == item.locked
+            return self.theme === item.theme && self.title == item.title && self.locked == item.locked && self.inProgress == item.inProgress
         } else {
             return false
         }
@@ -63,6 +65,7 @@ final class ApplyColorFooterItemNode: ItemListControllerFooterItemNode {
         
         self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(backgroundColor: .black, foregroundColor: .white), height: 50.0, cornerRadius: 11.0)
         self.buttonNode.icon = item.locked ? UIImage(bundleImageName: "Chat/Stickers/Lock") : nil
+        self.buttonNode.progressType = .embedded
         
         super.init()
         
@@ -73,6 +76,7 @@ final class ApplyColorFooterItemNode: ItemListControllerFooterItemNode {
         self.updateItem()
     }
     
+    private var inProgress = false
     private func updateItem() {
         self.backgroundNode.updateColor(color: self.item.theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = self.item.theme.rootController.tabBar.separatorColor
@@ -86,6 +90,16 @@ final class ApplyColorFooterItemNode: ItemListControllerFooterItemNode {
         
         self.buttonNode.pressed = { [weak self] in
             self?.item.action()
+        }
+        
+        if self.inProgress != self.item.inProgress {
+            self.inProgress = true
+            
+            if self.item.inProgress {
+                self.buttonNode.transitionToProgress()
+            } else {
+                self.buttonNode.transitionFromProgress()
+            }
         }
     }
     

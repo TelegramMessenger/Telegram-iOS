@@ -8387,6 +8387,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             if let self {
                                 self.openStats(boosts: true, boostStatus: status)
                             }
+                        }, openGift: { [weak self] in
+                            if let self {
+                                let controller = createGiveawayController(context: self.context, peerId: self.peerId, subject: .generic)
+                                self.controller?.push(controller)
+                            }
                         })
                         navigationController.pushViewController(controller)
                     }

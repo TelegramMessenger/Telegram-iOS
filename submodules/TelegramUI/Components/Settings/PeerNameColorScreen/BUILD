@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard",
         "//submodules/SolidRoundedButtonNode",
         "//submodules/AppBundle",
+        "//submodules/PremiumUI",
     ],
     visibility = [
         "//visibility:public",
