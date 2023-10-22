@@ -118,7 +118,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostersTitle(PresentationTheme, String)
     case boostersPlaceholder(PresentationTheme, String)
     case boosterTabs(PresentationTheme, String, String, Bool)
-    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer?, Int32, ChannelBoostersContext.State.Boost.Flags, Int32)
+    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer?, Int32, ChannelBoostersContext.State.Boost.Flags, Int32, Int32)
     case boostersExpand(PresentationTheme, String)
     case boostersInfo(PresentationTheme, String)
     
@@ -232,7 +232,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2102
             case .boosterTabs:
                 return 2103
-            case let .booster(index, _, _, _, _, _, _):
+            case let .booster(index, _, _, _, _, _, _, _):
                 return 2104 + index
             case .boostersExpand:
                 return 10000
@@ -439,8 +439,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .booster(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsCount, lhsFlags, lhsExpires):
-                if case let .booster(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsCount, rhsFlags, rhsExpires) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsCount == rhsCount, lhsFlags == rhsFlags, lhsExpires == rhsExpires {
+            case let .booster(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsCount, lhsFlags, lhsDate, lhsExpires):
+                if case let .booster(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsCount, rhsFlags, rhsDate, rhsExpires) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsCount == rhsCount, lhsFlags == rhsFlags, lhsDate == rhsDate, lhsExpires == rhsExpires {
                     return true
                 } else {
                     return false
@@ -548,28 +548,47 @@ private enum StatsEntry: ItemListNodeEntry {
                 return BoostsTabsItem(theme: presentationData.theme, boostsText: boostText, giftsText: giftText, selectedTab: giftSelected ? .gifts : .boosts, sectionId: self.section, selectionUpdated: { tab in
                     arguments.updateGiftsSelected(tab == .gifts)
                 })
-            case let .booster(_, _, _, peer, count, flags, expires):
+            case let .booster(_, _, _, peer, count, flags, date, expires):
                 let expiresValue = stringForDate(timestamp: expires, strings: presentationData.strings)
-                let expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
+                let expiresString: String
+                
+                let durationMonths = Int32(round(Float(expires - date) / (86400.0 * 30.0)))
+                let durationString = "\(durationMonths)m"
                 
                 let title: String
                 let icon: GiftOptionItem.Icon
+                var label: String?
+                if flags.contains(.isGiveaway) {
+                    label = "🏆 Giveaway"
+                } else if flags.contains(.isGift) {
+                    label = "🎁 Gift"
+                }
                 if let peer {
                     title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     icon = .peer(peer)
+                    expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
                 } else {
+                    let color: GiftOptionItem.Icon.Color
+                    if durationMonths > 11 {
+                        color = .red
+                    } else if durationMonths > 5 {
+                        color = .blue
+                    } else {
+                        color = .green
+                    }
                     if flags.contains(.isUnclaimed) {
                         title = "Unclaimed"
-                        icon = .image(color: .red, name: "Premium/Unclaimed")
+                        icon = .image(color: color, name: "Premium/Unclaimed")
                     } else if flags.contains(.isGiveaway) {
                         title = "To be distributed"
-                        icon = .image(color: .blue, name: "Premium/ToBeDistributed")
+                        icon = .image(color: color, name: "Premium/ToBeDistributed")
                     } else {
                         title = "Unknown"
-                        icon = .image(color: .red, name: "Premium/ToBeDistributed")
+                        icon = .image(color: color, name: "Premium/ToBeDistributed")
                     }
+                    expiresString = "\(durationString) • \(expiresValue)"
                 }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, sectionId: self.section, action: peer != nil && peer?.id != arguments.context.account.peerId  ? {
+                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, label: label.flatMap { .semitransparent($0) }, sectionId: self.section, action: peer != nil && peer?.id != arguments.context.account.peerId  ? {
                     arguments.openPeer(peer!)
                 } : nil)
             case let .boostersExpand(theme, title):
@@ -805,7 +824,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 }
                 
                 for booster in boosters {
-                    entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster.peer, booster.multiplier, booster.flags, booster.expires))
+                    entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster.peer, booster.multiplier, booster.flags, booster.date, booster.expires))
                     boosterIndex += 1
                 }
                 

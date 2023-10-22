@@ -37,11 +37,12 @@ public final class GiftOptionItem: ListViewItem, ItemListItem {
     
     public enum Label {
         case generic(String)
+        case semitransparent(String)
         case boosts(Int32)
         
         var string: String {
             switch self {
-            case let .generic(value):
+            case let .generic(value), let .semitransparent(value):
                 return value
             case let .boosts(value):
                 return "\(value)"
@@ -265,6 +266,9 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
             if let label = item.label, case .boosts = label {
                 labelColor = item.presentationData.theme.list.itemAccentColor
                 labelFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
+            } else if let label = item.label, case .semitransparent = label {
+                labelColor = item.presentationData.theme.list.itemAccentColor
+                labelFont = Font.semibold(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             } else {
                 labelColor = item.presentationData.theme.list.itemSecondaryTextColor
                 labelFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 17.0 / 17.0))
@@ -539,6 +543,23 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                             transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
                             transition.updateFrame(node: iconNode, frame: iconFrame)
                         }
+                    } else if let label = item.label, case .semitransparent = label {
+                        let backgroundNode: ASImageNode
+                        if let currentBackground = strongSelf.labelBackgroundNode {
+                            backgroundNode = currentBackground
+                        } else {
+                            backgroundNode = ASImageNode()
+                            backgroundNode.displaysAsynchronously = false
+                            backgroundNode.image = generateStretchableFilledCircleImage(radius: 13.0, color: item.presentationData.theme.list.itemAccentColor.withAlphaComponent(0.1))
+                            strongSelf.containerNode.insertSubnode(backgroundNode, at: 1)
+                            
+                            strongSelf.labelBackgroundNode = backgroundNode
+                        }
+                        
+                        let labelFrame = CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 19.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size)
+                        let totalFrame = CGRect(x: labelFrame.minX - 7.0, y: labelFrame.minY - 5.0, width: labelFrame.width + 14.0, height: 26.0)
+                        transition.updateFrame(node: backgroundNode, frame: totalFrame)
+                        transition.updateFrame(node: strongSelf.labelNode, frame: labelFrame)
                     } else {
                         transition.updateFrame(node: strongSelf.labelNode, frame: CGRect(origin: CGPoint(x: layoutSize.width - rightInset - labelLayout.size.width - 18.0, y: floorToScreenPixels((layout.contentSize.height - labelLayout.size.height) / 2.0)), size: labelLayout.size))
                     }
