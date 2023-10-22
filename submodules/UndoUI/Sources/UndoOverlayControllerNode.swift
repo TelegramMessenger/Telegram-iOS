@@ -191,7 +191,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if text.contains("](") {
                     isUserInteractionEnabled = true
                 }
-            case let .succeed(text, timeout):
+            case let .succeed(text, timeout, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -203,9 +203,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 5
-                displayUndo = false
+                if let customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
                 self.originalRemainingSeconds = timeout ?? 3
-            case let .info(title, text, timeout):
+            case let .info(title, text, timeout, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -224,7 +229,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }), textAlignment: .natural)
                 self.textNode.attributedText = attributedText
                 self.textNode.maximumNumberOfLines = 10
-                displayUndo = false
+                if let customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
                 if let timeout {
                     self.originalRemainingSeconds = timeout
                 } else {

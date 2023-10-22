@@ -302,9 +302,6 @@ public enum PresentationResourceKey: Int32 {
     case chatReplyBackgroundTemplateOutgoingDashedImage
     case chatReplyServiceBackgroundTemplateImage
     
-    case chatReplyLineDashTemplateIncomingImage
-    case chatReplyLineDashTemplateOutgoingImage
-    
     case chatBubbleCloseIcon
 }
 

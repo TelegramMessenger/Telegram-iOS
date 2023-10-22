@@ -601,7 +601,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .startAttach(peerId, payload, choose):
             let presentError: (String) -> Void = { errorText in
-                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
+                present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: errorText, timeout: nil, customUndoText: nil), elevatedLayout: true, animateInAsReplacement: false, action: { _ in
                     return true
                 }), nil)
             }
@@ -894,54 +894,6 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), forceDark: forceDark, action: {
                     let dismiss = false
                     updateImpl?()
-                    
-//                    switch canApplyStatus {
-//                    case .ok:
-//                        updateImpl?()
-//                    case let .replace(previousPeer):
-//                        let controller = replaceBoostConfirmationController(context: context, fromPeers: [previousPeer], toPeer: peer, commit: {
-//                            updateImpl?()
-//                        })
-//                        present(controller, nil)
-//                    case let .error(error):
-//                        let title: String?
-//                        let text: String
-//                        
-//                        var actions: [TextAlertAction] = [
-//                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-//                        ]
-//                        
-//                        switch error {
-//                        case .generic:
-//                            title = nil
-//                            text = presentationData.strings.Login_UnknownError
-//                        case let .floodWait(timeout):
-//                            title = presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle
-//                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
-//                            text = presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string
-//                            dismiss = true
-//                        case .premiumRequired:
-//                            title = presentationData.strings.ChannelBoost_Error_PremiumNeededTitle
-//                            text = presentationData.strings.ChannelBoost_Error_PremiumNeededText
-//                            actions = [
-//                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
-//                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-//                                    dismissImpl?()
-//                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: false, dismissed: nil)
-//                                    navigationController?.pushViewController(controller)
-//                                })
-//                            ]
-//                        case .giftedPremiumNotAllowed:
-//                            title = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedTitle
-//                            text = presentationData.strings.ChannelBoost_Error_GiftedPremiumNotAllowedText
-//                            dismiss = true
-//                        case .peerBoostAlreadyActive:
-//                            return true
-//                        }
-//                        
-//                        let controller = textAlertController(sharedContext: context.sharedContext, updatedPresentationData: updatedPresentationData, title: title, text: text, actions: actions, parseMarkdown: true)
-//                        present(controller, nil)
-//                    }
                     return dismiss
                 },
                 openPeer: { peer in
@@ -971,7 +923,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: slots).startStandalone()
                                 
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "\(slots.count) boosts are reassigned from 1 other channel.", timeout: nil), elevatedLayout: true, position: .bottom, action: { _ in return true })
+                                let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "\(slots.count) boosts are reassigned from 1 other channel.", timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true })
                                 (navigationController?.viewControllers.last as? ViewController)?.present(undoController, in: .window(.root))
                             })
                             dismissImpl?()
@@ -982,7 +934,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }
                 }
                 dismissImpl = { [weak controller] in
-                    controller?.dismiss()
+                    controller?.dismissAnimated()
                 }
             })
         case let .premiumGiftCode(slug):

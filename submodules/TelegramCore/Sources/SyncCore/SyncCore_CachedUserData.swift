@@ -128,6 +128,7 @@ public enum PeerNameColor: Int32, CaseIterable {
     case greenDash
     case cyanDash
     case blueDash
+    case pinkDash
 }
 
 public struct PeerEmojiStatus: Equatable, Codable {

@@ -1062,17 +1062,19 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false)
+        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false, giveawayGiftsPurchaseAvailable: false)
     }
     
     public let isPremiumDisabled: Bool
     public let showPremiumGiftInAttachMenu: Bool
     public let showPremiumGiftInTextField: Bool
+    public let giveawayGiftsPurchaseAvailable: Bool
     
-    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool) {
+    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool, giveawayGiftsPurchaseAvailable: Bool) {
         self.isPremiumDisabled = isPremiumDisabled
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
+        self.giveawayGiftsPurchaseAvailable = giveawayGiftsPurchaseAvailable
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
@@ -1080,7 +1082,8 @@ public struct PremiumConfiguration {
             return PremiumConfiguration(
                 isPremiumDisabled: data["premium_purchase_blocked"] as? Bool ?? false,
                 showPremiumGiftInAttachMenu: data["premium_gift_attach_menu_icon"] as? Bool ?? false,
-                showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? false
+                showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? false,
+                giveawayGiftsPurchaseAvailable: data["giveaway_gifts_purchase_available"] as? Bool ?? false
             )
         } else {
             return .defaultValue

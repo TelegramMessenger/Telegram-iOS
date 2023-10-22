@@ -468,7 +468,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                                     self.hapticFeedback.error()
                                     
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(limit) countries.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(limit) countries.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                     return
                                 }
                                 toggleCountry()

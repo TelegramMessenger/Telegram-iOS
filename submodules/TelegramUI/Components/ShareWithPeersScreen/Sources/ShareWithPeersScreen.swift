@@ -1444,7 +1444,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.error()
                                             
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(component.context.userLimits.maxGiveawayChannelsCount) channels.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(component.context.userLimits.maxGiveawayChannelsCount) channels.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         if case .channels = component.stateContext.subject {
@@ -1474,7 +1474,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.error()
                                             
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum 10 subscribers.", timeout: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum 10 subscribers.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         togglePeer()

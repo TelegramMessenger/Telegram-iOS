@@ -951,7 +951,7 @@ public func privacyAndSecurityController(
                 hapticFeedback.impact()
                 
                 var alreadyPresented = false
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip, timeout: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Privacy_VoiceMessages_Tooltip, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                     if action == .info {
                         if !alreadyPresented {
                             let controller = PremiumIntroScreen(context: context, source: .settings)

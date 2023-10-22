@@ -297,6 +297,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var preloadAttachBotIconsDisposables: DisposableSet?
     var keepMessageCountersSyncrhonizedDisposable: Disposable?
     var saveMediaDisposable: MetaDisposable?
+    var giveawayStatusDisposable: MetaDisposable?
     
     let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -733,34 +734,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .full:
                             break
                     }
-                } else if let giveaway = media as? TelegramMediaGiveaway {
-//TODO:localize
-                    var peerName = ""
-                    if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
-                        peerName = EnginePeer(peer).compactDisplayTitle
-                    }
-                    
+                } else if let _ = media as? TelegramMediaGiveaway {
                     var signal = strongSelf.context.engine.payments.premiumGiveawayInfo(peerId: message.id.peerId, messageId: message.id)
                     let disposable: MetaDisposable
-                    if let current = strongSelf.bankCardDisposable {
+                    if let current = strongSelf.giveawayStatusDisposable {
                         disposable = current
                     } else {
                         disposable = MetaDisposable()
-                        strongSelf.bankCardDisposable = disposable
+                        strongSelf.giveawayStatusDisposable = disposable
                     }
                     
-//                    var cancelImpl: (() -> Void)?
-//                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                     let progressSignal = Signal<Never, NoError> { subscriber in
-//                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-//                            cancelImpl?()
-//                        }))
-//                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-//                        return ActionDisposable { [weak controller] in
-//                            Queue.mainQueue().async() {
-//                                controller?.dismiss()
-//                            }
-//                        }
                         return EmptyDisposable
                     }
                     |> runOn(Queue.mainQueue())
@@ -773,149 +757,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             progressDisposable.dispose()
                         }
                     }
-//                    cancelImpl = {
-//                        disposable.set(nil)
-//                    }
                     disposable.set((signal
                     |> deliverOnMainQueue).startStrict(next: { [weak self] info in
-                        if let strongSelf = self, let info = info {
-                            let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: strongSelf.presentationData.strings)
-                            
-                            let title: String
-                            let text: String
-                            var warning: String?
-                            
-                            var dismissImpl: (() -> Void)?
-                            
-                            var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                                dismissImpl?()
-                            })]
-                            
-                            switch info {
-                            case let .ongoing(start, status):
-                                let startDate = stringForDate(timestamp: start, strings: strongSelf.presentationData.strings)
-                                
-                                title = "About This Giveaway"
-                                
-                                let intro: String
-                                if case .almostOver = status {
-                                    intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                                } else {
-                                    intro = "The giveaway is sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                                }
-                                
-                                let ending: String
-                                if giveaway.flags.contains(.onlyNewSubscribers) {
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
-                                    } else {
-                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                                    }
-                                } else {
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
-                                    } else {
-                                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                                    }
-                                }
-                                
-                                var participation: String
-                                switch status {
-                                case .notQualified:
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
-                                    } else {
-                                        participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
-                                    }
-                                case let .notAllowed(reason):
-                                    switch reason {
-                                    case let .joinedTooEarly(joinedOn):
-                                        let joinDate = stringForDate(timestamp: joinedOn, strings: strongSelf.presentationData.strings)
-                                        participation = "You are not eligible to participate in this giveaway, because you joined this channel on **\(joinDate)**, which is before the contest started."
-                                    case let .channelAdmin(adminId):
-                                        let _ = adminId
-                                        participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
-                                    case let .disallowedCountry(countryCode):
-                                        let _ = countryCode
-                                        participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
-                                    }
-                                case .participating:
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels)."
-                                    } else {
-                                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)**."
-                                    }
-                                case .almostOver:
-                                    participation = "The giveaway is over, preparing results."
-                                }
-                                
-                                if !participation.isEmpty {
-                                    participation = "\n\n\(participation)"
-                                }
-                                
-                                text = "\(intro)\n\n\(ending)\(participation)"
-                            case let .finished(status, start, finish, _, activatedCount):
-                                let startDate = stringForDate(timestamp: start, strings: strongSelf.presentationData.strings)
-                                let finishDate = stringForDate(timestamp: finish, strings: strongSelf.presentationData.strings)
-                                title = "Giveaway Ended"
-                                
-                                let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                                
-                                var ending: String
-                                if giveaway.flags.contains(.onlyNewSubscribers) {
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
-                                    } else {
-                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                                    }
-                                } else {
-                                    if giveaway.channelPeerIds.count > 1 {
-                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
-                                    } else {
-                                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                                    }
-                                }
-                                
-                                if activatedCount > 0 {
-                                    ending += " \(activatedCount) of the winners already used their gift links."
-                                }
-                                
-                                var result: String
-                                switch status {
-                                case .refunded:
-                                    result = ""
-                                    warning = "The channel cancelled the prizes by reversing the payment for them."
-                                    actions = [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Close, action: {
-                                        dismissImpl?()
-                                    })]
-                                case .notWon:
-                                    result = "\n\nYou didn't win a prize in this giveaway."
-                                case let .won(slug):
-                                    result = "\n\nYou won a prize in this giveaway. 🏆"
-                                    let _ = slug
-                                    actions = [TextAlertAction(type: .defaultAction, title: "View My Prize", action: {
-                                        dismissImpl?()
-                                    }), TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                                        dismissImpl?()
-                                    })]
-                                }
-                                
-                                text = "\(intro)\n\n\(ending)\(result)"
-                            }
-                            
-                            let alertController = giveawayInfoAlertController(
-                                context: strongSelf.context,
-                                updatedPresentationData: strongSelf.updatedPresentationData,
-                                title: title,
-                                text: text,
-                                warning: warning,
-                                actions: actions
-                            )
-                            strongSelf.present(alertController, in: .window(.root))
-                            
-                            dismissImpl = { [weak alertController] in
-                                alertController?.dismissAnimated()
-                            }
+                        if let strongSelf = self, let info {
+                            strongSelf.displayGiveawayStatusInfo(messageId: message.id, giveawayInfo: info)
                         }
                     }))
                     
@@ -4899,6 +4744,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 controller?.replace(with: c)
             }
             self.push(controller)
+        }, displayGiveawayParticipationStatus: { [weak self] messageId in
+            guard let self else {
+                return
+            }
+            let disposable: MetaDisposable
+            if let current = self.giveawayStatusDisposable {
+                disposable = current
+            } else {
+                disposable = MetaDisposable()
+                self.giveawayStatusDisposable = disposable
+            }
+            disposable.set((self.context.engine.payments.premiumGiveawayInfo(peerId: messageId.peerId, messageId: messageId)
+            |> deliverOnMainQueue).start(next: { [weak self] info in
+                guard let self, let info else {
+                    return
+                }
+                let content: UndoOverlayContent
+                switch info {
+                case let .ongoing(_, status):
+                    switch status {
+                    case .notAllowed:
+                        content = .info(title: nil, text: "You can't participate in this giveaway.", timeout: nil, customUndoText: "Learn More")
+                    case .participating:
+                        content = .succeed(text: "You are participating in this giveaway.", timeout: nil, customUndoText: "Learn More")
+                    case .notQualified:
+                        content = .info(title: nil, text: "You are not qualified for this giveaway yet.", timeout: nil, customUndoText: "Learn More")
+                    case .almostOver:
+                        content = .info(title: nil, text: "The giveaway is almost over.", timeout: nil, customUndoText: "Learn More")
+                    }
+                case let .finished(status, _, _, _, _):
+                    let _ = status
+                    content = .info(title: nil, text: "The giveaway is ended.", timeout: nil, customUndoText: "Learn More")
+                }
+                let controller = UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
+                    if case .undo = action, let self {
+                        self.displayGiveawayStatusInfo(messageId: messageId, giveawayInfo: info)
+                        return true
+                    }
+                    return false
+                })
+                self.present(controller, in: .current)
+                
+            }))
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -6866,6 +6754,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.premiumGiftSuggestionDisposable?.dispose()
             self.powerSavingMonitoringDisposable?.dispose()
             self.saveMediaDisposable?.dispose()
+            self.giveawayStatusDisposable?.dispose()
             self.choosingStickerActivityDisposable?.dispose()
             self.automaticMediaDownloadSettingsDisposable?.dispose()
             self.stickerSettingsDisposable?.dispose()
@@ -8084,7 +7973,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, case let .message(index) = toSubject.index {
                 if case let .message(messageSubject, _, _) = strongSelf.subject, initial, case let .id(messageId) = messageSubject, messageId != index.id {
                     if messageId.peerId == index.id.peerId {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_MessageDoesntExist, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                     }
                 } else if let controllerInteraction = strongSelf.controllerInteraction {
                     if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(index.id) {
@@ -8099,7 +7988,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 hasQuote = true
                             } else {
                                 //TODO:localize
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                             }
                         }
                         
@@ -9427,12 +9316,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     bannedMediaInput = true
                 } else if channel.hasBannedPermission(.banSendVoice) != nil {
                     if !isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
                         return
                     }
                 } else if channel.hasBannedPermission(.banSendInstantVideos) != nil {
                     if isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
                         return
                     }
                 }
@@ -9441,12 +9330,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     bannedMediaInput = true
                 } else if group.hasBannedPermission(.banSendVoice) {
                     if !isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
                         return
                     }
                 } else if group.hasBannedPermission(.banSendInstantVideos) {
                     if isVideo {
-                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil))
+                        strongSelf.controllerInteraction?.displayUndo(.info(title: nil, text: strongSelf.restrictedSendingContentsText(), timeout: nil, customUndoText: nil))
                         return
                     }
                 }
@@ -10609,7 +10498,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             unarchiveAutomaticallyArchivedPeer(account: strongSelf.context.account, peerId: peerId)
             
-            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+            strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .succeed(text: strongSelf.presentationData.strings.Conversation_UnarchiveDone, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
         }, scrollToTop: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -10702,7 +10591,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             presentAddMembersImpl(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, parentController: strongSelf, groupPeer: peer, selectAddMemberDisposable: strongSelf.selectAddMemberDisposable, addMemberDisposable: strongSelf.addMemberDisposable)
         }, presentGigagroupHelp: { [weak self] in
             if let strongSelf = self {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Conversation_GigagroupDescription, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
             }
         }, editMessageMedia: { [weak self] messageId, draw in
             if let strongSelf = self {
@@ -11796,7 +11685,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .center)
                     
                     let controller = richTextAlertController(context: strongSelf.context, title: attributedTitle, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
-                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_SettingsTip, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                        strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_SettingsTip, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                     }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.BroadcastGroups_LimitAlert_LearnMore, action: {
                         
                         let context = strongSelf.context
@@ -13135,7 +13024,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 disposable.set((signal
                                 |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                                     if let strongSelf = self, let _ = strongSelf.validLayout {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string, timeout: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(selectedSize, formatting: DataSizeStringFormatting(presentationData: presentationData)))", stringForDeviceType()).string, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), in: .current)
                                     }
                                 }))
 
@@ -13414,7 +13303,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if justInstalled {
                     let content: UndoOverlayContent
 //                    if bot.flags.contains(.showInSettings) {
-                    content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0)
+                    content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(botPeer.compactDisplayTitle).string, timeout: 5.0, customUndoText: nil)
 //                    } else {
 //                        content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
 //                    }
@@ -13657,12 +13546,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let content: UndoOverlayContent
                         if botJustInstalled {
                             if bot.flags.contains(.showInSettings) {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0, customUndoText: nil)
                             } else {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0, customUndoText: nil)
                             }
                         } else {
-                            content = .info(title: nil, text: strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError, timeout: nil)
+                            content = .info(title: nil, text: strongSelf.presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError, timeout: nil, customUndoText: nil)
                         }
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                     } else {
@@ -14038,9 +13927,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         Queue.mainQueue().after(0.3) {
                             let content: UndoOverlayContent
                             if bot.flags.contains(.showInSettings) {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsSettingsAdded(bot.shortName).string, timeout: 5.0, customUndoText: nil)
                             } else {
-                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0)
+                                content = .succeed(text: strongSelf.presentationData.strings.WebApp_ShortcutsAdded(bot.shortName).string, timeout: 5.0, customUndoText: nil)
                             }
                             attachmentController.present(UndoOverlayController(presentationData: presentationData, content: content, elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
                         }
@@ -19606,6 +19495,157 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     func updateNextChannelToReadVisibility() {
         self.chatDisplayNode.historyNode.offerNextChannelToRead = self.offerNextChannelToRead && self.presentationInterfaceState.interfaceState.selectionState == nil
+    }
+    
+    func displayGiveawayStatusInfo(messageId: EngineMessage.Id, giveawayInfo: PremiumGiveawayInfo) {
+        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
+        |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
+            guard let self, let message, let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
+                return
+            }
+            var peerName = ""
+            if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
+                peerName = EnginePeer(peer).compactDisplayTitle
+            }
+            
+            let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: self.presentationData.strings)
+            
+            let title: String
+            let text: String
+            var warning: String?
+            
+            var dismissImpl: (() -> Void)?
+            
+            var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
+                dismissImpl?()
+            })]
+            
+            switch giveawayInfo {
+            case let .ongoing(start, status):
+                let startDate = stringForDate(timestamp: start, strings: self.presentationData.strings)
+                
+                title = "About This Giveaway"
+                
+                let intro: String
+                if case .almostOver = status {
+                    intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+                } else {
+                    intro = "The giveaway is sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+                }
+                
+                let ending: String
+                if giveaway.flags.contains(.onlyNewSubscribers) {
+                    if giveaway.channelPeerIds.count > 1 {
+                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
+                    } else {
+                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+                    }
+                } else {
+                    if giveaway.channelPeerIds.count > 1 {
+                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
+                    } else {
+                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+                    }
+                }
+                
+                var participation: String
+                switch status {
+                case .notQualified:
+                    if giveaway.channelPeerIds.count > 1 {
+                        participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
+                    } else {
+                        participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
+                    }
+                case let .notAllowed(reason):
+                    switch reason {
+                    case let .joinedTooEarly(joinedOn):
+                        let joinDate = stringForDate(timestamp: joinedOn, strings: self.presentationData.strings)
+                        participation = "You are not eligible to participate in this giveaway, because you joined this channel on **\(joinDate)**, which is before the contest started."
+                    case let .channelAdmin(adminId):
+                        let _ = adminId
+                        participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
+                    case let .disallowedCountry(countryCode):
+                        let _ = countryCode
+                        participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
+                    }
+                case .participating:
+                    if giveaway.channelPeerIds.count > 1 {
+                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels)."
+                    } else {
+                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)**."
+                    }
+                case .almostOver:
+                    participation = "The giveaway is over, preparing results."
+                }
+                
+                if !participation.isEmpty {
+                    participation = "\n\n\(participation)"
+                }
+                
+                text = "\(intro)\n\n\(ending)\(participation)"
+            case let .finished(status, start, finish, _, activatedCount):
+                let startDate = stringForDate(timestamp: start, strings: self.presentationData.strings)
+                let finishDate = stringForDate(timestamp: finish, strings: self.presentationData.strings)
+                title = "Giveaway Ended"
+                
+                let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+                
+                var ending: String
+                if giveaway.flags.contains(.onlyNewSubscribers) {
+                    if giveaway.channelPeerIds.count > 1 {
+                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
+                    } else {
+                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+                    }
+                } else {
+                    if giveaway.channelPeerIds.count > 1 {
+                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
+                    } else {
+                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+                    }
+                }
+                
+                if activatedCount > 0 {
+                    ending += " \(activatedCount) of the winners already used their gift links."
+                }
+                
+                var result: String
+                switch status {
+                case .refunded:
+                    result = ""
+                    warning = "The channel cancelled the prizes by reversing the payment for them."
+                    actions = [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Close, action: {
+                        dismissImpl?()
+                    })]
+                case .notWon:
+                    result = "\n\nYou didn't win a prize in this giveaway."
+                case let .won(slug):
+                    result = "\n\nYou won a prize in this giveaway. 🏆"
+                    let _ = slug
+                    actions = [TextAlertAction(type: .defaultAction, title: "View My Prize", action: {
+                        dismissImpl?()
+                    }), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
+                        dismissImpl?()
+                    })]
+                }
+                
+                text = "\(intro)\n\n\(ending)\(result)"
+            }
+            
+            let alertController = giveawayInfoAlertController(
+                context: self.context,
+                updatedPresentationData: self.updatedPresentationData,
+                title: title,
+                text: text,
+                warning: warning,
+                actions: actions
+            )
+            self.present(alertController, in: .window(.root))
+            
+            dismissImpl = { [weak alertController] in
+                alertController?.dismissAnimated()
+            }
+        })
     }
 }
 

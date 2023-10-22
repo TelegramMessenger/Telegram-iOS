@@ -3324,7 +3324,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: component.strings.Story_ToastShowStoriesTo(peer.compactDisplayTitle).string, timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastShowStoriesTo(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -3345,7 +3345,7 @@ public final class StoryItemSetContainerComponent: Component {
                                             let presentationData = component.context.sharedContext.currentPresentationData.with({ $0 }).withUpdated(theme: component.theme)
                                             self.component?.presentController(UndoOverlayController(
                                                 presentationData: presentationData,
-                                                content: .info(title: nil, text: component.strings.Story_ToastHideStoriesFrom(peer.compactDisplayTitle).string, timeout: nil),
+                                                content: .info(title: nil, text: component.strings.Story_ToastHideStoriesFrom(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil),
                                                 elevatedLayout: false,
                                                 position: .top,
                                                 animateInAsReplacement: false,
@@ -4787,7 +4787,7 @@ public final class StoryItemSetContainerComponent: Component {
             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
             let controller = UndoOverlayController(
                 presentationData: presentationData,
-                content: .info(title: nil, text: text, timeout: nil),
+                content: .info(title: nil, text: text, timeout: nil, customUndoText: nil),
                 elevatedLayout: false,
                 animateInAsReplacement: false,
                 blurred: true,
@@ -5778,7 +5778,7 @@ public final class StoryItemSetContainerComponent: Component {
                 if component.slice.item.storyItem.isPinned {
                     self.component?.presentController(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .info(title: nil, text: component.strings.Story_ToastRemovedFromProfileText, timeout: nil),
+                        content: .info(title: nil, text: component.strings.Story_ToastRemovedFromProfileText, timeout: nil, customUndoText: nil),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
                         blurred: true,
@@ -5787,7 +5787,7 @@ public final class StoryItemSetContainerComponent: Component {
                 } else {
                     self.component?.presentController(UndoOverlayController(
                         presentationData: presentationData,
-                        content: .info(title: component.strings.Story_ToastSavedToProfileTitle, text: component.strings.Story_ToastSavedToProfileText, timeout: nil),
+                        content: .info(title: component.strings.Story_ToastSavedToProfileTitle, text: component.strings.Story_ToastSavedToProfileText, timeout: nil, customUndoText: nil),
                         elevatedLayout: false,
                         animateInAsReplacement: false,
                         blurred: true,
@@ -5929,7 +5929,7 @@ public final class StoryItemSetContainerComponent: Component {
                     if component.slice.item.storyItem.isPinned {
                         self.scheduledStoryUnpinnedUndoOverlay = UndoOverlayController(
                             presentationData: presentationData,
-                            content: .info(title: nil, text: presentationData.strings.Story_ToastRemovedFromChannelText, timeout: nil),
+                            content: .info(title: nil, text: presentationData.strings.Story_ToastRemovedFromChannelText, timeout: nil, customUndoText: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             blurred: true,
@@ -5938,7 +5938,7 @@ public final class StoryItemSetContainerComponent: Component {
                     } else {
                         self.component?.presentController(UndoOverlayController(
                             presentationData: presentationData,
-                            content: .info(title: presentationData.strings.Story_ToastSavedToChannelTitle, text: presentationData.strings.Story_ToastSavedToChannelText, timeout: nil),
+                            content: .info(title: presentationData.strings.Story_ToastSavedToChannelTitle, text: presentationData.strings.Story_ToastSavedToChannelText, timeout: nil, customUndoText: nil),
                             elevatedLayout: false,
                             animateInAsReplacement: false,
                             blurred: true,
@@ -6439,7 +6439,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func maybeDisplayUnmuteVideoTooltip() {
-            guard let component = self.component, component.visibilityFraction == 1.0 else {
+            guard let component = self.component, component.visibilityFraction == 1.0 && !component.isProgressPaused else {
                 return
             }
             guard let soundButtonView = self.soundButton.view else {

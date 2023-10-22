@@ -242,6 +242,7 @@ private final class CameraScreenComponent: CombinedComponent {
         var isTransitioning = false
         
         var displayingFlashTint = false
+        var previousFlashMode: Camera.FlashMode?
         
         private let hapticFeedback = HapticFeedback()
         
@@ -553,7 +554,7 @@ private final class CameraScreenComponent: CombinedComponent {
                 self.completion.invoke(takePhoto)
             }
             
-            let isFrontCamera = controller.cameraState.position == .front
+            let isFrontCamera = controller.cameraState.position == .front || controller.cameraState.isDualCameraEnabled
             let isFlashOn = controller.cameraState.flashMode == .on
             
             if isFrontCamera && isFlashOn {
@@ -980,7 +981,11 @@ private final class CameraScreenComponent: CombinedComponent {
                     let flashIconName: String
                     switch component.cameraState.flashMode {
                     case .off:
-                        flashIconName = "flash_off"
+                        if let previousFlashMode = state.previousFlashMode, previousFlashMode == .on {
+                            flashIconName = "flash_onToOff"
+                        } else {
+                            flashIconName = "flash_off"
+                        }
                     case .on:
                         flashIconName = "flash_on"
                     case .auto:
@@ -988,6 +993,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     @unknown default:
                         flashIconName = "flash_off"
                     }
+                    state.previousFlashMode = component.cameraState.flashMode
                     
                     flashContentComponent = AnyComponentWithIdentity(
                         id: "animatedIcon",
@@ -2439,6 +2445,13 @@ public class CameraScreen: ViewController {
             
                 let componentFrame = CGRect(origin: .zero, size: componentSize)
                 transition.setFrame(view: componentView, frame: componentFrame)
+            }
+
+            if let view = self.componentHost.findTaggedView(tag: cancelButtonTag), view.layer.shadowOpacity.isZero {
+                view.layer.shadowOffset = CGSize(width: 0.0, height: 0.0)
+                view.layer.shadowRadius = 3.0
+                view.layer.shadowColor = UIColor.black.cgColor
+                view.layer.shadowOpacity = 0.25
             }
             
             if let view = self.componentHost.findTaggedView(tag: flashButtonTag), view.layer.shadowOpacity.isZero {

@@ -37,7 +37,9 @@ public final class SheetComponentEnvironment: Equatable {
     }
 }
 
+public let sheetComponentTag = GenericComponentViewTag()
 public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
+    
     public typealias EnvironmentType = (ChildEnvironmentType, SheetComponentEnvironment)
     
     public enum BackgroundColor: Equatable {
@@ -90,7 +92,19 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
         }
     }
         
-    public final class View: UIView, UIScrollViewDelegate {
+    public final class View: UIView, UIScrollViewDelegate, ComponentTaggedView {
+        public final class Tag {
+            public init() {
+            }
+        }
+        
+        public func matches(tag: Any) -> Bool {
+            if let _ = tag as? Tag {
+                return true
+            }
+            return false
+        }
+        
         private let dimView: UIView
         private let scrollView: ScrollView
         private let backgroundView: UIView
@@ -157,6 +171,10 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             if case .ended = recognizer.state {
                 self.dismiss?(true)
             }
+        }
+        
+        public func dismissAnimated() {
+            self.dismiss?(true)
         }
         
         private var scrollingOut = false

@@ -581,7 +581,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, timeout: nil), elevatedLayout: false, action: { _ in return false }), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
         })
     }
     

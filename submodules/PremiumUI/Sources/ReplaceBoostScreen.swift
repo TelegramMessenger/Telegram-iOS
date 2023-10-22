@@ -232,7 +232,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                         selectedSlotsUpdated(state.selectedSlots)
                                     } else {
                                         let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Wait until the boost is available or get **3** more boosts by gifting a **Telegram Premium** subscription.", timeout: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Wait until the boost is available or get **3** more boosts by gifting a **Telegram Premium** subscription.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
                                         presentController(undoController)
                                     }
                                 })

@@ -169,6 +169,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openRequestedPeerSelection: { _, _, _ in
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
+        }, displayGiveawayParticipationStatus: { _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {

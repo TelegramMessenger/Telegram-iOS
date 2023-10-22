@@ -331,7 +331,6 @@ private final class GuideItemComponent: Component {
             
             let sideInset: CGFloat = 48.0
             
-            let size = CGSize(width: availableSize.width, height: 90.0)
             let originX = availableSize.width / 2.0 - 110.0
             
             let animationSize = self.animation.update(
@@ -382,7 +381,12 @@ private final class GuideItemComponent: Component {
             
             let titleSize = self.titleLabel.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .natural)))),
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.title, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .natural)),
+                        maximumNumberOfLines: 2
+                    )
+                ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
@@ -396,7 +400,12 @@ private final class GuideItemComponent: Component {
             
             let textSize = self.descriptionLabel.update(
                 transition: .immediate,
-                component: AnyComponent(BalancedTextComponent(text: .plain(NSAttributedString(string: component.text, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .natural)), maximumNumberOfLines: 0)),
+                component: AnyComponent(
+                    MultilineTextComponent(
+                        text: .plain(NSAttributedString(string: component.text, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .natural)),
+                        maximumNumberOfLines: 3
+                    )
+                ),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
@@ -407,6 +416,8 @@ private final class GuideItemComponent: Component {
                 }
                 view.frame = textFrame
             }
+            
+            let size = CGSize(width: availableSize.width, height: 53.0 + titleSize.height + textSize.height)
             
             self.selectionView.frame = CGRect(origin: .zero, size: size).insetBy(dx: 12.0, dy: 8.0)
             transition.setAlpha(view: self.selectionView, alpha: component.isPlaying ? 1.0 : 0.0)

@@ -198,6 +198,7 @@ public final class ChatControllerInteraction {
     public let openRequestedPeerSelection: (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void
     public let saveMediaToFiles: (EngineMessage.Id) -> Void
     public let openNoAdsDemo: () -> Void
+    public let displayGiveawayParticipationStatus: (EngineMessage.Id) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -315,6 +316,7 @@ public final class ChatControllerInteraction {
         openRequestedPeerSelection: @escaping (EngineMessage.Id, ReplyMarkupButtonRequestPeerType, Int32) -> Void,
         saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         openNoAdsDemo: @escaping () -> Void,
+        displayGiveawayParticipationStatus: @escaping (EngineMessage.Id) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -414,6 +416,7 @@ public final class ChatControllerInteraction {
         self.openRequestedPeerSelection = openRequestedPeerSelection
         self.saveMediaToFiles = saveMediaToFiles
         self.openNoAdsDemo = openNoAdsDemo
+        self.displayGiveawayParticipationStatus = displayGiveawayParticipationStatus
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput
