@@ -450,6 +450,9 @@ private final class StoryContainerScreenComponent: Component {
                 guard let self, let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
                     return []
                 }
+                if self.isDisplayingInteractionGuide {
+                    return []
+                }
                 if let environment = self.environment, case .regular = environment.metrics.widthClass {
                 } else {
                     if !itemSetComponentView.isPointInsideContentArea(point: self.convert(point, to: itemSetComponentView)) {
@@ -566,6 +569,9 @@ private final class StoryContainerScreenComponent: Component {
             pinchRecognizer.delegate = self
             pinchRecognizer.shouldBegin = { [weak self] pinchLocation in
                 guard let self else {
+                    return false
+                }
+                if self.isDisplayingInteractionGuide {
                     return false
                 }
                 if let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id] {
