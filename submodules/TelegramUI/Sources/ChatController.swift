@@ -4921,7 +4921,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 text = "This quote is from a private chat"
             }
-            self.controllerInteraction?.displayUndo(.info(title: nil, text: text, timeout: nil))
+            self.controllerInteraction?.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         controllerInteraction.enableFullTranslucency = context.sharedContext.energyUsageSettings.fullTranslucency
         
