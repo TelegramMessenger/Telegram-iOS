@@ -6439,7 +6439,7 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func maybeDisplayUnmuteVideoTooltip() {
-            guard let component = self.component, component.visibilityFraction == 1.0 else {
+            guard let component = self.component, component.visibilityFraction == 1.0 && !component.isProgressPaused else {
                 return
             }
             guard let soundButtonView = self.soundButton.view else {
