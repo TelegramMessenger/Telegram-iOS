@@ -606,11 +606,11 @@ public final class CustomEmojiContainerView: UIView {
         preconditionFailure()
     }
     
-    public func update(fontSize: CGFloat, textColor: UIColor, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+    public func update(fontSize: CGFloat, textColor: UIColor, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute, CGFloat)]) {
         var nextIndexById: [Int64: Int] = [:]
         
         var validKeys = Set<InlineStickerItemLayer.Key>()
-        for (rect, emoji) in emojiRects {
+        for (rect, emoji, fontSize) in emojiRects {
             let index: Int
             if let nextIndex = nextIndexById[emoji.fileId] {
                 index = nextIndex

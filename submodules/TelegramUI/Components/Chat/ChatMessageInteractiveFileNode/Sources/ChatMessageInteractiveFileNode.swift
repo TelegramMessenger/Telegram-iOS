@@ -1802,7 +1802,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     item.controllerInteraction.performTextSelectionAction(item.message, true, text, action)
                 })
-                textSelectionNode.enableQuote = true
+                textSelectionNode.enableQuote = false
                 self.textSelectionNode = textSelectionNode
                 self.textClippingNode.addSubnode(textSelectionNode)
                 self.textClippingNode.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)

@@ -446,6 +446,11 @@ public final class TextSelectionNode: ASDisplayNode {
     }
     
     public func setSelection(range: NSRange, displayMenu: Bool) {
+        guard let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
+            return
+        }
+        let range = self.convertSelectionFromOriginalText(attributedString: attributedString, range: range)
+        
         self.currentRange = (range.lowerBound, range.upperBound)
         self.updateSelection(range: range, animateIn: true)
         self.updateIsActive(true)
@@ -455,12 +460,109 @@ public final class TextSelectionNode: ASDisplayNode {
         }
     }
     
+    private func convertSelectionToOriginalText(attributedString: NSAttributedString, range: NSRange) -> NSRange {
+        var adjustedRange = range
+        
+        do {
+            attributedString.enumerateAttribute(originalTextAttributeKey, in: NSRange(location: 0, length: range.lowerBound), options: [], using: { value, range, stop in
+                guard let value = value as? OriginalTextAttribute else {
+                    return
+                }
+                let updatedSubstring = NSMutableAttributedString(string: value.string)
+                let difference = updatedSubstring.length - range.length
+                
+                adjustedRange.location += difference
+            })
+        }
+        
+        do {
+            attributedString.enumerateAttribute(originalTextAttributeKey, in: range, options: [], using: { value, range, stop in
+                guard let value = value as? OriginalTextAttribute else {
+                    return
+                }
+                let updatedSubstring = NSMutableAttributedString(string: value.string)
+                let difference = updatedSubstring.length - range.length
+                
+                adjustedRange.length += difference
+            })
+        }
+        
+        return adjustedRange
+    }
+    
+    private func convertSelectionFromOriginalText(attributedString: NSAttributedString, range: NSRange) -> NSRange {
+        var adjustedRange = range
+        
+        final class PreviousText: NSObject {
+            let id: Int
+            let string: String
+            
+            init(id: Int, string: String) {
+                self.id = id
+                self.string = string
+            }
+        }
+        
+        var nextId = 0
+        let attributedString = NSMutableAttributedString(attributedString: attributedString)
+        var fullRange = NSRange(location: 0, length: attributedString.length)
+        while true {
+            var found = false
+            attributedString.enumerateAttribute(originalTextAttributeKey, in: fullRange, options: [], using: { value, range, stop in
+                if let value = value as? OriginalTextAttribute {
+                    let updatedSubstring = NSMutableAttributedString(string: value.string)
+                    
+                    let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
+                    updatedSubstring.addAttributes(attributedString.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
+                    updatedSubstring.addAttribute(NSAttributedString.Key(rawValue: "__previous_text"), value: PreviousText(id: nextId, string: attributedString.attributedSubstring(from: range).string), range: replacementRange)
+                    nextId += 1
+                    
+                    attributedString.replaceCharacters(in: range, with: updatedSubstring)
+                    let updatedRange = NSRange(location: range.location, length: updatedSubstring.length)
+                    
+                    found = true
+                    stop.pointee = ObjCBool(true)
+                    fullRange = NSRange(location: updatedRange.upperBound, length: fullRange.upperBound - range.upperBound)
+                }
+            })
+            if !found {
+                break
+            }
+        }
+        
+        do {
+            attributedString.enumerateAttribute(NSAttributedString.Key(rawValue: "__previous_text"), in: NSRange(location: 0, length: range.lowerBound), options: [], using: { value, range, stop in
+                guard let value = value as? PreviousText else {
+                    return
+                }
+                let updatedSubstring = NSMutableAttributedString(string: value.string)
+                let difference = updatedSubstring.length - range.length
+                
+                adjustedRange.location += difference
+            })
+        }
+        
+        do {
+            attributedString.enumerateAttribute(NSAttributedString.Key(rawValue: "__previous_text"), in: range, options: [], using: { value, range, stop in
+                guard let value = value as? PreviousText else {
+                    return
+                }
+                let updatedSubstring = NSMutableAttributedString(string: value.string)
+                let difference = updatedSubstring.length - range.length
+                
+                adjustedRange.length += difference
+            })
+        }
+        
+        return adjustedRange
+    }
+    
     public func getSelection() -> NSRange? {
-        guard let currentRange = self.currentRange else {
+        guard let currentRange = self.currentRange, let cachedLayout = self.textNode.cachedLayout, let attributedString = cachedLayout.attributedString else {
             return nil
         }
         let range = NSRange(location: min(currentRange.0, currentRange.1), length: max(currentRange.0, currentRange.1) - min(currentRange.0, currentRange.1))
-        return range
+        return self.convertSelectionToOriginalText(attributedString: attributedString, range: range)
     }
     
     private func updateSelection(range: NSRange?, animateIn: Bool) {
@@ -578,8 +680,8 @@ public final class TextSelectionNode: ASDisplayNode {
         while true {
             var found = false
             string.enumerateAttribute(originalTextAttributeKey, in: fullRange, options: [], using: { value, range, stop in
-                if let value = value as? String {
-                    let updatedSubstring = NSMutableAttributedString(string: value)
+                if let value = value as? OriginalTextAttribute {
+                    let updatedSubstring = NSMutableAttributedString(string: value.string)
                     
                     let replacementRange = NSRange(location: 0, length: updatedSubstring.length)
                     updatedSubstring.addAttributes(string.attributes(at: range.location, effectiveRange: nil), range: replacementRange)
@@ -597,6 +699,8 @@ public final class TextSelectionNode: ASDisplayNode {
             }
         }
         
+        let adjustedRange = self.convertSelectionToOriginalText(attributedString: attributedString, range: range)
+        
         var actions: [ContextMenuAction] = []
         if self.enableCopy {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.strings.Conversation_ContextMenuCopy), action: { [weak self] in
@@ -606,7 +710,7 @@ public final class TextSelectionNode: ASDisplayNode {
         }
         if self.enableQuote {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuQuote, accessibilityLabel: self.strings.Conversation_ContextMenuQuote), action: { [weak self] in
-                self?.performAction(string, .quote(range: range.lowerBound ..< range.upperBound))
+                self?.performAction(string, .quote(range: adjustedRange.lowerBound ..< adjustedRange.upperBound))
                 self?.cancelSelection()
             }))
         } else if self.enableLookup {

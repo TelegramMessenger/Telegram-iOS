@@ -616,8 +616,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 if case let .reply(info) = info {
                                     if strongSelf.textSelectionNode == nil {
                                         strongSelf.updateIsExtractedToContextPreview(true)
-                                        if let initialQuote = info.quote, item.message.id == initialQuote.messageId, let string = strongSelf.textNode.textNode.cachedLayout?.attributedString {
-                                            let nsString = string.string as NSString
+                                        if let initialQuote = info.quote, item.message.id == initialQuote.messageId {
+                                            let nsString = item.message.text as NSString
                                             let subRange = nsString.range(of: initialQuote.text)
                                             if subRange.location != NSNotFound {
                                                 strongSelf.beginTextSelection(range: subRange, displayMenu: true)
@@ -1117,6 +1117,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 if !item.controllerInteraction.canSendMessages() && !enableCopy {
+                    enableQuote = false
+                }
+                if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                     enableQuote = false
                 }
                 
