@@ -2016,7 +2016,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openMessageContextActions: { message, node, rect, gesture in
             gesture?.cancel()
         }, navigateToMessage: { [weak self] fromId, id, params in
-            self?.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
+            guard let self else {
+                return
+            }
+            if params.quote != nil {
+                if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(fromId), let toPeer = message.peers[id.peerId] {
+                    switch toPeer {
+                    case let channel as TelegramChannel:
+                        if channel.username == nil && channel.usernames.isEmpty {
+                            switch channel.participationStatus {
+                            case .kicked, .left:
+                                self.controllerInteraction?.attemptedNavigationToPrivateQuote(toPeer)
+                                return
+                            case .member:
+                                break
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
         }, navigateToMessageStandalone: { [weak self] id in
             self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in

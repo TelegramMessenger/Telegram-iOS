@@ -1090,12 +1090,10 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
                     if let replyBackgroundNode = strongSelf.replyBackgroundNode, let replyBackgroundFrame {
                         replyBackgroundNode.frame = replyBackgroundFrame
                         
-                        let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
+                        let cornerRadius = 4.0
                         replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: cornerRadius, transition: .immediate)
                         
                         if let backgroundContent = strongSelf.replyBackgroundContent {
-                            let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
-                            
                             replyBackgroundNode.isHidden = true
                             backgroundContent.cornerRadius = cornerRadius
                             backgroundContent.frame = replyBackgroundNode.frame
