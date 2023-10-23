@@ -70,6 +70,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var textSelectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>?
     
+    private var linkPreviewHighlightText: String?
     private var linkPreviewOptionsDisposable: Disposable?
     private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -318,7 +319,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         messageEntities = updatingMedia.entities?.entities ?? []
                     }
                     
-                    if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty && incoming {
+                    if let subject = item.associatedData.subject, case .messageOptions = subject {
+                    } else if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty && incoming {
                         isTranslating = true
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
@@ -645,7 +647,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                             }
                                             
                                             if options.hasAlternativeLinks {
-                                                strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                                strongSelf.linkPreviewHighlightText = options.url
+                                                strongSelf.updateLinkPreviewTextHighlightState(text: strongSelf.linkPreviewHighlightText)
                                             }
                                         })
                                     }
@@ -653,6 +656,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             strongSelf.updateLinkProgressState()
+                            if let linkPreviewHighlightText = strongSelf.linkPreviewHighlightText {
+                                strongSelf.updateLinkPreviewTextHighlightState(text: linkPreviewHighlightText)
+                            }
                         }
                     })
                 })
@@ -1120,6 +1126,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     enableQuote = false
                 }
                 if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    enableQuote = false
+                }
+                if item.message.containsSecretMedia {
                     enableQuote = false
                 }
                 

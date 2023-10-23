@@ -1296,8 +1296,8 @@ open class TextNode: ASDisplayNode {
             var constrainedSegmentWidth = constrainedSize.width
             var additionalOffsetX: CGFloat = 0.0
             if segment.isBlockQuote {
-                constrainedSegmentWidth -= blockQuoteLeftInset + blockQuoteRightInset
                 additionalOffsetX += blockQuoteLeftInset
+                constrainedSegmentWidth -= additionalOffsetX + blockQuoteLeftInset + blockQuoteRightInset
                 calculatedSegment.additionalWidth += blockQuoteLeftInset + blockQuoteRightInset
             }
             
@@ -1305,7 +1305,7 @@ open class TextNode: ASDisplayNode {
             
             if let title = segment.title {
                 let rawTitleLine = CTLineCreateWithAttributedString(title)
-                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth + additionalSegmentRightInset, .end, nil) {
+                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth - additionalSegmentRightInset, .end, nil) {
                     var lineAscent: CGFloat = 0.0
                     var lineDescent: CGFloat = 0.0
                     let lineWidth = CTLineGetTypographicBounds(titleLine, &lineAscent, &lineDescent, nil)
@@ -1328,7 +1328,7 @@ open class TextNode: ASDisplayNode {
             }
             
             while true {
-                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth + additionalSegmentRightInset)
+                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth - additionalSegmentRightInset)
                 
                 if lineCharacterCount != 0 {
                     let line = CTTypesetterCreateLine(typesetter, CFRange(location: currentLineStartIndex, length: lineCharacterCount))
@@ -2149,6 +2149,9 @@ open class TextNode: ASDisplayNode {
                 let lineWidth: CGFloat = 3.0
                 
                 var blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
+                if blockFrame.origin.x + blockFrame.size.width > bounds.width - layout.insets.right - 2.0 - 30.0 {
+                    blockFrame.size.width = bounds.width - layout.insets.right - blockFrame.origin.x - 2.0
+                }
                 blockFrame.size.width += 4.0
                 blockFrame.origin.x -= 2.0
                 

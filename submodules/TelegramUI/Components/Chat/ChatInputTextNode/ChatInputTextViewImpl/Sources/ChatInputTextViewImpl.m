@@ -16,10 +16,9 @@
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
 {
-    if (_targetForActionImpl) {
-        ChatInputTextViewImplTargetForAction *result = _targetForActionImpl(action);
-        if (result) {
-            return result.target != nil;
+    if (_shouldRespondToAction) {
+        if (!_shouldRespondToAction(action)) {
+            return false;
         }
     }
     
@@ -50,14 +49,7 @@
     return [super canPerformAction:action withSender:sender];
 }
 
-- (id)targetForAction:(SEL)action withSender:(id)__unused sender
-{
-    if (_targetForActionImpl) {
-        ChatInputTextViewImplTargetForAction *result = _targetForActionImpl(action);
-        if (result) {
-            return result.target;
-        }
-    }
+- (id)targetForAction:(SEL)action withSender:(id)__unused sender {
     return [super targetForAction:action withSender:sender];
 }
 

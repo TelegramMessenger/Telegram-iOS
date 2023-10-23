@@ -8957,7 +8957,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             strongSelf.chatDisplayNode.openStickers(beginWithEmoji: false)
             strongSelf.mediaRecordingModeTooltipController?.dismissImmediately()
         }, editMessage: { [weak self] in
-            if let strongSelf = self, let editMessage = strongSelf.presentationInterfaceState.interfaceState.editMessage {
+            guard let strongSelf = self, let editMessage = strongSelf.presentationInterfaceState.interfaceState.editMessage else {
+                return
+            }
+            
+            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: editMessage.messageId))
+            |> deliverOnMainQueue).start(next: { [weak strongSelf] message in
+                guard let strongSelf, let message else {
+                    return
+                }
+                
                 var disableUrlPreview = false
                 
                 var webpage: TelegramMediaWebpage?
@@ -8972,6 +8981,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
+                
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
                 if !entities.isEmpty {
@@ -9015,6 +9025,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 
+                if text.length == 0 {
+                    if strongSelf.presentationInterfaceState.editMessageState?.mediaReference != nil {
+                    } else if message.media.contains(where: { media in
+                        switch media {
+                        case _ as TelegramMediaImage, _ as TelegramMediaFile, _ as TelegramMediaMap:
+                            return true
+                        default:
+                            return false
+                        }
+                    }) {
+                    } else {
+                        if strongSelf.recordingModeFeedback == nil {
+                            strongSelf.recordingModeFeedback = HapticFeedback()
+                            strongSelf.recordingModeFeedback?.prepareError()
+                        }
+                        strongSelf.recordingModeFeedback?.error()
+                        return
+                    }
+                }
+                
                 var updatingMedia = false
                 let media: RequestEditMessageMedia
                 if let editMediaReference = strongSelf.presentationInterfaceState.editMessageState?.mediaReference {
@@ -9047,7 +9077,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                     }
                 })
-            }
+            })
         }, beginMessageSearch: { [weak self] domain, query in
             guard let strongSelf = self else {
                 return

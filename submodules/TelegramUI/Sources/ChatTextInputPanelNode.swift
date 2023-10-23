@@ -3680,13 +3680,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             return UIMenu(children: [])
         }
         
-        /*if "".isEmpty {
-            let index = self.suggestedActionCounter % suggestedActions.count
-            self.suggestedActionCounter += 1
-            print("action index: \(index)")
-            return UIMenu(children: [suggestedActions[index]])
-        }*/
-        
         var actions = suggestedActions
         
         if #available(iOS 16.0, *) {
@@ -3700,8 +3693,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
-            
         } else {
+            var hasQuoteSelected = false
+            let selectedRange = editableTextNode.selectedRange
+            if let attributedText = editableTextNode.attributedText, selectedRange.lowerBound >= 0, selectedRange.lowerBound < attributedText.length, selectedRange.upperBound >= 0, selectedRange.upperBound < attributedText.length {
+                attributedText.enumerateAttribute(ChatTextInputAttributes.quote, in: selectedRange, using: { value, _, _ in
+                    if value is ChatTextInputTextQuoteAttribute {
+                        hasQuoteSelected = true
+                    }
+                })
+            }
+            let _ = hasQuoteSelected
+            
             var children: [UIAction] = []
             
             //TODO:localize
@@ -3918,6 +3921,18 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     
     @objc func editableTextNodeShouldCopy(_ editableTextNode: ASEditableTextNode) -> Bool {
         return self.chatInputTextNodeShouldCopy()
+    }
+    
+    public func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool {
+        guard let textInputNode = self.textInputNode else {
+            return true
+        }
+        
+        /*if textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
+            print("action: \(action)")
+        }*/
+            
+        return true
     }
     
     func chatInputTextNodeShouldPaste() -> Bool {

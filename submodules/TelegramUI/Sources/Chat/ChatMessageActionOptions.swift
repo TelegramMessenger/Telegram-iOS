@@ -403,9 +403,37 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             })))
         }
         
-        if selfController.presentationInterfaceState.copyProtectionEnabled || messages.first?.isCopyProtected() == true {
-        } else if messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
-        } else {
+        var canReplyInAnotherChat = true
+        
+        if let message = messages.first {
+            if selfController.presentationInterfaceState.copyProtectionEnabled {
+                canReplyInAnotherChat = false
+            }
+            
+            var isAction = false
+            for media in message.media {
+                if media is TelegramMediaAction || media is TelegramMediaExpiredContent {
+                    isAction = true
+                } else if let story = media as? TelegramMediaStory {
+                    if story.isMention {
+                        isAction = true
+                    }
+                }
+            }
+            
+            if isAction {
+                canReplyInAnotherChat = false
+            }
+            if message.isCopyProtected() {
+                canReplyInAnotherChat = false
+            }
+            if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                canReplyInAnotherChat = false
+            }
+            
+        }
+        
+        if canReplyInAnotherChat {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
                 f(.default)
@@ -627,7 +655,9 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
                             proceed(chatController)
                         })
                     } else {
-                        proceed(ChatControllerImpl(context: selfController.context, chatLocation: .peer(id: peerId)))
+                        let chatController = ChatControllerImpl(context: selfController.context, chatLocation: .peer(id: peerId))
+                        chatController.activateInput(type: .text)
+                        proceed(chatController)
                     }
                 })
             }

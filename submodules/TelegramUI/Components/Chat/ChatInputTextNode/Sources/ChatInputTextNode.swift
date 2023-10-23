@@ -19,6 +19,8 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNode(shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool
     func chatInputTextNodeShouldCopy() -> Bool
     func chatInputTextNodeShouldPaste() -> Bool
+    
+    func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool
 }
 
 open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
@@ -125,6 +127,16 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         })
         
         self.textView.delegate = self
+        self.textView.shouldRespondToAction = { [weak self] action in
+            guard let self, let action else {
+                return false
+            }
+            if let delegate = self.delegate {
+                return delegate.chatInputTextNodeShouldRespondToAction(action: action)
+            } else {
+                return true
+            }
+        }
     }
     
     public func resetInitialPrimaryLanguage() {
