@@ -1915,7 +1915,7 @@ public func chatWebpageSnippetPhotoData(account: Account, userLocation: MediaRes
     }
 }
 
-public func chatWebpageSnippetFile(account: Account, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference, representation: TelegramMediaImageRepresentation, automaticFetch: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebpageSnippetFile(account: Account, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference, representation: TelegramMediaImageRepresentation, automaticFetch: Bool = true, placeholderColor: UIColor? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetFileData(account: account, userLocation: userLocation, mediaReference: mediaReference, resource: representation.resource, automaticFetch: automaticFetch)
     
     return signal |> map { fullSizeData in

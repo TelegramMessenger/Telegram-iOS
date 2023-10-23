@@ -1993,6 +1993,20 @@ public func _internal_setStoryNotificationWasDisplayed(transaction: Transaction,
     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedStoryNotifications, key: key), entry: CodableEntry(data: Data()))
 }
 
+public func _internal_getMessageNotificationWasDisplayed(transaction: Transaction, id: MessageId) -> Bool {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    return transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedMessageNotifications, key: key)) != nil
+}
+
+public func _internal_setMessageNotificationWasDisplayed(transaction: Transaction, id: MessageId) {
+    let key = ValueBoxKey(length: 8 + 4)
+    key.setInt64(0, value: id.peerId.toInt64())
+    key.setInt32(8, value: id.id)
+    transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.displayedMessageNotifications, key: key), entry: CodableEntry(data: Data()))
+}
+
 func _internal_updateStoryViewsForMyReaction(isChannel: Bool, views: Stories.Item.Views?, previousReaction: MessageReaction.Reaction?, reaction: MessageReaction.Reaction?) -> Stories.Item.Views? {
     if !isChannel {
         return views

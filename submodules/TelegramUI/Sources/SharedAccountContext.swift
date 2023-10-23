@@ -1512,6 +1512,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _, _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
         }, canSetupReply: { _ in
             return .none
+        }, canSendMessages: {
+            return false
         }, navigateToFirstDateMessage: { _, _ in
         }, requestRedeliveryOfFailedMessages: { _ in
         }, addContact: { _ in
@@ -1562,6 +1564,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, dismissTextInput: {
         }, scrollToMessageId: { _ in
         }, navigateToStory: { _, _ in
+        }, attemptedNavigationToPrivateQuote: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         

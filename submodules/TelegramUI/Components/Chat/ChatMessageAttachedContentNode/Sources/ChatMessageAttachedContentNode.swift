@@ -67,7 +67,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var actionButtonSeparator: SimpleLayer?
     public let statusNode: ChatMessageDateAndStatusNode
     
-    private var inlineMediaValue: TelegramMediaImage?
+    private var inlineMediaValue: Media?
     
     //private var additionalImageBadgeNode: ChatMessageInteractiveMediaBadge?
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -300,7 +300,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             var maxWidth: CGFloat = .greatestFiniteMagnitude
             
             let contentMediaContinueLayout: ((CGSize, Bool, Bool, ImageCorners) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode)))?
-            let inlineMediaAndSize: (TelegramMediaImage, CGSize)?
+            let inlineMediaAndSize: (Media, CGSize)?
             
             if let contentMediaValue {
                 if contentMediaInline {
@@ -308,6 +308,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     
                     if let image = contentMediaValue as? TelegramMediaImage {
                         inlineMediaAndSize = (image, CGSize(width: 54.0, height: 54.0))
+                    } else if let file = contentMediaValue as? TelegramMediaFile, !file.previewRepresentations.isEmpty {
+                        inlineMediaAndSize = (file, CGSize(width: 54.0, height: 54.0))
                     } else {
                         inlineMediaAndSize = nil
                     }
@@ -843,14 +845,14 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let current = self.backgroundView {
                                 backgroundView = current
                                 animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
+                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: animation)
                             } else {
                                 backgroundView = MessageInlineBlockBackgroundView()
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
                                 self.transformContainer.view.insertSubview(backgroundView, at: 0)
+                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: .None)
                             }
-                            
-                            backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: animation)
                         } else {
                             if let backgroundView = self.backgroundView {
                                 self.backgroundView = nil
@@ -892,17 +894,28 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             self.inlineMediaValue = inlineMediaValue
                             
-                            if updateMedia {
-                                let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: inlineMediaValue), placeholderColor: mainColor.withMultipliedAlpha(0.1))
-                                inlineMedia.setSignal(updateInlineImageSignal)
-                            }
-                            
                             var fittedImageSize = inlineMediaSize
-                            if let dimensions = inlineMediaValue.representations.last?.dimensions.cgSize {
-                                fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                            if let image = inlineMediaValue as? TelegramMediaImage {
+                                if let dimensions = image.representations.last?.dimensions.cgSize {
+                                    fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                                }
+                            } else if let file = inlineMediaValue as? TelegramMediaFile {
+                                if let dimensions = file.dimensions?.cgSize {
+                                    fittedImageSize = dimensions.aspectFilled(inlineMediaSize)
+                                }
                             }
-                            inlineMedia.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: fittedImageSize, boundingSize: inlineMediaSize, intrinsicInsets: UIEdgeInsets()))()
                             
+                            if updateMedia {
+                                if let image = inlineMediaValue as? TelegramMediaImage {
+                                    let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), placeholderColor: mainColor.withMultipliedAlpha(0.1))
+                                    inlineMedia.setSignal(updateInlineImageSignal)
+                                } else if let file = inlineMediaValue as? TelegramMediaFile, let representation = file.previewRepresentations.last {
+                                    let updateInlineImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file), representation: representation)
+                                    inlineMedia.setSignal(updateInlineImageSignal)
+                                }
+                            }
+                            
+                            inlineMedia.asyncLayout()(TransformImageArguments(corners: ImageCorners(radius: 4.0), imageSize: fittedImageSize, boundingSize: inlineMediaSize, intrinsicInsets: UIEdgeInsets(), emptyColor: mainColor.withMultipliedAlpha(0.1)))()
                         } else {
                             if let inlineMedia = self.inlineMedia {
                                 self.inlineMedia = nil
@@ -2133,7 +2146,11 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             return ChatMessageBubbleContentTapAction(content: .ignore)
         }
         
-        return self.defaultContentAction()
+        if let backgroundView = self.backgroundView, backgroundView.frame.contains(point) {
+            return self.defaultContentAction()
+        } else {
+            return .init(content: .none)
+        }
     }
     
     public func updateTouchesAtPoint(_ point: CGPoint?) {
@@ -2184,7 +2201,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         var isHighlighted = false
         if rects == nil, let point {
             if let actionButton = self.actionButton, actionButton.frame.contains(point) {
-            } else {
+            } else if let backgroundView = self.backgroundView, backgroundView.frame.contains(point) {
                 isHighlighted = true
             }
         }

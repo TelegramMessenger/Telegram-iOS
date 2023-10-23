@@ -649,6 +649,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
     }
     
+    if !canSendMessagesToChat(chatPresentationInterfaceState) && (chatPresentationInterfaceState.copyProtectionEnabled || message.isCopyProtected()) {
+        canReply = false
+    }
+    
     for media in messages[0].media {
         if let story = media as? TelegramMediaStory {
             if let story = message.associatedStories[story.storyId], story.data.isEmpty {

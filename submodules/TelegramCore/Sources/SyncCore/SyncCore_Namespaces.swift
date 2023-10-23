@@ -112,6 +112,7 @@ public struct Namespaces {
         public static let displayedStoryNotifications: Int8 = 28
         public static let storySendAsPeerIds: Int8 = 29
         public static let cachedChannelBoosts: Int8 = 31
+        public static let displayedMessageNotifications: Int8 = 32
     }
     
     public struct UnorderedItemList {

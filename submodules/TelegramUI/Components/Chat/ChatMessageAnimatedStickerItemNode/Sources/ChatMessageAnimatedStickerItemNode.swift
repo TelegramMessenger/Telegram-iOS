@@ -1488,8 +1488,10 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         }
                     }
                     
+                    var replyBackgroundFrame: CGRect?
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
                         let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 11.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 9.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        replyBackgroundFrame = replyInfoFrame
                         
                         let replyInfoNode = replyInfoApply(replyInfoFrame.size, synchronousLoads, animation)
                         if strongSelf.replyInfoNode == nil {
@@ -1504,8 +1506,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        replyBackgroundNode.frame = CGRect(origin: CGPoint(x: (!incoming ? (params.leftInset + layoutConstants.bubble.edgeInset + 10.0) : (params.width - params.rightInset - messageInfoSize.width - layoutConstants.bubble.edgeInset - 10.0)) - 4.0, y: headersOffset + 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
+                    if let replyBackgroundNode = strongSelf.replyBackgroundNode, let replyBackgroundFrame {
+                        replyBackgroundNode.frame = replyBackgroundFrame
                         
                         let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
                         replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: cornerRadius, transition: .immediate)
@@ -1973,6 +1975,10 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else if let attribute = attribute as? ReplyStoryAttribute {
                             return .optionalAction({
                                 item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
+                            })
+                        } else if let attribute = attribute as? QuotedReplyMessageAttribute {
+                            return .action({
+                                item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                             })
                         }
                     }
