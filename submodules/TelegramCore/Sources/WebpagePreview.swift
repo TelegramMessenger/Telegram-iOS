@@ -5,7 +5,7 @@ import TelegramApi
 import MtProtoKit
 
 
-public enum WebpagePreviewResult {
+public enum WebpagePreviewResult : Equatable {
     case progress
     case result(TelegramMediaWebpage?)
 }
