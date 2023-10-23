@@ -188,7 +188,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
             })
         }
     }
-                
+        
+    //TODO:localize
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -220,17 +221,22 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                         case let .giftPremium(_, _, monthsValue, _, _):
                             months = monthsValue
                             text = item.presentationData.strings.Notification_PremiumGift_Subtitle(item.presentationData.strings.Notification_PremiumGift_Months(months)).string
-                        case let .giftCode(_, fromGiveaway, channelId, monthsValue):
+                        case let .giftCode(_, fromGiveaway, unclaimed, channelId, monthsValue):
                             giftSize.width += 34.0
-                            giftSize.height += 84.0
                             textSpacing += 13.0
                             
-                            title = "Congratulations!"
+                            if unclaimed {
+                                title = "Unclaimed Prize"
+                            } else {
+                                title = "Congratulations!"
+                            }
                             var peerName = ""
                             if let channelId, let channel = item.message.peers[channelId] {
                                 peerName = EnginePeer(channel).compactDisplayTitle
                             }
-                            if fromGiveaway {
+                            if unclaimed {
+                                text = "You have an unclaimed prize from a giveaway by **\(peerName)**.\n\nThis prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
+                            } else if fromGiveaway {
                                 text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
                             } else {
                                 text = "You've received a gift from **\(peerName)**.\n\nYour gift is a **Telegram Premium** subscription for **\(monthsValue)** months."
@@ -273,6 +279,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: buttonTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
+                giftSize.height = titleLayout.size.height + subtitleLayout.size.height + 225.0
+                
                 var labelRects = labelLayout.linesRects()
                 if labelRects.count > 1 {
                     let sortedIndices = (0 ..< labelRects.count).sorted(by: { labelRects[$0].width > labelRects[$1].width })

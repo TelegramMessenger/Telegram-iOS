@@ -166,6 +166,7 @@ private final class StatusReactionNode: ASDisplayNode {
                     fileId: fileId,
                     animationCache: animationCache,
                     animationRenderer: animationRenderer,
+                    tintColor: nil,
                     placeholderColor: placeholderColor,
                     animateIdle: animateIdle,
                     reaction: value,

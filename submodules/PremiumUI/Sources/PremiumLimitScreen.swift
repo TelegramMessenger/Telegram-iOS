@@ -162,6 +162,9 @@ public class PremiumLimitDisplayComponent: Component {
         private let badgeLabel: BadgeLabelView
         private let badgeLabelMaskView = UIImageView()
         
+        private var badgeTailPosition: CGFloat = 0.0
+        private var badgeShapeArguments: (Double, Double, CGSize, CGFloat, CGFloat)?
+        
         private let hapticFeedback = HapticFeedback()
         
         override init(frame: CGRect) {
@@ -230,6 +233,10 @@ public class PremiumLimitDisplayComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.badgeShapeAnimator?.invalidate()
         }
         
         private var didPlayAppearanceAnimation = false
@@ -534,17 +541,30 @@ public class PremiumLimitDisplayComponent: Component {
             
             if badgePosition > 1.0 - 0.15 {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 1.0, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 1.0).cgPath)
+                
+                if component.isPremiumDisabled || progressTransition.animation.isImmediate {
+                    self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 1.0).cgPath
+                } else {
+                    self.badgeShapeArguments = (CACurrentMediaTime(), 0.5, badgeSize, self.badgeTailPosition, 1.0)
+                    self.animateBadgeTailPositionChange()
+                }
+                self.badgeTailPosition = 1.0
                 
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
-                    
                 } else {
                     self.badgeView.center = CGPoint(x: 3.0 + (size.width - 6.0) * badgePosition + 3.0, y: 82.0)
                 }
             } else if badgePosition < 0.15 {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.0, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.0).cgPath)
-                                
+                
+                if component.isPremiumDisabled || progressTransition.animation.isImmediate {
+                    self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.0).cgPath
+                } else {
+                    self.badgeShapeArguments = (CACurrentMediaTime(), 0.5, badgeSize, self.badgeTailPosition, 0.0)
+                    self.animateBadgeTailPositionChange()
+                }
+                self.badgeTailPosition = 0.0
+                
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
                 } else {
@@ -552,8 +572,15 @@ public class PremiumLimitDisplayComponent: Component {
                 }
             } else {
                 progressTransition.setAnchorPoint(layer: self.badgeView.layer, anchorPoint: CGPoint(x: 0.5, y: 1.0))
-                progressTransition.setShapeLayerPath(layer: self.badgeShapeLayer, path: generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.5).cgPath)
-                                
+                
+                if component.isPremiumDisabled || progressTransition.animation.isImmediate {
+                    self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: component.isPremiumDisabled ? nil : 0.5).cgPath
+                } else {
+                    self.badgeShapeArguments = (CACurrentMediaTime(), 0.5, badgeSize, self.badgeTailPosition, 0.5)
+                    self.animateBadgeTailPositionChange()
+                }
+                self.badgeTailPosition = 0.5
+                
                 if let _ = self.badgeView.layer.animation(forKey: "appearance1") {
                     
                 } else {
@@ -615,6 +642,36 @@ public class PremiumLimitDisplayComponent: Component {
             }
             
             return size
+        }
+        
+        private var badgeShapeAnimator: ConstantDisplayLinkAnimator?
+        private func animateBadgeTailPositionChange() {
+            if self.badgeShapeAnimator == nil {
+                self.badgeShapeAnimator = ConstantDisplayLinkAnimator(update: { [weak self] in
+                    self?.animateBadgeTailPositionChange()
+                })
+                self.badgeShapeAnimator?.isPaused = true
+            }
+            
+            if let (startTime, duration, badgeSize, initial, target) = self.badgeShapeArguments {
+                self.badgeShapeAnimator?.isPaused = false
+                
+                let t = CGFloat(max(0.0, min(1.0, (CACurrentMediaTime() - startTime) / duration)))
+                let value = initial + (target - initial) * t
+                
+                self.badgeShapeLayer.path = generateRoundedRectWithTailPath(rectSize: badgeSize, tailPosition: value).cgPath
+                
+                if t >= 1.0 {
+                    self.badgeShapeArguments = nil
+                    self.badgeShapeAnimator?.isPaused = true
+                    self.badgeShapeAnimator?.invalidate()
+                    self.badgeShapeAnimator = nil
+                }
+            } else {
+                self.badgeShapeAnimator?.isPaused = true
+                self.badgeShapeAnimator?.invalidate()
+                self.badgeShapeAnimator = nil
+            }
         }
         
         private func setupGradientAnimations() {
@@ -1143,12 +1200,14 @@ private final class LimitSheetContent: CombinedComponent {
                             string = strings.ChannelBoost_HelpUpgradeChannelText(peer.compactDisplayTitle, boostsString, storiesString).string
                         }
                         actionButtonText = strings.ChannelBoost_BoostChannel
+                        buttonIconName = "Premium/BoostChannel"
                     } else {
                         titleText = strings.ChannelBoost_MaxLevelReached
                         string = strings.ChannelBoost_BoostedChannelReachedLevel("\(level)", storiesString).string
                         actionButtonText = strings.Common_OK
+                        buttonIconName = nil
+                        actionButtonHasGloss = false
                     }
-                    buttonIconName = "Premium/BoostChannel"
                 }
                 buttonAnimationName = nil
                 defaultTitle = strings.ChannelBoost_Level("\(level)").string
@@ -1161,11 +1220,13 @@ private final class LimitSheetContent: CombinedComponent {
                     let prefixString = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannelText
                     
                     let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
-                    
-//                    buttonIconName = nil
-//                    actionButtonText = environment.strings.Common_OK
-                    actionButtonText = "Boost Again"
-                    
+                    if let _ = remaining {
+                        actionButtonText = "Boost Again"
+                    } else {
+                        buttonIconName = nil
+                        actionButtonText = environment.strings.Common_OK
+                        actionButtonHasGloss = false
+                    }
                     if let remaining {
                         let boostsString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
@@ -1208,7 +1269,6 @@ private final class LimitSheetContent: CombinedComponent {
             if case .storiesChannelBoost = component.subject {
                 reachedMaximumLimit = false
             }
-            
             
             let contentSize: CGSize
             if state.initialized {
@@ -1391,6 +1451,7 @@ private final class LimitSheetContent: CombinedComponent {
                         }))
                     )
                 } else if let alternateTextChild {
+                    textOffset += 9.0
                     textSize = alternateTextChild.size
                     context.add(alternateTextChild
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
@@ -1498,7 +1559,7 @@ private final class LimitSheetContent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.maxY + 50.0 + giftText.size.height / 2.0))
                     )
                     
-                    additionalContentHeight += giftText.size.height + 50.0
+                    additionalContentHeight += giftText.size.height + 30.0
                 }
             
                 contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + additionalContentHeight + 5.0 + environment.safeInsets.bottom)
@@ -1598,6 +1659,7 @@ private final class LimitSheetComponent: CombinedComponent {
                         openGift: context.component.openGift
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: true,
                     animateOut: animateOut
                 ),
                 environment: {

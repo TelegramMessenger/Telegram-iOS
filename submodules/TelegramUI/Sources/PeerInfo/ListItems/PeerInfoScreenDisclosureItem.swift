@@ -156,7 +156,11 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
         self.textNode.attributedText = NSAttributedString(string: item.text, font: titleFont, textColor: textColorValue)
         
         let textSize = self.textNode.updateLayout(CGSize(width: width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
-        let labelSize = self.labelNode.updateLayout(CGSize(width: width - textSize.width - (leftInset + rightInset), height: .greatestFiniteMagnitude))
+        var labelConstrainWidth = width - textSize.width - (leftInset + rightInset)
+        if case .semitransparentBadge = item.label {
+            labelConstrainWidth -= 16.0
+        }
+        let labelSize = self.labelNode.updateLayout(CGSize(width: labelConstrainWidth, height: .greatestFiniteMagnitude))
         
         let textFrame = CGRect(origin: CGPoint(x: leftInset, y: 12.0), size: textSize)
         
