@@ -978,13 +978,28 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_read_text_from_clipboard":
                     if let json = json, let requestId = json["req_id"] as? String {
-                        let currentTimestamp = CACurrentMediaTime()
-                        var fillData = false
-                        if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0, self.controller?.url == nil {
-                            self.webView?.lastTouchTimestamp = nil
-                            fillData = true
-                        }
-                        self.sendClipboardTextEvent(requestId: requestId, fillData: fillData)
+                        let botId = controller.botId
+                        let isAttachMenu = controller.url == nil
+                        
+                        let _ = (self.context.engine.messages.attachMenuBots()
+                        |> take(1)
+                        |> deliverOnMainQueue).startStandalone(next: { [weak self] attachMenuBots in
+                            guard let self else {
+                                return
+                            }
+                            let currentTimestamp = CACurrentMediaTime()
+                            var fillData = false
+                            
+                            let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
+                            if isAttachMenu || attachMenuBot != nil {
+                                if let lastTouchTimestamp = self.webView?.lastTouchTimestamp, currentTimestamp < lastTouchTimestamp + 10.0 {
+                                    self.webView?.lastTouchTimestamp = nil
+                                    fillData = true
+                                }
+                            }
+                            
+                            self.sendClipboardTextEvent(requestId: requestId, fillData: fillData)
+                        })
                     }
                 case "web_app_request_write_access":
                     self.requestWriteAccess()
@@ -1498,16 +1513,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
             var items: [ContextMenuItem] = []
             
             let attachMenuBot = attachMenuBots.first(where: { $0.peer.id == botId && !$0.flags.contains(.notActivated) })
-            
-//            if url == nil {
-//                if forceHasSettings {
-//                    hasSettings = true
-//                } else {
-//                    hasSettings = attachMenuBot?.flags.contains(.hasSettings) == true
-//                }
-//            } else {
-//                hasSettings = forceHasSettings
-//            }
             
             if hasSettings {
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.WebApp_Settings, icon: { theme in
