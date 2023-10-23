@@ -42,6 +42,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
     public final class Arguments {
         public let context: AccountContext
         public let presentationData: ChatPresentationData
+        public let customTintColor: UIColor?
         public let message: Message
         public let topMessage: Message
         public let associatedData: ChatMessageItemAssociatedData
@@ -65,6 +66,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         public init(
             context: AccountContext,
             presentationData: ChatPresentationData,
+            customTintColor: UIColor?,
             message: Message,
             topMessage: Message,
             associatedData: ChatMessageItemAssociatedData,
@@ -87,6 +89,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         ) {
             self.context = context
             self.presentationData = presentationData
+            self.customTintColor = customTintColor
             self.message = message
             self.topMessage = topMessage
             self.associatedData = associatedData
@@ -602,7 +605,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 audioWaveform = AudioWaveform(bitstream: waveform, bitsPerSample: 5)
                             }
                         } else {
-                            candidateTitleString = NSAttributedString(string: title ?? (arguments.file.fileName ?? "Unknown Track"), font: titleFont, textColor: messageTheme.fileTitleColor)
+                            candidateTitleString = NSAttributedString(string: title ?? (arguments.file.fileName ?? "Unknown Track"), font: titleFont, textColor: arguments.customTintColor ?? messageTheme.fileTitleColor)
                             let descriptionText: String
                             if let performer = performer {
                                 descriptionText = performer
@@ -627,7 +630,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if let candidateTitleString = candidateTitleString {
                     titleString = candidateTitleString
                 } else if !isVoice {
-                    titleString = NSAttributedString(string: arguments.file.fileName ?? "File", font: titleFont, textColor: messageTheme.fileTitleColor)
+                    titleString = NSAttributedString(string: arguments.file.fileName ?? "File", font: titleFont, textColor: arguments.customTintColor ?? messageTheme.fileTitleColor)
                 }
                 
                 if let candidateDescriptionString = candidateDescriptionString {
@@ -1428,6 +1431,9 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         guard let file = self.file else {
             return
         }
+        guard let arguments = self.arguments else {
+            return
+        }
         let incoming = message.effectivelyIncoming(context.account.peerId)
         let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
         
@@ -1576,7 +1582,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             backgroundNodeColor = presentationData.theme.theme.chat.message.mediaOverlayControlColors.fillColor
             foregroundNodeColor = .white
         } else {
-            backgroundNodeColor = messageTheme.mediaActiveControlColor
+            backgroundNodeColor = arguments.customTintColor ?? messageTheme.mediaActiveControlColor
             if incoming && messageTheme.mediaActiveControlColor.rgb != 0xffffff {
                 foregroundNodeColor = .white
             } else {
@@ -1640,7 +1646,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             playbackMaskLayer.path = maskPath.cgPath
             playbackAudioLevelNode.layer.mask = playbackMaskLayer
         }
-        self.playbackAudioLevelNode?.setColor(messageTheme.mediaActiveControlColor)
+        self.playbackAudioLevelNode?.setColor(arguments.customTintColor ?? messageTheme.mediaActiveControlColor)
         
         if streamingState != .none && self.streamingStatusNode == nil {
             let streamingStatusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor)

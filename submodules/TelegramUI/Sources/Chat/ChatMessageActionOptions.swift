@@ -169,9 +169,11 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         let hideCaptions = forwardOptions.hideCaptions
         
         if canHideNames {
-            items.append(.action(ContextMenuActionItem(text: hideNames ? (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames) : (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames), icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: !hideNames ? "Chat/Context Menu/UserCrossed" : "Chat/Context Menu/User"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak selfController] _, f in
+            items.append(.action(ContextMenuActionItem(text: hideNames ? (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_ShowSendersName : presentationData.strings.Conversation_ForwardOptions_ShowSendersNames) : (uniquePeerIds.count == 1 ? presentationData.strings.Conversation_ForwardOptions_HideSendersName : presentationData.strings.Conversation_ForwardOptions_HideSendersNames), icon: { _ in
+                return nil
+            }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                name: !hideNames ? "message_preview_person_on" : "message_preview_person_off"
+            ), action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
                     if hideNames {
@@ -188,9 +190,11 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         }
         
         if hasCaptions {
-            items.append(.action(ContextMenuActionItem(text: hideCaptions ? presentationData.strings.Conversation_ForwardOptions_ShowCaption : presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: !hideCaptions ? "Chat/Context Menu/CaptionHide" : "Chat/Context Menu/CaptionShow"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak selfController] _, f in
+            items.append(.action(ContextMenuActionItem(text: hideCaptions ? presentationData.strings.Conversation_ForwardOptions_ShowCaption : presentationData.strings.Conversation_ForwardOptions_HideCaption, icon: { _ in
+                return nil
+            }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                name: !hideCaptions ? "message_preview_caption_off" : "message_preview_caption_on"
+            ), action: { [weak selfController] _, f in
                 selfController?.interfaceInteraction?.updateForwardOptionsState({ current in
                     var updated = current
                     if hideCaptions {
@@ -274,7 +278,7 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         id: AnyHashable(OptionsId.forward),
         title: "Forward",
         source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
-        items: items |> map { ContextController.Items(content: .list($0)) }
+        items: items |> map { ContextController.Items(id: AnyHashable("forward"), content: .list($0)) }
     ), dismissedForCancel)
 }
 
@@ -483,7 +487,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             tip = .quoteSelection
         }
         
-        return ContextController.Items(content: .list(items), tip: tip)
+        return ContextController.Items(id: AnyHashable("reply"), content: .list(items), tip: tip)
     }
     
     let _ = ApplicationSpecificNotice.incrementReplyQuoteTextSelectionTips(accountManager: selfController.context.sharedContext.accountManager).startStandalone()
@@ -755,8 +759,10 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         do {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: linkOptions.linkBelowText ? "Move Up" : "Move Down", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: linkOptions.linkBelowText ? "Chat/Context Menu/MoveUp" : "Chat/Context Menu/MoveDown"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak selfController] _, f in
+                return nil
+            }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                name: linkOptions.linkBelowText ? "message_preview_sort_above" : "message_preview_sort_below"
+            ), action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {
                         guard var urlPreview = state.editingUrlPreview else {
@@ -787,9 +793,11 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                 enlargeTitle = "Enlarge Photo"
             }
             
-            items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? shrinkTitle : enlargeTitle, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: !linkOptions.largeMedia ? "Chat/Context Menu/ImageEnlarge" : "Chat/Context Menu/ImageShrink"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak selfController] _, f in
+            items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? shrinkTitle : enlargeTitle, icon: { _ in
+                return nil
+            }, iconAnimation: ContextMenuActionItem.IconAnimation(
+                name: !linkOptions.largeMedia ? "message_preview_media_large" : "message_preview_media_small"
+            ), action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in
                     if state.interfaceState.editMessage != nil {
                         guard var urlPreview = state.editingUrlPreview else {

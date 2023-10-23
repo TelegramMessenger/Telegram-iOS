@@ -13,6 +13,8 @@ import EntityKeyboard
 import AnimationCache
 import MultiAnimationRenderer
 import AnimationUI
+import ComponentFlow
+import LottieComponent
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     var wantsFullWidth: Bool { get }
@@ -60,7 +62,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let getController: () -> ContextControllerProtocol?
     private let requestDismiss: (ContextMenuActionResult) -> Void
     private let requestUpdateAction: (AnyHashable, ContextMenuActionItem) -> Void
-    private let item: ContextMenuActionItem
+    private var item: ContextMenuActionItem
     
     private let highlightBackgroundNode: ASDisplayNode
     private let titleLabelNode: ImmediateTextNode
@@ -69,6 +71,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let additionalIconNode: ASImageNode
     private var badgeIconNode: ASImageNode?
     private var animationNode: AnimationNode?
+    
+    private var currentAnimatedIconContent: ContextMenuActionItem.IconAnimation?
+    private var animatedIcon: ComponentView<Empty>?
     
     private var currentBadge: (badge: ContextMenuActionBadge, image: UIImage)?
     
@@ -189,6 +194,11 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         return super.hitTest(point, with: event)
     }
     
+    func setItem(item: ContextMenuActionItem) {
+        self.item = item
+        self.accessibilityLabel = item.text
+    }
+    
     func update(presentationData: PresentationData, constrainedSize: CGSize) -> (minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
         let verticalInset: CGFloat = 11.0
@@ -286,7 +296,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             )
         }
         
-        let iconSize: CGSize?
+        var iconSize: CGSize?
         if let iconSource = self.item.iconSource {
             iconSize = iconSource.size
             self.iconNode.cornerRadius = iconSource.cornerRadius
@@ -314,6 +324,34 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             let iconImage = self.item.icon(presentationData.theme)
             self.iconNode.image = iconImage
             iconSize = iconImage?.size
+        }
+        
+        if let iconAnimation = self.item.iconAnimation {
+            let animatedIcon: ComponentView<Empty>
+            if let current = self.animatedIcon {
+                animatedIcon = current
+            } else {
+                animatedIcon = ComponentView()
+                self.animatedIcon = animatedIcon
+            }
+            
+            let animatedIconSize = CGSize(width: 24.0, height: 24.0)
+            let _ = animatedIcon.update(
+                transition: .immediate,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: iconAnimation.name),
+                    color: titleColor,
+                    startingPosition: .end,
+                    loop: false
+                )),
+                environment: {},
+                containerSize: animatedIconSize
+            )
+            
+            iconSize = animatedIconSize
+        } else if let animatedIcon = self.animatedIcon {
+            self.animatedIcon = nil
+            animatedIcon.view?.removeFromSuperview()
         }
         
         let additionalIcon = self.item.additionalLeftIcon?(presentationData.theme)
@@ -472,6 +510,21 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 if let animationNode = self.animationNode {
                     transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)
                 }
+                if let animatedIconView = self.animatedIcon?.view {
+                    if animatedIconView.superview == nil {
+                        self.view.addSubview(animatedIconView)
+                        animatedIconView.frame = iconFrame
+                    } else {
+                        transition.updateFrame(view: animatedIconView, frame: iconFrame, beginWithCurrentState: true)
+                        if let currentAnimatedIconContent = self.currentAnimatedIconContent, currentAnimatedIconContent != self.item.iconAnimation {
+                            if let animatedIconView = animatedIconView as? LottieComponent.View {
+                                animatedIconView.playOnce()
+                            }
+                        }
+                    }
+                    
+                    self.currentAnimatedIconContent = self.item.iconAnimation
+                }
             }
             
             if let additionalIconSize {
@@ -588,7 +641,7 @@ private final class ContextControllerActionsListCustomItemNode: ASDisplayNode, C
 }
 
 final class ContextControllerActionsListStackItem: ContextControllerActionsStackItem {
-    private final class Node: ASDisplayNode, ContextControllerActionsStackItemNode {
+    final class Node: ASDisplayNode, ContextControllerActionsStackItemNode {
         private final class Item {
             let node: ContextControllerActionsListItemNode
             let separatorNode: ASDisplayNode?
@@ -607,6 +660,8 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         
         private var hapticFeedback: HapticFeedback?
         private var highlightedItemNode: Item?
+        
+        private var invalidatedItemNodes: Bool = false
         
         var wantsFullWidth: Bool {
             return false
@@ -674,6 +729,20 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             }
         }
         
+        func updateItems(items: [ContextMenuItem]) {
+            self.items = items
+            for i in 0 ..< items.count {
+                if self.itemNodes.count < i {
+                    break
+                }
+                if case let .action(action) = items[i] {
+                    if let itemNode = self.itemNodes[i].node as? ContextControllerActionsListActionItemNode {
+                        itemNode.setItem(item: action)
+                    }
+                }
+            }
+        }
+        
         private func requestUpdateAction(id: AnyHashable, action: ContextMenuActionItem) {
             loop: for i in 0 ..< self.items.count {
                 switch self.items[i] {
@@ -734,6 +803,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 combinedSize.width = max(combinedSize.width, itemNodeLayout.minSize.width)
                 combinedSize.height += itemNodeLayout.minSize.height
             }
+            self.invalidatedItemNodes = false
             combinedSize.width = max(combinedSize.width, standardMinWidth)
             
             var nextItemOrigin = CGPoint()
@@ -835,7 +905,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     }
     
     let id: AnyHashable?
-    private let items: [ContextMenuItem]
+    let items: [ContextMenuItem]
     let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
     let tipSignal: Signal<ContextController.Tip?, NoError>?
@@ -1326,6 +1396,37 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     }
     
     func replace(item: ContextControllerActionsStackItem, animated: Bool?) {
+        if let item = item as? ContextControllerActionsListStackItem, let topContainer = self.itemContainers.last, let topItem = topContainer.item as? ContextControllerActionsListStackItem, let topId = topItem.id, let id = item.id, topId == id, item.items.count == topItem.items.count {
+            if let topNode = topContainer.node as? ContextControllerActionsListStackItem.Node {
+                var matches = true
+                for i in 0 ..< item.items.count {
+                    switch item.items[i] {
+                    case .action:
+                        if case .action = topItem.items[i] {
+                        } else {
+                            matches = false
+                        }
+                    case .custom:
+                        if case .custom = topItem.items[i] {
+                        } else {
+                            matches = false
+                        }
+                    case .separator:
+                        if case .separator = topItem.items[i] {
+                        } else {
+                            matches = false
+                        }
+                    }
+                }
+                
+                if matches {
+                    topNode.updateItems(items: item.items)
+                    self.requestUpdate(.animated(duration: 0.3, curve: .spring))
+                    return
+                }
+            }
+        }
+        
         var resolvedAnimated = false
         if let animated {
             resolvedAnimated = animated

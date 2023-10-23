@@ -1048,7 +1048,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             textInputNode.textView.theme = ChatInputTextView.Theme(
                 quote: ChatInputTextView.Theme.Quote(
                     background: presentationInterfaceState.theme.list.itemAccentColor.withMultipliedAlpha(presentationInterfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
-                    foreground: presentationInterfaceState.theme.list.itemAccentColor
+                    foreground: presentationInterfaceState.theme.list.itemAccentColor,
+                    isDashed: presentationInterfaceState.accountPeerColor?.isDashed == true
                 )
             )
             
@@ -1630,7 +1631,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     textInputNode.textView.theme = ChatInputTextView.Theme(
                         quote: ChatInputTextView.Theme.Quote(
                             background: interfaceState.theme.list.itemAccentColor.withMultipliedAlpha(interfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
-                            foreground: interfaceState.theme.list.itemAccentColor
+                            foreground: interfaceState.theme.list.itemAccentColor,
+                            isDashed: interfaceState.accountPeerColor?.isDashed == true
                         )
                     )
                 }
