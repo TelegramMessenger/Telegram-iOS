@@ -393,7 +393,27 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         underlineLinks = false
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
+                    let author = item.message.author
+                    let mainColor: UIColor
+                    var secondaryColor: UIColor?
+                    if !incoming {
+                        mainColor = messageTheme.accentTextColor
+                        if let _ = author?.nameColor?.dashColors.1 {
+                            secondaryColor = .clear
+                        }
+                    } else {
+                        var authorNameColor: UIColor?
+                        authorNameColor = author?.nameColor?.color
+                        secondaryColor = author?.nameColor?.dashColors.1
+                        
+                        if let authorNameColor {
+                            mainColor = authorNameColor
+                        } else {
+                            mainColor = messageTheme.accentTextColor
+                        }
+                    }
+                    
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
