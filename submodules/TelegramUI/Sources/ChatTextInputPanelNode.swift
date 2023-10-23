@@ -3927,6 +3927,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         guard let textInputNode = self.textInputNode else {
             return true
         }
+        let _ = textInputNode
         
         /*if textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
             print("action: \(action)")
