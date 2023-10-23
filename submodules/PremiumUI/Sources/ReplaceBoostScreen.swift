@@ -27,13 +27,15 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
     let context: AccountContext
     let peerId: EnginePeer.Id
     let myBoostStatus: MyBoostStatus
+    let initiallySelectedSlot: Int32?
     let selectedSlotsUpdated: ([Int32]) -> Void
     let presentController: (ViewController) -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, myBoostStatus: MyBoostStatus, selectedSlotsUpdated: @escaping ([Int32]) -> Void, presentController: @escaping (ViewController) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, myBoostStatus: MyBoostStatus, initiallySelectedSlot: Int32?, selectedSlotsUpdated: @escaping ([Int32]) -> Void, presentController: @escaping (ViewController) -> Void) {
         self.context = context
         self.peerId = peerId
         self.myBoostStatus = myBoostStatus
+        self.initiallySelectedSlot = initiallySelectedSlot
         self.selectedSlotsUpdated = selectedSlotsUpdated
         self.presentController = presentController
     }
@@ -62,12 +64,16 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
-        init(context: AccountContext, peerId: EnginePeer.Id) {
+        init(context: AccountContext, peerId: EnginePeer.Id, initiallySelectedSlot: Int32?) {
             self.context = context
             
             self.currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
             
             super.init()
+            
+            if let initiallySelectedSlot {
+                self.selectedSlots.append(initiallySelectedSlot)
+            }
             
             self.disposable.set((context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).startStrict(next: { [weak self] peer in
@@ -94,7 +100,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, peerId: self.peerId)
+        return State(context: self.context, peerId: self.peerId, initiallySelectedSlot: self.initiallySelectedSlot)
     }
     
     static var body: Body {
@@ -180,6 +186,8 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 .position(CGPoint(x: availableSize.width / 2.0, y: 172.0))
             )
             
+            let hasSelection = occupiedBoosts.count > 1
+            
             let selectedSlotsUpdated = context.component.selectedSlotsUpdated
             let presentController = context.component.presentController
             for i in 0 ..< occupiedBoosts.count {
@@ -193,11 +201,11 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 if let cooldownUntil = boost.cooldownUntil, cooldownUntil > state.currentTime {
                     let duration = cooldownUntil - state.currentTime
                     let durationValue = stringForDuration(duration, position: nil)
-                    subtitle = "available in \(durationValue)"
+                    subtitle = "Available in \(durationValue)"
                     isEnabled = false
                 } else {
                     let expiresValue = stringForDate(timestamp: boost.expires, strings: strings)
-                    subtitle = "boost expires on \(expiresValue)"
+                    subtitle = "Boost expires on \(expiresValue)"
                 }
                 
                 let accountContext = context.component.context
@@ -216,12 +224,12 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                 subtitle: subtitle,
                                 subtitleAccessory: .none,
                                 presence: nil,
-                                selectionState: .editing(isSelected: state.selectedSlots.contains(boost.slot), isTinted: false),
+                                selectionState: hasSelection ? .editing(isSelected: state.selectedSlots.contains(boost.slot), isTinted: false) : .none,
                                 selectionPosition: .right,
                                 isEnabled: isEnabled,
                                 hasNext: i != occupiedBoosts.count - 1,
                                 action: { [weak state] _ in
-                                    guard let state else {
+                                    guard let state, hasSelection else {
                                         return
                                     }
                                     if isEnabled {
@@ -433,6 +441,35 @@ public class ReplaceBoostScreen: ViewController {
                 effectiveExpanded = true
             }
             
+            let environment = ViewControllerComponentContainer.Environment(
+                statusBarHeight: 0.0,
+                navigationHeight: navigationHeight,
+                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                inputHeight: layout.inputHeight ?? 0.0,
+                metrics: layout.metrics,
+                deviceMetrics: layout.deviceMetrics,
+                isVisible: self.currentIsVisible,
+                theme: self.presentationData.theme,
+                strings: self.presentationData.strings,
+                dateTimeFormat: self.presentationData.dateTimeFormat,
+                controller: { [weak self] in
+                    return self?.controller
+                }
+            )
+            let contentSize = self.hostView.update(
+                transition: transition,
+                component: self.component,
+                environment: {
+                    environment
+                },
+                forceUpdate: true,
+                containerSize: CGSize(width: layout.size.width, height: 10000.0)
+            )
+//            contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
+            transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
+            
+            self.scrollView.contentSize = contentSize
+            
             let isLandscape = layout.orientation == .landscape
             let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
             let topInset: CGFloat
@@ -499,36 +536,7 @@ public class ReplaceBoostScreen: ViewController {
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
-            
-            let environment = ViewControllerComponentContainer.Environment(
-                statusBarHeight: 0.0,
-                navigationHeight: navigationHeight,
-                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
-                inputHeight: layout.inputHeight ?? 0.0,
-                metrics: layout.metrics,
-                deviceMetrics: layout.deviceMetrics,
-                isVisible: self.currentIsVisible,
-                theme: self.presentationData.theme,
-                strings: self.presentationData.strings,
-                dateTimeFormat: self.presentationData.dateTimeFormat,
-                controller: { [weak self] in
-                    return self?.controller
-                }
-            )
-            var contentSize = self.hostView.update(
-                transition: transition,
-                component: self.component,
-                environment: {
-                    environment
-                },
-                forceUpdate: true,
-                containerSize: CGSize(width: clipFrame.size.width, height: 10000.0)
-            )
-            contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
-            transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
-            
-            self.scrollView.contentSize = contentSize
-            
+
             let footerInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
             
             transition.setFrame(view: self.footerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: layout.size))
@@ -564,7 +572,11 @@ public class ReplaceBoostScreen: ViewController {
                 if layout.size.width <= 320.0 {
                     factor = 0.15
                 }
-                return floor(max(layout.size.width, layout.size.height) * factor)
+                if self.scrollView.contentSize.height > 0.0 && self.scrollView.contentSize.height < layout.size.height / 2.0 {
+                    return layout.size.height - self.scrollView.contentSize.height - layout.intrinsicInsets.bottom - 154.0
+                } else {
+                    return floor(max(layout.size.width, layout.size.height) * factor)
+                }
             } else {
                 return 210.0
             }
@@ -590,7 +602,7 @@ public class ReplaceBoostScreen: ViewController {
             }
             
             let isLandscape = layout.orientation == .landscape
-            let edgeTopInset = isLandscape ? 0.0 : defaultTopInset
+            let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
         
             switch recognizer.state {
                 case .began:
@@ -783,15 +795,23 @@ public class ReplaceBoostScreen: ViewController {
     public convenience init(context: AccountContext, peerId: EnginePeer.Id, myBoostStatus: MyBoostStatus, replaceBoosts: @escaping ([Int32]) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 
+        var initiallySelectedSlot: Int32?
+        let occupiedBoosts = myBoostStatus.boosts.filter { $0.peer?.id != peerId && $0.peer != nil }.sorted { lhs, rhs in
+            return lhs.date < rhs.date
+        }
+        if occupiedBoosts.count == 1, let boost = occupiedBoosts.first {
+            initiallySelectedSlot = boost.slot
+        }
+        
         var selectedSlotsUpdatedImpl: (([Int32]) -> Void)?
         var presentControllerImpl: ((ViewController) -> Void)?
-        self.init(context: context, component: ReplaceBoostScreenComponent(context: context, peerId: peerId, myBoostStatus: myBoostStatus, selectedSlotsUpdated: { slots in
+        self.init(context: context, component: ReplaceBoostScreenComponent(context: context, peerId: peerId, myBoostStatus: myBoostStatus, initiallySelectedSlot: initiallySelectedSlot, selectedSlotsUpdated: { slots in
             selectedSlotsUpdatedImpl?(slots)
         }, presentController: { c in
             presentControllerImpl?(c)
         }))
         
-        self.title = "Reassign Boost"
+        self.title = "Reassign Boosts"
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
         
@@ -806,6 +826,10 @@ public class ReplaceBoostScreen: ViewController {
         }
         
         self.replaceBoosts = replaceBoosts
+        
+        if let initiallySelectedSlot {
+            self.node.selectedSlots = [initiallySelectedSlot]
+        }
     }
     
     private init<C: Component>(context: AccountContext, component: C, theme: PresentationTheme? = nil) where C.EnvironmentType == ViewControllerComponentContainer.Environment {
@@ -989,6 +1013,9 @@ private final class FooterView: UIView {
                 self.addSubview(view)
             }
             view.frame = CGRect(origin: CGPoint(x: insets.left + buttonInset, y: panelFrame.minY + inset), size: buttonSize)
+            
+            buttonTransition.setAlpha(view: view, alpha: count > 0 ? 1.0 : 0.3)
+            view.isUserInteractionEnabled = count > 0
         }
         
         self.backgroundNode.frame = panelFrame

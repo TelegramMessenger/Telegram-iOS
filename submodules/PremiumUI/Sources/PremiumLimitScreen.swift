@@ -1159,7 +1159,7 @@ private final class LimitSheetContent: CombinedComponent {
                     state.myBoostCount = myBoostCount
                     boostUpdated = true
                 }
-                useAlternateText = myBoostCount > 0
+                useAlternateText = (myBoostCount % 2) != 0
                 
                 iconName = "Premium/Boost"
                 badgeText = "\(component.count)"
@@ -1390,7 +1390,7 @@ private final class LimitSheetContent: CombinedComponent {
                 )
                 
                 var buttonOffset: CGFloat = 0.0
-                var textOffset: CGFloat = 228.0 + topOffset
+                var textOffset: CGFloat = 184.0 + topOffset
                                 
                 if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject {
                     if let link {
@@ -1416,13 +1416,11 @@ private final class LimitSheetContent: CombinedComponent {
                             transition: context.transition
                         )
                         buttonOffset += 66.0
-                                                
+                        
                         let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil((textChild?.size ?? .zero).height / 2.0) + 24.0), size: linkButton.size)
                         context.add(linkButton
                             .position(CGPoint(x: linkFrame.midX, y: linkFrame.midY))
                         )
-                    } else {
-                        textOffset -= 26.0
                     }
                 }
                 if isPremiumDisabled {
@@ -1436,6 +1434,9 @@ private final class LimitSheetContent: CombinedComponent {
                 var textSize: CGSize
                 if let textChild {
                     textSize = textChild.size
+                    
+                    textOffset += textSize.height / 2.0
+                    
                     context.add(textChild
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
                         .appear(Transition.Appear({ _, view, transition in
@@ -1451,8 +1452,10 @@ private final class LimitSheetContent: CombinedComponent {
                         }))
                     )
                 } else if let alternateTextChild {
-                    textOffset += 9.0
                     textSize = alternateTextChild.size
+                    
+                    textOffset += textSize.height / 2.0
+                    
                     context.add(alternateTextChild
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: textOffset))
                         .appear(Transition.Appear({ _, view, transition in
@@ -1559,7 +1562,7 @@ private final class LimitSheetContent: CombinedComponent {
                         .position(CGPoint(x: context.availableSize.width / 2.0, y: buttonFrame.maxY + 50.0 + giftText.size.height / 2.0))
                     )
                     
-                    additionalContentHeight += giftText.size.height + 30.0
+                    additionalContentHeight += giftText.size.height + 50.0
                 }
             
                 contentSize = CGSize(width: context.availableSize.width, height: buttonFrame.maxY + additionalContentHeight + 5.0 + environment.safeInsets.bottom)

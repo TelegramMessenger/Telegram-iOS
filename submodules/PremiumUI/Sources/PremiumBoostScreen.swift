@@ -23,11 +23,16 @@ public func PremiumBoostScreen(
     pushController: @escaping (ViewController) -> Void,
     dismissed: @escaping () -> Void
 ) {
-    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-    |> deliverOnMainQueue).startStandalone(next: { peer in
-        guard let peer, let status else {
+    let _ = (context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)
+    )
+    |> deliverOnMainQueue).startStandalone(next: { peer, accountPeer in
+        guard let peer, let accountPeer, let status else {
             return
         }
+        
+        let isPremium = accountPeer.isPremium
         
         var myBoostCount: Int32 = 0
         var availableBoosts: [MyBoostStatus.Boost] = []
@@ -57,7 +62,9 @@ public func PremiumBoostScreen(
         }
         
         let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount)
-        let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)
+        let nextSubject = Promise<PremiumLimitScreen.Subject>()
+        nextSubject.set(.single(.storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)))
+        
         var nextCount = Int32(status.boosts + 1)
         
         var updateImpl: (() -> Void)?
@@ -81,7 +88,11 @@ public func PremiumBoostScreen(
             if let _ = status.nextLevelBoosts {
                 if let availableBoost = availableBoosts.first {
                     let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot]).startStandalone()
-                    controller?.updateSubject(nextSubject, count: nextCount)
+                    let _ = (nextSubject.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { nextSubject in
+                        controller?.updateSubject(nextSubject, count: nextCount)
+                    })
                     
                     availableBoosts.removeFirst()
                     nextCount += 1
@@ -95,22 +106,36 @@ public func PremiumBoostScreen(
                     dismissImpl?()
                     pushController(replaceController)
                 } else {
-                    let controller = textAlertController(
-                        sharedContext: context.sharedContext, 
-                        updatedPresentationData: nil,
-                        title: presentationData.strings.ChannelBoost_Error_PremiumNeededTitle,
-                        text: presentationData.strings.ChannelBoost_Error_PremiumNeededText,
-                        actions: [
-                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {}),
-                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
-                                dismissImpl?()
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: forceDark, dismissed: nil)
-                                pushController(controller)
-                            })
-                        ],
-                        parseMarkdown: true
-                    )
-                    presentController(controller)
+                    if isPremium {
+                        let controller = textAlertController(
+                            sharedContext: context.sharedContext,
+                            updatedPresentationData: nil,
+                            title: "More Boosts Needed",
+                            text: "To boost **\(peer.compactDisplayTitle)**, get more boosts by gifting **Telegram Premium** to a friend.",
+                            actions: [
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                            ],
+                            parseMarkdown: true
+                        )
+                        presentController(controller)
+                    } else {
+                        let controller = textAlertController(
+                            sharedContext: context.sharedContext,
+                            updatedPresentationData: nil,
+                            title: presentationData.strings.ChannelBoost_Error_PremiumNeededTitle,
+                            text: presentationData.strings.ChannelBoost_Error_PremiumNeededText,
+                            actions: [
+                                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Yes, action: {
+                                    dismissImpl?()
+                                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .channelBoost(peerId), forceDark: forceDark, dismissed: nil)
+                                    pushController(controller)
+                                })
+                            ],
+                            parseMarkdown: true
+                        )
+                        presentController(controller)
+                    }
                 }
             } else {
                 dismissImpl?()
