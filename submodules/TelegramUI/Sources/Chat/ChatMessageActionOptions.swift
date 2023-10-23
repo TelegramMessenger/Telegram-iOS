@@ -404,6 +404,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         }
         
         if selfController.presentationInterfaceState.copyProtectionEnabled || messages.first?.isCopyProtected() == true {
+        } else if messages.first?.id.peerId.namespace == Namespaces.Peer.SecretChat {
         } else {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
@@ -746,7 +747,17 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         
         if case let .Loaded(content) = linkOptions.webpage.content, let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
             //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? "Shrink Photo" : "Enlarge Photo", icon: { theme in
+            let shrinkTitle: String
+            let enlargeTitle: String
+            if let file = content.file, file.isVideo {
+                shrinkTitle = "Shrink Video"
+                enlargeTitle = "Enlarge Video"
+            } else {
+                shrinkTitle = "Shrink Photo"
+                enlargeTitle = "Enlarge Photo"
+            }
+            
+            items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? shrinkTitle : enlargeTitle, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: !linkOptions.largeMedia ? "Chat/Context Menu/ImageEnlarge" : "Chat/Context Menu/ImageShrink"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController] _, f in
                 selfController?.updateChatPresentationInterfaceState(animated: true, interactive: true, { state in

@@ -136,6 +136,13 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
             guard let self, let item = self.item, let webPage = self.webPage, case let .Loaded(content) = webPage.content else {
                 return ChatMessageBubbleContentTapAction(content: .none)
             }
+            
+            if let file = content.file {
+                if !file.isVideo, !file.isVideoSticker, !file.isAnimated, !file.isAnimatedSticker, !file.isSticker, !file.isMusic {
+                    return ChatMessageBubbleContentTapAction(content: .openMessage)
+                }
+            }
+            
             var isConcealed = true
             if item.message.text.contains(content.url) {
                 isConcealed = false
