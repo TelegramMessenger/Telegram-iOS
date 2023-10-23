@@ -2572,7 +2572,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         let textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
         
         var rects: [CGRect] = []
-        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
+        var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute, CGFloat)] = []
         
         let fontSize = max(minInputFontSize, presentationInterfaceState.fontSize.baseDisplaySize)
         
@@ -2619,7 +2619,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     if let start = textInputNode.textView.position(from: beginning, offset: range.location), let end = textInputNode.textView.position(from: start, offset: range.length), let textRange = textInputNode.textView.textRange(from: start, to: end) {
                         let textRects = textInputNode.textView.selectionRects(for: textRange)
                         for textRect in textRects {
-                            customEmojiRects.append((textRect.rect, value))
+                            var emojiFontSize = fontSize
+                            if let font = attributes[.font] as? UIFont {
+                                emojiFontSize = font.pointSize
+                            }
+                            customEmojiRects.append((textRect.rect, value, emojiFontSize))
                             break
                         }
                     }

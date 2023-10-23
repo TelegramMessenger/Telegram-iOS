@@ -412,7 +412,8 @@ public func PeerNameColorScreen(
                             updatedState.inProgress = true
                             return updatedState
                         }
-                        let _ = context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone(next: {
+                        let _ = (context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0)
+                        |> deliverOnMainQueue).startStandalone(next: {
                         }, error: { error in
                             if case .channelBoostRequired = error {
                                 let _ = combineLatest(

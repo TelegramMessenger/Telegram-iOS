@@ -663,7 +663,7 @@ public final class TextFieldComponent: Component {
             }
 
             var spoilerRects: [CGRect] = []
-            var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)] = []
+            var customEmojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute, CGFloat)] = []
 
             let textView = self.textView
             if let attributedText = textView.attributedText {
@@ -707,9 +707,13 @@ public final class TextFieldComponent: Component {
                     
                     if let value = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
                         if let start = textView.position(from: beginning, offset: range.location), let end = textView.position(from: start, offset: range.length), let textRange = textView.textRange(from: start, to: end) {
+                            var emojiFontSize = component.fontSize
+                            if let font = attributes[.font] as? UIFont {
+                                emojiFontSize = font.pointSize
+                            }
                             let textRects = textView.selectionRects(for: textRange)
                             for textRect in textRects {
-                                customEmojiRects.append((textRect.rect, value))
+                                customEmojiRects.append((textRect.rect, value, emojiFontSize))
                                 break
                             }
                         }

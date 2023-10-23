@@ -1568,12 +1568,6 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }))
                 }
 
-                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemNameColor, label: .semitransparentBadge(EnginePeer(channel).compactDisplayTitle, (data.peer?.nameColor ?? .blue).color), text: "Channel Color", icon: UIImage(bundleImageName: "Settings/Menu/Appearance"), action: {
-                        interaction.editingOpenNameColorSetup()
-                    }))
-                }
-                
                 if (isCreator && (channel.addressName?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
@@ -1623,6 +1617,12 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     }
                     items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: presentationData.strings.PeerInfo_Reactions, icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
                         interaction.editingOpenReactionsSetup()
+                    }))
+                }
+                
+                if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemNameColor, label: .semitransparentBadge(EnginePeer(channel).compactDisplayTitle, (data.peer?.nameColor ?? .blue).color), text: "Channel Color", icon: UIImage(bundleImageName: "Chat/Info/NameColorIcon"), action: {
+                        interaction.editingOpenNameColorSetup()
                     }))
                 }
                 

@@ -449,6 +449,7 @@ public final class MessageInputActionButtonComponent: Component {
                     fileId: animationFileId ?? reactionFile?.fileId.id ?? 0,
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
+                    tintColor: nil,
                     placeholderColor: UIColor(white: 1.0, alpha: 0.2),
                     animateIdle: false,
                     reaction: reaction,

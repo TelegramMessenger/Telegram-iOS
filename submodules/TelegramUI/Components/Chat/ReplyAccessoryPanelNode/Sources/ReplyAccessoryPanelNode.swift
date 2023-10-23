@@ -75,7 +75,6 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
         self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
         
         self.titleNode = CompositeTextNode()
-        self.titleNode.imageTintColor = theme.chat.inputPanel.panelControlAccentColor
         
         self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 1
@@ -243,29 +242,30 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     let icon: UIImage?
                     icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
                     
+                    //TODO:localize
                     if let _ = strongSelf.quote {
                         if let icon {
                             let string = "Reply to Quote by "
-                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                             titleText.append(.icon(icon))
-                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
                         }
                     } else {
                         if let icon {
                             let string = "Reply to "
-                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                             titleText.append(.icon(icon))
-                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
                         }
                     }
                 } else {
                     if let _ = strongSelf.quote {
                         //TODO:localize
                         let string = "Reply to Quote by \(authorName)"
-                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                     } else {
                         let string = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
-                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: .white))]
+                        titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                     }
                     
                     if strongSelf.messageId.peerId != strongSelf.chatPeerId {
@@ -276,9 +276,9 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             } else {
                                 icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")?.withRenderingMode(.alwaysTemplate)
                             }
-                            if let icon {
-                                titleText.append(.icon(icon))
-                                titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: .white)))
+                            if let iconImage = generateTintedImage(image: icon, color: strongSelf.theme.chat.inputPanel.panelControlAccentColor) {
+                                titleText.append(.icon(iconImage))
+                                titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
                             }
                         }
                     }
@@ -387,10 +387,25 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(theme)
             self.iconView.tintColor = theme.chat.inputPanel.panelControlAccentColor
             
-            self.titleNode.imageTintColor = theme.chat.inputPanel.panelControlAccentColor
+            self.titleNode.components = self.titleNode.components.map { item in
+                switch item {
+                case let .text(text):
+                    let updatedText = NSMutableAttributedString(attributedString: text)
+                    updatedText.addAttribute(.foregroundColor, value: theme.chat.inputPanel.panelControlAccentColor, range: NSRange(location: 0, length: updatedText.length))
+                    return .text(updatedText)
+                case let .icon(icon):
+                    if let iconImage = generateTintedImage(image: icon, color: theme.chat.inputPanel.panelControlAccentColor) {
+                        return .icon(iconImage)
+                    } else {
+                        return .icon(icon)
+                    }
+                }
+            }
             
-            if let text = self.textNode.attributedText?.string {
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(15.0), textColor: self.textIsOptions ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
+            if let text = self.textNode.attributedText {
+                let updatedText = NSMutableAttributedString(attributedString: text)
+                updatedText.addAttribute(.foregroundColor, value: self.textIsOptions ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor, range: NSRange(location: 0, length: updatedText.length))
+                self.textNode.attributedText = updatedText
             }
             self.textNode.spoilerColor = self.theme.chat.inputPanel.secondaryTextColor
             

@@ -39,7 +39,6 @@ public final class SheetComponentEnvironment: Equatable {
 
 public let sheetComponentTag = GenericComponentViewTag()
 public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
-    
     public typealias EnvironmentType = (ChildEnvironmentType, SheetComponentEnvironment)
     
     public enum BackgroundColor: Equatable {
@@ -54,15 +53,18 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     
     public let content: AnyComponent<ChildEnvironmentType>
     public let backgroundColor: BackgroundColor
+    public let followContentSizeChanges: Bool
     public let animateOut: ActionSlot<Action<()>>
     
     public init(
         content: AnyComponent<ChildEnvironmentType>,
         backgroundColor: BackgroundColor,
+        followContentSizeChanges: Bool = false,
         animateOut: ActionSlot<Action<()>>
     ) {
         self.content = content
         self.backgroundColor = backgroundColor
+        self.followContentSizeChanges = followContentSizeChanges
         self.animateOut = animateOut
     }
     
@@ -71,6 +73,9 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             return false
         }
         if lhs.backgroundColor != rhs.backgroundColor {
+            return false
+        }
+        if lhs.followContentSizeChanges != rhs.followContentSizeChanges {
             return false
         }
         if lhs.animateOut != rhs.animateOut {
@@ -338,12 +343,15 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
             }
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: availableSize), completion: nil)
             
+            let previousContentSize = self.scrollView.contentSize
             self.scrollView.contentSize = contentSize
             self.scrollView.contentInset = UIEdgeInsets(top: max(0.0, availableSize.height - contentSize.height) + contentSize.height, left: 0.0, bottom: 0.0, right: 0.0)
             self.ignoreScrolling = false
             
             if let currentAvailableSize = self.currentAvailableSize, currentAvailableSize.height != availableSize.height {
                 self.scrollView.contentOffset = CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height))
+            } else if component.followContentSizeChanges, !previousContentSize.height.isZero, previousContentSize != contentSize {
+                transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: availableSize))
             }
             if self.currentHasInputHeight != previousHasInputHeight {
                 transition.setBounds(view: self.scrollView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -(availableSize.height - contentSize.height)), size: self.scrollView.bounds.size))

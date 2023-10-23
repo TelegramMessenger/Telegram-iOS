@@ -3382,7 +3382,25 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 if let replyMessageSubject = self.chatPresentationInterfaceState.interfaceState.replyMessageSubject, let quote = replyMessageSubject.quote {
                     if let replyMessage = self.chatPresentationInterfaceState.replyMessage {
-                        if !replyMessage.text.contains(quote.text) {
+                        let nsText = replyMessage.text as NSString
+                        var startIndex = 0
+                        var found = false
+                        while true {
+                            let range = nsText.range(of: quote.text, range: NSRange(location: startIndex, length: nsText.length - startIndex))
+                            if range.location != NSNotFound {
+                                let subEntities = messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: range, onlyQuoteable: true)
+                                if subEntities == quote.entities {
+                                    found = true
+                                    break
+                                }
+                                
+                                startIndex = range.upperBound
+                            } else {
+                                break
+                            }
+                        }
+                        
+                        if !found {
                             //TODO:localize
                             let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
                             let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)

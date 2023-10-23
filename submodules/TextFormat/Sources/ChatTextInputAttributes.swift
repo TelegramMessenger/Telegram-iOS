@@ -26,6 +26,15 @@ public struct ChatTextInputAttributes {
 }
 
 public let originalTextAttributeKey = NSAttributedString.Key(rawValue: "Attribute__OriginalText")
+public final class OriginalTextAttribute: NSObject {
+    public let id: Int
+    public let string: String
+    
+    public init(id: Int, string: String) {
+        self.id = id
+        self.string = string
+    }
+}
 
 public func stateAttributedStringForText(_ text: NSAttributedString) -> NSAttributedString {
     let sourceString = NSMutableAttributedString(attributedString: text)

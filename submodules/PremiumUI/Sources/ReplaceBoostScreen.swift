@@ -19,6 +19,8 @@ import PeerListItemComponent
 import TelegramStringFormatting
 import AvatarNode
 
+//TODO:localize
+
 private final class ReplaceBoostScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -799,6 +801,7 @@ public class ReplaceBoostScreen: ViewController {
             self?.node.selectedSlots = selectedSlots
         }
         presentControllerImpl = { [weak self] c in
+            self?.dismissAllTooltips()
             self?.present(c, in: .window(.root))
         }
         
@@ -819,13 +822,27 @@ public class ReplaceBoostScreen: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
-    @objc private func cancelPressed() {
-        self.dismiss(animated: true, completion: nil)
-    }
-    
     override open func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self, component: self.component)
         self.displayNodeDidLoad()
+    }
+    
+    fileprivate func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+            return true
+        })
+    }
+    
+    @objc private func cancelPressed() {
+        self.dismiss(animated: true, completion: nil)
     }
     
     public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {

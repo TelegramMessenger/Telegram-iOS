@@ -23,6 +23,7 @@ public final class ReactionIconView: PortalSourceView {
     private var file: TelegramMediaFile?
     private var animationCache: AnimationCache?
     private var animationRenderer: MultiAnimationRenderer?
+    private var contentTintColor: UIColor?
     private var placeholderColor: UIColor?
     private var size: CGSize?
     private var animateIdle: Bool?
@@ -58,6 +59,7 @@ public final class ReactionIconView: PortalSourceView {
         fileId: Int64,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
+        tintColor: UIColor?,
         placeholderColor: UIColor,
         animateIdle: Bool,
         reaction: MessageReaction.Reaction,
@@ -66,6 +68,7 @@ public final class ReactionIconView: PortalSourceView {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.contentTintColor = tintColor
         self.placeholderColor = placeholderColor
         self.size = size
         self.animateIdle = animateIdle
@@ -112,6 +115,8 @@ public final class ReactionIconView: PortalSourceView {
             
             transition.updateFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
         }
+        
+        self.updateTintColor()
     }
     
     public func updateIsAnimationHidden(isAnimationHidden: Bool, transition: ContainedViewLayoutTransition) {
@@ -170,6 +175,36 @@ public final class ReactionIconView: PortalSourceView {
         animationLayer.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
         
         animationLayer.isVisibleForAnimations = animateIdle && context.sharedContext.energyUsageSettings.loopEmoji
+        self.updateTintColor()
+    }
+    
+    private func updateTintColor() {
+        guard let file = self.file, let animationLayer = self.animationLayer else {
+            return
+        }
+        var accentTint = false
+        if file.isCustomTemplateEmoji {
+            accentTint = true
+        }
+        for attribute in file.attributes {
+            if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                switch packReference {
+                case let .id(id, _):
+                    if id == 773947703670341676 || id == 2964141614563343 {
+                        accentTint = true
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        if accentTint, let tintColor = self.contentTintColor {
+            animationLayer.contentTintColor = tintColor
+            animationLayer.dynamicColor = tintColor
+        } else {
+            animationLayer.contentTintColor = nil
+            animationLayer.dynamicColor = nil
+        }
     }
     
     func reset() {
@@ -769,6 +804,17 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     animateIdle = false
                 }
                 
+                let tintColor: UIColor
+                if layout.backgroundLayout.colors.isSelected {
+                    if layout.spec.component.colors.selectedForeground != 0 {
+                        tintColor = UIColor(argb: layout.spec.component.colors.selectedForeground)
+                    } else {
+                        tintColor = .white
+                    }
+                } else {
+                    tintColor = UIColor(argb: layout.spec.component.colors.deselectedForeground)
+                }
+                
                 iconView.update(
                     size: layout.imageFrame.size,
                     context: layout.spec.component.context,
@@ -776,6 +822,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     fileId: fileId,
                     animationCache: arguments.animationCache,
                     animationRenderer: arguments.animationRenderer,
+                    tintColor: tintColor,
                     placeholderColor: layout.spec.component.chosenOrder != nil ? UIColor(argb: layout.spec.component.colors.selectedMediaPlaceholder) : UIColor(argb: layout.spec.component.colors.deselectedMediaPlaceholder),
                     animateIdle: animateIdle,
                     reaction: layout.spec.component.reaction.value,

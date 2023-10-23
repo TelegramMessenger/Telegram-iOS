@@ -113,7 +113,7 @@ func _internal_applyChannelBoost(account: Account, peerId: PeerId, slots: [Int32
         |> map (Optional.init)
         |> `catch` { error -> Signal<Api.premium.MyBoosts?, NoError> in
             return .complete()
-        }
+        } 
         |> mapToSignal { result -> Signal<MyBoostStatus?, NoError> in
             if let result = result {
                 return account.postbox.transaction { transaction -> MyBoostStatus? in

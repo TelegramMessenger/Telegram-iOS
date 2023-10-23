@@ -948,7 +948,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
                             strongSelf.push(controller)
                             return true
-                        case let .giftCode(slug, _, _, _):
+                        case let .giftCode(slug, _, _, _, _):
                             strongSelf.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: message.id)
                             return true
                         case let .suggestedProfilePhoto(image):
@@ -3819,7 +3819,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 }
-                if let messageId = message?.id, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                if let messageId = message?.id, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) ?? message {
                     var quoteData: EngineMessageReplyQuote?
                     
                     let nsRange = NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound)
@@ -10765,9 +10765,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let inputText = NSMutableAttributedString(attributedString: textInputState.inputText)
                 
                 let range = textInputState.selectionRange
-                inputText.replaceCharacters(in: NSMakeRange(range.lowerBound, range.count), with: text)
                 
-                let selectionPosition = range.lowerBound + (text.string as NSString).length
+                let updatedText = NSMutableAttributedString(attributedString: text)
+                if range.lowerBound < inputText.length {
+                    if let quote = inputText.attribute(ChatTextInputAttributes.quote, at: range.lowerBound, effectiveRange: nil) {
+                        updatedText.addAttribute(ChatTextInputAttributes.quote, value: quote, range: NSRange(location: 0, length: updatedText.length))
+                    }
+                }
+                inputText.replaceCharacters(in: NSMakeRange(range.lowerBound, range.count), with: updatedText)
+                
+                let selectionPosition = range.lowerBound + (updatedText.string as NSString).length
                 
                 return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
             }

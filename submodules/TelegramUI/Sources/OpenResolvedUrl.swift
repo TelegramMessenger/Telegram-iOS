@@ -842,101 +842,49 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             })
         case let .boost(peerId, status, myBoostStatus):
-            let _ = myBoostStatus
+            var isCurrent = false
+            if case let .chat(chatPeerId, _) = urlContext, chatPeerId == peerId {
+                isCurrent = true
+            }
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {
                 forceDark = true
             }
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).startStandalone(next: { peer in
-                guard let peer, let status else {
-                    return
+        
+            var dismissedImpl: (() -> Void)?
+            if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                let updateExternalController = storyProgressPauseContext.update
+                dismissedImpl = {
+                    updateExternalController(nil)
                 }
-                
-                var myBoostCount: Int32 = 0
-                var availableBoosts: [MyBoostStatus.Boost] = []
-                var occupiedBoosts: [MyBoostStatus.Boost] = []
-                if let myBoostStatus {
-                    for boost in myBoostStatus.boosts {
-                        if let boostPeer = boost.peer {
-                            if boostPeer.id == peer.id {
-                                myBoostCount += 1
-                            } else {
-                                occupiedBoosts.append(boost)
-                            }
-                        } else {
-                            availableBoosts.append(boost)
-                        }
-                    }
-                }
-                
-                var isCurrent = false
-                if case let .chat(chatPeerId, _) = urlContext, chatPeerId == peerId {
-                    isCurrent = true
-                }
-                
-                var currentLevel = Int32(status.level)
-                var currentLevelBoosts = Int32(status.currentLevelBoosts)
-                var nextLevelBoosts = status.nextLevelBoosts.flatMap(Int32.init)
-                
-                if myBoostCount > 0 && status.boosts == currentLevelBoosts {
-                    currentLevel = max(0, currentLevel - 1)
-                    nextLevelBoosts = currentLevelBoosts
-                    currentLevelBoosts = max(0, currentLevelBoosts - 1)
-                }
-                
-                let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount)
-                let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)
-                var nextCount = Int32(status.boosts + 1)
-                
-                var updateImpl: (() -> Void)?
-                var dismissImpl: (() -> Void)?
-                let controller = PremiumLimitScreen(context: context, subject: subject, count: Int32(status.boosts), forceDark: forceDark, action: {
-                    let dismiss = false
-                    updateImpl?()
-                    return dismiss
-                },
+            }
+        
+            PremiumBoostScreen(
+                context: context,
+                contentContext: contentContext,
+                peerId: peerId,
+                isCurrent: isCurrent,
+                status: status,
+                myBoostStatus: myBoostStatus,
+                forceDark: forceDark,
                 openPeer: { peer in
                     openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
-                })
-                navigationController?.pushViewController(controller)
-                
-                if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
-                    storyProgressPauseContext.update(controller)
+                },
+                presentController: { [weak navigationController] c in
+                    (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
+                },
+                pushController: { [weak navigationController] c in
+                    navigationController?.pushViewController(c)
                     
-                    let updateExternalController = storyProgressPauseContext.update
-                    controller.disposed = {
-                        updateExternalController(nil)
-                    }
-                }
-                
-                updateImpl = { [weak controller] in
-                    if let _ = status.nextLevelBoosts {
-                        if let availableBoost = availableBoosts.first {
-                            let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot]).startStandalone()
-                            controller?.updateSubject(nextSubject, count: nextCount)
-                            
-                            availableBoosts.removeFirst()
-                            nextCount += 1
-                        } else if !occupiedBoosts.isEmpty, let myBoostStatus {
-                            let replaceController = ReplaceBoostScreen(context: context, peerId: peerId, myBoostStatus: myBoostStatus, replaceBoosts: { slots in
-                                let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: slots).startStandalone()
-                                
-                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "\(slots.count) boosts are reassigned from 1 other channel.", timeout: nil, customUndoText: nil), elevatedLayout: true, position: .bottom, action: { _ in return true })
-                                (navigationController?.viewControllers.last as? ViewController)?.present(undoController, in: .window(.root))
-                            })
-                            dismissImpl?()
-                            navigationController?.pushViewController(replaceController)
+                    if c is PremiumLimitScreen {
+                        if let storyProgressPauseContext = contentContext as? StoryProgressPauseContext {
+                            storyProgressPauseContext.update(c)
                         }
-                    } else {
-                        dismissImpl?()
                     }
+                }, dismissed: {
+                    dismissedImpl?()
                 }
-                dismissImpl = { [weak controller] in
-                    controller?.dismissAnimated()
-                }
-            })
+            )
         case let .premiumGiftCode(slug):
             var forceDark = false
             if let updatedPresentationData, updatedPresentationData.initial.theme.overallDarkAppearance {

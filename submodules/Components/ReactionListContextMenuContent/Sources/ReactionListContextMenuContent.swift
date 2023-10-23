@@ -218,6 +218,37 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     }
                     reactionLayer.frame = iconFrame
                 }
+                
+                self.updateReactionAccentColor()
+            }
+            
+            func updateReactionAccentColor() {
+                guard let file = self.file, let reactionLayer = self.reactionLayer, let theme = self.theme else {
+                    return
+                }
+                var accentTint = false
+                if file.isCustomTemplateEmoji {
+                    accentTint = true
+                }
+                for attribute in file.attributes {
+                    if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                        switch packReference {
+                        case let .id(id, _):
+                            if id == 773947703670341676 || id == 2964141614563343 {
+                                accentTint = true
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                if accentTint {
+                    reactionLayer.contentTintColor = theme.contextMenu.badgeFillColor
+                    reactionLayer.dynamicColor = theme.contextMenu.badgeFillColor
+                } else {
+                    reactionLayer.contentTintColor = nil
+                    reactionLayer.dynamicColor = nil
+                }
             }
             
             func update(presentationData: PresentationData, constrainedSize: CGSize, isSelected: Bool) -> CGSize {
@@ -227,6 +258,8 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                     if let iconNode = self.iconNode {
                         iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reactions"), color: presentationData.theme.contextMenu.primaryColor)
                     }
+                    
+                    self.updateReactionLayer()
                 }
                 
                 let sideInset: CGFloat = 12.0
@@ -478,6 +511,35 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 }
             }
             
+            func updateReactionAccentColor(theme: PresentationTheme) {
+                guard let file = self.file, let reactionLayer = self.reactionLayer else {
+                    return
+                }
+                var accentTint = false
+                if file.isCustomTemplateEmoji {
+                    accentTint = true
+                }
+                for attribute in file.attributes {
+                    if case let .CustomEmoji(_, _, _, packReference) = attribute {
+                        switch packReference {
+                        case let .id(id, _):
+                            if id == 773947703670341676 || id == 2964141614563343 {
+                                accentTint = true
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                if accentTint {
+                    reactionLayer.contentTintColor = theme.contextMenu.badgeFillColor
+                    reactionLayer.dynamicColor = theme.contextMenu.badgeFillColor
+                } else {
+                    reactionLayer.contentTintColor = nil
+                    reactionLayer.dynamicColor = nil
+                }
+            }
+            
             func update(size: CGSize, presentationData: PresentationData, item: EngineMessageReactionListContext.Item, isLast: Bool, syncronousLoad: Bool) {
                 let avatarInset: CGFloat = 12.0
                 let avatarSpacing: CGFloat = 8.0
@@ -495,6 +557,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                                     if availableReaction.value == reaction {
                                         self.file = availableReaction.centerAnimation
                                         self.updateReactionLayer()
+                                        self.updateReactionAccentColor(theme: presentationData.theme)
                                         break
                                     }
                                 }
@@ -507,6 +570,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                                 }
                                 strongSelf.file = file
                                 strongSelf.updateReactionLayer()
+                                strongSelf.updateReactionAccentColor(theme: presentationData.theme)
                             }).strict()
                         }
                     } else {
@@ -520,6 +584,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         }
                     }
                 }
+                self.updateReactionAccentColor(theme: presentationData.theme)
                 
                 if self.item != item {
                     self.item = item
