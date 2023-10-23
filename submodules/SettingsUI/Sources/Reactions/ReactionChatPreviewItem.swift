@@ -261,10 +261,10 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
+                currentBackgroundNode?.update(wallpaper: item.wallpaper)
+                currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
             }
-            currentBackgroundNode?.update(wallpaper: item.wallpaper)
-            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
-            
+
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
@@ -329,6 +329,11 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     }
                        
                     strongSelf.item = item
+                    
+                    if let currentBackgroundNode {
+                        currentBackgroundNode.update(wallpaper: item.wallpaper)
+                        currentBackgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+                    }
                     
                     if strongSelf.genericReactionEffectDisposable == nil {
                         strongSelf.loadNextGenericReactionEffect(context: item.context)

@@ -109,7 +109,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case requestedPeer(buttonId: Int32, peerId: PeerId)
     case setChatWallpaper(wallpaper: TelegramWallpaper)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
-    case giftCode(slug: String, fromGiveaway: Bool, boostPeerId: PeerId?, months: Int32)
+    case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32)
     case giveawayLaunched
     
     public init(decoder: PostboxDecoder) {
@@ -206,7 +206,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 35:
             self = .botAppAccessGranted(appName: decoder.decodeOptionalStringForKey("app"), type: decoder.decodeOptionalInt32ForKey("atp").flatMap { BotSendMessageAccessGrantedType(rawValue: $0) })
         case 36:
-            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0))
+            self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0))
         case 37:
             self = .giveawayLaunched
         default:
@@ -388,10 +388,11 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             } else {
                 encoder.encodeNil(forKey: "atp")
             }
-        case let .giftCode(slug, fromGiveaway, boostPeerId, months):
+        case let .giftCode(slug, fromGiveaway, unclaimed, boostPeerId, months):
             encoder.encodeInt32(36, forKey: "_rawValue")
             encoder.encodeString(slug, forKey: "slug")
             encoder.encodeBool(fromGiveaway, forKey: "give")
+            encoder.encodeBool(unclaimed, forKey: "unclaimed")
             if let boostPeerId = boostPeerId {
                 encoder.encodeInt64(boostPeerId.toInt64(), forKey: "pi")
             } else {
@@ -421,7 +422,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             return peerIds
         case let .requestedPeer(_, peerId):
             return [peerId]
-        case let .giftCode(_, _, boostPeerId, _):
+        case let .giftCode(_, _, _, boostPeerId, _):
             return boostPeerId.flatMap { [$0] } ?? []
         default:
             return []

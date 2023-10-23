@@ -133,9 +133,9 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
+                currentBackgroundNode?.update(wallpaper: item.wallpaper)
+                currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
             }
-            currentBackgroundNode?.update(wallpaper: item.wallpaper)
-            currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
             
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -188,6 +188,11 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    
+                    if let currentBackgroundNode {
+                        currentBackgroundNode.update(wallpaper: item.wallpaper)
+                        currentBackgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
+                    }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     

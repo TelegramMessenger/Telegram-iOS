@@ -25,6 +25,7 @@ import TelegramUIPreferences
 import UndoUI
 import TelegramStringFormatting
 
+//TODO:localize
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
