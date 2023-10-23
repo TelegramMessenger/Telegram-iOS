@@ -629,7 +629,8 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
             var replyInfoApply: (CGSize, (CGSize, Bool, ListViewItemUpdateAnimation) -> ChatMessageReplyInfoNode)?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
-            var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
+            var availableWidth = min(200.0, max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left))
+            availableWidth -= 20.0
             if isEmoji {
                 availableWidth -= 24.0
             }

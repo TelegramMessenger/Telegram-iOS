@@ -15,81 +15,108 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     }
     
     case auto(caption: String, entities: TextEntitiesMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
-    case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, replyMarkup: ReplyMarkupMessageAttribute?)
+    case text(text: String, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool, previewParameters: WebpagePreviewMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     case mapLocation(media: TelegramMediaMap, replyMarkup: ReplyMarkupMessageAttribute?)
     case contact(media: TelegramMediaContact, replyMarkup: ReplyMarkupMessageAttribute?)
     case invoice(media: TelegramMediaInvoice, replyMarkup: ReplyMarkupMessageAttribute?)
+    case webpage(text: String, entities: TextEntitiesMessageAttribute?, url: String, previewParameters: WebpagePreviewMessageAttribute?, replyMarkup: ReplyMarkupMessageAttribute?)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("_v", orElse: 0) {
-            case 0:
-                self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
-            case 1:
-                self = .text(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, disableUrlPreview: decoder.decodeInt32ForKey("du", orElse: 0) != 0, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
-            case 2:
-                self = .mapLocation(media: decoder.decodeObjectForKey("l") as! TelegramMediaMap, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
-            case 3:
-                self = .contact(media: decoder.decodeObjectForKey("c") as! TelegramMediaContact, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
-            case 4:
-                self = .invoice(media: decoder.decodeObjectForKey("i") as! TelegramMediaInvoice, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
-            default:
-                self = .auto(caption: "", entities: nil, replyMarkup: nil)
+        case 0:
+            self = .auto(caption: decoder.decodeStringForKey("c", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 1:
+            self = .text(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, disableUrlPreview: decoder.decodeInt32ForKey("du", orElse: 0) != 0, previewParameters: decoder.decodeObjectForKey("prp") as? WebpagePreviewMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 2:
+            self = .mapLocation(media: decoder.decodeObjectForKey("l") as! TelegramMediaMap, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 3:
+            self = .contact(media: decoder.decodeObjectForKey("c") as! TelegramMediaContact, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 4:
+            self = .invoice(media: decoder.decodeObjectForKey("i") as! TelegramMediaInvoice, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        case 5:
+            self = .webpage(text: decoder.decodeStringForKey("t", orElse: ""), entities: decoder.decodeObjectForKey("e") as? TextEntitiesMessageAttribute, url: decoder.decodeStringForKey("url", orElse: ""), previewParameters: decoder.decodeObjectForKey("prp") as? WebpagePreviewMessageAttribute, replyMarkup: decoder.decodeObjectForKey("m") as? ReplyMarkupMessageAttribute)
+        default:
+            self = .auto(caption: "", entities: nil, replyMarkup: nil)
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .auto(caption, entities, replyMarkup):
-                encoder.encodeInt32(0, forKey: "_v")
-                encoder.encodeString(caption, forKey: "c")
-                if let entities = entities {
-                    encoder.encodeObject(entities, forKey: "e")
-                } else {
-                    encoder.encodeNil(forKey: "e")
-                }
-                if let replyMarkup = replyMarkup {
-                    encoder.encodeObject(replyMarkup, forKey: "m")
-                } else {
-                    encoder.encodeNil(forKey: "m")
-                }
-            case let .text(text, entities, disableUrlPreview, replyMarkup):
-                encoder.encodeInt32(1, forKey: "_v")
-                encoder.encodeString(text, forKey: "t")
-                if let entities = entities {
-                    encoder.encodeObject(entities, forKey: "e")
-                } else {
-                    encoder.encodeNil(forKey: "e")
-                }
-                encoder.encodeInt32(disableUrlPreview ? 1 : 0, forKey: "du")
-                if let replyMarkup = replyMarkup {
-                    encoder.encodeObject(replyMarkup, forKey: "m")
-                } else {
-                    encoder.encodeNil(forKey: "m")
-                }
-            case let .mapLocation(media, replyMarkup):
-                encoder.encodeInt32(2, forKey: "_v")
-                encoder.encodeObject(media, forKey: "l")
-                if let replyMarkup = replyMarkup {
-                    encoder.encodeObject(replyMarkup, forKey: "m")
-                } else {
-                    encoder.encodeNil(forKey: "m")
-                }
-            case let .contact(media, replyMarkup):
-                encoder.encodeInt32(3, forKey: "_v")
-                encoder.encodeObject(media, forKey: "c")
-                if let replyMarkup = replyMarkup {
-                    encoder.encodeObject(replyMarkup, forKey: "m")
-                } else {
-                    encoder.encodeNil(forKey: "m")
-                }
-            case let .invoice(media: media, replyMarkup):
-                encoder.encodeInt32(4, forKey: "_v")
-                encoder.encodeObject(media, forKey: "i")
-                if let replyMarkup = replyMarkup {
-                    encoder.encodeObject(replyMarkup, forKey: "m")
-                } else {
-                    encoder.encodeNil(forKey: "m")
-                }
+        case let .auto(caption, entities, replyMarkup):
+            encoder.encodeInt32(0, forKey: "_v")
+            encoder.encodeString(caption, forKey: "c")
+            if let entities = entities {
+                encoder.encodeObject(entities, forKey: "e")
+            } else {
+                encoder.encodeNil(forKey: "e")
+            }
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .text(text, entities, disableUrlPreview, previewParameters, replyMarkup):
+            encoder.encodeInt32(1, forKey: "_v")
+            encoder.encodeString(text, forKey: "t")
+            if let entities = entities {
+                encoder.encodeObject(entities, forKey: "e")
+            } else {
+                encoder.encodeNil(forKey: "e")
+            }
+            encoder.encodeInt32(disableUrlPreview ? 1 : 0, forKey: "du")
+            if let previewParameters = previewParameters {
+                encoder.encodeObject(previewParameters, forKey: "prp")
+            } else {
+                encoder.encodeNil(forKey: "prp")
+            }
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .mapLocation(media, replyMarkup):
+            encoder.encodeInt32(2, forKey: "_v")
+            encoder.encodeObject(media, forKey: "l")
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .contact(media, replyMarkup):
+            encoder.encodeInt32(3, forKey: "_v")
+            encoder.encodeObject(media, forKey: "c")
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .invoice(media, replyMarkup):
+            encoder.encodeInt32(4, forKey: "_v")
+            encoder.encodeObject(media, forKey: "i")
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        case let .webpage(text, entities, url, previewParameters, replyMarkup):
+            encoder.encodeInt32(5, forKey: "_v")
+            encoder.encodeString(text, forKey: "t")
+            if let entities = entities {
+                encoder.encodeObject(entities, forKey: "e")
+            } else {
+                encoder.encodeNil(forKey: "e")
+            }
+            encoder.encodeString(url, forKey: "url")
+            if let previewParameters = previewParameters {
+                encoder.encodeObject(previewParameters, forKey: "prp")
+            } else {
+                encoder.encodeNil(forKey: "prp")
+            }
+            if let replyMarkup = replyMarkup {
+                encoder.encodeObject(replyMarkup, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
         }
     }
     
@@ -110,75 +137,99 @@ public enum ChatContextResultMessage: PostboxCoding, Equatable, Codable {
     
     public static func ==(lhs: ChatContextResultMessage, rhs: ChatContextResultMessage) -> Bool {
         switch lhs {
-            case let .auto(lhsCaption, lhsEntities, lhsReplyMarkup):
-                if case let .auto(rhsCaption, rhsEntities, rhsReplyMarkup) = rhs {
-                    if lhsCaption != rhsCaption {
-                        return false
-                    }
-                    if lhsEntities != rhsEntities {
-                        return false
-                    }
-                    if lhsReplyMarkup != rhsReplyMarkup {
-                        return false
-                    }
-                    return true
-                } else {
+        case let .auto(lhsCaption, lhsEntities, lhsReplyMarkup):
+            if case let .auto(rhsCaption, rhsEntities, rhsReplyMarkup) = rhs {
+                if lhsCaption != rhsCaption {
                     return false
                 }
-            case let .text(lhsText, lhsEntities, lhsDisableUrlPreview, lhsReplyMarkup):
-                if case let .text(rhsText, rhsEntities, rhsDisableUrlPreview, rhsReplyMarkup) = rhs {
-                    if lhsText != rhsText {
-                        return false
-                    }
-                    if lhsEntities != rhsEntities {
-                        return false
-                    }
-                    if lhsDisableUrlPreview != rhsDisableUrlPreview {
-                        return false
-                    }
-                    if lhsReplyMarkup != rhsReplyMarkup {
-                        return false
-                    }
-                    return true
-                } else {
+                if lhsEntities != rhsEntities {
                     return false
                 }
-            case let .mapLocation(lhsMedia, lhsReplyMarkup):
-                if case let .mapLocation(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(to: rhsMedia) {
-                        return false
-                    }
-                    if lhsReplyMarkup != rhsReplyMarkup {
-                        return false
-                    }
-                    return true
-                } else {
+                if lhsReplyMarkup != rhsReplyMarkup {
                     return false
                 }
-            case let .contact(lhsMedia, lhsReplyMarkup):
-                if case let .contact(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(to: rhsMedia) {
-                        return false
-                    }
-                    if lhsReplyMarkup != rhsReplyMarkup {
-                        return false
-                    }
-                    return true
-                } else {
+                return true
+            } else {
+                return false
+            }
+        case let .text(lhsText, lhsEntities, lhsDisableUrlPreview, lhsPreviewParameters, lhsReplyMarkup):
+            if case let .text(rhsText, rhsEntities, rhsDisableUrlPreview, rhsPreviewParameters, rhsReplyMarkup) = rhs {
+                if lhsText != rhsText {
                     return false
                 }
-            case let .invoice(lhsMedia, lhsReplyMarkup):
-                if case let .invoice(rhsMedia, rhsReplyMarkup) = rhs {
-                    if !lhsMedia.isEqual(to: rhsMedia) {
-                        return false
-                    }
-                    if lhsReplyMarkup != rhsReplyMarkup {
-                        return false
-                    }
-                    return true
-                } else {
+                if lhsEntities != rhsEntities {
                     return false
                 }
+                if lhsDisableUrlPreview != rhsDisableUrlPreview {
+                    return false
+                }
+                if lhsPreviewParameters != rhsPreviewParameters {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .mapLocation(lhsMedia, lhsReplyMarkup):
+            if case let .mapLocation(rhsMedia, rhsReplyMarkup) = rhs {
+                if !lhsMedia.isEqual(to: rhsMedia) {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .contact(lhsMedia, lhsReplyMarkup):
+            if case let .contact(rhsMedia, rhsReplyMarkup) = rhs {
+                if !lhsMedia.isEqual(to: rhsMedia) {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .invoice(lhsMedia, lhsReplyMarkup):
+            if case let .invoice(rhsMedia, rhsReplyMarkup) = rhs {
+                if !lhsMedia.isEqual(to: rhsMedia) {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .webpage(lhsText, lhsEntities, lhsUrl, lhsPreviewParameters, lhsReplyMarkup):
+            if case let .webpage(rhsText, rhsEntities, rhsUrl, rhsPreviewParameters, rhsReplyMarkup) = rhs {
+                if lhsText != rhsText {
+                    return false
+                }
+                if lhsEntities != rhsEntities {
+                    return false
+                }
+                if lhsUrl != rhsUrl {
+                    return false
+                }
+                if lhsPreviewParameters != rhsPreviewParameters {
+                    return false
+                }
+                if lhsReplyMarkup != rhsReplyMarkup {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -458,7 +509,13 @@ extension ChatContextResultMessage {
                 if let replyMarkup = replyMarkup {
                     parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
                 }
-                self = .text(text: message, entities: parsedEntities, disableUrlPreview: (flags & (1 << 0)) != 0, replyMarkup: parsedReplyMarkup)
+                let leadingPreview = (flags & (1 << 3)) != 0
+                self = .text(text: message, entities: parsedEntities, disableUrlPreview: (flags & (1 << 0)) != 0, previewParameters: WebpagePreviewMessageAttribute(
+                    leadingPreview: leadingPreview,
+                    forceLargeMedia: nil,
+                    isManuallyAdded: false,
+                    isSafe: false
+                ), replyMarkup: parsedReplyMarkup)
             case let .botInlineMessageMediaGeo(_, geo, heading, period, proximityNotificationRadius, replyMarkup):
                 let media = telegramMediaMapFromApiGeoPoint(geo, title: nil, address: nil, provider: nil, venueId: nil, venueType: nil, liveBroadcastingTimeout: period, liveProximityNotificationRadius: proximityNotificationRadius, heading: heading)
                 var parsedReplyMarkup: ReplyMarkupMessageAttribute?
@@ -494,12 +551,38 @@ extension ChatContextResultMessage {
                 }
                 self = .invoice(media: TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: currency, totalAmount: totalAmount, startParam: "", extendedMedia: nil, flags: parsedFlags, version: TelegramMediaInvoice.lastVersion), replyMarkup: parsedReplyMarkup)
             case let .botInlineMessageMediaWebPage(flags, message, entities, url, replyMarkup):
-                let _ = flags
-                let _ = message
-                let _ = entities
-                let _ = url
-                let _ = replyMarkup
-                fatalError()
+                var parsedReplyMarkup: ReplyMarkupMessageAttribute?
+                if let replyMarkup = replyMarkup {
+                    parsedReplyMarkup = ReplyMarkupMessageAttribute(apiMarkup: replyMarkup)
+                }
+            
+                let leadingPreview = (flags & (1 << 3)) != 0
+                var forceLargeMedia: Bool?
+                if (flags & (1 << 4)) != 0 {
+                    forceLargeMedia = true
+                } else if (flags & (1 << 5)) != 0 {
+                    forceLargeMedia = false
+                }
+                let isManuallyAdded = (flags & (1 << 7)) != 0
+                let isSafe = (flags & (1 << 8)) != 0
+            
+                var parsedEntities: TextEntitiesMessageAttribute?
+                if let entities = entities, !entities.isEmpty {
+                    parsedEntities = TextEntitiesMessageAttribute(entities: messageTextEntitiesFromApiEntities(entities))
+                }
+                
+                self = .webpage(
+                    text: message,
+                    entities: parsedEntities,
+                    url: url,
+                    previewParameters: WebpagePreviewMessageAttribute(
+                        leadingPreview: leadingPreview,
+                        forceLargeMedia: forceLargeMedia,
+                        isManuallyAdded: isManuallyAdded,
+                        isSafe: isSafe
+                    ),
+                    replyMarkup: parsedReplyMarkup
+                )
         }
     }
 }

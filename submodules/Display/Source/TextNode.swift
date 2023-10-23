@@ -1713,7 +1713,7 @@ open class TextNode: ASDisplayNode {
                 embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
             }
             
-            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, isAtEndOfTheLine: Bool, rightInset: CGFloat = 0.0) {
                 var secondaryLeftOffset: CGFloat = 0.0
                 let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
                 var leftOffset = floor(rawLeftOffset)
@@ -1721,11 +1721,17 @@ open class TextNode: ASDisplayNode {
                     leftOffset = floor(secondaryLeftOffset)
                 }
                 
-                var secondaryRightOffset: CGFloat = 0.0
-                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                var rightOffset = ceil(rawRightOffset)
-                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                    rightOffset = ceil(secondaryRightOffset)
+                var rightOffset: CGFloat = leftOffset
+                if isAtEndOfTheLine {
+                    let rawRightOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
+                    rightOffset = floor(rawRightOffset)
+                } else {
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
                 }
                 
                 attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
@@ -1918,7 +1924,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                 }
@@ -2037,7 +2043,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                     
