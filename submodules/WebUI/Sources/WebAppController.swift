@@ -52,14 +52,17 @@ public class WebAppCancelButtonNode: ASDisplayNode {
     }
     private let strings: PresentationStrings
     
+    private weak var colorSnapshotView: UIView?
+    
     public func updateColor(_ color: UIColor?, transition: ContainedViewLayoutTransition) {
         let previousColor = self.color
         self.color = color
-        
-        if case let .animated(duration, curve) = transition, previousColor != color {
+                
+        if case let .animated(duration, curve) = transition, previousColor != color, !self.animatingStateChange {
             if let snapshotView = self.view.snapshotContentTree() {
                 snapshotView.frame = self.bounds
                 self.view.addSubview(snapshotView)
+                self.colorSnapshotView = snapshotView
                 
                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, timingFunction: curve.timingFunction, removeOnCompletion: false, completion: { _ in
                     snapshotView.removeFromSuperview()
@@ -124,6 +127,11 @@ public class WebAppCancelButtonNode: ASDisplayNode {
             return
         }
         self.state = state
+        
+        if let colorSnapshotView = self.colorSnapshotView {
+            self.colorSnapshotView = nil
+            colorSnapshotView.removeFromSuperview()
+        }
         
         if animated, let snapshotView = self.buttonNode.view.snapshotContentTree() {
             self.animatingStateChange = true

@@ -62,7 +62,9 @@ public func PremiumBoostScreen(
         }
         
         let subject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount)
-        let nextSubject: PremiumLimitScreen.Subject = .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)
+        let nextSubject = Promise<PremiumLimitScreen.Subject>()
+        nextSubject.set(.single(.storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount + 1)))
+        
         var nextCount = Int32(status.boosts + 1)
         
         var updateImpl: (() -> Void)?
@@ -86,7 +88,11 @@ public func PremiumBoostScreen(
             if let _ = status.nextLevelBoosts {
                 if let availableBoost = availableBoosts.first {
                     let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot]).startStandalone()
-                    controller?.updateSubject(nextSubject, count: nextCount)
+                    let _ = (nextSubject.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).startStandalone(next: { nextSubject in
+                        controller?.updateSubject(nextSubject, count: nextCount)
+                    })
                     
                     availableBoosts.removeFirst()
                     nextCount += 1
