@@ -120,11 +120,11 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         }
     }
 
-    override public init() {
+    public init(disableTiling: Bool = false) {
         super.init()
 
         self.setViewBlock({
-            return ChatInputTextView()
+            return ChatInputTextView(disableTiling: disableTiling)
         })
         
         self.textView.delegate = self
@@ -355,7 +355,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         }
     }
     
-    public init() {
+    public init(disableTiling: Bool) {
         self.customTextContainer = ChatInputTextContainer(size: CGSize(width: 100.0, height: 100000.0))
         self.customLayoutManager = NSLayoutManager()
         self.customTextStorage = NSTextStorage()
@@ -368,7 +368,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         self.measurementTextStorage.addLayoutManager(self.measurementLayoutManager)
         self.measurementLayoutManager.addTextContainer(self.measurementTextContainer)
         
-        super.init(frame: CGRect(), textContainer: self.customTextContainer)
+        super.init(frame: CGRect(), textContainer: self.customTextContainer, disableTiling: disableTiling)
         
         self.textContainerInset = UIEdgeInsets()
         self.backgroundColor = nil
@@ -755,7 +755,6 @@ private final class QuoteBackgroundView: UIView {
         if self.theme != theme {
             self.theme = theme
             
-            self.backgroundColor = theme.background
             self.iconView.tintColor = theme.foreground
         }
         

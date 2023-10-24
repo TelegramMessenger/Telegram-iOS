@@ -14,6 +14,22 @@
 
 @implementation ChatInputTextViewImpl
 
+- (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(NSTextContainer * _Nullable)textContainer disableTiling:(bool)disableTiling {
+    self = [super initWithFrame:frame textContainer:textContainer];
+    if (self != nil) {
+        if (disableTiling) {
+            SEL selector = NSSelectorFromString(@"_disableTiledViews");
+            if (selector && [self respondsToSelector:selector]) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
+                [self performSelector:selector];
+#pragma clang diagnostic pop
+            }
+        }
+    }
+    return self;
+}
+
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
 {
     if (_shouldRespondToAction) {
@@ -59,8 +75,7 @@
     }
 }
 
-- (void)paste:(id)sender
-{
+- (void)paste:(id)sender {
     if (_shouldPaste == nil || _shouldPaste()) {
         [super paste:sender];
     }

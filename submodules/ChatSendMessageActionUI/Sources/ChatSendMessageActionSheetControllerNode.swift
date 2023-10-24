@@ -226,12 +226,12 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.messageClipNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         self.messageBackgroundNode = ASImageNode()
         self.messageBackgroundNode.isUserInteractionEnabled = true
-        self.fromMessageTextNode = ChatInputTextNode()
+        self.fromMessageTextNode = ChatInputTextNode(disableTiling: true)
         self.fromMessageTextNode.textView.isScrollEnabled = false
         self.fromMessageTextNode.isUserInteractionEnabled = false
         self.fromMessageTextScrollView = UIScrollView()
         self.fromMessageTextScrollView.isUserInteractionEnabled = false
-        self.toMessageTextNode = ChatInputTextNode()
+        self.toMessageTextNode = ChatInputTextNode(disableTiling: true)
         self.toMessageTextNode.textView.isScrollEnabled = false
         self.toMessageTextNode.isUserInteractionEnabled = false
         self.toMessageTextScrollView = UIScrollView()
