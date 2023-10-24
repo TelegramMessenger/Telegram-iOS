@@ -104,7 +104,7 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
             return .single(nil)
         }
         |> map { result -> PremiumGiveawayInfo? in
-            if let result {
+            if let result = result {
                 switch result {
                 case let .giveawayInfo(flags, startDate, joinedTooEarlyDate, adminDisallowedChatId, disallowedCountry):
                     if (flags & (1 << 3)) != 0 {

@@ -25,7 +25,7 @@ private final class AccountPresenceManagerImpl {
         self.shouldKeepOnlinePresenceDisposable = (shouldKeepOnlinePresence
         |> distinctUntilChanged
         |> deliverOn(self.queue)).start(next: { [weak self] value in
-            guard let self else {
+            guard let `self` = self else {
                 return
             }
             if self.wasOnline != value {
