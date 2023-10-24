@@ -318,8 +318,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 }
 
-                //TODO:localize
-                textString = NSAttributedString(string: replyForward.quote?.text ?? "Message")
+                textString = NSAttributedString(string: replyForward.quote?.text ?? arguments.presentationData.strings.VoiceOver_ChatList_Message)
                 if let media = replyForward.quote?.media {
                     if let text = replyForward.quote?.text, !text.isEmpty {
                     } else {
@@ -327,7 +326,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                             let (string, _) = stringForMediaKind(contentKind, strings: arguments.strings)
                             textString = string
                         } else {
-                            textString = NSAttributedString(string: "Message")
+                            textString = NSAttributedString(string: arguments.presentationData.strings.VoiceOver_ChatList_Message)
                         }
                     }
                     isMedia = true

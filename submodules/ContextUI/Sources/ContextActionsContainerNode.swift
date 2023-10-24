@@ -404,8 +404,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             }
             icon = UIImage(bundleImageName: "Chat/Context Menu/Tip")
         case .quoteSelection:
-            //TODO:localize
-            var rawText = "Hold on a word, then move cursor to select more| text to quote."
+            var rawText = presentationData.strings.ChatContextMenu_QuoteSelectionTip
             if let range = rawText.range(of: "|") {
                 rawText.removeSubrange(range)
                 self.text = rawText

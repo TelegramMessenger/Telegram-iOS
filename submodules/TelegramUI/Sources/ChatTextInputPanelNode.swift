@@ -3710,8 +3710,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             
             var children: [UIAction] = []
             
-            //TODO:localize
-            children.append(UIAction(title: "Quote", image: nil) { [weak self] (action) in
+            children.append(UIAction(title: self.strings?.TextFormat_Quote ?? "Quote", image: nil) { [weak self] (action) in
                 if let strongSelf = self {
                     strongSelf.formatAttributesQuote(strongSelf)
                 }

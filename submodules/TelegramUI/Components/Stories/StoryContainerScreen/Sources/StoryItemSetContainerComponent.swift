@@ -2708,8 +2708,6 @@ public final class StoryItemSetContainerComponent: Component {
             
             let inputPlaceholder: MessageInputPanelComponent.Placeholder
             if let stealthModeTimeout = component.stealthModeTimeout {
-                //TODO:localize
-                
                 let minutes = Int(stealthModeTimeout / 60)
                 let seconds = Int(stealthModeTimeout % 60)
                 

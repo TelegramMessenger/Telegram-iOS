@@ -740,8 +740,7 @@ public final class TextSelectionNode: ASDisplayNode {
         
         let realFullRange = NSRange(location: 0, length: attributedString.length)
         if range != realFullRange {
-            //TODO:localize
-            actions.append(ContextMenuAction(content: .text(title: "Select All", accessibilityLabel: "Select All"), action: { [weak self] in
+            actions.append(ContextMenuAction(content: .text(title: self.strings.TextSelection_SelectAll, accessibilityLabel: self.strings.TextSelection_SelectAll), action: { [weak self] in
                 guard let self else {
                     return
                 }

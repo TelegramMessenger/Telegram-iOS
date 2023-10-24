@@ -229,28 +229,11 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
             f(.default)
         })))
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_MessageOptionsApplyChanges, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             f(.default)
         })))
         
-        /*items.append(.action(ContextMenuActionItem(text: messagesCount == 1 ? presentationData.strings.Conversation_ForwardOptions_SendMessage : presentationData.strings.Conversation_ForwardOptions_SendMessages, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, f in
-            guard let selfController else {
-                return
-            }
-            if let selectedMessageIds = (chatController as? ChatControllerImpl)?.selectedMessageIds {
-                var forwardMessageIds = selfController.presentationInterfaceState.interfaceState.forwardMessageIds ?? []
-                forwardMessageIds = forwardMessageIds.filter { selectedMessageIds.contains($0) }
-                selfController.updateChatPresentationInterfaceState(interactive: false, { $0.updatedInterfaceState({ $0.withUpdatedForwardMessageIds(forwardMessageIds) }) })
-            }
-            
-            selfController.controllerInteraction?.sendCurrentMessage(false)
-            
-            f(.default)
-        })))*/
-        
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Do Not Forward", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+        items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ForwardOptionsCancel, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
             f(.default)
             
             guard let selfController else {
@@ -273,10 +256,9 @@ private func chatForwardOptions(selfController: ChatControllerImpl, sourceNode: 
         }
     }
     
-    //TODO:localize
     return (ContextController.Source(
         id: AnyHashable(OptionsId.forward),
-        title: "Forward",
+        title: selfController.presentationData.strings.Conversation_MessageOptionsTabForward,
         source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
         items: items |> map { ContextController.Items(id: AnyHashable("forward"), content: .list($0)) }
     ), dismissedForCancel)
@@ -304,8 +286,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         var items: [ContextMenuItem] = []
         
         if replySubject.quote != nil {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Quote Selected Part", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelectedPart, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteSelected"), color: theme.contextMenu.primaryColor)
             }, action: { [weak selfController, weak chatController] _, f in
                 guard let selfController, let chatController else {
@@ -345,8 +326,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 f(.default)
             })))
         } else if let message = messages.first, !message.text.isEmpty {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Select Specific Quote", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Quote"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, _ in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelect, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Quote"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController, weak chatController] c, _ in
                 guard let selfController, let chatController else {
                     return
                 }
@@ -371,8 +351,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                             })))
                             subItems.append(.separator)
                             
-                            //TODO:localize
-                            subItems.append(.action(ContextMenuActionItem(text: "Quote Selected Part", icon: { theme in
+                            subItems.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelectedPart, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteSelected"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak selfController, weak contentNode] _, f in
                                 guard let selfController, let contentNode else {
@@ -438,8 +417,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         }
         
         if canReplyInAnotherChat {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Reply in Another Chat", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsReplyInAnotherChat, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
                 f(.default)
                 
                 guard let selfController else {
@@ -455,13 +433,13 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         if !items.isEmpty {
             items.append(.separator)
             
-            items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsApplyChanges, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
             })))
         }
         
         if replySubject.quote != nil {
-            items.append(.action(ContextMenuActionItem(text: "Remove Quote", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteRemove"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteRemove, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteRemove"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
                 f(.default)
                 
                 guard let selfController else {
@@ -472,7 +450,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                 selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(replySubject).withoutSelectionState() }).updatedSearch(nil) })
             })))
         } else {
-            items.append(.action(ContextMenuActionItem(text: "Do Not Reply", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
+            items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsReplyCancel, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in
                 f(.default)
                 
                 guard let selfController else {
@@ -539,10 +517,9 @@ private func chatReplyOptions(selfController: ChatControllerImpl, sourceNode: AS
         selfController.controllerInteraction?.performTextSelectionAction(message, canCopy, text, action)
     }
     
-    //TODO:localize
     return ContextController.Source(
         id: AnyHashable(OptionsId.reply),
-        title: "Reply",
+        title: selfController.presentationData.strings.Conversation_MessageOptionsTabReply,
         source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
         items: items
     )
@@ -564,7 +541,7 @@ func moveReplyMessageToAnotherChat(selfController: ChatControllerImpl, replySubj
             updatedPresentationData: selfController.updatedPresentationData,
             filter: filter,
             hasFilters: true,
-            title: "Reply in...", //TODO:localize
+            title: selfController.presentationData.strings.Conversation_MoveReplyToAnotherChatTitle,
             attemptSelection: { peer, _ in
                 attemptSelectionImpl?(peer)
             },
@@ -759,8 +736,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         var items: [ContextMenuItem] = []
         
         do {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: linkOptions.linkBelowText ? "Move Up" : "Move Down", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: linkOptions.linkBelowText ? selfController.presentationData.strings.Conversation_MessageOptionsLinkMoveUp : selfController.presentationData.strings.Conversation_MessageOptionsLinkMoveDown, icon: { theme in
                 return nil
             }, iconAnimation: ContextMenuActionItem.IconAnimation(
                 name: linkOptions.linkBelowText ? "message_preview_sort_above" : "message_preview_sort_below"
@@ -784,15 +760,14 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         }
         
         if case let .Loaded(content) = linkOptions.webpage.content, let isMediaLargeByDefault = content.isMediaLargeByDefault, isMediaLargeByDefault {
-            //TODO:localize
             let shrinkTitle: String
             let enlargeTitle: String
             if let file = content.file, file.isVideo {
-                shrinkTitle = "Shrink Video"
-                enlargeTitle = "Enlarge Video"
+                shrinkTitle = selfController.presentationData.strings.Conversation_MessageOptionsShrinkVideo
+                enlargeTitle = selfController.presentationData.strings.Conversation_MessageOptionsEnlargeVideo
             } else {
-                shrinkTitle = "Shrink Photo"
-                enlargeTitle = "Enlarge Photo"
+                shrinkTitle = selfController.presentationData.strings.Conversation_MessageOptionsShrinkImage
+                enlargeTitle = selfController.presentationData.strings.Conversation_MessageOptionsEnlargeImage
             }
             
             items.append(.action(ContextMenuActionItem(text: linkOptions.largeMedia ? shrinkTitle : enlargeTitle, icon: { _ in
@@ -830,13 +805,11 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
             items.append(.separator)
         }
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+        items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsApplyChanges, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             f(.default)
         })))
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "Do Not Preview", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController, weak chatController] c, f in
+        items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_LinkOptionsCancel, textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController, weak chatController] c, f in
             guard let selfController else {
                 return
             }
@@ -921,10 +894,9 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         }
     }
     
-    //TODO:localize
     return ContextController.Source(
         id: AnyHashable(OptionsId.link),
-        title: "Link",
+        title: selfController.presentationData.strings.Conversation_MessageOptionsTabLink,
         source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceNode: sourceNode, passthroughTouches: true)),
         items: items
     )
