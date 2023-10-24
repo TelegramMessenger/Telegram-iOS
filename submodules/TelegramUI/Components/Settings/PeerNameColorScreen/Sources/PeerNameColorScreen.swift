@@ -189,7 +189,7 @@ private func peerNameColorScreenEntries(
     state: PeerNameColorScreenState,
     peer: EnginePeer?,
     isPremium: Bool,
-    emojiContent: EmojiPagerContentComponent
+    emojiContent: EmojiPagerContentComponent?
 ) -> [PeerNameColorScreenEntry] {
     var entries: [PeerNameColorScreenEntry] = []
     
@@ -255,8 +255,10 @@ private func peerNameColorScreenEntries(
         ))
         entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
         
-        entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
-        entries.append(.backgroundEmoji(emojiContent, nameColor.color))
+        if let emojiContent {
+            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
+            entries.append(.backgroundEmoji(emojiContent, nameColor.color))
+        }
     }
     
     return entries
@@ -316,7 +318,7 @@ public func PeerNameColorScreen(
         statePromise.get(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
     )
-    |> mapToSignal { state, peer in
+    |> mapToSignal { state, peer -> Signal<EmojiPagerContentComponent?, NoError> in
         var selectedEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
             selectedEmojiId = updatedBackgroundEmojiId
@@ -351,6 +353,7 @@ public func PeerNameColorScreen(
             selectedItems: Set(selectedItems),
             backgroundIconColor: nameColor
         )
+        |> map(Optional.init)
     }
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -359,7 +362,7 @@ public func PeerNameColorScreen(
         statePromise.get(),
         context.engine.stickers.availableReactions(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
-        emojiContent
+        .single(nil) |> then(emojiContent)
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, availableReactions, peer, emojiContent -> (ItemListControllerState, (ItemListNodeState, Any)) in
@@ -475,7 +478,7 @@ public func PeerNameColorScreen(
             }
         )
     
-        emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+        emojiContent?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { _, item, _, _, _, _ in
                 var selectedFileId: Int64?
                 if let fileId = item.itemFile?.fileId.id {
@@ -565,7 +568,7 @@ public func PeerNameColorScreen(
             entries: entries,
             style: .blocks,
             footerItem: footerItem,
-            animateChanges: true
+            animateChanges: false
         )
         
         return (controllerState, (listState, arguments))

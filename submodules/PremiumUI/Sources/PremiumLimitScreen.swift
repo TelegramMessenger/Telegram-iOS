@@ -821,7 +821,7 @@ private final class LimitSheetContent: CombinedComponent {
         let closeButton = Child(Button.self)
         let title = Child(MultilineTextComponent.self)
         let text = Child(BalancedTextComponent.self)
-        let alternateText = Child(BalancedTextComponent.self)
+        let alternateText = Child(List<Empty>.self)
         let limit = Child(PremiumLimitDisplayComponent.self)
         let linkButton = Child(SolidRoundedButtonComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
@@ -881,6 +881,9 @@ private final class LimitSheetContent: CombinedComponent {
             var peerShortcutChild: _UpdatedChildComponent?
             
             var useAlternateText = false
+            var alternateTitle = ""
+            var alternateBadge: String?
+            
             var titleText = strings.Premium_LimitReached
             var actionButtonText: String?
             var actionButtonHasGloss = true
@@ -1159,7 +1162,7 @@ private final class LimitSheetContent: CombinedComponent {
                     state.myBoostCount = myBoostCount
                     boostUpdated = true
                 }
-                useAlternateText = (myBoostCount % 2) != 0
+                useAlternateText = myBoostCount > 0
                 
                 iconName = "Premium/Boost"
                 badgeText = "\(component.count)"
@@ -1217,8 +1220,10 @@ private final class LimitSheetContent: CombinedComponent {
                 premiumTitle = ""
                 
                 if myBoostCount > 0 {
-                    let prefixString = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannelText
-                    
+                    alternateTitle = isCurrent ? strings.ChannelBoost_YouBoostedChannelText(peer.compactDisplayTitle).string : strings.ChannelBoost_YouBoostedOtherChannelText
+                    if myBoostCount > 1 {
+                        alternateBadge = "X\(myBoostCount)"
+                    }
                     let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
                     if let _ = remaining {
                         actionButtonText = "Boost Again"
@@ -1246,8 +1251,6 @@ private final class LimitSheetContent: CombinedComponent {
                     } else {
                         string = strings.ChannelBoost_BoostedChannelReachedLevel("\(level + 1)", storiesString).string
                     }
-                    
-                    string = "**\(prefixString)**\n\(string)"
                 }
                 
                 let progress: CGFloat
@@ -1299,15 +1302,42 @@ private final class LimitSheetContent: CombinedComponent {
                 var alternateTextChild: _UpdatedChildComponent?
                 if useAlternateText {
                     alternateTextChild = alternateText.update(
-                        component: BalancedTextComponent(
-                            text: .markdown(text: string, attributes: markdownAttributes),
-                            horizontalAlignment: .center,
-                            maximumNumberOfLines: 0,
-                            lineSpacing: 0.1
+                        component: List(
+                            [
+                                AnyComponentWithIdentity(
+                                    id: "title",
+                                    component: AnyComponent(
+                                        BoostedTitleContent(text: NSAttributedString(string: alternateTitle, font: Font.semibold(15.0), textColor: textColor), badge: alternateBadge)
+                                    )
+                                ),
+                                AnyComponentWithIdentity(
+                                    id: "text",
+                                    component: AnyComponent(
+                                        BalancedTextComponent(
+                                            text: .markdown(text: string, attributes: markdownAttributes),
+                                            horizontalAlignment: .center,
+                                            maximumNumberOfLines: 0,
+                                            lineSpacing: 0.1
+                                        )
+                                    )
+                                )
+                            ],
+                            centerAlignment: true
                         ),
                         availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
                         transition: .immediate
                     )
+                    
+//                    alternateTextChild = alternateText.update(
+//                        component: BalancedTextComponent(
+//                            text: .markdown(text: string, attributes: markdownAttributes),
+//                            horizontalAlignment: .center,
+//                            maximumNumberOfLines: 0,
+//                            lineSpacing: 0.1
+//                        ),
+//                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+//                        transition: .immediate
+//                    )
                 } else {
                     textChild = text.update(
                         component: BalancedTextComponent(
@@ -1417,7 +1447,7 @@ private final class LimitSheetContent: CombinedComponent {
                         )
                         buttonOffset += 66.0
                         
-                        let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + ceil((textChild?.size ?? .zero).height / 2.0) + 24.0), size: linkButton.size)
+                        let linkFrame = CGRect(origin: CGPoint(x: sideInset, y: textOffset + (textChild?.size ?? .zero).height + 24.0), size: linkButton.size)
                         context.add(linkButton
                             .position(CGPoint(x: linkFrame.midX, y: linkFrame.midY))
                         )
@@ -1637,6 +1667,8 @@ private final class LimitSheetComponent: CombinedComponent {
         let sheet = Child(SheetComponent<EnvironmentType>.self)
         let animateOut = StoredActionSlot(Action<Void>.self)
         
+        let sheetExternalState = SheetComponent<EnvironmentType>.ExternalState()
+        
         return { context in
             let environment = context.environment[EnvironmentType.self]
             
@@ -1663,6 +1695,7 @@ private final class LimitSheetComponent: CombinedComponent {
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
                     followContentSizeChanges: true,
+                    externalState: sheetExternalState,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -1694,6 +1727,22 @@ private final class LimitSheetComponent: CombinedComponent {
             context.add(sheet
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
+            
+            if let controller = controller(), !controller.automaticallyControlPresentationContextLayout {
+                let layout = ContainerViewLayout(
+                    size: context.availableSize,
+                    metrics: environment.metrics,
+                    deviceMetrics: environment.deviceMetrics,
+                    intrinsicInsets: UIEdgeInsets(top: 0.0, left: 0.0, bottom: max(environment.safeInsets.bottom, sheetExternalState.contentHeight), right: 0.0),
+                    safeInsets: UIEdgeInsets(top: 0.0, left: environment.safeInsets.left, bottom: 0.0, right: environment.safeInsets.right),
+                    additionalInsets: .zero,
+                    statusBarHeight: environment.statusBarHeight,
+                    inputHeight: nil,
+                    inputHeightIsInteractivellyChanging: false,
+                    inVoiceOver: false
+                )
+                controller.presentationContext.containerLayoutUpdated(layout, transition: context.transition.containedViewLayoutTransition)
+            }
             
             return context.availableSize
         }
@@ -1734,6 +1783,9 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         }, openPeer: openPeer, openStats: openStats, openGift: openGift), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
         
         self.navigationPresentation = .flatModal
+        if case .storiesChannelBoost = subject {
+            self.automaticallyControlPresentationContextLayout = false
+        }
         
         self.wasDismissed = cancel
         
@@ -1769,13 +1821,25 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
     }
     
     public func updateSubject(_ subject: Subject, count: Int32) {
-        let component = LimitSheetComponent(context: self.context, subject: subject, count: count, cancel: {}, action: {
-            return true
-        }, openPeer: self.openPeer, openStats: nil, openGift: nil)
+        let component = LimitSheetComponent(
+            context: self.context,
+            subject: subject,
+            count: count,
+            cancel: {},
+            action: { [weak self] in
+                return self?.action?() ?? true
+            },
+            openPeer: self.openPeer,
+            openStats: nil,
+            openGift: nil
+        )
         self.updateComponent(component: AnyComponent(component), transition: .easeInOut(duration: 0.2))
                 
+        self.animateSuccess()
+    }
+    
+    public func animateSuccess() {
         self.hapticFeedback.impact()
-        
         self.view.addSubview(ConfettiView(frame: self.view.bounds))
     }
 }
@@ -1813,8 +1877,6 @@ private final class PeerShortcutComponent: Component {
         private let backgroundView = UIView()
         private let avatarNode: AvatarNode
         private let text = ComponentView<Empty>()
-        
-        private let badge = ComponentView<Empty>()
         
         private var component: PeerShortcutComponent?
         private weak var state: EmptyComponentState?
@@ -1869,29 +1931,6 @@ private final class PeerShortcutComponent: Component {
                 view.frame = textFrame
             }
             
-            if let badge = component.badge {
-                let badgeSize = self.badge.update(
-                    transition: .immediate,
-                    component: AnyComponent(
-                        BoostIconComponent(text: badge)
-                    ),
-                    environment: {},
-                    containerSize: availableSize
-                )
-                if let view = self.badge.view {
-                    if view.superview == nil {
-                        self.addSubview(view)
-                    }
-                    
-                    let badgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(size.width - badgeSize.width / 2.0), y: -5.0), size: badgeSize)
-                    view.frame = badgeFrame
-                }
-            } else {
-                if let view = self.badge.view {
-                    view.removeFromSuperview()
-                }
-            }
-            
             self.backgroundView.frame = CGRect(origin: .zero, size: size)
             
             return size
@@ -1908,13 +1947,18 @@ private final class PeerShortcutComponent: Component {
 }
 
 public final class BoostIconComponent: Component {
+    let hasIcon: Bool
     let text: String
 
-    public init(text: String) {
+    public init(hasIcon: Bool, text: String) {
+        self.hasIcon = hasIcon
         self.text = text
     }
 
     public static func ==(lhs: BoostIconComponent, rhs: BoostIconComponent) -> Bool {
+        if lhs.hasIcon != rhs.hasIcon {
+            return false
+        }
         if lhs.text != rhs.text {
             return false
         }
@@ -1961,11 +2005,11 @@ public final class BoostIconComponent: Component {
             )
             
             let spacing: CGFloat = 2.0
-            var totalWidth = textSize.width + spacing
+            var totalWidth = textSize.width
             var iconSize = CGSize()
-            if let icon = self.badgeIcon.image {
+            if let icon = self.badgeIcon.image, component.hasIcon {
                 iconSize = CGSize(width: icon.size.width * 0.9, height: icon.size.height * 0.9)
-                totalWidth += icon.size.width
+                totalWidth += spacing + icon.size.width
             }
             
             let size = CGSize(width: totalWidth + 8.0, height: 19.0)
@@ -1973,7 +2017,7 @@ public final class BoostIconComponent: Component {
             let iconFrame = CGRect(x: floorToScreenPixels((size.width - totalWidth) / 2.0 + 1.0), y: 4.0 + UIScreenPixel, width: iconSize.width, height: iconSize.height)
             self.badgeIcon.frame = iconFrame
             
-            let textFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + spacing, y: 4.0), size: textSize)
+            let textFrame = CGRect(origin: CGPoint(x: component.hasIcon ? iconFrame.maxX + spacing : 5.0, y: 4.0), size: textSize)
             
             if let view = self.badgeText.view {
                 if view.superview == nil {
@@ -1995,5 +2039,66 @@ public final class BoostIconComponent: Component {
 
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+final class BoostedTitleContent: CombinedComponent {
+    let text: NSAttributedString
+    let badge: String?
+  
+    init(
+        text: NSAttributedString,
+        badge: String?
+    ) {
+        self.text = text
+        self.badge = badge
+    }
+    
+    static func ==(lhs: BoostedTitleContent, rhs: BoostedTitleContent) -> Bool {
+        if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.badge != rhs.badge {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let text = Child(MultilineTextComponent.self)
+        let badge = Child(BoostIconComponent.self)
+        
+        return { context in
+            let component = context.component
+            
+            let height: CGFloat = 24.0
+            var totalWidth: CGFloat = 0.0
+            let text = text.update(
+                component: MultilineTextComponent(
+                    text: .plain(component.text),
+                    horizontalAlignment: .center
+                ),
+                availableSize: CGSize(width: context.availableSize.width - 40.0, height: context.availableSize.height),
+                transition: .immediate
+            )
+            totalWidth += text.size.width
+            context.add(text
+                .position(CGPoint(x: text.size.width / 2.0, y: height / 2.0))
+            )
+            
+            if let badgeText = component.badge {
+                let badge = badge.update(
+                    component: BoostIconComponent(hasIcon: false, text: badgeText),
+                    availableSize: CGSize(width: 24.0, height: 24.0),
+                    transition: .immediate
+                )
+                totalWidth += badge.size.width + 4.0
+                context.add(badge
+                    .position(CGPoint(x: totalWidth - badge.size.width / 2.0, y: height / 2.0))
+                )
+            }
+            
+            return CGSize(width: totalWidth, height: height)
+        }
     }
 }

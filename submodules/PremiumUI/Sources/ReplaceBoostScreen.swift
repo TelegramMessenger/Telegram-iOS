@@ -349,7 +349,6 @@ public class ReplaceBoostScreen: ViewController {
                     return
                 }
                 self.controller?.replaceBoosts?(self.selectedSlots)
-                self.controller?.dismiss(animated: true)
             }
         }
         
@@ -369,7 +368,7 @@ public class ReplaceBoostScreen: ViewController {
         }
         
         @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .ended = recognizer.state {
+            if case .ended = recognizer.state, !self.footerView.inProgress {
                 self.controller?.dismiss(animated: true)
             }
         }
@@ -950,10 +949,12 @@ private final class FooterView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    private var currentLayout: (CGSize, UIEdgeInsets)?
+    fileprivate var inProgress = false
+    
+    private var currentLayout: (CGSize, UIEdgeInsets, PresentationTheme, Int32)?
     func update(size: CGSize, insets: UIEdgeInsets, theme: PresentationTheme, count: Int32) -> CGFloat {
         let hadLayout = self.currentLayout != nil
-        self.currentLayout = (size, insets)
+        self.currentLayout = (size, insets, theme, count)
         
         self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorView.backgroundColor = theme.rootController.tabBar.separatorColor
@@ -996,10 +997,14 @@ private final class FooterView: UIView {
                         ))
                     ),
                     isEnabled: true,
-                    displaysProgress: false,
+                    displaysProgress: self.inProgress,
                     action: { [weak self] in
-                        guard let self else {
+                        guard let self, !self.inProgress else {
                             return
+                        }
+                        self.inProgress = true
+                        if let (size, insets, theme, count) = self.currentLayout {
+                            let _ = self.update(size: size, insets: insets, theme: theme, count: count)
                         }
                         self.action()
                     }

@@ -109,7 +109,7 @@ final class EmojiPickerItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let contentSize = CGSize(width: params.width, height: 200.0)
+            let contentSize = CGSize(width: params.width, height: params.availableHeight - 452.0)
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: contentSize.height - 20.0), insets: insets)
