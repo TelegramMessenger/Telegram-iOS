@@ -755,9 +755,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             } else {
                 return
             }
-        case .controller:
+        case let .controller(source):
             if let contentNode = controllerContentNode {
                 var defaultContentSize = CGSize(width: layout.size.width - 12.0 * 2.0, height: layout.size.height - 12.0 * 2.0 - contentTopInset - layout.safeInsets.bottom)
+                if case .regular = layout.metrics.widthClass {
+                    defaultContentSize.width = min(defaultContentSize.width, 400.0)
+                }
                 defaultContentSize.height = min(defaultContentSize.height, 460.0)
                 
                 let contentSize: CGSize
@@ -770,7 +773,30 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     isContentResizeableVertically = true
                 }
                 
-                contentRect = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
+                if case .regular = layout.metrics.widthClass {
+                    if let transitionInfo = source.transitionInfo(), let (sourceView, sourceRect) = transitionInfo.sourceNode() {
+                        let sourcePoint = sourceView.convert(sourceRect.center, to: self.view)
+                        
+                        contentRect = CGRect(origin: CGPoint(x: sourcePoint.x - floor(contentSize.width * 0.5), y: sourcePoint.y - floor(contentSize.height * 0.5)), size: contentSize)
+                        if contentRect.origin.x < 0.0 {
+                            contentRect.origin.x = 0.0
+                        }
+                        if contentRect.origin.y < 0.0 {
+                            contentRect.origin.y = 0.0
+                        }
+                        if contentRect.origin.x + contentRect.width > layout.size.width {
+                            contentRect.origin.x = layout.size.width - contentRect.width
+                        }
+                        if contentRect.origin.y + contentRect.height > layout.size.height {
+                            contentRect.origin.y = layout.size.height - contentRect.height
+                        }
+                    } else {
+                        contentRect = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
+                    }
+                } else {
+                    contentRect = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width) * 0.5), y: floor((layout.size.height - contentSize.height) * 0.5)), size: contentSize)
+                }
+                
                 contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: layout.size.height))
             } else {
                 return
@@ -815,9 +841,9 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             
             let actionsStackPresentation: ContextControllerActionsStackNode.Presentation
             switch self.source {
-            case .location, .reference:
+            case .location, .reference, .controller:
                 actionsStackPresentation = .inline
-            case .extracted, .controller:
+            case .extracted:
                 actionsStackPresentation = .modal
             }
             
@@ -841,7 +867,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 contentHeight = min(contentHeight, contentRect.height)
                 contentHeight = max(contentHeight, 200.0)
                 
-                contentRect = CGRect(origin: CGPoint(x: 12.0, y: floor((layout.size.height - contentHeight) * 0.5)), size: CGSize(width: layout.size.width - 12.0 * 2.0, height: contentHeight))
+                if case .regular = layout.metrics.widthClass {
+                } else {
+                    contentRect = CGRect(origin: CGPoint(x: contentRect.minX, y: floor(contentRect.midY - contentHeight * 0.5)), size: CGSize(width: contentRect.width, height: contentHeight))
+                }
             }
             
             var isAnimatingOut = false

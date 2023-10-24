@@ -16,8 +16,13 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
         replyToMessageId = EngineMessageReplySubject(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: MessageId.Id(clamping: threadId)), quote: nil)
     }
     
+    var webpageUrl: String?
+    if case let .webpage(_, _, url, _, _) = result.message {
+        webpageUrl = url
+    }
+    
     var attributes: [MessageAttribute] = []
-    attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id, hideVia: hideVia))
+    attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id, hideVia: hideVia, webpageUrl: webpageUrl))
     if !hideVia {
         attributes.append(InlineBotMessageAttribute(peerId: botId, title: nil))
     }

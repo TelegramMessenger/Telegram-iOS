@@ -570,12 +570,21 @@ final class ContextSourceContainer: ASDisplayNode {
                     transition: .immediate
                 )
             case .controller:
-                self.backgroundNode.updateColor(
-                    color: presentationData.theme.contextMenu.dimColor,
-                    enableBlur: true,
-                    forceKeepBlur: true,
-                    transition: .immediate
-                )
+                if case .regular = layout.metrics.widthClass {
+                    self.backgroundNode.updateColor(
+                        color: UIColor(white: 0.0, alpha: 0.4),
+                        enableBlur: false,
+                        forceKeepBlur: false,
+                        transition: .immediate
+                    )
+                } else {
+                    self.backgroundNode.updateColor(
+                        color: presentationData.theme.contextMenu.dimColor,
+                        enableBlur: true,
+                        forceKeepBlur: true,
+                        transition: .immediate
+                    )
+                }
             }
         }
         
