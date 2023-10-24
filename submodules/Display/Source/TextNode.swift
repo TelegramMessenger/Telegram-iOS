@@ -1353,13 +1353,23 @@ open class TextNode: ASDisplayNode {
                     var lineAscent: CGFloat = 0.0
                     var lineDescent: CGFloat = 0.0
                     let lineWidth = CTLineGetTypographicBounds(line, &lineAscent, &lineDescent, nil)
+                    
+                    var isRTL = false
+                    let glyphRuns = CTLineGetGlyphRuns(line) as NSArray
+                    if glyphRuns.count != 0 {
+                        let run = glyphRuns[0] as! CTRun
+                        if CTRunGetStatus(run).contains(CTRunStatus.rightToLeft) {
+                            isRTL = true
+                        }
+                    }
+                    
                     calculatedSegment.lines.append(TextNodeLine(
                         line: line,
                         frame: CGRect(origin: CGPoint(x: additionalOffsetX, y: 0.0), size: CGSize(width: lineWidth + additionalSegmentRightInset, height: lineAscent + lineDescent)),
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: NSRange(location: currentLineStartIndex, length: lineCharacterCount),
-                        isRTL: false,
+                        isRTL: isRTL && !segment.isBlockQuote,
                         strikethroughs: [],
                         spoilers: [],
                         spoilerWords: [],
