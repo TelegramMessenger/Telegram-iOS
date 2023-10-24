@@ -2019,26 +2019,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            if params.quote != nil {
-                if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(fromId), let toPeer = message.peers[id.peerId] {
-                    switch toPeer {
-                    case let channel as TelegramChannel:
-                        if channel.username == nil && channel.usernames.isEmpty {
-                            switch channel.participationStatus {
-                            case .kicked, .left:
-                                self.controllerInteraction?.attemptedNavigationToPrivateQuote(toPeer)
-                                return
-                            case .member:
-                                break
-                            }
-                        }
-                    default:
-                        break
-                    }
+            
+            let continueNavigation: () -> Void = { [weak self] in
+                guard let self else {
+                    return
                 }
+                self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
             }
             
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: id.peerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] toPeer in
+                guard let self else {
+                    return
+                }
+                
+                if params.quote != nil {
+                    if let toPeer {
+                        switch toPeer {
+                        case let .channel(channel):
+                            if channel.username == nil && channel.usernames.isEmpty {
+                                switch channel.participationStatus {
+                                case .kicked, .left:
+                                    self.controllerInteraction?.attemptedNavigationToPrivateQuote(toPeer._asPeer())
+                                    return
+                                case .member:
+                                    break
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    } else {
+                        self.controllerInteraction?.attemptedNavigationToPrivateQuote(nil)
+                        return
+                    }
+                }
+                
+                continueNavigation()
+            })
         }, navigateToMessageStandalone: { [weak self] id in
             self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
