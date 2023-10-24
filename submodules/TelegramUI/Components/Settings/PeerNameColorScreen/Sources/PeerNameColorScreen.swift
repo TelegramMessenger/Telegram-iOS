@@ -318,7 +318,7 @@ public func PeerNameColorScreen(
         statePromise.get(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
     )
-    |> mapToSignal { state, peer -> Signal<EmojiPagerContentComponent?, NoError> in
+    |> mapToSignal { state, peer -> Signal<EmojiPagerContentComponent, NoError> in
         var selectedEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
             selectedEmojiId = updatedBackgroundEmojiId
@@ -353,7 +353,6 @@ public func PeerNameColorScreen(
             selectedItems: Set(selectedItems),
             backgroundIconColor: nameColor
         )
-        |> map(Optional.init)
     }
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
@@ -361,8 +360,8 @@ public func PeerNameColorScreen(
         presentationData,
         statePromise.get(),
         context.engine.stickers.availableReactions(),
-        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
-        .single(nil) |> then(emojiContent)
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+        emojiContent
     )
     |> deliverOnMainQueue
     |> map { presentationData, state, availableReactions, peer, emojiContent -> (ItemListControllerState, (ItemListNodeState, Any)) in
@@ -478,7 +477,7 @@ public func PeerNameColorScreen(
             }
         )
     
-        emojiContent?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+        emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { _, item, _, _, _, _ in
                 var selectedFileId: Int64?
                 if let fileId = item.itemFile?.fileId.id {
