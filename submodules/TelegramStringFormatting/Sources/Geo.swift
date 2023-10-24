@@ -46,6 +46,9 @@ public func stringForDistance(strings: PresentationStrings, distance: CLLocation
 }
 
 public func flagEmoji(countryCode: String) -> String {
+    if countryCode.uppercased() == "FT" {
+        return "🏴‍☠️"
+    }
     let base : UInt32 = 127397
     var flagString = ""
     for v in countryCode.uppercased().unicodeScalars {

@@ -258,7 +258,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     let locale = localeWithStrings(item.presentationData.strings)
                     let countryNames = giveaway.countries.map { id in
                         if let countryName = locale.localizedString(forRegionCode: id) {
-                            return "\(flagEmoji(countryCode: id))\(countryName)"
+                            return "\(flagEmoji(countryCode: id))\u{feff}\(countryName)"
                         } else {
                             return id
                         }

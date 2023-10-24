@@ -5,15 +5,6 @@ import AppBundle
 import AsyncDisplayKit
 import Display
 
-private func generateShadowImage() -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 1.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setShadow(offset: CGSize(), blur: 10.0, color: UIColor(white: 0.18, alpha: 1.0).cgColor)
-        context.setFillColor(UIColor(white: 0.18, alpha: 1.0).cgColor)
-        context.fill(CGRect(origin: CGPoint(x: -15.0, y: 0.0), size: CGSize(width: 30.0, height: 1.0)))
-    })
-}
-
 private final class ArrowNode: HighlightTrackingButtonNode {
     private let isLeft: Bool
     
@@ -21,7 +12,7 @@ private final class ArrowNode: HighlightTrackingButtonNode {
     private let separatorLayer: SimpleLayer
     var action: (() -> Void)?
     
-    init(isLeft: Bool) {
+    init(isLeft: Bool, isDark: Bool) {
         self.isLeft = isLeft
         
         self.iconView = UIImageView()
@@ -39,12 +30,15 @@ private final class ArrowNode: HighlightTrackingButtonNode {
         
         self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
         
-        self.backgroundColor = UIColor(rgb: 0x2f2f2f)
         self.highligthedChanged = { [weak self] highlighted in
             guard let self else {
                 return
             }
-            self.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
+            if isDark {
+                self.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : nil
+            } else {
+                self.backgroundColor = highlighted ? UIColor(rgb: 0xDCE3DC) : nil
+            }
         }
     }
     
@@ -70,6 +64,8 @@ private final class ArrowNode: HighlightTrackingButtonNode {
 }
 
 final class ContextMenuNode: ASDisplayNode {
+    private let isDark: Bool
+    
     private let actions: [ContextMenuAction]
     private let dismiss: () -> Void
     private let dismissOnTap: (UIView, CGPoint) -> Bool
@@ -96,22 +92,24 @@ final class ContextMenuNode: ASDisplayNode {
     
     private let feedback: HapticFeedback?
     
-    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool = false) {
+    init(actions: [ContextMenuAction], dismiss: @escaping () -> Void, dismissOnTap: @escaping (UIView, CGPoint) -> Bool, catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool = false, isDark: Bool = true) {
+        self.isDark = isDark
+        
         self.actions = actions
         self.dismiss = dismiss
         self.dismissOnTap = dismissOnTap
         self.catchTapsOutside = catchTapsOutside
         
-        self.containerNode = ContextMenuContainerNode(blurred: blurred)
+        self.containerNode = ContextMenuContainerNode(isBlurred: blurred, isDark: isDark)
         self.contentNode = ASDisplayNode()
         self.contentNode.clipsToBounds = true
         
         self.actionNodes = actions.map { action in
-            return ContextMenuActionNode(action: action, blurred: blurred)
+            return ContextMenuActionNode(action: action, blurred: blurred, isDark: isDark)
         }
         
-        self.pageLeftNode = ArrowNode(isLeft: true)
-        self.pageRightNode = ArrowNode(isLeft: false)
+        self.pageLeftNode = ArrowNode(isLeft: true, isDark: isDark)
+        self.pageRightNode = ArrowNode(isLeft: false, isDark: isDark)
         
         if hasHapticFeedback {
             self.feedback = HapticFeedback()
@@ -122,7 +120,7 @@ final class ContextMenuNode: ASDisplayNode {
         
         super.init()
         
-        self.containerNode.addSubnode(self.contentNode)
+        self.containerNode.containerNode.addSubnode(self.contentNode)
         
         self.addSubnode(self.containerNode)
         let dismissNode = {
@@ -133,8 +131,8 @@ final class ContextMenuNode: ASDisplayNode {
             self.contentNode.addSubnode(actionNode)
         }
         
-        self.containerNode.addSubnode(self.pageLeftNode)
-        self.containerNode.addSubnode(self.pageRightNode)
+        self.containerNode.containerNode.addSubnode(self.pageLeftNode)
+        self.containerNode.containerNode.addSubnode(self.pageRightNode)
         
         let navigatePage: (Bool) -> Void = { [weak self] isLeft in
             guard let self else {
@@ -173,12 +171,12 @@ final class ContextMenuNode: ASDisplayNode {
             var offsetX: CGFloat
         }
         
-        let separatorColor = UIColor(rgb: 0x8c8e8e)
+        let separatorColor = self.isDark ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0xDCE3DC)
         
         let height: CGFloat = 54.0
         
-        let pageLeftSize = self.pageLeftNode.update(color: .white, separatorColor: separatorColor, height: height)
-        let pageRightSize = self.pageRightNode.update(color: .white, separatorColor: separatorColor, height: height)
+        let pageLeftSize = self.pageLeftNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
+        let pageRightSize = self.pageRightNode.update(color: self.isDark ? .white : .black, separatorColor: separatorColor, height: height)
         
         let maxPageWidth = layout.size.width - 20.0 - pageLeftSize.width - pageRightSize.width
         var absoluteActionOffsetX: CGFloat = 0.0

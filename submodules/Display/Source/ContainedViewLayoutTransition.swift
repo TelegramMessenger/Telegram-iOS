@@ -2070,7 +2070,21 @@ public final class ControlledTransition {
             if layer.bounds == bounds {
                 return
             }
-            let fromValue = layer.presentation()?.bounds ?? layer.bounds
+            let fromValue: CGRect
+            if let animationKeys = layer.animationKeys(), animationKeys.contains(where: { key in
+                guard let animation = layer.animation(forKey: key) as? CAPropertyAnimation else {
+                    return false
+                }
+                if animation.keyPath == "bounds" {
+                    return true
+                } else {
+                    return false
+                }
+            }) {
+                fromValue = layer.presentation()?.bounds ?? layer.bounds
+            } else {
+                fromValue = layer.bounds
+            }
             layer.bounds = bounds
             self.add(animation: ControlledTransitionProperty(
                 layer: layer,

@@ -33,8 +33,8 @@ final class TooltipControllerNode: ASDisplayNode {
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
-        self.containerNode = ContextMenuContainerNode(blurred: false)
-        self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        self.containerNode = ContextMenuContainerNode(isBlurred: false, isDark: true)
+        self.containerNode.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
         self.imageNode = ASImageNode()
         self.imageNode.image = content.image
@@ -57,9 +57,9 @@ final class TooltipControllerNode: ASDisplayNode {
         
         super.init()
         
-        self.containerNode.addSubnode(self.imageNode)
-        self.containerNode.addSubnode(self.textNode)
-        self.contentNode.flatMap { self.containerNode.addSubnode($0) }
+        self.containerNode.containerNode.addSubnode(self.imageNode)
+        self.containerNode.containerNode.addSubnode(self.textNode)
+        self.contentNode.flatMap { self.containerNode.containerNode.addSubnode($0) }
         
         self.addSubnode(self.containerNode)
     }

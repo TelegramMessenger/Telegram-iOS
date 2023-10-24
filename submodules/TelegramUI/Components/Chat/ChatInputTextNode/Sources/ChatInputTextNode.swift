@@ -120,11 +120,11 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         }
     }
 
-    override public init() {
+    public init(disableTiling: Bool = false) {
         super.init()
 
         self.setViewBlock({
-            return ChatInputTextView()
+            return ChatInputTextView(disableTiling: disableTiling)
         })
         
         self.textView.delegate = self
@@ -319,6 +319,9 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     private let measurementTextStorage: NSTextStorage
     private let measurementLayoutManager: NSLayoutManager
     
+    private var validLayoutSize: CGSize?
+    private var isUpdatingLayout: Bool = false
+    
     private var blockQuotes: [Int: QuoteBackgroundView] = [:]
     
     public var defaultTextContainerInset: UIEdgeInsets = UIEdgeInsets() {
@@ -346,7 +349,13 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         return super.textInputMode
     }
     
-    public init() {
+    override public var bounds: CGRect {
+        didSet {
+            assert(true)
+        }
+    }
+    
+    public init(disableTiling: Bool) {
         self.customTextContainer = ChatInputTextContainer(size: CGSize(width: 100.0, height: 100000.0))
         self.customLayoutManager = NSLayoutManager()
         self.customTextStorage = NSTextStorage()
@@ -359,7 +368,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         self.measurementTextStorage.addLayoutManager(self.measurementLayoutManager)
         self.measurementLayoutManager.addTextContainer(self.measurementTextContainer)
         
-        super.init(frame: CGRect(), textContainer: self.customTextContainer)
+        super.init(frame: CGRect(), textContainer: self.customTextContainer, disableTiling: disableTiling)
         
         self.textContainerInset = UIEdgeInsets()
         self.backgroundColor = nil
@@ -405,6 +414,20 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
+        var rect = rect
+        if rect.maxY > self.contentSize.height - 8.0 {
+            rect = CGRect(origin: CGPoint(x: rect.minX, y: self.contentSize.height - 1.0), size: CGSize(width: rect.width, height: 1.0))
+        }
+        
+        var animated = animated
+        if self.isUpdatingLayout {
+            animated = false
+        }
+        
+        super.scrollRectToVisible(rect, animated: animated)
     }
     
     @objc public func layoutManager(_ layoutManager: NSLayoutManager, paragraphSpacingBeforeGlyphAt glyphIndex: Int, withProposedLineFragmentRect rect: CGRect) -> CGFloat {
@@ -535,8 +558,19 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         }
     }
     
+    override public func setNeedsLayout() {
+        super.setNeedsLayout()
+    }
+    
     override public func layoutSubviews() {
+        let isLayoutUpdated = self.validLayoutSize != self.bounds.size
+        self.validLayoutSize = self.bounds.size
+        
+        self.isUpdatingLayout = isLayoutUpdated
+        
         super.layoutSubviews()
+        
+        self.isUpdatingLayout = false
     }
     
     public func updateTextElements() {
@@ -721,7 +755,6 @@ private final class QuoteBackgroundView: UIView {
         if self.theme != theme {
             self.theme = theme
             
-            self.backgroundColor = theme.background
             self.iconView.tintColor = theme.foreground
         }
         

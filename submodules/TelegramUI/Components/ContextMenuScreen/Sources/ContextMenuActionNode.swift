@@ -16,14 +16,14 @@ final private class ContextMenuActionButton: HighlightTrackingButton {
 final class ContextMenuActionNode: ASDisplayNode {
     private let textNode: ImmediateTextNode?
     private var textSize: CGSize?
-    private let iconNode: ASImageNode?
+    private let iconView: UIImageView?
     private let action: () -> Void
     private let button: ContextMenuActionButton
     private let actionArea: AccessibilityAreaNode
     
     var dismiss: (() -> Void)?
     
-    init(action: ContextMenuAction, blurred: Bool) {
+    init(action: ContextMenuAction, blurred: Bool, isDark: Bool) {
         self.actionArea = AccessibilityAreaNode()
         self.actionArea.accessibilityTraits = .button
         
@@ -34,30 +34,30 @@ final class ContextMenuActionNode: ASDisplayNode {
                 let textNode = ImmediateTextNode()
                 textNode.isUserInteractionEnabled = false
                 textNode.displaysAsynchronously = false
-                textNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: UIColor.white)
+                textNode.attributedText = NSAttributedString(string: title, font: Font.regular(14.0), textColor: isDark ? .white : .black)
                 textNode.isAccessibilityElement = false
                 
                 self.textNode = textNode
-                self.iconNode = nil
+                self.iconView = nil
             case let .textWithIcon(title, icon):
                 let textNode = ImmediateTextNode()
                 textNode.isUserInteractionEnabled = false
                 textNode.displaysAsynchronously = false
-                textNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: UIColor.white)
+                textNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: isDark ? .white : .black)
                 textNode.isAccessibilityElement = false
             
-                let iconNode = ASImageNode()
-                iconNode.displaysAsynchronously = false
-                iconNode.image = icon
+                let iconView = UIImageView()
+                iconView.tintColor = isDark ? .white : .black
+                iconView.image = icon
                 
                 self.textNode = textNode
-                self.iconNode = iconNode
+                self.iconView = iconView
             case let .icon(image):
-                let iconNode = ASImageNode()
-                iconNode.displaysAsynchronously = false
-                iconNode.image = image
+                let iconView = UIImageView()
+                iconView.tintColor = isDark ? .white : .black
+                iconView.image = image
                 
-                self.iconNode = iconNode
+                self.iconView = iconView
                 self.textNode = nil
         }
         self.action = action.action
@@ -68,21 +68,25 @@ final class ContextMenuActionNode: ASDisplayNode {
         super.init()
         
         if !blurred {
-            self.backgroundColor = UIColor(rgb: 0x2f2f2f)
+            self.backgroundColor = isDark ? UIColor(rgb: 0x2f2f2f) : nil
         }
         
         if let textNode = self.textNode {
             self.addSubnode(textNode)
         }
-        if let iconNode = self.iconNode {
-            self.addSubnode(iconNode)
+        if let iconView = self.iconView {
+            self.view.addSubview(iconView)
         }
         
         self.button.highligthedChanged = { [weak self] highlighted in
-            if blurred {
-                self?.backgroundColor = highlighted ? UIColor(rgb: 0xffffff, alpha: 0.5) : .clear
+            if isDark {
+                if blurred {
+                    self?.backgroundColor = highlighted ? UIColor(rgb: 0xffffff, alpha: 0.5) : .clear
+                } else {
+                    self?.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
+                }
             } else {
-                self?.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
+                self?.backgroundColor = highlighted ? UIColor(rgb: 0xDCE3DC) : .clear
             }
         }
         self.view.addSubview(self.button)
@@ -116,7 +120,7 @@ final class ContextMenuActionNode: ASDisplayNode {
             
             var totalWidth = 0.0
             totalWidth += textSize.width
-            if let image = self.iconNode?.image {
+            if let image = self.iconView?.image {
                 if totalWidth > 0.0 {
                     totalWidth += 11.0
                 }
@@ -127,7 +131,7 @@ final class ContextMenuActionNode: ASDisplayNode {
             }
             
             return CGSize(width: totalWidth, height: 54.0)
-        } else if let iconNode = self.iconNode, let image = iconNode.image {
+        } else if let iconView = self.iconView, let image = iconView.image {
             return CGSize(width: image.size.width + 36.0, height: 54.0)
         } else {
             return CGSize(width: 36.0, height: 54.0)
@@ -144,7 +148,7 @@ final class ContextMenuActionNode: ASDisplayNode {
         if let textSize = self.textSize {
             totalWidth += textSize.width
         }
-        if let image = self.iconNode?.image {
+        if let image = self.iconView?.image {
             if totalWidth > 0.0 {
                 totalWidth += 11.0
             }
@@ -154,9 +158,9 @@ final class ContextMenuActionNode: ASDisplayNode {
         if let textNode = self.textNode, let textSize = self.textSize {
             textNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - totalWidth) / 2.0), y: floor((self.bounds.size.height - textSize.height) / 2.0)), size: textSize)
         }
-        if let iconNode = self.iconNode, let image = iconNode.image {
+        if let iconView = self.iconView, let image = iconView.image {
             let iconSize = image.size
-            iconNode.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - totalWidth) / 2.0) + totalWidth - iconSize.width, y: floorToScreenPixels((self.bounds.size.height - iconSize.height) / 2.0)), size: iconSize)
+            iconView.frame = CGRect(origin: CGPoint(x: floor((self.bounds.size.width - totalWidth) / 2.0) + totalWidth - iconSize.width, y: floorToScreenPixels((self.bounds.size.height - iconSize.height) / 2.0)), size: iconSize)
         }
     }
 }
