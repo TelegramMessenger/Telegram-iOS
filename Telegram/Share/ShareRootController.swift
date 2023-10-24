@@ -2,6 +2,9 @@ import UIKit
 import TelegramUI
 import BuildConfig
 import ShareExtensionContext
+import SwiftSignalKit
+import Postbox
+import TelegramCore
 
 @objc(ShareRootController)
 class ShareRootController: UIViewController {
@@ -46,7 +49,24 @@ class ShareRootController: UIViewController {
             
             let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
             
-            self.impl = ShareRootControllerImpl(initializationData: ShareRootControllerInitializationData(appBundleId: baseAppBundleId, appBuildType: buildConfig.isAppStoreBuild ? .public : .internal, appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, apiHash: buildConfig.apiHash, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData(withAppToken: nil, signatureDict: nil), useBetaFeatures: !buildConfig.isAppStoreBuild), getExtensionContext: { [weak self] in
+            self.impl = ShareRootControllerImpl(initializationData: ShareRootControllerInitializationData(appBundleId: baseAppBundleId, appBuildType: buildConfig.isAppStoreBuild ? .public : .internal, appGroupPath: appGroupUrl.path, apiId: buildConfig.apiId, apiHash: buildConfig.apiHash, languagesCategory: languagesCategory, encryptionParameters: encryptionParameters, appVersion: appVersion, bundleData: buildConfig.bundleData(withAppToken: nil, signatureDict: nil), useBetaFeatures: !buildConfig.isAppStoreBuild, makeTempContext: { accountManager, appLockContext, applicationBindings, InitialPresentationDataAndSettings, networkArguments in
+                return makeTempContext(
+                    sharedContainerPath: appGroupUrl.path,
+                    rootPath: rootPath,
+                    appGroupPath: appGroupUrl.path,
+                    accountManager: accountManager,
+                    appLockContext: appLockContext,
+                    encryptionParameters: ValueBoxEncryptionParameters(
+                        forceEncryptionIfNoSet: false,
+                        key: ValueBoxEncryptionParameters.Key(data: encryptionParameters.0)!,
+                        salt: ValueBoxEncryptionParameters.Salt(data: encryptionParameters.1)!
+                    ),
+                    applicationBindings: applicationBindings,
+                    initialPresentationDataAndSettings: InitialPresentationDataAndSettings,
+                    networkArguments: networkArguments,
+                    buildConfig: buildConfig
+                )
+            }), getExtensionContext: { [weak self] in
                 return self?.extensionContext
             })
         }
