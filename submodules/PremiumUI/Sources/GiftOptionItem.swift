@@ -591,7 +591,7 @@ class GiftOptionItemNode: ItemListRevealOptionsItemNode {
                         let badgeSize = strongSelf.titleBadge.update(
                             transition: .immediate,
                             component: AnyComponent(
-                                BoostIconComponent(text: badge)
+                                BoostIconComponent(hasIcon: true, text: badge)
                             ),
                             environment: {},
                             containerSize: CGSize(width: params.width, height: 100.0)

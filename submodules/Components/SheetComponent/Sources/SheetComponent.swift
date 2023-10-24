@@ -41,6 +41,14 @@ public let sheetComponentTag = GenericComponentViewTag()
 public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public typealias EnvironmentType = (ChildEnvironmentType, SheetComponentEnvironment)
     
+    public class ExternalState {
+        public fileprivate(set) var contentHeight: CGFloat
+        
+        public init() {
+            self.contentHeight = 0.0
+        }
+    }
+    
     public enum BackgroundColor: Equatable {
         public enum BlurStyle: Equatable {
             case light
@@ -54,17 +62,20 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
     public let content: AnyComponent<ChildEnvironmentType>
     public let backgroundColor: BackgroundColor
     public let followContentSizeChanges: Bool
+    public let externalState: ExternalState?
     public let animateOut: ActionSlot<Action<()>>
     
     public init(
         content: AnyComponent<ChildEnvironmentType>,
         backgroundColor: BackgroundColor,
         followContentSizeChanges: Bool = false,
+        externalState: ExternalState? = nil,
         animateOut: ActionSlot<Action<()>>
     ) {
         self.content = content
         self.backgroundColor = backgroundColor
         self.followContentSizeChanges = followContentSizeChanges
+        self.externalState = externalState
         self.animateOut = animateOut
     }
     
@@ -327,6 +338,7 @@ public final class SheetComponent<ChildEnvironmentType: Equatable>: Component {
                 },
                 containerSize: containerSize
             )
+            component.externalState?.contentHeight = contentSize.height
             
             self.ignoreScrolling = true
             if let contentView = self.contentView.view {
