@@ -1208,7 +1208,7 @@ swift_library(
         "-warnings-as-errors",
     ],
     deps = [
-        "//submodules/TelegramUI:TelegramUI",
+        "//submodules/TelegramUI",
         "//submodules/TelegramUI/Components/ShareExtensionContext"
     ],
 )

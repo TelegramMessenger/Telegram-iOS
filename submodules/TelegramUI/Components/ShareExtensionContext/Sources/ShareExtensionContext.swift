@@ -733,54 +733,11 @@ public class ShareRootControllerImpl {
                                         
                                         if let mainFile = mainFile, let mainFileHeader = extractTextFileHeader(path: mainFile.path) {
                                             let _ = mainFileHeader
-                                            final class TempController: ViewController {
-                                                override public var _presentedInModal: Bool {
-                                                    get {
-                                                        return true
-                                                    } set(value) {
-                                                    }
-                                                }
-                                                
-                                                private let activityIndicator: ActivityIndicator
-                                                
-                                                init(environment: ShareControllerEnvironment) {
-                                                    let presentationData = environment.presentationData
-                                                    
-                                                    self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
-                                                    
-                                                    super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
-                                                    
-                                                    self.title = presentationData.strings.ChatImport_Title
-                                                    self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
-                                                }
-                                                
-                                                required public init(coder aDecoder: NSCoder) {
-                                                    fatalError("init(coder:) has not been implemented")
-                                                }
-                                                
-                                                @objc private func cancelPressed() {
-                                                    //self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
-                                                }
-                                                
-                                                override func displayNodeDidLoad() {
-                                                    super.displayNodeDidLoad()
-                                                    
-                                                    self.displayNode.addSubnode(self.activityIndicator)
-                                                }
-                                                
-                                                override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-                                                    super.containerLayoutUpdated(layout, transition: transition)
-                                                    
-                                                    let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
-                                                    let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
-                                                    transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: navigationHeight + floor((layout.size.height - navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
-                                                }
-                                            }
                                             
                                             let presentationData = environment.presentationData
                                             let navigationController = NavigationController(mode: .single, theme: NavigationControllerTheme(presentationTheme: presentationData.theme))
                                             strongSelf.navigationController = navigationController
-                                            navigationController.viewControllers = [TempController(environment: environment)]
+                                            navigationController.viewControllers = [ChatImportTempController(presentationData: environment.presentationData)]
                                             strongSelf.mainWindow?.present(navigationController, on: .root)
                                             
                                             if let mainWindow = strongSelf.mainWindow {

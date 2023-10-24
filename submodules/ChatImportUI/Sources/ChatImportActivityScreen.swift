@@ -15,6 +15,7 @@ import MimeTypes
 import ConfettiEffect
 import TelegramUniversalVideoContent
 import SolidRoundedButtonNode
+import ActivityIndicator
 
 private func fileSize(_ path: String, useTotalFileAllocatedSize: Bool = false) -> Int64? {
     if useTotalFileAllocatedSize {
@@ -886,3 +887,48 @@ public final class ChatImportActivityScreen: ViewController {
         }
     }
 }
+
+public final class ChatImportTempController: ViewController {
+    override public var _presentedInModal: Bool {
+        get {
+            return true
+        } set(value) {
+        }
+    }
+    
+    private let activityIndicator: ActivityIndicator
+    
+    public init(presentationData: PresentationData) {
+        let presentationData = presentationData
+        
+        self.activityIndicator = ActivityIndicator(type: .custom(presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
+        
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+        
+        self.title = presentationData.strings.ChatImport_Title
+        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func cancelPressed() {
+        //self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+    }
+    
+    override public func displayNodeDidLoad() {
+        super.displayNodeDidLoad()
+        
+        self.displayNode.addSubnode(self.activityIndicator)
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        let indicatorSize = self.activityIndicator.measure(CGSize(width: 100.0, height: 100.0))
+        let navigationHeight = self.navigationLayout(layout: layout).navigationFrame.maxY
+        transition.updateFrame(node: self.activityIndicator, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - indicatorSize.width) / 2.0), y: navigationHeight + floor((layout.size.height - navigationHeight - indicatorSize.height) / 2.0)), size: indicatorSize))
+    }
+}
+
