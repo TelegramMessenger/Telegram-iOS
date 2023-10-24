@@ -618,7 +618,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             initialWidth = ceil(layout.size.width - self.textFieldFrame.origin.x - self.sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 21.0)
         }
         
-        let toFrame = CGRect(origin: CGPoint(), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 1.0))
+        let toFrame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: initialWidth, height: self.textFieldFrame.height + 2.0))
         let delta = (toFrame.height - self.messageClipNode.bounds.height) / 2.0
                 
         if cancel && self.animateInputField {
@@ -632,7 +632,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
             }
             
-            self.messageClipNode.layer.animateBounds(from: self.messageClipNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
+            self.messageClipNode.layer.animateBounds(from: self.messageClipNode.bounds, to: toFrame.offsetBy(dx: 0.0, dy: 1.0), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { _ in
                 completedBubble = true
                 intermediateCompletion()
             })
