@@ -160,7 +160,7 @@ final class NetworkBroadcastPartSource: BroadcastPartSource {
             switch result.status {
             case let .data(dataValue):
                 #if DEBUG
-                if let debugDumpDirectory {
+                if let debugDumpDirectory = debugDumpDirectory {
                     let tempFilePath = debugDumpDirectory.path + "/\(timestampMilliseconds).mp4"
                     let _ = try? dataValue.subdata(in: 32 ..< dataValue.count).write(to: URL(fileURLWithPath: tempFilePath))
                     print("Dump stream part: \(tempFilePath)")
