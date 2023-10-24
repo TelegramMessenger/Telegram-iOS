@@ -558,6 +558,10 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         }
     }
     
+    override public func setNeedsLayout() {
+        super.setNeedsLayout()
+    }
+    
     override public func layoutSubviews() {
         let isLayoutUpdated = self.validLayoutSize != self.bounds.size
         self.validLayoutSize = self.bounds.size
