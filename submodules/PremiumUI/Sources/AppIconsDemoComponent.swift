@@ -38,7 +38,6 @@ final class AppIconsDemoComponent: Component {
         private var component: AppIconsDemoComponent?
         
         private var containerView: UIView
-        private var axisView = UIView()
         private var imageViews: [UIImageView] = []
         
         private var isVisible = false
@@ -50,7 +49,6 @@ final class AppIconsDemoComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.containerView)
-            self.containerView.addSubview(self.axisView)
         }
         
         required init?(coder: NSCoder) {
@@ -64,11 +62,7 @@ final class AppIconsDemoComponent: Component {
             
             self.containerView.frame = CGRect(origin: CGPoint(x: -availableSize.width / 2.0, y: 0.0), size: CGSize(width: availableSize.width * 2.0, height: availableSize.height))
             
-            self.axisView.bounds = CGRect(origin: .zero, size: availableSize)
-            self.axisView.center = CGPoint(x: availableSize.width, y: availableSize.height / 2.0)
-            
             if self.imageViews.isEmpty {
-                var i = 0
                 for icon in component.appIcons {
                     let image: UIImage?
                     switch icon.imageName {
@@ -78,12 +72,6 @@ final class AppIconsDemoComponent: Component {
                             image = UIImage(bundleImageName: "Premium/Icons/Black")
                         case "PremiumTurbo":
                             image = UIImage(bundleImageName: "Premium/Icons/Turbo")
-                        case "PremiumDuck":
-                            image = UIImage(bundleImageName: "Premium/Icons/Duck")
-                        case "PremiumCoffee":
-                            image = UIImage(bundleImageName: "Premium/Icons/Coffee")
-                        case "PremiumSteam":
-                            image = UIImage(bundleImageName: "Premium/Icons/Steam")
                         default:
                             image = nil
                     }
@@ -95,37 +83,31 @@ final class AppIconsDemoComponent: Component {
                             imageView.layer.cornerCurve = .continuous
                         }
                         imageView.image = image
-                        if i == 0 {
-                            self.containerView.addSubview(imageView)
-                        } else {
-                            self.axisView.addSubview(imageView)
-                        }
+                        self.containerView.addSubview(imageView)
                         
                         self.imageViews.append(imageView)
-                        
-                        i += 1
                     }
                 }
             }
  
-            let radius: CGFloat = availableSize.width * 0.33
-            let angleIncrement: CGFloat = 2 * .pi / CGFloat(self.imageViews.count - 1)
-                
             var i = 0
             for view in self.imageViews {
                 let position: CGPoint
-                if i == 0 {
-                    position = CGPoint(x: availableSize.width, y: availableSize.height / 2.0)
-                } else {
-                    let angle = CGFloat(i - 1) * angleIncrement
-                    let xPosition = radius * cos(angle) + availableSize.width / 2.0
-                    let yPosition = radius * sin(angle) + availableSize.height / 2.0
-                    
-                    position = CGPoint(x: xPosition, y: yPosition)
+                switch i {
+                    case 0:
+                        position = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.333)
+                    case 1:
+                        position = CGPoint(x: availableSize.width * 0.333, y: availableSize.height * 0.667)
+                    case 2:
+                        position = CGPoint(x: availableSize.width * 0.667, y: availableSize.height * 0.667)
+                    default:
+                        position = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
                 }
                 
-                view.center = position
-                    
+                if !self.animating {
+                    view.center = position.offsetBy(dx: availableSize.width / 2.0, dy: 0.0)
+                }
+                
                 i += 1
             }
             
@@ -143,48 +125,6 @@ final class AppIconsDemoComponent: Component {
             }
             self.isVisible = isDisplaying
             
-            let rotationDuration: Double = 12.0
-            if isDisplaying {
-                if self.axisView.layer.animation(forKey: "rotationAnimation") == nil {
-                    let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation")
-                    rotationAnimation.fromValue = 0.0
-                    rotationAnimation.toValue = 2.0 * CGFloat.pi
-                    rotationAnimation.duration = rotationDuration
-                    rotationAnimation.repeatCount = Float.infinity
-                    self.axisView.layer.add(rotationAnimation, forKey: "rotationAnimation")
-                    
-                    var i = 0
-                    for view in self.imageViews {
-                        if i == 0 {
-                            let animation = CABasicAnimation(keyPath: "transform.scale")
-                            animation.duration = 2.0
-                            animation.fromValue = 1.0
-                            animation.toValue = 1.15
-                            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                            animation.autoreverses = true
-                            animation.repeatCount = .infinity
-                            view.layer.add(animation, forKey: "scale")
-                        } else {
-                            view.transform = CGAffineTransformMakeScale(0.8, 0.8)
-                            
-                            let rotationAnimation = CABasicAnimation(keyPath: "transform.rotation")
-                            rotationAnimation.fromValue = 0.0
-                            rotationAnimation.toValue = -2.0 * CGFloat.pi
-                            rotationAnimation.duration = rotationDuration
-                            rotationAnimation.repeatCount = Float.infinity
-                            view.layer.add(rotationAnimation, forKey: "rotationAnimation")
-                        }
-                        
-                        i += 1
-                    }
-                }
-            } else {
-                self.axisView.layer.removeAllAnimations()
-                for view in self.imageViews {
-                    view.layer.removeAllAnimations()
-                }
-            }
-            
             return availableSize
         }
         
@@ -192,37 +132,38 @@ final class AppIconsDemoComponent: Component {
         func animateIn(availableSize: CGSize) {
             self.animating = true
             
-            let radius: CGFloat = availableSize.width * 2.5
-            let angleIncrement: CGFloat = 2 * .pi / CGFloat(self.imageViews.count - 1)
-            
             var i = 0
             for view in self.imageViews {
-                if i > 0 {
-                    let delay: Double = 0.033 * Double(i - 1)
-                    
-                    let angle = CGFloat(i - 1) * angleIncrement
-                    let xPosition = radius * cos(angle)
-                    let yPosition = radius * sin(angle)
-                                        
-                    let from = CGPoint(x: xPosition, y: yPosition)
-                    let initialPosition = view.layer.position
-                    view.layer.position = initialPosition.offsetBy(dx: xPosition, dy: yPosition)
-                    view.alpha = 0.0
-                    
-                    Queue.mainQueue().after(delay) {
-                        view.alpha = 1.0
-                        view.layer.position = initialPosition
-                        view.layer.animateScale(from: 3.0, to: 0.8, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
-                        view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                        view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
-                        
-                        if i == self.imageViews.count - 1 {
-                            self.animating = false
-                        }
-                    }
-                } else {
-                    
+                let from: CGPoint
+                let delay: Double
+                switch i {
+                    case 0:
+                        from = CGPoint(x: -availableSize.width * 0.333, y: -availableSize.height * 0.8)
+                        delay = 0.1
+                    case 1:
+                        from = CGPoint(x: -availableSize.width * 0.55, y: availableSize.height * 0.75)
+                        delay = 0.15
+                    case 2:
+                        from = CGPoint(x: availableSize.width * 0.9, y: availableSize.height * 0.75)
+                        delay = 0.0
+                    default:
+                        from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
+                        delay = 0.0
                 }
+                
+                let initialPosition = view.layer.position
+                view.layer.position = initialPosition.offsetBy(dx: from.x, dy: from.y)
+                
+                Queue.mainQueue().after(delay) {
+                    view.layer.position = initialPosition
+                    view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                    
+                    if i == 2 {
+                        self.animating = false
+                    }
+                }
+                
                 i += 1
             }
         }

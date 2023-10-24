@@ -329,9 +329,6 @@ alternate_icon_folders = [
     "Premium",
     "PremiumBlack",
     "PremiumTurbo",
-    "PremiumCoffee",
-    "PremiumDuck",
-    "PremiumSteam",
 ]
 
 [

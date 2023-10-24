@@ -1522,10 +1522,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 guard let self else {
                     return
                 }
-                var newPerks: [String] = []
-                if !dismissedPremiumAppIconsBadge {
-                    newPerks.append(PremiumPerk.appIcons.identifier)
-                }
+                let newPerks: [String] = []
                 self.newPerks = newPerks
                 self.updated()
             })
@@ -1856,7 +1853,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .animatedUserpics
                             case .appIcons:
                                 demoSubject = .appIcons
-                                let _ = ApplicationSpecificNotice.setDismissedPremiumAppIconsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+//                                let _ = ApplicationSpecificNotice.setDismissedPremiumAppIconsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .animatedEmoji:
                                 demoSubject = .animatedEmoji
                             case .emojiStatus:

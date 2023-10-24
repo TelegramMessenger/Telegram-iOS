@@ -10105,10 +10105,6 @@ Sorry for the inconvenience.";
 
 "ChatContextMenu.TextSelectionTip2" = "Hold on a word, then move cursor to select more| text to copy or quote.";
 
-"Appearance.AppIconCoffee" = "Coffee";
-"Appearance.AppIconDuck" = "Duck";
-"Appearance.AppIconSteam" = "Steam";
-
 "Notification.GiftLink" = "You received a gift";
 
 "MESSAGE_GIFTCODE" = "%1$@ sent you a Gift Code for %2$@ months of Telegram Premium";
