@@ -424,6 +424,8 @@ public class ReplaceBoostScreen: ViewController {
             positionTransition.updatePosition(layer: self.footerView.layer, position: CGPoint(x: self.footerView.center.x, y: self.bounds.height + self.footerView.bounds.height / 2.0))
             let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
             alphaTransition.updateAlpha(node: self.dim, alpha: 0.0)
+            
+            self.controller?.updateModalStyleOverlayTransitionFactor(0.0, transition: positionTransition)
         }
                 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {

@@ -955,6 +955,10 @@ private class ChatThemeScreenNode: ViewControllerTracingNode, UIScrollViewDelega
         self.updateCancelButton()
     }
     
+    deinit {
+        self.disposable.dispose()
+    }
+    
     private func enqueueTransition(_ transition: ThemeSettingsThemeItemNodeTransition) {
         self.enqueuedTransitions.append(transition)
         
