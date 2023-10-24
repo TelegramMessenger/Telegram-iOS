@@ -70,6 +70,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     private var textSelectionState: Promise<ChatControllerSubject.MessageOptionsInfo.SelectionState>?
     
+    private var linkPreviewHighlightText: String?
     private var linkPreviewOptionsDisposable: Disposable?
     private var linkPreviewHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -318,7 +319,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         messageEntities = updatingMedia.entities?.entities ?? []
                     }
                     
-                    if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty && incoming {
+                    if let subject = item.associatedData.subject, case .messageOptions = subject {
+                    } else if let translateToLanguage = item.associatedData.translateToLanguage, !item.message.text.isEmpty && incoming {
                         isTranslating = true
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? TranslationMessageAttribute, !attribute.text.isEmpty, attribute.toLang == translateToLanguage {
@@ -391,7 +393,27 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         underlineLinks = false
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: messageTheme.accentTextColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
+                    let author = item.message.author
+                    let mainColor: UIColor
+                    var secondaryColor: UIColor?
+                    if !incoming {
+                        mainColor = messageTheme.accentTextColor
+                        if let _ = author?.nameColor?.dashColors.1 {
+                            secondaryColor = .clear
+                        }
+                    } else {
+                        var authorNameColor: UIColor?
+                        authorNameColor = author?.nameColor?.color
+                        secondaryColor = author?.nameColor?.dashColors.1
+                        
+                        if let authorNameColor {
+                            mainColor = authorNameColor
+                        } else {
+                            mainColor = messageTheme.accentTextColor
+                        }
+                    }
+                    
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -645,7 +667,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                             }
                                             
                                             if options.hasAlternativeLinks {
-                                                strongSelf.updateLinkPreviewTextHighlightState(text: options.url)
+                                                strongSelf.linkPreviewHighlightText = options.url
+                                                strongSelf.updateLinkPreviewTextHighlightState(text: strongSelf.linkPreviewHighlightText)
                                             }
                                         })
                                     }
@@ -653,6 +676,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             strongSelf.updateLinkProgressState()
+                            if let linkPreviewHighlightText = strongSelf.linkPreviewHighlightText {
+                                strongSelf.updateLinkPreviewTextHighlightState(text: linkPreviewHighlightText)
+                            }
                         }
                     })
                 })
@@ -1120,6 +1146,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     enableQuote = false
                 }
                 if item.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
+                    enableQuote = false
+                }
+                if item.message.containsSecretMedia {
                     enableQuote = false
                 }
                 

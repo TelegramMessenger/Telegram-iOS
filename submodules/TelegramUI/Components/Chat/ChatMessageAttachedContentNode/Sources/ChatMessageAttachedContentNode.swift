@@ -349,6 +349,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let (_, refineLayout) = makeContentFile(ChatMessageInteractiveFileNode.Arguments(
                     context: context,
                     presentationData: presentationData,
+                    customTintColor: incoming ? mainColor : nil,
                     message: message,
                     topMessage: message,
                     associatedData: associatedData,
@@ -470,7 +471,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 cutout = TextNodeCutout(topRight: CGSize(width: cutoutWidth, height: remainingCutoutHeight))
                             }
                             
-                            let textString = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil, adjustQuoteFontSize: true)
+                            let textString = stringWithAppliedEntities(text, entities: entities ?? [], baseColor: messageTheme.primaryTextColor, linkColor: incoming ? mainColor : messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont, message: nil, adjustQuoteFontSize: true)
                             let textLayoutAndApplyValue = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 12, truncationType: .end, constrainedSize: CGSize(width: maxContentsWidth, height: 10000.0), alignment: .natural, lineSpacing: textLineSpacing, cutout: cutout, insets: UIEdgeInsets()))
                             textLayoutAndApply = textLayoutAndApplyValue
                             
@@ -809,8 +810,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     } else {
                         if let (_, inlineMediaSize) = inlineMediaAndSize {
-                            if actualSize.height < insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset {
-                                actualSize.height = insets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
+                            if actualSize.height < backgroundInsets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset {
+                                actualSize.height = backgroundInsets.top + inlineMediaEdgeInset + inlineMediaSize.height + inlineMediaEdgeInset
                             }
                         }
                     }

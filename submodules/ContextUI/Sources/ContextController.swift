@@ -112,6 +112,14 @@ public final class ContextMenuActionItem {
             self.updateAction = updateAction
         }
     }
+    
+    public struct IconAnimation: Equatable {
+        public var name: String
+        
+        public init(name: String) {
+            self.name = name
+        }
+    }
 
     public let id: AnyHashable?
     public let text: String
@@ -125,6 +133,7 @@ public final class ContextMenuActionItem {
     public let iconSource: ContextMenuActionItemIconSource?
     public let iconPosition: ContextMenuActionItemIconPosition
     public let animationName: String?
+    public let iconAnimation: IconAnimation?
     public let textIcon: (PresentationTheme) -> UIImage?
     public let textLinkAction: () -> Void
     public let action: ((Action) -> Void)?
@@ -142,6 +151,7 @@ public final class ContextMenuActionItem {
         iconSource: ContextMenuActionItemIconSource? = nil,
         iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
+        iconAnimation: IconAnimation? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
         action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
@@ -159,6 +169,7 @@ public final class ContextMenuActionItem {
             iconSource: iconSource,
             iconPosition: iconPosition,
             animationName: animationName,
+            iconAnimation: iconAnimation,
             textIcon: textIcon,
             textLinkAction: textLinkAction,
             action: action.flatMap { action in
@@ -182,6 +193,7 @@ public final class ContextMenuActionItem {
         iconSource: ContextMenuActionItemIconSource? = nil,
         iconPosition: ContextMenuActionItemIconPosition = .right,
         animationName: String? = nil,
+        iconAnimation: IconAnimation? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         textLinkAction: @escaping () -> Void = {},
         action: ((Action) -> Void)?
@@ -198,6 +210,7 @@ public final class ContextMenuActionItem {
         self.iconSource = iconSource
         self.iconPosition = iconPosition
         self.animationName = animationName
+        self.iconAnimation = iconAnimation
         self.textIcon = textIcon
         self.textLinkAction = textLinkAction
         self.action = action

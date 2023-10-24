@@ -728,6 +728,21 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         }
     }
     
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        
+        if let textSelectionNode = self.textSelectionNode, result === textSelectionNode.view {
+            let localPoint = self.view.convert(point, to: textSelectionNode.view)
+            if !textSelectionNode.canBeginSelection(localPoint) {
+                if let result = self.textNode.view.hitTest(self.view.convert(point, to: self.textNode.view), with: event) {
+                    return result
+                }
+            }
+        }
+        
+        return result
+    }
+    
     private func actionForAttributes(_ attributes: [NSAttributedString.Key: Any], _ index: Int) -> GalleryControllerInteractionTapAction? {
         if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
             var concealed = true

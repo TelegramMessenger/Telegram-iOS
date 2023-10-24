@@ -13,6 +13,10 @@ public final class ChatPresentationThemeData: Equatable {
         self.wallpaper = wallpaper
     }
     
+    public func withTheme(_ theme: PresentationTheme) -> ChatPresentationThemeData {
+        return ChatPresentationThemeData(theme: theme, wallpaper: self.wallpaper)
+    }
+    
     public static func ==(lhs: ChatPresentationThemeData, rhs: ChatPresentationThemeData) -> Bool {
         return lhs.theme === rhs.theme && lhs.wallpaper == rhs.wallpaper
     }
@@ -59,6 +63,21 @@ public final class ChatPresentationData {
         self.messageBlockQuoteFont = Font.regular(baseFontSize - 1.0)
         
         self.animatedEmojiScale = animatedEmojiScale
+    }
+    
+    public func withTheme(_ theme: ChatPresentationThemeData) -> ChatPresentationData {
+        return ChatPresentationData(
+            theme: self.theme,
+            fontSize: self.fontSize,
+            strings: self.strings,
+            dateTimeFormat: self.dateTimeFormat,
+            nameDisplayOrder: self.nameDisplayOrder,
+            disableAnimations: self.disableAnimations,
+            largeEmoji: self.largeEmoji,
+            chatBubbleCorners: self.chatBubbleCorners,
+            animatedEmojiScale: self.animatedEmojiScale,
+            isPreview: self.isPreview
+        )
     }
 }
 

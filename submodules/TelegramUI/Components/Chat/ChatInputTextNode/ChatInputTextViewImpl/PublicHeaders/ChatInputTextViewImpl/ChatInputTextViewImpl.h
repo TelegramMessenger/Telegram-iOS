@@ -16,7 +16,7 @@
 
 @property (nonatomic, copy) bool (^ _Nullable shouldCopy)();
 @property (nonatomic, copy) bool (^ _Nullable shouldPaste)();
-@property (nonatomic, copy) ChatInputTextViewImplTargetForAction * _Nullable (^ _Nullable targetForActionImpl)(SEL _Nullable);
+@property (nonatomic, copy) bool (^ _Nullable shouldRespondToAction)(SEL _Nullable);
 @property (nonatomic, copy) bool (^ _Nullable shouldReturn)();
 @property (nonatomic, copy) void (^ _Nullable backspaceWhileEmpty)();
 

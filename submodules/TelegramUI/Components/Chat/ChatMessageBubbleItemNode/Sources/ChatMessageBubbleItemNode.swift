@@ -1523,6 +1523,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
         
         var maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset * 3.0 - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+        if needsShareButton {
+            maximumContentWidth -= 10.0
+        }
         
         var hasInstantVideo = false
         for contentNodeItemValue in contentNodeMessagesAndClasses {

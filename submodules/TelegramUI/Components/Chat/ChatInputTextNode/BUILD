@@ -14,6 +14,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/AppBundle",
         "//submodules/TelegramUI/Components/Chat/ChatInputTextNode/ChatInputTextViewImpl",
+        "//submodules/TelegramUI/Components/Chat/MessageInlineBlockBackgroundView",
     ],
     visibility = [
         "//visibility:public",

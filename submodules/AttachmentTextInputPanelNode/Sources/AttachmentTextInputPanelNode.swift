@@ -1724,6 +1724,10 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         return true
     }
     
+    public func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool {
+        return true
+    }
+    
     @objc public func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
         return self.chatInputTextNodeShouldPaste()
     }

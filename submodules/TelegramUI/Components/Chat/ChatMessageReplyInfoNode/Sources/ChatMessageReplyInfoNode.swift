@@ -37,14 +37,21 @@ private let channelIcon: UIImage = {
     })!.precomposed().withRenderingMode(.alwaysTemplate)
 }()
 
-private let groupIcon: UIImage = {
+private func generateGroupIcon() -> UIImage {
     let sourceImage = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")!
-    return generateImage(CGSize(width: sourceImage.size.width + 3.0, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: sourceImage.size.width, height: sourceImage.size.height + 4.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         UIGraphicsPushContext(context)
-        sourceImage.draw(at: CGPoint(x: 3.0, y: 1.0 - UIScreenPixel))
+        sourceImage.draw(at: CGPoint(x: 0.0, y: 1.0 - UIScreenPixel))
         UIGraphicsPopContext()
+        
+        //context.setFillColor(UIColor.white.cgColor)
+        //context.fill(CGRect(origin: CGPoint(), size: size))
     })!.precomposed().withRenderingMode(.alwaysTemplate)
+}
+
+private let groupIcon: UIImage = {
+    return generateGroupIcon()
 }()
 
 public class ChatMessageReplyInfoNode: ASDisplayNode {
@@ -286,6 +293,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                             titleString = rawTitleString
                         } else {
                             let rawTitleString = NSMutableAttributedString(attributedString: titleString)
+                            rawTitleString.append(NSAttributedString(string: "\u{200B}", font: titleFont, textColor: titleColor))
                             rawTitleString.append(NSAttributedString(string: ">", attributes: [
                                 .attachment: groupIcon,
                                 .foregroundColor: titleColor,
@@ -603,7 +611,10 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            var size = CGSize(width: max(titleLayout.size.width + additionalTitleWidth - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right - textCutoutWidth) + leftInset + 6.0, height: titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing)
+            var size = CGSize()
+            size.width = max(titleLayout.size.width + additionalTitleWidth - textInsets.left - textInsets.right, textLayout.size.width - textInsets.left - textInsets.right - textCutoutWidth) + leftInset + 6.0
+            size.height = titleLayout.size.height + textLayout.size.height - 2 * (textInsets.top + textInsets.bottom) + 2 * spacing
+            size.height += 2.0
             if isExpiredStory || isStory {
                 size.width += 16.0
             }

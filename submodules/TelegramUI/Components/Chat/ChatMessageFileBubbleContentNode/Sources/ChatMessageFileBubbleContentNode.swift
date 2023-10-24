@@ -133,6 +133,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             let (initialWidth, refineLayout) = interactiveFileLayout(ChatMessageInteractiveFileNode.Arguments(
                 context: item.context,
                 presentationData: item.presentationData,
+                customTintColor: nil,
                 message: item.message,
                 topMessage: item.topMessage,
                 associatedData: item.associatedData,

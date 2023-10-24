@@ -70,10 +70,12 @@ public struct TextRangeRectEdge: Equatable {
 public final class TextNodeBlockQuoteData: NSObject {
     public let title: NSAttributedString?
     public let color: UIColor
+    public let secondaryColor: UIColor?
     
-    public init(title: NSAttributedString?, color: UIColor) {
+    public init(title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?) {
         self.title = title
         self.color = color
+        self.secondaryColor = secondaryColor
         
         super.init()
     }
@@ -91,6 +93,13 @@ public final class TextNodeBlockQuoteData: NSObject {
             return false
         }
         if !self.color.isEqual(other.color) {
+            return false
+        }
+        if let lhsSecondaryColor = self.secondaryColor, let rhsSecondaryColor = other.secondaryColor {
+            if !lhsSecondaryColor.isEqual(rhsSecondaryColor) {
+                return false
+            }
+        } else if (self.secondaryColor == nil) != (other.secondaryColor == nil) {
             return false
         }
         
@@ -131,10 +140,12 @@ private final class TextNodeLine {
 private final class TextNodeBlockQuote {
     let frame: CGRect
     let tintColor: UIColor
+    let secondaryTintColor: UIColor?
     
-    init(frame: CGRect, tintColor: UIColor) {
+    init(frame: CGRect, tintColor: UIColor, secondaryTintColor: UIColor?) {
         self.frame = frame
         self.tintColor = tintColor
+        self.secondaryTintColor = secondaryTintColor
     }
 }
 
@@ -1200,6 +1211,7 @@ open class TextNode: ASDisplayNode {
             let firstCharacterOffset: Int
             let isBlockQuote: Bool
             let tintColor: UIColor?
+            let secondaryTintColor: UIColor?
         }
         var stringSegments: [StringSegment] = []
         
@@ -1222,7 +1234,8 @@ open class TextNode: ASDisplayNode {
                         )),
                         firstCharacterOffset: segmentCharacterOffset,
                         isBlockQuote: false,
-                        tintColor: nil
+                        tintColor: nil,
+                        secondaryTintColor: nil
                     ))
                 }
                 
@@ -1233,7 +1246,8 @@ open class TextNode: ASDisplayNode {
                             substring: attributedString.attributedSubstring(from: effectiveRange),
                             firstCharacterOffset: effectiveRange.location,
                             isBlockQuote: true,
-                            tintColor: value.color
+                            tintColor: value.color,
+                            secondaryTintColor: value.secondaryColor
                         ))
                     }
                     segmentCharacterOffset = effectiveRange.location + effectiveRange.length
@@ -1246,7 +1260,8 @@ open class TextNode: ASDisplayNode {
                         substring: attributedString.attributedSubstring(from: effectiveRange),
                         firstCharacterOffset: effectiveRange.location,
                         isBlockQuote: false,
-                        tintColor: nil
+                        tintColor: nil,
+                        secondaryTintColor: nil
                     ))
                     segmentCharacterOffset = effectiveRange.location + effectiveRange.length
                 }
@@ -1261,7 +1276,8 @@ open class TextNode: ASDisplayNode {
                         )),
                         firstCharacterOffset: segmentCharacterOffset,
                         isBlockQuote: false,
-                        tintColor: nil
+                        tintColor: nil,
+                        secondaryTintColor: nil
                     ))
                 }
                 
@@ -1273,6 +1289,7 @@ open class TextNode: ASDisplayNode {
             var titleLine: TextNodeLine?
             var lines: [TextNodeLine] = []
             var tintColor: UIColor?
+            var secondaryTintColor: UIColor?
             var isBlockQuote: Bool = false
             var additionalWidth: CGFloat = 0.0
         }
@@ -1283,6 +1300,7 @@ open class TextNode: ASDisplayNode {
             var calculatedSegment = CalculatedSegment()
             calculatedSegment.isBlockQuote = segment.isBlockQuote
             calculatedSegment.tintColor = segment.tintColor
+            calculatedSegment.secondaryTintColor = segment.secondaryTintColor
             
             let rawSubstring = segment.substring.string as NSString
             let substringLength = rawSubstring.length
@@ -1296,8 +1314,8 @@ open class TextNode: ASDisplayNode {
             var constrainedSegmentWidth = constrainedSize.width
             var additionalOffsetX: CGFloat = 0.0
             if segment.isBlockQuote {
-                constrainedSegmentWidth -= blockQuoteLeftInset + blockQuoteRightInset
                 additionalOffsetX += blockQuoteLeftInset
+                constrainedSegmentWidth -= additionalOffsetX + blockQuoteLeftInset + blockQuoteRightInset
                 calculatedSegment.additionalWidth += blockQuoteLeftInset + blockQuoteRightInset
             }
             
@@ -1305,7 +1323,7 @@ open class TextNode: ASDisplayNode {
             
             if let title = segment.title {
                 let rawTitleLine = CTLineCreateWithAttributedString(title)
-                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth + additionalSegmentRightInset, .end, nil) {
+                if let titleLine = CTLineCreateTruncatedLine(rawTitleLine, constrainedSegmentWidth - additionalSegmentRightInset, .end, nil) {
                     var lineAscent: CGFloat = 0.0
                     var lineDescent: CGFloat = 0.0
                     let lineWidth = CTLineGetTypographicBounds(titleLine, &lineAscent, &lineDescent, nil)
@@ -1328,7 +1346,7 @@ open class TextNode: ASDisplayNode {
             }
             
             while true {
-                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth + additionalSegmentRightInset)
+                let lineCharacterCount = CTTypesetterSuggestLineBreak(typesetter, currentLineStartIndex, constrainedSegmentWidth - additionalSegmentRightInset)
                 
                 if lineCharacterCount != 0 {
                     let line = CTTypesetterCreateLine(typesetter, CFRange(location: currentLineStartIndex, length: lineCharacterCount))
@@ -1484,7 +1502,7 @@ open class TextNode: ASDisplayNode {
             }
             
             if segment.isBlockQuote, let tintColor = segment.tintColor {
-                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor))
+                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor))
             }
         }
         
@@ -1695,7 +1713,7 @@ open class TextNode: ASDisplayNode {
                 embeddedItems.append(TextNodeEmbeddedItem(range: NSMakeRange(startIndex, endIndex - startIndex + 1), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), item: item))
             }
             
-            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, rightInset: CGFloat = 0.0) {
+            func addAttachment(attachment: UIImage, line: CTLine, ascent: CGFloat, descent: CGFloat, startIndex: Int, endIndex: Int, isAtEndOfTheLine: Bool, rightInset: CGFloat = 0.0) {
                 var secondaryLeftOffset: CGFloat = 0.0
                 let rawLeftOffset = CTLineGetOffsetForStringIndex(line, startIndex, &secondaryLeftOffset)
                 var leftOffset = floor(rawLeftOffset)
@@ -1703,11 +1721,17 @@ open class TextNode: ASDisplayNode {
                     leftOffset = floor(secondaryLeftOffset)
                 }
                 
-                var secondaryRightOffset: CGFloat = 0.0
-                let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
-                var rightOffset = ceil(rawRightOffset)
-                if !rawRightOffset.isEqual(to: secondaryRightOffset) {
-                    rightOffset = ceil(secondaryRightOffset)
+                var rightOffset: CGFloat = leftOffset
+                if isAtEndOfTheLine {
+                    let rawRightOffset = CTLineGetTypographicBounds(line, nil, nil, nil)
+                    rightOffset = floor(rawRightOffset)
+                } else {
+                    var secondaryRightOffset: CGFloat = 0.0
+                    let rawRightOffset = CTLineGetOffsetForStringIndex(line, endIndex, &secondaryRightOffset)
+                    rightOffset = ceil(rawRightOffset)
+                    if !rawRightOffset.isEqual(to: secondaryRightOffset) {
+                        rightOffset = ceil(secondaryRightOffset)
+                    }
                 }
                 
                 attachments.append(TextNodeAttachment(range: NSMakeRange(startIndex, endIndex - startIndex), frame: CGRect(x: min(leftOffset, rightOffset), y: descent - (ascent + descent), width: abs(rightOffset - leftOffset) + rightInset, height: ascent + descent), attachment: attachment))
@@ -1900,7 +1924,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                 }
@@ -2019,7 +2043,7 @@ open class TextNode: ASDisplayNode {
                             var descent: CGFloat = 0.0
                             CTLineGetTypographicBounds(coreTextLine, &ascent, &descent, nil)
                             
-                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: range.location + range.length)
+                            addAttachment(attachment: attachment, line: coreTextLine, ascent: ascent, descent: descent, startIndex: range.location, endIndex: max(range.location, min(lineRange.location + lineRange.length - 1, range.location + range.length)), isAtEndOfTheLine: range.location + range.length >= lineRange.location + lineRange.length - 1)
                         }
                     }
                     
@@ -2149,6 +2173,9 @@ open class TextNode: ASDisplayNode {
                 let lineWidth: CGFloat = 3.0
                 
                 var blockFrame = blockQuote.frame.offsetBy(dx: offset.x + 2.0, dy: offset.y)
+                if blockFrame.origin.x + blockFrame.size.width > bounds.width - layout.insets.right - 2.0 - 30.0 {
+                    blockFrame.size.width = bounds.width - layout.insets.right - blockFrame.origin.x - 2.0
+                }
                 blockFrame.size.width += 4.0
                 blockFrame.origin.x -= 2.0
                 
@@ -2175,7 +2202,46 @@ open class TextNode: ASDisplayNode {
                 context.addArc(tangent1End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY), tangent2End: CGPoint(x: lineFrame.minX, y: lineFrame.maxY - radius), radius: radius)
                 context.closePath()
                 context.clip()
-                context.fill(lineFrame)
+                
+                if let secondaryTintColor = blockQuote.secondaryTintColor {
+                    let isMonochrome = secondaryTintColor.alpha == 0.0
+                    
+                    do {
+                        context.saveGState()
+                    
+                        if isMonochrome {
+                            context.setFillColor(blockQuote.tintColor.withMultipliedAlpha(0.2).cgColor)
+                            context.fill(lineFrame)
+                            context.setFillColor(blockQuote.tintColor.cgColor)
+                        } else {
+                            context.setFillColor(blockQuote.tintColor.cgColor)
+                            context.fill(lineFrame)
+                            context.setFillColor(secondaryTintColor.cgColor)
+                        }
+                        
+                        let dashOffset: CGFloat = isMonochrome ? -4.0 : 5.0
+                        context.translateBy(x: blockFrame.minX, y: blockFrame.minY + dashOffset)
+                        
+                        var offset = 0.0
+                        while offset < blockFrame.height {
+                            context.move(to: CGPoint(x: 0.0, y: 3.0))
+                            context.addLine(to: CGPoint(x: lineWidth, y: 0.0))
+                            context.addLine(to: CGPoint(x: lineWidth, y: 9.0))
+                            context.addLine(to: CGPoint(x: 0.0, y: 9.0 + 3.0))
+                            context.closePath()
+                            context.fillPath()
+                            
+                            context.translateBy(x: 0.0, y: 18.0)
+                            offset += 18.0
+                        }
+                        
+                        context.restoreGState()
+                    }
+                } else {
+                    context.setFillColor(blockQuote.tintColor.cgColor)
+                    context.fill(lineFrame)
+                }
+                
                 context.resetClip()
             }
             

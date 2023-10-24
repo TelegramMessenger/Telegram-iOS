@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import AppBundle
 import ChatInputTextViewImpl
+import MessageInlineBlockBackgroundView
 
 public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeDidUpdateText()
@@ -19,6 +20,8 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNode(shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool
     func chatInputTextNodeShouldCopy() -> Bool
     func chatInputTextNodeShouldPaste() -> Bool
+    
+    func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool
 }
 
 open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
@@ -125,6 +128,16 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         })
         
         self.textView.delegate = self
+        self.textView.shouldRespondToAction = { [weak self] action in
+            guard let self, let action else {
+                return false
+            }
+            if let delegate = self.delegate {
+                return delegate.chatInputTextNodeShouldRespondToAction(action: action)
+            } else {
+                return true
+            }
+        }
     }
     
     public func resetInitialPrimaryLanguage() {
@@ -248,13 +261,16 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         public final class Quote: Equatable {
             public let background: UIColor
             public let foreground: UIColor
+            public let isDashed: Bool
             
             public init(
                 background: UIColor,
-                foreground: UIColor
+                foreground: UIColor,
+                isDashed: Bool
             ) {
                 self.background = background
                 self.foreground = foreground
+                self.isDashed = isDashed
             }
             
             public static func ==(lhs: Quote, rhs: Quote) -> Bool {
@@ -262,6 +278,9 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
                     return false
                 }
                 if !lhs.foreground.isEqual(rhs.foreground) {
+                    return false
+                }
+                if lhs.isDashed != rhs.isDashed {
                     return false
                 }
                 return true
@@ -679,22 +698,19 @@ private let quoteIcon: UIImage = {
 }()
 
 private final class QuoteBackgroundView: UIView {
-    private let lineLayer: SimpleLayer
+    private let backgroundView: MessageInlineBlockBackgroundView
     private let iconView: UIImageView
     
     private var theme: ChatInputTextView.Theme.Quote?
     
     override init(frame: CGRect) {
-        self.lineLayer = SimpleLayer()
+        self.backgroundView = MessageInlineBlockBackgroundView()
         self.iconView = UIImageView(image: quoteIcon)
         
         super.init(frame: frame)
         
-        self.layer.addSublayer(self.lineLayer)
+        self.addSubview(self.backgroundView)
         self.addSubview(self.iconView)
-        
-        self.layer.cornerRadius = 3.0
-        self.clipsToBounds = true
     }
     
     required init?(coder: NSCoder) {
@@ -706,11 +722,18 @@ private final class QuoteBackgroundView: UIView {
             self.theme = theme
             
             self.backgroundColor = theme.background
-            self.lineLayer.backgroundColor = theme.foreground.cgColor
             self.iconView.tintColor = theme.foreground
         }
         
-        self.lineLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 00), size: CGSize(width: 3.0, height: size.height))
         self.iconView.frame = CGRect(origin: CGPoint(x: size.width - 4.0 - quoteIcon.size.width, y: 4.0), size: quoteIcon.size)
+        
+        self.backgroundView.update(
+            size: size,
+            primaryColor: theme.foreground,
+            secondaryColor: theme.isDashed ? .clear : nil,
+            pattern: nil,
+            animation: .None
+        )
+        self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
     }
 }
