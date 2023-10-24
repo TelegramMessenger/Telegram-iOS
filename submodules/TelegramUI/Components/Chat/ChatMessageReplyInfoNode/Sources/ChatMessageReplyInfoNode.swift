@@ -321,6 +321,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 textString = NSAttributedString(string: replyForward.quote?.text ?? arguments.presentationData.strings.VoiceOver_ChatList_Message)
                 if let media = replyForward.quote?.media {
                     if let text = replyForward.quote?.text, !text.isEmpty {
+                        isMedia = false
                     } else {
                         if let contentKind = mediaContentKind(EngineMedia(media), message: nil, strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId) {
                             let (string, _) = stringForMediaKind(contentKind, strings: arguments.strings)
@@ -328,8 +329,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         } else {
                             textString = NSAttributedString(string: arguments.presentationData.strings.VoiceOver_ChatList_Message)
                         }
+                        isMedia = true
                     }
-                    isMedia = true
                 } else {
                     isMedia = false
                 }
