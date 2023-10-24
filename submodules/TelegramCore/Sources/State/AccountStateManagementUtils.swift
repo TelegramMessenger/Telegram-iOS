@@ -1153,7 +1153,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             medias.append(mediaValue)
                             
                             if mediaValue is TelegramMediaWebpage {
-                                if let webpageAttributes {
+                                if let webpageAttributes = webpageAttributes {
                                     attributes.append(WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded, isSafe: webpageAttributes.isSafe))
                                 }
                             }

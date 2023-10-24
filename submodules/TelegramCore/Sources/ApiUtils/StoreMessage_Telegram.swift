@@ -709,7 +709,7 @@ extension StoreMessage {
                         if mediaValue is TelegramMediaWebpage {
                             let leadingPreview = (flags & (1 << 27)) != 0
                             
-                            if let webpageAttributes {
+                            if let webpageAttributes = webpageAttributes {
                                 attributes.append(WebpagePreviewMessageAttribute(leadingPreview: leadingPreview, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded, isSafe: webpageAttributes.isSafe))
                             }
                         }

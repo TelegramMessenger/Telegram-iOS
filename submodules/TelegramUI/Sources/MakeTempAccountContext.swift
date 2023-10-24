@@ -43,7 +43,7 @@ public func makeTempContext(
         },
         appDelegate: nil
     )
-    self.sharedTempContext = sharedContext
+    sharedTempContext = sharedContext
     
     return sharedContext.activeAccountContexts
     |> take(1)
