@@ -1,13 +1,13 @@
 public extension Api {
     indirect enum DraftMessage: TypeConstructorDescription {
-        case draftMessage(flags: Int32, replyTo: Api.MessageReplyHeader?, message: String, entities: [Api.MessageEntity]?, media: Api.MessageMedia?, date: Int32)
+        case draftMessage(flags: Int32, replyTo: Api.InputReplyTo?, message: String, entities: [Api.MessageEntity]?, media: Api.InputMedia?, date: Int32)
         case draftMessageEmpty(flags: Int32, date: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .draftMessage(let flags, let replyTo, let message, let entities, let media, let date):
                     if boxed {
-                        buffer.appendInt32(-620277848)
+                        buffer.appendInt32(1070397423)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 4) != 0 {replyTo!.serialize(buffer, true)}
@@ -42,9 +42,9 @@ public extension Api {
         public static func parse_draftMessage(_ reader: BufferReader) -> DraftMessage? {
             var _1: Int32?
             _1 = reader.readInt32()
-            var _2: Api.MessageReplyHeader?
+            var _2: Api.InputReplyTo?
             if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.MessageReplyHeader
+                _2 = Api.parse(reader, signature: signature) as? Api.InputReplyTo
             } }
             var _3: String?
             _3 = parseString(reader)
@@ -52,9 +52,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
                 _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
-            var _5: Api.MessageMedia?
+            var _5: Api.InputMedia?
             if Int(_1!) & Int(1 << 5) != 0 {if let signature = reader.readInt32() {
-                _5 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                _5 = Api.parse(reader, signature: signature) as? Api.InputMedia
             } }
             var _6: Int32?
             _6 = reader.readInt32()
