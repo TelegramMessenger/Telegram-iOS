@@ -262,6 +262,18 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         if let attributedText = textInputView.attributedText, !attributedText.string.isEmpty {
             self.animateInputField = true
+            if let textInputView = self.textInputView as? ChatInputTextView {
+                self.fromMessageTextNode.textView.theme = textInputView.theme
+                
+                let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
+                self.toMessageTextNode.textView.theme = ChatInputTextView.Theme(
+                    quote: ChatInputTextView.Theme.Quote(
+                        background: mainColor.withMultipliedAlpha(0.1),
+                        foreground: mainColor,
+                        isDashed: textInputView.theme?.quote.isDashed == true
+                    )
+                )
+            }
             self.fromMessageTextNode.attributedText = attributedText
             
             if let toAttributedText = self.fromMessageTextNode.attributedText?.mutableCopy() as? NSMutableAttributedString {
@@ -702,6 +714,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         messageFrame.size.width += 32.0
         messageFrame.origin.x -= 13.0
         messageFrame.origin.y = layout.size.height - messageFrame.origin.y - messageFrame.size.height - 1.0
+        
+        let messageHeightAddition: CGFloat = max(0.0, 35.0 - messageFrame.size.height)
+        
         if inputHeight.isZero || layout.isNonExclusive {
             messageFrame.origin.y += menuHeightWithInset
         }
@@ -732,17 +747,26 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let clipFrame = messageFrame
         transition.updateFrame(node: self.messageClipNode, frame: clipFrame)
         
-        let backgroundFrame = CGRect(origin: CGPoint(), size: messageFrame.size)
+        var backgroundFrame = CGRect(origin: CGPoint(), size: messageFrame.size)
+        backgroundFrame.origin.y -= messageHeightAddition * 0.5
+        backgroundFrame.size.height += messageHeightAddition
         transition.updateFrame(node: self.messageBackgroundNode, frame: backgroundFrame)
         
         var textFrame = self.textFieldFrame
         textFrame.origin = CGPoint(x: 13.0, y: 6.0 - UIScreenPixel)
         textFrame.size.height = self.textInputView.contentSize.height
+        
         if let textInputView = self.textInputView as? ChatInputTextView {
+            textFrame.origin.y -= 5.0
+            
+            self.fromMessageTextNode.textView.defaultTextContainerInset = textInputView.defaultTextContainerInset
+            self.toMessageTextNode.textView.defaultTextContainerInset = textInputView.defaultTextContainerInset
+        }
+        /*if let textInputView = self.textInputView as? ChatInputTextView {
             textFrame.size.width -= textInputView.defaultTextContainerInset.right
         } else {
             textFrame.size.width -= self.textInputView.textContainerInset.right
-        }
+        }*/
         
         if self.textInputView.isRTL {
             textFrame.origin.x -= messageOriginDelta

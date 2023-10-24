@@ -2284,7 +2284,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             textInputNode.textContainerInset = textInputViewRealInsets
             let textFieldFrame = CGRect(origin: CGPoint(x: self.textInputViewInternalInsets.left, y: self.textInputViewInternalInsets.top), size: CGSize(width: textInputFrame.size.width - (self.textInputViewInternalInsets.left + self.textInputViewInternalInsets.right), height: textInputFrame.size.height - self.textInputViewInternalInsets.top - textInputViewInternalInsets.bottom))
             let shouldUpdateLayout = textFieldFrame.size != textInputNode.frame.size
-            transition.updateFrame(node: textInputNode, frame: textFieldFrame)
+            //transition.updateFrame(node: textInputNode, frame: textFieldFrame)
+            textInputNode.frame = textFieldFrame
             textInputNode.updateLayout(size: textFieldFrame.size)
             self.updateInputField(textInputFrame: textFieldFrame, transition: Transition(transition))
             if shouldUpdateLayout {

@@ -319,6 +319,9 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     private let measurementTextStorage: NSTextStorage
     private let measurementLayoutManager: NSLayoutManager
     
+    private var validLayoutSize: CGSize?
+    private var isUpdatingLayout: Bool = false
+    
     private var blockQuotes: [Int: QuoteBackgroundView] = [:]
     
     public var defaultTextContainerInset: UIEdgeInsets = UIEdgeInsets() {
@@ -344,6 +347,12 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
             }
         }
         return super.textInputMode
+    }
+    
+    override public var bounds: CGRect {
+        didSet {
+            assert(true)
+        }
     }
     
     public init() {
@@ -405,6 +414,20 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func scrollRectToVisible(_ rect: CGRect, animated: Bool) {
+        var rect = rect
+        if rect.maxY > self.contentSize.height - 8.0 {
+            rect = CGRect(origin: CGPoint(x: rect.minX, y: self.contentSize.height - 1.0), size: CGSize(width: rect.width, height: 1.0))
+        }
+        
+        var animated = animated
+        if self.isUpdatingLayout {
+            animated = false
+        }
+        
+        super.scrollRectToVisible(rect, animated: animated)
     }
     
     @objc public func layoutManager(_ layoutManager: NSLayoutManager, paragraphSpacingBeforeGlyphAt glyphIndex: Int, withProposedLineFragmentRect rect: CGRect) -> CGFloat {
@@ -536,7 +559,14 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     }
     
     override public func layoutSubviews() {
+        let isLayoutUpdated = self.validLayoutSize != self.bounds.size
+        self.validLayoutSize = self.bounds.size
+        
+        self.isUpdatingLayout = isLayoutUpdated
+        
         super.layoutSubviews()
+        
+        self.isUpdatingLayout = false
     }
     
     public func updateTextElements() {
