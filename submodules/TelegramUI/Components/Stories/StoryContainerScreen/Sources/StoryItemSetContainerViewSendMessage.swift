@@ -3304,7 +3304,7 @@ final class StoryItemSetContainerSendMessage {
         frame = view.controlsContainerView.convert(frame, to: nil)
         
         let node = controller.displayNode
-        let menuController = ContextMenuController(actions: actions, blurred: true)
+        let menuController = makeContextMenuController(actions: actions, blurred: true)
         menuController.centerHorizontally = true
         menuController.dismissed = { [weak self, weak view] in
             if let self, let view {

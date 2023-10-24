@@ -2015,7 +2015,7 @@ public final class StickerPackScreenImpl: ViewController {
                 }
             }))
             
-            let contextMenuController = ContextMenuController(actions: actions)
+            let contextMenuController = makeContextMenuController(actions: actions)
             strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
                 if let strongSelf = self {
                     return (node, frame.insetBy(dx: -40.0, dy: 0.0), strongSelf.controllerNode, strongSelf.controllerNode.view.bounds)

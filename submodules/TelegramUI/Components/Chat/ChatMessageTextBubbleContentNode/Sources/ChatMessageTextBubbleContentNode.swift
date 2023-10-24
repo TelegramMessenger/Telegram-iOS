@@ -1139,7 +1139,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject, case .reply = info {
                     enableOtherActions = false
                 } else if item.controllerInteraction.canSetupReply(item.message) == .reply {
-                    enableOtherActions = false
+                    //enableOtherActions = false
                 }
                 
                 if !item.controllerInteraction.canSendMessages() && !enableCopy {

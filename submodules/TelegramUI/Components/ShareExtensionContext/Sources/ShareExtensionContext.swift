@@ -30,6 +30,7 @@ import MultiAnimationRenderer
 import TelegramUIDeclareEncodables
 import TelegramAccountAuxiliaryMethods
 import PeerSelectionController
+import ContextMenuScreen
 
 private var installedSharedLogger = false
 
@@ -457,6 +458,9 @@ public class ShareRootControllerImpl {
                 (environment as? ShareControllerEnvironmentExtension)?.accounts = otherAccounts.compactMap { $0.account as? ShareControllerAccountContextExtension }
                 
                 initializeLegacyComponents(application: nil, currentSizeClassGetter: { return .compact }, currentHorizontalClassGetter: { return .compact }, documentsPath: "", currentApplicationBounds: { return CGRect() }, canOpenUrl: { _ in return false}, openUrl: { _ in })
+                setContextMenuControllerProvider { arguments in
+                    return ContextMenuControllerImpl(arguments)
+                }
                 
                 let displayShare: () -> Void = {
                     var cancelImpl: (() -> Void)?

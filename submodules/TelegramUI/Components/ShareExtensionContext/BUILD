@@ -38,6 +38,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/TelegramAccountAuxiliaryMethods",
         "//submodules/TelegramUI/Components/PeerSelectionController",
+        "//submodules/TelegramUI/Components/ContextMenuScreen",
     ],
     visibility = [
         "//visibility:public",

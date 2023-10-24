@@ -1333,7 +1333,7 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                 return false
             })
             if let resultItemNode = resultItemNode {
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
+                let contextMenuController = makeContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
                     UIPasteboard.general.string = value
                     
                     let content: UndoOverlayContent = .copy(text: presentationData.strings.Conversation_TextCopied)
