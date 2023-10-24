@@ -220,6 +220,7 @@ public final class TextSelectionNode: ASDisplayNode {
     private let updateIsActive: (Bool) -> Void
     public var canBeginSelection: (CGPoint) -> Bool = { _ in true }
     public var updateRange: ((NSRange?) -> Void)?
+    public var presentMenu: ((UIView, CGPoint, [ContextMenuAction]) -> Void)?
     private let present: (ViewController, Any?) -> Void
     private let rootNode: () -> ASDisplayNode?
     private let performAction: (NSAttributedString, TextSelectionAction) -> Void
@@ -713,7 +714,8 @@ public final class TextSelectionNode: ASDisplayNode {
                 self?.performAction(string, .quote(range: adjustedRange.lowerBound ..< adjustedRange.upperBound))
                 self?.cancelSelection()
             }))
-        } else if self.enableLookup {
+        }
+        if self.enableLookup {
             actions.append(ContextMenuAction(content: .text(title: self.strings.Conversation_ContextMenuLookUp, accessibilityLabel: self.strings.Conversation_ContextMenuLookUp), action: { [weak self] in
                 self?.performAction(string, .lookup)
                 self?.cancelSelection()
@@ -753,7 +755,7 @@ public final class TextSelectionNode: ASDisplayNode {
         
         self.contextMenu?.dismiss()
         
-        let contextMenu = ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false, skipCoordnateConversion: self.menuSkipCoordnateConversion)
+        let contextMenu = makeContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false, skipCoordnateConversion: self.menuSkipCoordnateConversion)
         contextMenu.dismissOnTap = { [weak self] view, point in
             guard let self else {
                 return true

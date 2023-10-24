@@ -40,6 +40,7 @@ import ManagedFile
 import DeviceProximity
 import MediaEditor
 import TelegramUIDeclareEncodables
+import ContextMenuScreen
 
 #if canImport(AppCenter)
 import AppCenter
@@ -602,6 +603,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, openUrl: { url in
             UIApplication.shared.open(url, options: [:], completionHandler: nil)
         })
+        setContextMenuControllerProvider { arguments in
+            return ContextMenuControllerImpl(arguments)
+        }
         
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self

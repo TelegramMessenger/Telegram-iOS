@@ -452,11 +452,13 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             })))
         }
         
-        items.append(.separator)
-        
-        items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-            f(.default)
-        })))
+        if !items.isEmpty {
+            items.append(.separator)
+            
+            items.append(.action(ContextMenuActionItem(text: "Apply Changes", icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                f(.default)
+            })))
+        }
         
         if replySubject.quote != nil {
             items.append(.action(ContextMenuActionItem(text: "Remove Quote", textColor: .destructive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteRemove"), color: theme.contextMenu.destructiveColor) }, action: { [weak selfController] c, f in

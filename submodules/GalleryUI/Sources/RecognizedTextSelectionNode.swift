@@ -527,7 +527,7 @@ public final class RecognizedTextSelectionNode: ASDisplayNode {
             let _ = self?.dismissSelection()
         }))
         
-        self.present(ContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+        self.present(makeContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
             guard let strongSelf = self, let rootNode = strongSelf.rootNode else {
                 return nil
             }

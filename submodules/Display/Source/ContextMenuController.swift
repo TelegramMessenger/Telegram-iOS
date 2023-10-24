@@ -3,8 +3,8 @@ import UIKit
 import AsyncDisplayKit
 
 public final class ContextMenuControllerPresentationArguments {
-    fileprivate let sourceNodeAndRect: () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?
-    fileprivate let bounce: Bool
+    public let sourceNodeAndRect: () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?
+    public let bounce: Bool
     
     public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?, bounce: Bool = true) {
         self.sourceNodeAndRect = sourceNodeAndRect
@@ -12,105 +12,43 @@ public final class ContextMenuControllerPresentationArguments {
     }
 }
 
-public final class ContextMenuController: ViewController, KeyShortcutResponder, StandalonePresentableController {
-    private var contextMenuNode: ContextMenuNode {
-        return self.displayNode as! ContextMenuNode
-    }
+public protocol ContextMenuController: ViewController, StandalonePresentableController {
+    var centerHorizontally: Bool { get set }
+    var dismissed: (() -> Void)? { get set }
+    var dismissOnTap: ((UIView, CGPoint) -> Bool)? { get set }
+}
+
+public struct ContextMenuControllerArguments {
+    public var actions: [ContextMenuAction]
+    public var catchTapsOutside: Bool
+    public var hasHapticFeedback: Bool
+    public var blurred: Bool
+    public var skipCoordnateConversion: Bool
     
-    public var keyShortcuts: [KeyShortcut] {
-        return [KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
-            if let strongSelf = self {
-                strongSelf.dismiss()
-            }
-        })]
-    }
-    private let actions: [ContextMenuAction]
-    private let catchTapsOutside: Bool
-    private let hasHapticFeedback: Bool
-    private let blurred: Bool
-    private let skipCoordnateConversion: Bool
-    
-    private var layout: ContainerViewLayout?
-    
-    public var centerHorizontally = false
-    public var dismissed: (() -> Void)?
-    
-    public var dismissOnTap: ((UIView, CGPoint) -> Bool)?
-    
-    public init(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false, skipCoordnateConversion: Bool = false) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool, skipCoordnateConversion: Bool) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
         self.hasHapticFeedback = hasHapticFeedback
         self.blurred = blurred
         self.skipCoordnateConversion = skipCoordnateConversion
-        
-        super.init(navigationBarPresentationData: nil)
-        
-        self.statusBar.statusBarStyle = .Ignore
     }
-    
-    required public init(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+}
+
+private var contextMenuControllerProvider: ((ContextMenuControllerArguments) -> ContextMenuController)?
+
+public func setContextMenuControllerProvider(_ f: @escaping (ContextMenuControllerArguments) -> ContextMenuController) {
+    contextMenuControllerProvider = f
+}
+
+public func makeContextMenuController(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false, skipCoordnateConversion: Bool = false) -> ContextMenuController {
+    guard let contextMenuControllerProvider = contextMenuControllerProvider else {
+        preconditionFailure()
     }
-    
-    override public func loadDisplayNode() {
-        self.displayNode = ContextMenuNode(actions: self.actions, dismiss: { [weak self] in
-            self?.dismissed?()
-            self?.contextMenuNode.animateOut(bounce: (self?.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: {
-                self?.presentingViewController?.dismiss(animated: false)
-            })
-        }, dismissOnTap: { [weak self] view, point in
-            guard let self, let dismissOnTap = self.dismissOnTap else {
-                return false
-            }
-            return dismissOnTap(view, point)
-        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback, blurred: self.blurred)
-        self.displayNodeDidLoad()
-    }
-    
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        self.contextMenuNode.animateIn(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true)
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.dismissed?()
-        self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false)
-        })
-    }
-    
-    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        super.containerLayoutUpdated(layout, transition: transition)
-        
-        self.contextMenuNode.centerHorizontally = self.centerHorizontally
-        if self.layout != nil && self.layout! != layout {
-            self.dismissed?()
-            self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false)
-            })
-        } else {
-            self.layout = layout
-            
-            if let presentationArguments = self.presentationArguments as? ContextMenuControllerPresentationArguments, let (sourceNode, sourceRect, containerNode, containerRect) = presentationArguments.sourceNodeAndRect() {
-                if self.skipCoordnateConversion {
-                    self.contextMenuNode.sourceRect = sourceRect
-                    self.contextMenuNode.containerRect = containerRect
-                } else {
-                    self.contextMenuNode.sourceRect = sourceNode.view.convert(sourceRect, to: nil)
-                    self.contextMenuNode.containerRect = containerNode.view.convert(containerRect, to: nil)
-                }
-            } else {
-                self.contextMenuNode.sourceRect = nil
-                self.contextMenuNode.containerRect = nil
-            }
-            
-            self.contextMenuNode.containerLayoutUpdated(layout, transition: transition)
-        }
-    }
-    
-    override public func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-    }
+    return contextMenuControllerProvider(ContextMenuControllerArguments(
+        actions: actions,
+        catchTapsOutside: catchTapsOutside,
+        hasHapticFeedback: hasHapticFeedback,
+        blurred: blurred,
+        skipCoordnateConversion: skipCoordnateConversion
+    ))
 }
