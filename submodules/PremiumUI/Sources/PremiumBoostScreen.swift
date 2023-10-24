@@ -182,11 +182,12 @@ public func PremiumBoostScreen(
                     }
                 } else {
                     if isPremium {
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
                         let controller = textAlertController(
                             sharedContext: context.sharedContext,
                             updatedPresentationData: nil,
                             title: "More Boosts Needed",
-                            text: "To boost **\(peer.compactDisplayTitle)**, get more boosts by gifting **Telegram Premium** to a friend.",
+                            text: "To boost **\(peer.compactDisplayTitle)** again, gift **Telegram Premium** to a friend and get **\(premiumConfiguration.boostsPerGiftCount)** additional boosts.",
                             actions: [
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                             ],

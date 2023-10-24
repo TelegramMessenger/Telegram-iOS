@@ -361,7 +361,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             default:
                 color = .blue
             }
-            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, subtitle: subtitle, label: .boosts(prepaidGiveaway.quantity), sectionId: self.section, action: nil)
+            return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, sectionId: self.section, action: nil)
         case let .subscriptionsHeader(_, text, additionalText):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, accessoryText: ItemListSectionHeaderAccessoryText(value: additionalText, color: .generic), sectionId: self.section)
         case let .subscriptions(_, value):
@@ -543,7 +543,7 @@ private func createGiveawayControllerEntries(
     
     if case .giveaway = state.mode {
         if case .generic = subject {
-            entries.append(.subscriptionsHeader(presentationData.theme, "QUANTITY OF PRIZES".uppercased(), "\(state.subscriptions) BOOSTS"))
+            entries.append(.subscriptionsHeader(presentationData.theme, "QUANTITY OF PRIZES".uppercased(), "\(state.subscriptions * 4) BOOSTS"))
             entries.append(.subscriptions(presentationData.theme, state.subscriptions))
             entries.append(.subscriptionsInfo(presentationData.theme, "Choose how many Premium subscriptions to give away and boosts to receive."))
         }
@@ -553,7 +553,7 @@ private func createGiveawayControllerEntries(
         let channels = [peerId] + state.channels
         for channelId in channels {
             if let channel = peers[channelId] {
-                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions : nil, false))
+                entries.append(.channel(index, presentationData.theme, channel, channel.id == peerId ? state.subscriptions * 4 : nil, false))
             }
             index += 1
         }

@@ -896,7 +896,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     var dismissImpl: (() -> Void)?
                     let controller = PremiumGiftCodeScreen(
                         context: context,
-                        giftCode: giftCode,
+                        subject: .giftCode(giftCode),
                         forceDark: forceDark,
                         action: {
                             dismissImpl?()

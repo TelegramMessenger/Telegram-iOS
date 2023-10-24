@@ -10152,3 +10152,6 @@ Sorry for the inconvenience.";
 "Chat.ErrorQuoteOutdatedActionEdit" = "Edit";
 
 "Premium.BoostByGiftDescription" = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()";
+
+"Stats.Boosts.ShowMoreBoosts_1" = "Show %@ More Boost";
+"Stats.Boosts.ShowMoreBoosts_any" = "Show %@ More Boosts";
