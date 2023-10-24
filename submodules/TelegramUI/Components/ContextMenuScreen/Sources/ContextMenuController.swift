@@ -19,6 +19,7 @@ public final class ContextMenuControllerImpl: ViewController, KeyShortcutRespond
     private let hasHapticFeedback: Bool
     private let blurred: Bool
     private let skipCoordnateConversion: Bool
+    private let isDark: Bool
     
     private var layout: ContainerViewLayout?
     
@@ -33,6 +34,7 @@ public final class ContextMenuControllerImpl: ViewController, KeyShortcutRespond
         self.hasHapticFeedback = arguments.hasHapticFeedback
         self.blurred = arguments.blurred
         self.skipCoordnateConversion = arguments.skipCoordnateConversion
+        self.isDark = arguments.isDark
         
         super.init(navigationBarPresentationData: nil)
         
@@ -54,7 +56,7 @@ public final class ContextMenuControllerImpl: ViewController, KeyShortcutRespond
                 return false
             }
             return dismissOnTap(view, point)
-        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback, blurred: self.blurred)
+        }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback, blurred: self.blurred, isDark: self.isDark)
         self.displayNodeDidLoad()
     }
     

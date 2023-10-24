@@ -458,7 +458,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         self.highlightBackgroundNode.clipsToBounds = true
         self.highlightBackgroundNode.cornerRadius = 14.0
         
-        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0), strings: presentationData.strings, textNode: self.textNode.textNode, updateIsActive: { _ in
+        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0, isDark: presentationData.theme.overallDarkAppearance), strings: presentationData.strings, textNode: self.textNode.textNode, updateIsActive: { _ in
         }, present: { _, _ in
         }, rootNode: { [weak self] in
             return self

@@ -426,7 +426,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         )
         self.textNode.visibility = true
         
-        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: defaultDarkPresentationTheme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: defaultDarkPresentationTheme.list.itemAccentColor), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: defaultDarkPresentationTheme.list.itemAccentColor.withMultipliedAlpha(0.5), knob: defaultDarkPresentationTheme.list.itemAccentColor, isDark: true), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
             guard let self else {
                 return
             }

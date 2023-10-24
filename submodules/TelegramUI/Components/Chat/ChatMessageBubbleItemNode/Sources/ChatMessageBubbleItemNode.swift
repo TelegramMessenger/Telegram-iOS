@@ -3486,23 +3486,28 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         })
                         strongSelf.setAnimationForKey("contentNode\(contentNodeIndex)Frame", animation: animation)
                     } else {
-                        if let animateTextAndWebpagePositionSwap, let contentNode = contentNode as? ChatMessageTextBubbleContentNode, let snapshotLayer = contentNode.layer.snapshotContentTree() {
-                            let clippingLayer = SimpleLayer()
-                            clippingLayer.masksToBounds = true
-                            clippingLayer.frame = contentNode.frame
+                        var useExpensiveSnapshot = false
+                        if case .messageOptions = item.associatedData.subject {
+                            useExpensiveSnapshot = true
+                        }
+                        
+                        if let animateTextAndWebpagePositionSwap, let contentNode = contentNode as? ChatMessageTextBubbleContentNode, let snapshotView = useExpensiveSnapshot ? contentNode.view.snapshotView(afterScreenUpdates: false) :  contentNode.layer.snapshotContentTreeAsView() {
+                            let clippingView = UIView()
+                            clippingView.clipsToBounds = true
+                            clippingView.frame = contentNode.frame
                             
-                            clippingLayer.addSublayer(snapshotLayer)
-                            snapshotLayer.frame = CGRect(origin: CGPoint(), size: contentNode.bounds.size)
+                            clippingView.addSubview(snapshotView)
+                            snapshotView.frame = CGRect(origin: CGPoint(), size: contentNode.bounds.size)
                             
-                            contentNode.layer.superlayer?.insertSublayer(clippingLayer, below: contentNode.layer)
+                            contentNode.view.superview?.insertSubview(clippingView, belowSubview: contentNode.view)
                             
-                            animation.animator.updateAlpha(layer: clippingLayer, alpha: 0.0, completion: { [weak clippingLayer] _ in
-                                clippingLayer?.removeFromSuperlayer()
+                            animation.animator.updateAlpha(layer: clippingView.layer, alpha: 0.0, completion: { [weak clippingView] _ in
+                                clippingView?.removeFromSuperview()
                             })
                             
                             let positionOffset: CGFloat = animateTextAndWebpagePositionSwap ? -1.0 : 1.0
                             
-                            animation.animator.updatePosition(layer: snapshotLayer, position: CGPoint(x: snapshotLayer.position.x, y: snapshotLayer.position.y + positionOffset * contentNode.frame.height), completion: nil)
+                            animation.animator.updatePosition(layer: snapshotView.layer, position: CGPoint(x: snapshotView.center.x, y: snapshotView.center.y + positionOffset * contentNode.frame.height), completion: nil)
                             
                             contentNode.frame = contentNodeFrame
                             

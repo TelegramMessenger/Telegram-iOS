@@ -24,13 +24,15 @@ public struct ContextMenuControllerArguments {
     public var hasHapticFeedback: Bool
     public var blurred: Bool
     public var skipCoordnateConversion: Bool
+    public var isDark: Bool
     
-    public init(actions: [ContextMenuAction], catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool, skipCoordnateConversion: Bool) {
+    public init(actions: [ContextMenuAction], catchTapsOutside: Bool, hasHapticFeedback: Bool, blurred: Bool, skipCoordnateConversion: Bool, isDark: Bool) {
         self.actions = actions
         self.catchTapsOutside = catchTapsOutside
         self.hasHapticFeedback = hasHapticFeedback
         self.blurred = blurred
         self.skipCoordnateConversion = skipCoordnateConversion
+        self.isDark = isDark
     }
 }
 
@@ -40,7 +42,7 @@ public func setContextMenuControllerProvider(_ f: @escaping (ContextMenuControll
     contextMenuControllerProvider = f
 }
 
-public func makeContextMenuController(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false, skipCoordnateConversion: Bool = false) -> ContextMenuController {
+public func makeContextMenuController(actions: [ContextMenuAction], catchTapsOutside: Bool = false, hasHapticFeedback: Bool = false, blurred: Bool = false, isDark: Bool = true, skipCoordnateConversion: Bool = false) -> ContextMenuController {
     guard let contextMenuControllerProvider = contextMenuControllerProvider else {
         preconditionFailure()
     }
@@ -49,6 +51,7 @@ public func makeContextMenuController(actions: [ContextMenuAction], catchTapsOut
         catchTapsOutside: catchTapsOutside,
         hasHapticFeedback: hasHapticFeedback,
         blurred: blurred,
-        skipCoordnateConversion: skipCoordnateConversion
+        skipCoordnateConversion: skipCoordnateConversion,
+        isDark: isDark
     ))
 }
