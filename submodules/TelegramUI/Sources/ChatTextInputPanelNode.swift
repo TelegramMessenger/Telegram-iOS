@@ -1046,7 +1046,30 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
         if let presentationInterfaceState = self.presentationInterfaceState {
             var lineStyle: ChatInputTextView.Theme.Quote.LineStyle = .solid
-            if let accountPeerColor = presentationInterfaceState.accountPeerColor {
+            let authorNameColor: UIColor
+            let dashSecondaryColor: UIColor?
+            let dashTertiaryColor: UIColor?
+            
+            if let context = self.context, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, let nameColor = peer.nameColor {
+                let _ = nameColor
+                
+                lineStyle = .solid
+                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
+                dashSecondaryColor = nil
+                dashTertiaryColor = nil
+                
+                /*let colors = context.peerNameColors.get(nameColor)
+                
+                authorNameColor = colors.main
+                dashSecondaryColor = colors.secondary
+                dashTertiaryColor = colors.tertiary
+                
+                if dashSecondaryColor != nil {
+                    lineStyle = .doubleDashed
+                } else {
+                    lineStyle = .solid
+                }*/
+            } else if let accountPeerColor = presentationInterfaceState.accountPeerColor {
                 switch accountPeerColor.style {
                 case .solid:
                     lineStyle = .solid
@@ -1055,11 +1078,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 case .tripleDashed:
                     lineStyle = .tripleDashed
                 }
+                
+                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
+                dashSecondaryColor = .clear
+                dashTertiaryColor = nil
+            } else {
+                lineStyle = .solid
+                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
+                dashSecondaryColor = nil
+                dashTertiaryColor = nil
             }
+            
+            let _ = dashSecondaryColor
+            let _ = dashTertiaryColor
+                
             textInputNode.textView.theme = ChatInputTextView.Theme(
                 quote: ChatInputTextView.Theme.Quote(
-                    background: presentationInterfaceState.theme.list.itemAccentColor.withMultipliedAlpha(presentationInterfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
-                    foreground: presentationInterfaceState.theme.list.itemAccentColor,
+                    background: authorNameColor.withMultipliedAlpha(presentationInterfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
+                    foreground: authorNameColor,
                     lineStyle: lineStyle
                 )
             )

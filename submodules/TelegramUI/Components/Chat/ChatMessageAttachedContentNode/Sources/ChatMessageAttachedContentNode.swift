@@ -249,6 +249,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             var contentMediaAutomaticPlayback: Bool = false
             var contentMediaAutomaticDownload: InteractiveMediaNodeAutodownloadMode = .none
             
+            var mediaAndFlags = mediaAndFlags
+            if let mediaAndFlagsValue = mediaAndFlags, let _ = mediaAndFlagsValue.0 as? TelegramMediaStory {
+                var flags = mediaAndFlagsValue.1
+                flags.remove(.preferMediaInline)
+                mediaAndFlags = (mediaAndFlagsValue.0, flags)
+            }
+            
             var contentMediaAspectFilled = false
             if let (_, flags) = mediaAndFlags {
                 contentMediaAspectFilled = flags.contains(.preferMediaAspectFilled)
@@ -921,10 +928,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             if updateMedia {
-                                if let image = inlineMediaValue as? TelegramMediaImage {
+                                let resolvedInlineMediaValue = inlineMediaValue
+                                
+                                if let image = resolvedInlineMediaValue as? TelegramMediaImage {
                                     let updateInlineImageSignal = chatWebpageSnippetPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), placeholderColor: mainColor.withMultipliedAlpha(0.1))
                                     inlineMedia.setSignal(updateInlineImageSignal)
-                                } else if let file = inlineMediaValue as? TelegramMediaFile, let representation = file.previewRepresentations.last {
+                                } else if let file = resolvedInlineMediaValue as? TelegramMediaFile, let representation = file.previewRepresentations.last {
                                     let updateInlineImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file), representation: representation)
                                     inlineMedia.setSignal(updateInlineImageSignal)
                                 }

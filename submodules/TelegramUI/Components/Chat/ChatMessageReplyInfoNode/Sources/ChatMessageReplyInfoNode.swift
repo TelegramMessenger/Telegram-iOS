@@ -670,7 +670,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         node.addSubnode(imageNode)
                         node.imageNode = imageNode
                     }
-                    imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 3.0 + UIScreenPixel), size: CGSize(width: imageSide, height: imageSide))
+                    imageNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 4.0), size: CGSize(width: imageSide, height: imageSide))
                     
                     if let updateImageSignal = updateImageSignal {
                         imageNode.setSignal(updateImageSignal)

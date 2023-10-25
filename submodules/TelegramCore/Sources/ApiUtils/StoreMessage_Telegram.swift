@@ -599,21 +599,19 @@ extension StoreMessage {
                             if let replyToTopId = replyToTopId {
                                 if peerIsForum {
                                     if isForumTopic {
-                                        let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
                                         threadMessageId = threadIdValue
                                         if replyPeerId == peerId {
                                             threadId = makeMessageThreadId(threadIdValue)
                                         }
                                     }
                                 } else {
-                                    let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                    let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
                                     threadMessageId = threadIdValue
-                                    if replyPeerId == peerId {
-                                        threadId = makeMessageThreadId(threadIdValue)
-                                    }
+                                    threadId = makeMessageThreadId(threadIdValue)
                                 }
                             } else if peerId.namespace == Namespaces.Peer.CloudChannel {
-                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                                let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
                                 
                                 if peerIsForum {
                                     if isForumTopic {
