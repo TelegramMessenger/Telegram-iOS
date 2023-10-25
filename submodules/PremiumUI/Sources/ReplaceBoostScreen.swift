@@ -19,8 +19,6 @@ import PeerListItemComponent
 import TelegramStringFormatting
 import AvatarNode
 
-//TODO:localize
-
 private final class ReplaceBoostScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -172,7 +170,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
             if channelName.count > 48 {
                 channelName = "\(channelName.prefix(48))..."
             }
-            let descriptionString = "To boost **\(channelName)**, reassign a previous boost or gift **Telegram Premium** to a friend to get **\(premiumConfiguration.boostsPerGiftCount)** additional boosts."
+            let descriptionString = strings.ReassignBoost_Description(channelName, "\(premiumConfiguration.boostsPerGiftCount)").string
             
             let description = description.update(
                 component: MultilineTextComponent(
@@ -204,11 +202,11 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 if let cooldownUntil = boost.cooldownUntil, cooldownUntil > state.currentTime {
                     let duration = cooldownUntil - state.currentTime
                     let durationValue = stringForDuration(duration, position: nil)
-                    subtitle = "Available in \(durationValue)"
+                    subtitle = strings.ReassignBoost_AvailableIn(durationValue).string
                     isEnabled = false
                 } else {
                     let expiresValue = stringForDate(timestamp: boost.expires, strings: strings)
-                    subtitle = "Boost expires on \(expiresValue)"
+                    subtitle = strings.ReassignBoost_ExpiresOn(expiresValue).string
                 }
                 
                 let accountContext = context.component.context
@@ -245,7 +243,8 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                         selectedSlotsUpdated(state.selectedSlots)
                                     } else {
                                         let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Wait until the boost is available or get **3** more boosts by gifting a **Telegram Premium** subscription.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+         
+                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.ReassignBoost_WaitForCooldown("\(premiumConfiguration.boostsPerGiftCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
                                         presentController(undoController)
                                     }
                                 })
@@ -559,7 +558,7 @@ public class ReplaceBoostScreen: ViewController {
             let footerInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
             
             transition.setFrame(view: self.footerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: layout.size))
-            self.footerHeight = self.footerView.update(size: layout.size, insets: footerInsets, theme: self.presentationData.theme, count: Int32(self.selectedSlots.count))
+            self.footerHeight = self.footerView.update(size: layout.size, insets: footerInsets, theme: self.presentationData.theme, strings: self.presentationData.strings, count: Int32(self.selectedSlots.count))
             
             if !hadLayout {
                 self.updateFooterAlpha()
@@ -838,9 +837,9 @@ public class ReplaceBoostScreen: ViewController {
             presentControllerImpl?(c)
         }))
         
-        self.title = "Reassign Boosts"
+        self.title = presentationData.strings.ReassignBoost_Title
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -984,10 +983,10 @@ private final class FooterView: UIView {
     
     fileprivate var inProgress = false
     
-    private var currentLayout: (CGSize, UIEdgeInsets, PresentationTheme, Int32)?
-    func update(size: CGSize, insets: UIEdgeInsets, theme: PresentationTheme, count: Int32) -> CGFloat {
+    private var currentLayout: (CGSize, UIEdgeInsets, PresentationTheme, PresentationStrings, Int32)?
+    func update(size: CGSize, insets: UIEdgeInsets, theme: PresentationTheme, strings: PresentationStrings, count: Int32) -> CGFloat {
         let hadLayout = self.currentLayout != nil
-        self.currentLayout = (size, insets, theme, count)
+        self.currentLayout = (size, insets, theme, strings, count)
         
         self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorView.backgroundColor = theme.rootController.tabBar.separatorColor
@@ -1019,7 +1018,7 @@ private final class FooterView: UIView {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Reassign Boosts",
+                            text: strings.ReassignBoost_ReassignBoosts,
                             badge: Int(count),
                             textColor: theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: theme.list.itemCheckColors.foregroundColor,
@@ -1036,8 +1035,8 @@ private final class FooterView: UIView {
                             return
                         }
                         self.inProgress = true
-                        if let (size, insets, theme, count) = self.currentLayout {
-                            let _ = self.update(size: size, insets: insets, theme: theme, count: count)
+                        if let (size, insets, theme, strings, count) = self.currentLayout {
+                            let _ = self.update(size: size, insets: insets, theme: theme, strings: strings, count: count)
                         }
                         self.action()
                     }

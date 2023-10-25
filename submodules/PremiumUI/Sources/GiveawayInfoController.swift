@@ -4,12 +4,161 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramCore
-import TelegramPresentationData
-import TextFormat
 import AccountContext
-import AlertUI
-import PresentationDataUtils
+import TelegramStringFormatting
+import TelegramPresentationData
 import Markdown
+import AlertUI
+
+public func giveawayInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, message: EngineMessage, giveawayInfo: PremiumGiveawayInfo) -> ViewController? {
+    guard let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
+        return nil
+    }
+    
+    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    
+    var peerName = ""
+    if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
+        peerName = EnginePeer(peer).compactDisplayTitle
+    }
+    
+    let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: presentationData.strings)
+    
+    let title: String
+    let text: String
+    var warning: String?
+    
+    var dismissImpl: (() -> Void)?
+    
+    var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+        dismissImpl?()
+    })]
+    
+    switch giveawayInfo {
+    case let .ongoing(start, status):
+        let startDate = stringForDate(timestamp: start, strings: presentationData.strings)
+        
+        title = presentationData.strings.Chat_Giveaway_Info_Title
+        
+        let intro: String
+        if case .almostOver = status {
+            intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+        } else {
+            intro = "The giveaway is sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+        }
+        
+        let ending: String
+        if giveaway.flags.contains(.onlyNewSubscribers) {
+            if giveaway.channelPeerIds.count > 1 {
+                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
+            } else {
+                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+            }
+        } else {
+            if giveaway.channelPeerIds.count > 1 {
+                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
+            } else {
+                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+            }
+        }
+        
+        var participation: String
+        switch status {
+        case .notQualified:
+            if giveaway.channelPeerIds.count > 1 {
+                participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
+            } else {
+                participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
+            }
+        case let .notAllowed(reason):
+            switch reason {
+            case let .joinedTooEarly(joinedOn):
+                let joinDate = stringForDate(timestamp: joinedOn, strings: presentationData.strings)
+                participation = "You are not eligible to participate in this giveaway, because you joined this channel on **\(joinDate)**, which is before the contest started."
+            case let .channelAdmin(adminId):
+                let _ = adminId
+                participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
+            case let .disallowedCountry(countryCode):
+                let _ = countryCode
+                participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
+            }
+        case .participating:
+            if giveaway.channelPeerIds.count > 1 {
+                participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels)."
+            } else {
+                participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)**."
+            }
+        case .almostOver:
+            participation = presentationData.strings.Chat_Giveaway_Info_AlmostOver
+        }
+        
+        if !participation.isEmpty {
+            participation = "\n\n\(participation)"
+        }
+        
+        text = "\(intro)\n\n\(ending)\(participation)"
+    case let .finished(status, start, finish, _, activatedCount):
+        let startDate = stringForDate(timestamp: start, strings: presentationData.strings)
+        let finishDate = stringForDate(timestamp: finish, strings: presentationData.strings)
+        title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
+        
+        let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+        
+        var ending: String
+        if giveaway.flags.contains(.onlyNewSubscribers) {
+            if giveaway.channelPeerIds.count > 1 {
+                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
+            } else {
+                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+            }
+        } else {
+            if giveaway.channelPeerIds.count > 1 {
+                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
+            } else {
+                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+            }
+        }
+        
+        if activatedCount > 0 {
+            ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
+        }
+        
+        var result: String
+        switch status {
+        case .refunded:
+            result = ""
+            warning = presentationData.strings.Chat_Giveaway_Info_Refunded
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Close, action: {
+                dismissImpl?()
+            })]
+        case .notWon:
+            result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
+        case let .won(slug):
+            result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
+            let _ = slug
+            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
+                dismissImpl?()
+            }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                dismissImpl?()
+            })]
+        }
+    
+        text = "\(intro)\n\n\(ending)\(result)"
+    }
+    
+    let alertController = giveawayInfoAlertController(
+        context: context,
+        updatedPresentationData: updatedPresentationData,
+        title: title,
+        text: text,
+        warning: warning,
+        actions: actions
+    )
+    dismissImpl = { [weak alertController] in
+        alertController?.dismissAnimated()
+    }
+    return alertController
+}
 
 private final class GiveawayInfoAlertContentNode: AlertContentNode {
     private let title: String
@@ -229,7 +378,7 @@ private final class GiveawayInfoAlertContentNode: AlertContentNode {
     }
 }
 
-func giveawayInfoAlertController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, title: String, text: String, warning: String?, actions: [TextAlertAction]) -> AlertController {
+private func giveawayInfoAlertController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, title: String, text: String, warning: String?, actions: [TextAlertAction]) -> AlertController {
     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
                 
     let contentNode = GiveawayInfoAlertContentNode(theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, title: title, text: text, warning: warning, actions: actions)

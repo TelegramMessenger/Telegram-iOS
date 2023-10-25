@@ -554,15 +554,15 @@ private enum StatsEntry: ItemListNodeEntry {
                 let expiresString: String
                 
                 let durationMonths = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
-                let durationString = "\(durationMonths)m"
-                
+                let durationString = presentationData.strings.Stats_Boosts_ShortMonth("\(durationMonths)").string
+            
                 let title: String
                 let icon: GiftOptionItem.Icon
                 var label: String?
                 if boost.flags.contains(.isGiveaway) {
-                    label = "🏆 Giveaway"
+                    label = "🏆 \(presentationData.strings.Stats_Boosts_Giveaway)"
                 } else if boost.flags.contains(.isGift) {
-                    label = "🎁 Gift"
+                    label = "🎁 \(presentationData.strings.Stats_Boosts_Gift)"
                 }
             
                 let color: GiftOptionItem.Icon.Color
@@ -575,7 +575,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 }
             
                 if boost.flags.contains(.isUnclaimed) {
-                    title = "Unclaimed"
+                    title = presentationData.strings.Stats_Boosts_Unclaimed
                     icon = .image(color: color, name: "Premium/Unclaimed")
                     expiresString = "\(durationString) • \(expiresValue)"
                 } else if let peer = boost.peer {
@@ -588,10 +588,10 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                 } else {
                     if boost.flags.contains(.isUnclaimed) {
-                        title = "Unclaimed"
+                        title = presentationData.strings.Stats_Boosts_Unclaimed
                         icon = .image(color: color, name: "Premium/Unclaimed")
                     } else if boost.flags.contains(.isGiveaway) {
-                        title = "To be distributed"
+                        title = presentationData.strings.Stats_Boosts_ToBeDistributed
                         icon = .image(color: color, name: "Premium/ToBeDistributed")
                     } else {
                         title = "Unknown"
@@ -774,15 +774,14 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostOverviewTitle(presentationData.theme, presentationData.strings.Stats_Boosts_OverviewHeader))
             entries.append(.boostOverview(presentationData.theme, boostData))
             
-//TODO:localize
             if !boostData.prepaidGiveaways.isEmpty {
-                entries.append(.boostPrepaidTitle(presentationData.theme, "PREPAID GIVEAWAYS"))
+                entries.append(.boostPrepaidTitle(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysTitle))
                 var i: Int32 = 0
                 for giveaway in boostData.prepaidGiveaways {
-                    entries.append(.boostPrepaid(i, presentationData.theme, "\(giveaway.quantity) Telegram Premium", "\(giveaway.months)-month subscriptions", giveaway))
+                    entries.append(.boostPrepaid(i, presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity), presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(giveaway.months)").string, giveaway))
                     i += 1
                 }
-                entries.append(.boostPrepaidInfo(presentationData.theme, "Select a giveaway you already paid for to set it up."))
+                entries.append(.boostPrepaidInfo(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysInfo))
             }
             
             let boostersTitle: String
@@ -813,7 +812,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             }
             
             if boostsCount > 0 && giftsCount > 0 && boostsCount != giftsCount {
-                entries.append(.boosterTabs(presentationData.theme, "\(boostsCount) Boosts", "\(giftsCount) Gifts", state.giftsSelected))
+                entries.append(.boosterTabs(presentationData.theme, presentationData.strings.Stats_Boosts_TabBoosts(boostsCount), presentationData.strings.Stats_Boosts_TabGifts(giftsCount), state.giftsSelected))
             }
             
             let selectedState: ChannelBoostersContext.State?
@@ -853,8 +852,8 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
             
             if giveawayAvailable {
-                entries.append(.gifts(presentationData.theme, "Get Boosts via Gifts"))
-                entries.append(.giftsInfo(presentationData.theme, "Get more boosts for your channel by gifting Premium to your subscribers."))
+                entries.append(.gifts(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoosts))
+                entries.append(.giftsInfo(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoostsInfo))
             }
         }
     }

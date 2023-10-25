@@ -95,12 +95,13 @@ final class StoryInteractionGuideComponent: Component {
             self.component = component
             self.state = state
             
+            let strings = component.strings
+            
             let sideInset: CGFloat = 48.0
             
-//TODO:localize
             let titleSize = self.titleLabel.update(
                 transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Watching Stories", font: Font.semibold(20.0), textColor: .white, paragraphAlignment: .center)))),
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Title, font: Font.semibold(20.0), textColor: .white, paragraphAlignment: .center)))),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
@@ -114,7 +115,7 @@ final class StoryInteractionGuideComponent: Component {
             
             let textSize = self.descriptionLabel.update(
                 transition: .immediate,
-                component: AnyComponent(BalancedTextComponent(text: .plain(NSAttributedString(string: "You can use these gestures to control playback.", font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .center)), maximumNumberOfLines: 0, lineSpacing: 0.2)),
+                component: AnyComponent(BalancedTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Description, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .center)), maximumNumberOfLines: 0, lineSpacing: 0.2)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
@@ -132,8 +133,8 @@ final class StoryInteractionGuideComponent: Component {
                     component: AnyComponent(
                         GuideItemComponent(
                             context: component.context,
-                            title: "Go forward",
-                            text: "Tap the screen",
+                            title: strings.Story_Guide_ForwardTitle,
+                            text: strings.Story_Guide_ForwardDescription,
                             animationName: "story_forward",
                             isPlaying: self.currentIndex == 0,
                             playbackCompleted: { [weak self] in
@@ -151,8 +152,8 @@ final class StoryInteractionGuideComponent: Component {
                     component: AnyComponent(
                         GuideItemComponent(
                             context: component.context,
-                            title: "Pause and Seek",
-                            text: "Hold and move sideways",
+                            title: strings.Story_Guide_PauseTitle,
+                            text: strings.Story_Guide_PauseDescription,
                             animationName: "story_pause",
                             isPlaying: self.currentIndex == 1,
                             playbackCompleted: { [weak self] in
@@ -170,8 +171,8 @@ final class StoryInteractionGuideComponent: Component {
                     component: AnyComponent(
                         GuideItemComponent(
                             context: component.context,
-                            title: "Go back",
-                            text: "Tap the left edge",
+                            title: strings.Story_Guide_BackTitle,
+                            text: strings.Story_Guide_BackDescription,
                             animationName: "story_back",
                             isPlaying: self.currentIndex == 2,
                             playbackCompleted: { [weak self] in
@@ -189,8 +190,8 @@ final class StoryInteractionGuideComponent: Component {
                     component: AnyComponent(
                         GuideItemComponent(
                             context: component.context,
-                            title: "Move between stories",
-                            text: "Swipe left or right",
+                            title: strings.Story_Guide_MoveTitle,
+                            text: strings.Story_Guide_MoveDescription,
                             animationName: "story_move",
                             isPlaying: self.currentIndex == 3,
                             playbackCompleted: { [weak self] in
@@ -222,7 +223,7 @@ final class StoryInteractionGuideComponent: Component {
             let buttonSize = self.proceedButton.update(
                 transition: .immediate,
                 component: AnyComponent(Button(
-                    content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: "Tap to keep watching", font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)))),
+                    content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Proceed, font: Font.semibold(17.0), textColor: .white, paragraphAlignment: .center)))),
                     action: { [weak self] in
                         self?.handleTap()
                     }

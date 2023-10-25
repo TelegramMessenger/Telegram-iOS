@@ -4787,17 +4787,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 case let .ongoing(_, status):
                     switch status {
                     case .notAllowed:
-                        content = .info(title: nil, text: "You can't participate in this giveaway.", timeout: nil, customUndoText: "Learn More")
+                        content = .info(title: nil, text: self.presentationData.strings.Chat_Giveaway_Toast_NotAllowed, timeout: nil, customUndoText: self.presentationData.strings.Chat_Giveaway_Toast_LearnMore)
                     case .participating:
-                        content = .succeed(text: "You are participating in this giveaway.", timeout: nil, customUndoText: "Learn More")
+                        content = .succeed(text: self.presentationData.strings.Chat_Giveaway_Toast_Participating, timeout: nil, customUndoText: self.presentationData.strings.Chat_Giveaway_Toast_LearnMore)
                     case .notQualified:
-                        content = .info(title: nil, text: "You are not qualified for this giveaway yet.", timeout: nil, customUndoText: "Learn More")
+                        content = .info(title: nil, text: self.presentationData.strings.Chat_Giveaway_Toast_NotQualified, timeout: nil, customUndoText: self.presentationData.strings.Chat_Giveaway_Toast_LearnMore)
                     case .almostOver:
-                        content = .info(title: nil, text: "The giveaway is almost over.", timeout: nil, customUndoText: "Learn More")
+                        content = .info(title: nil, text: self.presentationData.strings.Chat_Giveaway_Toast_AlmostOver, timeout: nil, customUndoText: self.presentationData.strings.Chat_Giveaway_Toast_LearnMore)
                     }
-                case let .finished(status, _, _, _, _):
-                    let _ = status
-                    content = .info(title: nil, text: "The giveaway is ended.", timeout: nil, customUndoText: "Learn More")
+                    case .finished:
+                        content = .info(title: nil, text: self.presentationData.strings.Chat_Giveaway_Toast_Ended, timeout: nil, customUndoText: self.presentationData.strings.Chat_Giveaway_Toast_LearnMore)
                 }
                 let controller = UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { [weak self] action in
                     if case .undo = action, let self {
@@ -19563,150 +19562,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     func displayGiveawayStatusInfo(messageId: EngineMessage.Id, giveawayInfo: PremiumGiveawayInfo) {
         let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
         |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
-            guard let self, let message, let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
+            guard let self, let message else {
                 return
             }
-            var peerName = ""
-            if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
-                peerName = EnginePeer(peer).compactDisplayTitle
-            }
-            
-            let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: self.presentationData.strings)
-            
-            let title: String
-            let text: String
-            var warning: String?
-            
-            var dismissImpl: (() -> Void)?
-            
-            var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {
-                dismissImpl?()
-            })]
-            
-            switch giveawayInfo {
-            case let .ongoing(start, status):
-                let startDate = stringForDate(timestamp: start, strings: self.presentationData.strings)
-                
-                title = "About This Giveaway"
-                
-                let intro: String
-                if case .almostOver = status {
-                    intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                } else {
-                    intro = "The giveaway is sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                }
-                
-                let ending: String
-                if giveaway.flags.contains(.onlyNewSubscribers) {
-                    if giveaway.channelPeerIds.count > 1 {
-                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
-                    } else {
-                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                    }
-                } else {
-                    if giveaway.channelPeerIds.count > 1 {
-                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
-                    } else {
-                        ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                    }
-                }
-                
-                var participation: String
-                switch status {
-                case .notQualified:
-                    if giveaway.channelPeerIds.count > 1 {
-                        participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
-                    } else {
-                        participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
-                    }
-                case let .notAllowed(reason):
-                    switch reason {
-                    case let .joinedTooEarly(joinedOn):
-                        let joinDate = stringForDate(timestamp: joinedOn, strings: self.presentationData.strings)
-                        participation = "You are not eligible to participate in this giveaway, because you joined this channel on **\(joinDate)**, which is before the contest started."
-                    case let .channelAdmin(adminId):
-                        let _ = adminId
-                        participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
-                    case let .disallowedCountry(countryCode):
-                        let _ = countryCode
-                        participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
-                    }
-                case .participating:
-                    if giveaway.channelPeerIds.count > 1 {
-                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels)."
-                    } else {
-                        participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)**."
-                    }
-                case .almostOver:
-                    participation = "The giveaway is over, preparing results."
-                }
-                
-                if !participation.isEmpty {
-                    participation = "\n\n\(participation)"
-                }
-                
-                text = "\(intro)\n\n\(ending)\(participation)"
-            case let .finished(status, start, finish, _, activatedCount):
-                let startDate = stringForDate(timestamp: start, strings: self.presentationData.strings)
-                let finishDate = stringForDate(timestamp: finish, strings: self.presentationData.strings)
-                title = "Giveaway Ended"
-                
-                let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
-                
-                var ending: String
-                if giveaway.flags.contains(.onlyNewSubscribers) {
-                    if giveaway.channelPeerIds.count > 1 {
-                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
-                    } else {
-                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
-                    }
-                } else {
-                    if giveaway.channelPeerIds.count > 1 {
-                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
-                    } else {
-                        ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
-                    }
-                }
-                
-                if activatedCount > 0 {
-                    ending += " \(activatedCount) of the winners already used their gift links."
-                }
-                
-                var result: String
-                switch status {
-                case .refunded:
-                    result = ""
-                    warning = "The channel cancelled the prizes by reversing the payment for them."
-                    actions = [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Close, action: {
-                        dismissImpl?()
-                    })]
-                case .notWon:
-                    result = "\n\nYou didn't win a prize in this giveaway."
-                case let .won(slug):
-                    result = "\n\nYou won a prize in this giveaway. 🏆"
-                    let _ = slug
-                    actions = [TextAlertAction(type: .defaultAction, title: "View My Prize", action: {
-                        dismissImpl?()
-                    }), TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Cancel, action: {
-                        dismissImpl?()
-                    })]
-                }
-                
-                text = "\(intro)\n\n\(ending)\(result)"
-            }
-            
-            let alertController = giveawayInfoAlertController(
-                context: self.context,
-                updatedPresentationData: self.updatedPresentationData,
-                title: title,
-                text: text,
-                warning: warning,
-                actions: actions
-            )
-            self.present(alertController, in: .window(.root))
-            
-            dismissImpl = { [weak alertController] in
-                alertController?.dismissAnimated()
+            if let controller = giveawayInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, message: message, giveawayInfo: giveawayInfo) {
+                self.present(controller, in: .window(.root))
             }
         })
     }

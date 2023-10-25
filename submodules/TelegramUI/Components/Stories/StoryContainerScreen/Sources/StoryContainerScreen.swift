@@ -546,6 +546,14 @@ private final class StoryContainerScreenComponent: Component {
                 }
                 self.initialSeekTimestamp = nil
                 self.previousSeekTime = nil
+                
+                guard let stateValue = self.stateValue, let slice = stateValue.slice, let itemSetView = self.visibleItemSetViews[slice.peer.id], let itemSetComponentView = itemSetView.view.view as? StoryItemSetContainerComponent.View else {
+                    return
+                }
+                guard let visibleItemView = itemSetComponentView.visibleItems[slice.item.storyItem.id]?.view.view as? StoryItemContentComponent.View else {
+                    return
+                }
+                visibleItemView.seekEnded()
             }
             longPressRecognizer.shouldBegin = { [weak self] touch in
                 guard let self else {

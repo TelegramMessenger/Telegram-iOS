@@ -186,8 +186,8 @@ public func PremiumBoostScreen(
                         let controller = textAlertController(
                             sharedContext: context.sharedContext,
                             updatedPresentationData: nil,
-                            title: "More Boosts Needed",
-                            text: "To boost **\(peer.compactDisplayTitle)** again, gift **Telegram Premium** to a friend and get **\(premiumConfiguration.boostsPerGiftCount)** additional boosts.",
+                            title: presentationData.strings.ChannelBoost_MoreBoosts_Title,
+                            text: presentationData.strings.ChannelBoost_MoreBoosts_Text(peer.compactDisplayTitle, "\(premiumConfiguration.boostsPerGiftCount)").string,
                             actions: [
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                             ],

@@ -109,6 +109,7 @@ swift_library(
         "//submodules/CountrySelectionUI",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
         "//submodules/InvisibleInkDustNode",
+        "//submodules/AlertUI",
     ],
     visibility = [
         "//visibility:public",

@@ -11,12 +11,14 @@ import ComponentFlow
 
 final class CreateGiveawayHeaderItem: ItemListControllerHeaderItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let title: String
     let text: String
     let cancel: () -> Void
     
-    init(theme: PresentationTheme, title: String, text: String, cancel: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, title: String, text: String, cancel: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.title = title
         self.text = text
         self.cancel = cancel
@@ -132,7 +134,7 @@ class CreateGiveawayHeaderItemNode: ItemListControllerHeaderItemNode {
         self.titleNode.attributedText = attributedTitle
         self.textNode.attributedText = attributedText
         
-        self.cancelNode.setAttributedTitle(NSAttributedString(string: "Cancel", font: Font.regular(17.0), textColor: self.item.theme.rootController.navigationBar.accentTextColor), for: .normal)
+        self.cancelNode.setAttributedTitle(NSAttributedString(string: self.item.strings.Common_Cancel, font: Font.regular(17.0), textColor: self.item.theme.rootController.navigationBar.accentTextColor), for: .normal)
     }
     
     override func updateContentOffset(_ contentOffset: CGFloat, transition: ContainedViewLayoutTransition) {

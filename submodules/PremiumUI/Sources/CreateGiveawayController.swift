@@ -377,8 +377,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
         case let .channelsHeader(_, text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .channel(_, _, peer, boosts, isRevealed):
-            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text("this channel will receive \($0) boosts", .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: boosts == nil, editing: false, revealed: isRevealed), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
-//                arguments.openPeer(peer)
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: PresentationDateTimeFormat(), nameDisplayOrder: presentationData.nameDisplayOrder, context: arguments.context, peer: peer, presence: nil, text: boosts.flatMap { .text(presentationData.strings.BoostGift_ChannelsBoosts($0), .secondary) } ?? .none, label: .none, editing: ItemListPeerItemEditing(editable: boosts == nil, editing: false, revealed: isRevealed), switchValue: nil, enabled: true, selectable: peer.id != arguments.context.account.peerId, sectionId: self.section, action: {
             }, setPeerIdWithRevealedOptions: { lhs, rhs in
                 arguments.setItemIdWithRevealedOptions(lhs, rhs)
             }, removePeer: { id in
@@ -433,7 +432,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 text = presentationData.strings.InviteLink_Create_TimeLimitExpiryDateNever
             }
-            return ItemListDisclosureItem(presentationData: presentationData, title: "Ends", label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
+            return ItemListDisclosureItem(presentationData: presentationData, title: presentationData.strings.BoostGift_DateEnds, label: text, labelStyle: active ? .coloredText(theme.list.itemAccentColor) : .text, sectionId: self.section, style: .blocks, disclosureStyle: .none, action: {
                 arguments.dismissInput()
                 var focus = false
                 arguments.updateState { state in
@@ -515,7 +514,7 @@ private func createGiveawayControllerEntries(
         
     switch subject {
     case .generic:
-        entries.append(.createGiveaway(presentationData.theme, "Create Giveaway", "winners are chosen randomly", state.mode == .giveaway))
+        entries.append(.createGiveaway(presentationData.theme, presentationData.strings.BoostGift_CreateGiveaway, presentationData.strings.BoostGift_CreateGiveawayInfo, state.mode == .giveaway))
         
         let recipientsText: String
         if !state.peers.isEmpty {
@@ -533,22 +532,22 @@ private func createGiveawayControllerEntries(
                 recipientsText = presentationData.strings.PremiumGift_LabelRecipients(Int32(peersCount))
             }
         } else {
-            recipientsText = "select recipients"
+            recipientsText = presentationData.strings.BoostGift_SelectRecipients
         }
-        entries.append(.awardUsers(presentationData.theme, "Award Specific Users", recipientsText, state.mode == .gift))
+        entries.append(.awardUsers(presentationData.theme, presentationData.strings.BoostGift_AwardSpecificUsers, recipientsText, state.mode == .gift))
     case let .prepaid(prepaidGiveaway):
-        entries.append(.prepaidHeader(presentationData.theme, "PREPAID GIVEAWAY"))
-        entries.append(.prepaid(presentationData.theme, "\(prepaidGiveaway.quantity) Telegram Premium", "\(prepaidGiveaway.months)-month subscriptions", prepaidGiveaway))
+        entries.append(.prepaidHeader(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayTitle))
+        entries.append(.prepaid(presentationData.theme, presentationData.strings.BoostGift_PrepaidGiveawayCount(prepaidGiveaway.quantity), presentationData.strings.BoostGift_PrepaidGiveawayMonths("\(prepaidGiveaway.months)").string, prepaidGiveaway))
     }
     
     if case .giveaway = state.mode {
         if case .generic = subject {
-            entries.append(.subscriptionsHeader(presentationData.theme, "QUANTITY OF PRIZES".uppercased(), "\(state.subscriptions * 4) BOOSTS"))
+            entries.append(.subscriptionsHeader(presentationData.theme, presentationData.strings.BoostGift_QuantityTitle.uppercased(), presentationData.strings.BoostGift_QuantityBoosts(state.subscriptions * 4)))
             entries.append(.subscriptions(presentationData.theme, state.subscriptions))
-            entries.append(.subscriptionsInfo(presentationData.theme, "Choose how many Premium subscriptions to give away and boosts to receive."))
+            entries.append(.subscriptionsInfo(presentationData.theme, presentationData.strings.BoostGift_QuantityInfo))
         }
         
-        entries.append(.channelsHeader(presentationData.theme, "CHANNELS INCLUDED IN THE GIVEAWAY".uppercased()))
+        entries.append(.channelsHeader(presentationData.theme, presentationData.strings.BoostGift_ChannelsTitle.uppercased()))
         var index: Int32 = 0
         let channels = [peerId] + state.channels
         for channelId in channels {
@@ -557,35 +556,44 @@ private func createGiveawayControllerEntries(
             }
             index += 1
         }
-        entries.append(.channelAdd(presentationData.theme,  "Add Channel"))
-        entries.append(.channelsInfo(presentationData.theme, "Choose the channels users need to be subscribed to take part in the giveaway"))
+        entries.append(.channelAdd(presentationData.theme, presentationData.strings.BoostGift_AddChannel))
+        entries.append(.channelsInfo(presentationData.theme, presentationData.strings.BoostGift_ChannelsInfo))
         
-        entries.append(.usersHeader(presentationData.theme, "USERS ELIGIBLE FOR THE GIVEAWAY".uppercased()))
+        entries.append(.usersHeader(presentationData.theme, presentationData.strings.BoostGift_UsersTitle.uppercased()))
         
         let countriesText: String
         if state.countries.count > 2 {
-            countriesText = "from \(state.countries.count) countries"
+            countriesText = presentationData.strings.BoostGift_FromCountries(Int32(state.countries.count))
         } else if !state.countries.isEmpty {
-            let allCountries = state.countries.map { locale.localizedString(forRegionCode: $0) ?? $0 }.joined(separator: " and ")
-            countriesText = "from \(allCountries)"
+            if state.countries.count == 2 {
+                let firstCountryCode = state.countries.first ?? ""
+                let secondCountryCode = state.countries.last ?? ""
+                let firstCountryName = locale.localizedString(forRegionCode: firstCountryCode) ?? firstCountryCode
+                let secondCountryName = locale.localizedString(forRegionCode: secondCountryCode) ?? secondCountryCode
+                countriesText = presentationData.strings.BoostGift_FromTwoCountries(firstCountryName, secondCountryName).string
+            } else {
+                let countryCode = state.countries.first ?? ""
+                let countryName = locale.localizedString(forRegionCode: countryCode) ?? countryCode
+                countriesText = presentationData.strings.BoostGift_FromOneCountry(countryName).string
+            }
         } else {
-            countriesText = "from all countries"
+            countriesText = presentationData.strings.BoostGift_FromAllCountries
         }
         
-        entries.append(.usersAll(presentationData.theme, "All subscribers", countriesText, !state.onlyNewEligible))
-        entries.append(.usersNew(presentationData.theme, "Only new subscribers", countriesText, state.onlyNewEligible))
-        entries.append(.usersInfo(presentationData.theme, "Choose if you want to limit the giveaway only to those who joined the channel after the giveaway started."))
+        entries.append(.usersAll(presentationData.theme, presentationData.strings.BoostGift_AllSubscribers, countriesText, !state.onlyNewEligible))
+        entries.append(.usersNew(presentationData.theme, presentationData.strings.BoostGift_OnlyNewSubscribers, countriesText, state.onlyNewEligible))
+        entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
         
-        entries.append(.timeHeader(presentationData.theme, "DATE WHEN GIVEAWAY ENDS".uppercased()))
+        entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
         entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, state.time, state.pickingTimeLimit))
         if state.pickingTimeLimit {
             entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate))
         }
-        entries.append(.timeInfo(presentationData.theme, "Choose when \(state.subscriptions) subscribers of your channel will be randomly selected to receive Telegram Premium."))
+        entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
     }
     
     if case .generic = subject {
-        entries.append(.durationHeader(presentationData.theme, "DURATION OF PREMIUM SUBSCRIPTIONS".uppercased()))
+        entries.append(.durationHeader(presentationData.theme, presentationData.strings.BoostGift_DurationTitle.uppercased()))
         
         let recipientCount: Int
         switch state.mode {
@@ -628,7 +636,7 @@ private func createGiveawayControllerEntries(
             i += 1
         }
         
-        entries.append(.durationInfo(presentationData.theme, "You can review the list of features and terms of use for Telegram Premium [here]()."))
+        entries.append(.durationInfo(presentationData.theme, presentationData.strings.BoostGift_PremiumInfo))
     }
     
     return entries
@@ -776,7 +784,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         
         let (state, peersMap) = stateAndPeersMap
                 
-        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, title: "Boosts via Gifts", text: "Get more boosts for your channel by gifting\nPremium to your subscribers.", cancel: {
+        let headerItem = CreateGiveawayHeaderItem(theme: presentationData.theme, strings: presentationData.strings, title: presentationData.strings.BoostGift_Title, text: presentationData.strings.BoostGift_Description, cancel: {
             dismissImpl?()
         })
         
@@ -787,7 +795,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         case .gift:
             badgeCount = Int32(state.peers.count)
         }
-        let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? "Gift Premium" : "Start Giveaway", badgeCount: badgeCount, isLoading: state.updating, action: {
+        let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? presentationData.strings.BoostGift_GiftPremium : presentationData.strings.BoostGift_StartGiveaway, badgeCount: badgeCount, isLoading: state.updating, action: {
             buyActionImpl?()
         })
         let leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
@@ -857,7 +865,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         }
         
         guard let selectedProduct else {
-            let alertController = textAlertController(context: context, title: "Reduce Quantity", text: "You can't acquire \(state.subscriptions) \(selectedMonths)-month subscriptions in the app. Do you want to reduce quantity to 25?", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: "Reduce", action: {
+            let alertController = textAlertController(context: context, title: presentationData.strings.BoostGift_ReduceQuantity_Title, text: presentationData.strings.BoostGift_ReduceQuantity_Text("\(state.subscriptions)", "\(selectedMonths)", "\(25)").string, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BoostGift_ReduceQuantity_Reduce, action: {
                 updateState { state in
                     var updatedState = state
                     updatedState.subscriptions = 25
@@ -915,11 +923,11 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                                 let text: String
                                 switch state.mode {
                                 case .giveaway:
-                                    title = "Giveaway Created"
-                                    text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
+                                    title = presentationData.strings.BoostGift_GiveawayCreated_Title
+                                    text = presentationData.strings.BoostGift_GiveawayCreated_Text
                                 case .gift:
-                                    title = "Premium Subscriptions Gifted"
-                                    text = "Check your channel's [Statistics]() to see how gifts boosted your channel."
+                                    title = presentationData.strings.BoostGift_PremiumGifted_Title
+                                    text = presentationData.strings.BoostGift_PremiumGifted_Text
                                 }
                                 
                                 let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
@@ -992,8 +1000,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     controllers.removeLast(count)
                     navigationController.setViewControllers(controllers, animated: true)
                     
-                    let title = "Giveaway Created"
-                    let text = "Check your channel's [Statistics]() to see how this giveaway boosted your channel."
+                    let title = presentationData.strings.BoostGift_GiveawayCreated_Title
+                    let text = presentationData.strings.BoostGift_GiveawayCreated_Text
                     
                     let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
                         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))

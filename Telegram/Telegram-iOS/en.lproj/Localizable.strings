@@ -10151,3 +10151,150 @@ Sorry for the inconvenience.";
 
 "Stats.Boosts.ShowMoreBoosts_1" = "Show %@ More Boost";
 "Stats.Boosts.ShowMoreBoosts_any" = "Show %@ More Boosts";
+
+"ReassignBoost.Title" = "Reassign Boosts";
+"ReassignBoost.Description" = "To boost **%1$@**, reassign a previous boost or gift **Telegram Premium** to a friend to get **%2$@** additional boosts.";
+"ReassignBoost.ReassignBoosts" = "Reassign Boosts";
+"ReassignBoost.AvailableIn" = "Available in %@";
+"ReassignBoost.ExpiresOn" = "Boost expires on %@";
+"ReassignBoost.WaitForCooldown" = "Wait until the boost is available or get **%1$@** more boosts by gifting a **Telegram Premium** subscription.";
+
+"ReassignBoost.Success" = "Wait until the boost is available or get **%1$@** more boosts by gifting a **Telegram Premium** subscription.";
+
+//"\(replacedBoosts) boosts are reassigned from \(inChannels) other channel."
+
+"ChannelBoost.MoreBoosts.Title" = "More Boosts Needed";
+"ChannelBoost.MoreBoosts.Text" = "To boost **%1$@** again, gift **Telegram Premium** to a friend and get **%2$@** additional boosts.";
+
+"BoostGift.Title" = "Boosts via Gifts";
+"BoostGift.Description" = "Get more boosts for your channel by gifting\nPremium to your subscribers.";
+"BoostGift.PrepaidGiveawayTitle" = "PREPAID GIVEAWAY";
+"BoostGift.PrepaidGiveawayCount_1" = "%@ Telegram Premium";
+"BoostGift.PrepaidGiveawayCount_any" = "%@ Telegram Premium";
+"BoostGift.PrepaidGiveawayMonths" = "%@-month subscriptions";
+"BoostGift.CreateGiveaway" = "Create Giveaway";
+"BoostGift.CreateGiveawayInfo" = "winners are chosen randomly";
+"BoostGift.AwardSpecificUsers" = "Award Specific Users";
+"BoostGift.SelectRecipients" = "select recipients";
+"BoostGift.QuantityTitle" = "QUANTITY OF PRIZES";
+"BoostGift.QuantityBoosts_1" = "%@ BOOST";
+"BoostGift.QuantityBoosts_any" = "%@ BOOSTS";
+"BoostGift.QuantityInfo" = "Choose how many Premium subscriptions to give away and boosts to receive.";
+"BoostGift.ChannelsTitle" = "CHANNELS INCLUDED IN THE GIVEAWAY";
+"BoostGift.AddChannel" = "Add Channel";
+"BoostGift.ChannelsBoosts_1" = "this channel will receive %@ boost";
+"BoostGift.ChannelsBoosts_any" = "this channel will receive %@ boosts";
+"BoostGift.ChannelsInfo" = "Choose the channels users need to be subscribed to take part in the giveaway";
+"BoostGift.UsersTitle" = "USERS ELIGIBLE FOR THE GIVEAWAY";
+"BoostGift.FromCountries_1" = "from %@ country";
+"BoostGift.FromCountries_any" = "from %@ countries";
+"BoostGift.FromTwoCountries" = "from %1$@ and %2$@";
+"BoostGift.FromOneCountry" = "from %1$@";
+"BoostGift.FromAllCountries" = "from all countries";
+"BoostGift.AllSubscribers" = "All subscribers";
+"BoostGift.OnlyNewSubscribers" = "Only new subscribers";
+"BoostGift.LimitSubscribersInfo" = "Choose if you want to limit the giveaway only to those who joined the channel after the giveaway started.";
+"BoostGift.DateTitle" = "DATE WHEN GIVEAWAY ENDS";
+"BoostGift.DateEnds" = "Ends";
+"BoostGift.DateInfo" = "Choose when %1$@ of your channel will be randomly selected to receive Telegram Premium.";
+"BoostGift.DateInfoSubscribers_1" = "%@ subscriber";
+"BoostGift.DateInfoSubscribers_any" = "%@ subscribers";
+"BoostGift.DurationTitle" = "DURATION OF PREMIUM SUBSCRIPTIONS";
+"BoostGift.PremiumInfo" = "You can review the list of features and terms of use for Telegram Premium [here]().";
+"BoostGift.GiftPremium" = "Gift Premium";
+"BoostGift.StartGiveaway" = "Start Giveaway";
+"BoostGift.ReduceQuantity.Title" = "Reduce Quantity";
+"BoostGift.ReduceQuantity.Text" = "You can't acquire %1$@ %2$@-month subscriptions in the app. Do you want to reduce quantity to %3$@?";
+"BoostGift.ReduceQuantity.Reduce" = "Reduce";
+"BoostGift.GiveawayCreated.Title" = "Giveaway Created";
+"BoostGift.GiveawayCreated.Text" = "Check your channel's [Statistics]() to see how this giveaway boosted your channel.";
+"BoostGift.PremiumGifted.Title" = "Premium Subscriptions Gifted";
+"BoostGift.PremiumGifted.Text" = "Check your channel's [Statistics]() to see how gifts boosted your channel.";
+
+"BoostGift.Subscribers.Title" = "Gift Premium";
+"BoostGift.Subscribers.Subtitle" = "select up to %@ subscribers";
+"BoostGift.Subscribers.SectionTitle" = "SUBSCRIBERS";
+"BoostGift.Subscribers.Joined" = "joined %@";
+"BoostGift.Subscribers.Search" = "Search Subscribers";
+"BoostGift.Subscribers.MaximumReached" = "You can select maximum %@ subscribers.";
+"BoostGift.Subscribers.Save" = "Save Recipients";
+
+"BoostGift.Channels.Title" = "Add Channels";
+"BoostGift.Channels.Subtitle" = "select up to %@ channels";
+"BoostGift.Channels.SectionTitle" = "CHANNELS";
+"BoostGift.Channels.Search" = "Search Channels";
+"BoostGift.Channels.MaximumReached" = "You can select maximum %@ channels.";
+"BoostGift.Channels.PrivateChannel.Title" = "Channel is Private";
+"BoostGift.Channels.PrivateChannel.Text" = "Are you sure you want to add a private channel? Users won't be able to join it without an invite link.";
+"BoostGift.Channels.PrivateChannel.Add" = "Add";
+"BoostGift.Channels.Save" = "Save Channels";
+
+"Stats.Boosts.PrepaidGiveawaysTitle" = "PREPAID GIVEAWAYS";
+"Stats.Boosts.PrepaidGiveawayCount_any" = "%@ Telegram Premium";
+"Stats.Boosts.PrepaidGiveawayMonths" = "%@-month subscriptions";
+"Stats.Boosts.PrepaidGiveawaysInfo" = "Select a giveaway you already paid for to set it up.";
+"Stats.Boosts.ShortMonth" = "%@m";
+"Stats.Boosts.Giveaway" = "Giveaway";
+"Stats.Boosts.Gift" = "Gift";
+"Stats.Boosts.TabBoosts_1" = "%@ Boost";
+"Stats.Boosts.TabBoosts_any" = "%@ Boosts";
+"Stats.Boosts.TabGifts_1" = "%@ Boost";
+"Stats.Boosts.TabGifts_any" = "%@ Boosts";
+"Stats.Boosts.ToBeDistributed" = "To Be Distributed";
+"Stats.Boosts.Unclaimed" = "Unclaimed";
+"Stats.Boosts.GetBoosts" = "Get Boosts via Gifts";
+"Stats.Boosts.GetBoostsInfo" = "Get more boosts for your channel by gifting Premium to your subscribers.";
+
+"Notification.PremiumPrize.Title" = "Congratulations!";
+"Notification.PremiumPrize.UnclaimedText" = "You have an unclaimed prize from a giveaway by **%1$@**.\n\nThis prize is a **Telegram Premium** subscription for %2$@.";
+"Notification.PremiumPrize.GiveawayText" = "You won a prize in a giveaway organized by **%1$@**.\n\nYour prize is a **Telegram Premium** subscription for %2$@.";
+"Notification.PremiumPrize.GiftText" = "You've received a gift from **%1$@**.\n\nYour gift is a **Telegram Premium** subscription for %2$@.";
+"Notification.PremiumPrize.Months_1" = "**%@** month";
+"Notification.PremiumPrize.Months_any" = "**%@** months";
+"Notification.PremiumPrize.View" = "Open Gift Link";
+"Notification.PremiumPrize.Unclaimed" = "Unclaimed Prize";
+
+"Story.SlideToSeek" = "Slide left or right to seek";
+"Story.Guide.Title" = "Watching Stories";
+"Story.Guide.Description" = "You can use these gestures to control playback.";
+"Story.Guide.ForwardTitle" = "Go forward";
+"Story.Guide.ForwardDescription" = "Tap the screen";
+"Story.Guide.PauseTitle" = "Pause and Seek";
+"Story.Guide.PauseDescription" = "Hold and move sideways";
+"Story.Guide.BackTitle" = "Go back";
+"Story.Guide.BackDescription" = "Tap the left edge";
+"Story.Guide.MoveTitle" = "Move between stories";
+"Story.Guide.MoveDescription" = "Swipe left or right";
+"Story.Guide.Proceed" = "Tap to keep watching";
+
+"Chat.Giveaway.Info.Title" = "About This Giveaway";
+"Chat.Giveaway.Info.EndedTitle" = "Giveaway Ended";
+
+"Chat.Giveaway.Info.AlmostOver" = "The giveaway is almost over.";
+
+"Chat.Giveaway.Info.Subscriptions_1" = "**%@ Telegram Premium** subscription";
+"Chat.Giveaway.Info.Subscriptions_any" = "**%@ Telegram Premium** subscriptions";
+
+"Chat.Giveaway.Info.RandomUsers_1" = "**%@** random user";
+"Chat.Giveaway.Info.RandomUsers_any" = "**%@** random user";
+
+"Chat.Giveaway.Info.RandomSubscribers_1" = "**%@** random subscriber";
+"Chat.Giveaway.Info.RandomSubscribers_any" = "**%@** random subscribers";
+
+"Chat.Giveaway.Info.Months_1" = "**%@** month";
+"Chat.Giveaway.Info.Months_any" = "**%@** months";
+
+"Chat.Giveaway.Info.ActivatedLinks_1" = "%@ winner already used their gift link.";
+"Chat.Giveaway.Info.ActivatedLinks_any" = "%@ of the winners already used their gift links.";
+
+"Chat.Giveaway.Info.Refunded" = "The channel cancelled the prizes by reversing the payment for them.";
+"Chat.Giveaway.Info.Won" = "You won a prize in this giveaway. %@";
+"Chat.Giveaway.Info.DidntWin" = "You didn't win a prize in this giveaway.";
+"Chat.Giveaway.Info.ViewPrize" = "View My Prize";
+
+"Chat.Giveaway.Toast.NotAllowed" = "You can't participate in this giveaway.";
+"Chat.Giveaway.Toast.Participating" = "You are participating in this giveaway.";
+"Chat.Giveaway.Toast.NotQualified" = "You are not qualified for this giveaway yet.";
+"Chat.Giveaway.Toast.AlmostOver" = "The giveaway is almost over.";
+"Chat.Giveaway.Toast.Ended" = "The giveaway is ended.";
+"Chat.Giveaway.Toast.LearnMore" = "Learn More";

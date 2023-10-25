@@ -180,8 +180,6 @@ final class MediaNavigationStripComponent: Component {
             let itemHeight: CGFloat = 2.0
             let minItemWidth: CGFloat = 2.0
             
-            var size = CGSize(width: availableSize.width, height: itemHeight)
-            
             var didSetCompletion = false
             
             var validIndices: [Int] = []
@@ -223,7 +221,6 @@ final class MediaNavigationStripComponent: Component {
                     var itemFrame = CGRect(origin: CGPoint(x: -globalOffset + CGFloat(i) * (itemWidth + spacing), y: 0.0), size: CGSize(width: itemWidth, height: itemHeight))
                     if component.isSeeking {
                         itemFrame = CGRect(origin: .zero, size: CGSize(width: availableSize.width, height: 6.0))
-                        size.height = itemFrame.height
                     }
                     if itemFrame.maxX < 0.0 || itemFrame.minX >= availableSize.width {
                         continue
