@@ -99,7 +99,7 @@ private func generateDashTemplateImage(isMonochrome: Bool, isTriple: Bool) -> UI
         
         let dashOffset: CGFloat
         if isTriple {
-            dashOffset = isMonochrome ? -2.0 : 0.0
+            dashOffset = isMonochrome ? -7.0 : 5.0
         } else {
             dashOffset = isMonochrome ? -4.0 : 5.0
         }
@@ -324,7 +324,7 @@ private final class LineView: UIView {
         self.backgroundView.tintColor = primaryColor
         
         if let secondaryColor {
-            let dashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -18.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
+            let dashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: thirdColor != nil ? -12.0 : -18.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
             
             let dashBackgroundView: UIImageView
             if let current = self.dashBackgroundView {
@@ -343,7 +343,7 @@ private final class LineView: UIView {
             let monochromeTemplateImage: UIImage
             
             if let thirdColor {
-                let thirdDashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -12.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
+                let thirdDashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -18.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
                 templateImage = dashOpaqueTripleTemplateImage
                 monochromeTemplateImage = dashMonochromeTripleTemplateImage
                 
