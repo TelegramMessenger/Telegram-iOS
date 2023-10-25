@@ -1641,7 +1641,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
 
                         if let view = view as? StoryContentItem.View {
-                            view.setProgressMode(itemProgressMode, emitEvents: false)
+                            view.setProgressMode(itemProgressMode)
                         }
                         
                         var isChannel = false
@@ -1871,7 +1871,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if id != centralId {
                             itemMode = .pause
                         }
-                        view.setProgressMode(itemMode, emitEvents: true)
+                        view.setProgressMode(itemMode)
                     }
                 }
             }
