@@ -273,6 +273,41 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         return .complete()
     }
     
+    let applyCurrentQuoteSelection: () -> Void = { [weak selfController, weak chatController] in
+        guard let selfController, let chatController else {
+            return
+        }
+        var messageItemNode: ChatMessageItemView?
+        chatController.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
+            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.message.id == replySubject.messageId {
+                messageItemNode = itemNode
+            }
+            return true
+        }
+        var targetContentNode: ChatMessageTextBubbleContentNode?
+        if let messageItemNode = messageItemNode as? ChatMessageBubbleItemNode {
+            for contentNode in messageItemNode.contentNodes {
+                if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+                    targetContentNode = contentNode
+                    break
+                }
+            }
+        }
+        guard let contentNode = targetContentNode else {
+            return
+        }
+        guard let textSelection = contentNode.getCurrentTextSelection() else {
+            return
+        }
+        var quote: EngineMessageReplyQuote?
+        let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
+        if !trimmedText.string.isEmpty {
+            quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+        }
+        
+        selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })
+    }
+    
     let items = combineLatest(queue: .mainQueue(),
         selfController.context.account.postbox.messagesAtIds([replySubject.messageId]),
         ApplicationSpecificNotice.getReplyQuoteTextSelectionTips(accountManager: selfController.context.sharedContext.accountManager)
@@ -288,40 +323,8 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         if replySubject.quote != nil {
             items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsQuoteSelectedPart, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/QuoteSelected"), color: theme.contextMenu.primaryColor)
-            }, action: { [weak selfController, weak chatController] _, f in
-                guard let selfController, let chatController else {
-                    return
-                }
-                
-                var messageItemNode: ChatMessageItemView?
-                chatController.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
-                    if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item, item.message.id == replySubject.messageId {
-                        messageItemNode = itemNode
-                    }
-                    return true
-                }
-                var targetContentNode: ChatMessageTextBubbleContentNode?
-                if let messageItemNode = messageItemNode as? ChatMessageBubbleItemNode {
-                    for contentNode in messageItemNode.contentNodes {
-                        if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                            targetContentNode = contentNode
-                            break
-                        }
-                    }
-                }
-                guard let contentNode = targetContentNode else {
-                    return
-                }
-                guard let textSelection = contentNode.getCurrentTextSelection() else {
-                    return
-                }
-                var quote: EngineMessageReplyQuote?
-                let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
-                if !trimmedText.string.isEmpty {
-                    quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
-                }
-                
-                selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })
+            }, action: { _, f in
+                applyCurrentQuoteSelection()
                 
                 f(.default)
             })))
@@ -418,6 +421,8 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         
         if canReplyInAnotherChat {
             items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsReplyInAnotherChat, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Replace"), color: theme.contextMenu.primaryColor) }, action: { [weak selfController] c, f in
+                applyCurrentQuoteSelection()
+                
                 f(.default)
                 
                 guard let selfController else {
@@ -434,6 +439,8 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
             items.append(.separator)
             
             items.append(.action(ContextMenuActionItem(text: selfController.presentationData.strings.Conversation_MessageOptionsApplyChanges, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                applyCurrentQuoteSelection()
+                
                 f(.default)
             })))
         }

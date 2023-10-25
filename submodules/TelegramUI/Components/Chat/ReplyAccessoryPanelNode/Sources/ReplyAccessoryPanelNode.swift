@@ -240,7 +240,7 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 var titleText: [CompositeTextNode.Component] = []
                 if let peer = message?.peers[strongSelf.messageId.peerId] as? TelegramChannel, case .broadcast = peer.info {
                     let icon: UIImage?
-                    icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
+                    icon = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
                     
                     if let icon {
                         let rawString: PresentationStrings.FormattedString
@@ -279,9 +279,9 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         if let peer = message?.peers[strongSelf.messageId.peerId], (peer is TelegramChannel || peer is TelegramGroup) {
                             let icon: UIImage?
                             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
+                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")
                             } else {
-                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")?.withRenderingMode(.alwaysTemplate)
+                                icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextGroupIcon")
                             }
                             if let iconImage = generateTintedImage(image: icon, color: strongSelf.theme.chat.inputPanel.panelControlAccentColor) {
                                 titleText.append(.icon(iconImage))

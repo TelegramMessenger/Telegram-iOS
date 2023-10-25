@@ -1819,7 +1819,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             if let index = node.index {
                 nodes.append(.Node(index: index, frame: node.apparentFrame, referenceNode: QueueLocalObject(queue: Queue.mainQueue(), generate: {
                     return node
-                })))
+                }), newNode: nil))
             } else {
                 nodes.append(.Placeholder(frame: node.apparentFrame))
             }
@@ -2000,10 +2000,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }
                         
                         switch state.nodes[i] {
-                            case let .Node(_, frame, referenceNode):
-                                state.nodes[i] = .Node(index: updatedIndex, frame: frame, referenceNode: referenceNode)
-                            case .Placeholder:
-                                break
+                        case let .Node(_, frame, referenceNode, newNode):
+                            state.nodes[i] = .Node(index: updatedIndex, frame: frame, referenceNode: referenceNode, newNode: newNode)
+                        case .Placeholder:
+                            break
                         }
                         i += 1
                     }
@@ -2039,10 +2039,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         }
                         
                         switch state.nodes[i] {
-                            case let .Node(_, frame, referenceNode):
-                                state.nodes[i] = .Node(index: updatedIndex, frame: frame, referenceNode: referenceNode)
-                            case .Placeholder:
-                                break
+                        case let .Node(_, frame, referenceNode, newNode):
+                            state.nodes[i] = .Node(index: updatedIndex, frame: frame, referenceNode: referenceNode, newNode: newNode)
+                        case .Placeholder:
+                            break
                         }
                     }
                 }
@@ -2097,7 +2097,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 
                 var updateIndices = updateAdjacentItemsIndices
                 if widthUpdated {
-                    for case let .Node(index, _, _) in updatedState.nodes {
+                    for case let .Node(index, _, _, _) in updatedState.nodes {
                         updateIndices.insert(index)
                     }
                 }
@@ -2205,7 +2205,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             
             var i = 0
             for node in state.nodes {
-                if case let .Node(index, _, referenceNode) = node , index == nodeIndex {
+                if case let .Node(index, _, referenceNode, _) = node, index == nodeIndex {
                     if let referenceNode = referenceNode {
                         continueWithoutNode = false
                         var controlledTransition: ControlledTransition?
@@ -2953,9 +2953,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                     offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.insets.top
                                     offset += overflow
                                     offset -= floor((self.visibleSize.height - insets.bottom - insets.top) * 0.5)
-                                    //offset += 100.0
-                                    
-                                    //offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + getOverflow(itemNode)
                                 }
                             }
                         case .visible:

@@ -17994,7 +17994,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                 }
-            } else if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
+            } else if content.file == nil, (content.image == nil || content.isMediaLargeByDefault == true || content.isMediaLargeByDefault == nil), let embedUrl = content.embedUrl, !embedUrl.isEmpty {
                 progress?.set(.single(false))
                 if let controllerInteraction = self.controllerInteraction {
                     if controllerInteraction.openMessage(message, .default) {

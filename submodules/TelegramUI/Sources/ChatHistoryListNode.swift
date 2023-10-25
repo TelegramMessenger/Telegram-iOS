@@ -1375,7 +1375,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         initialSearchLocation = .index(.absoluteUpperBound())
                                     }
                                 }
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: initialSearchLocation, quote: nil), count: historyMessageCount, highlight: highlight != nil), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: initialSearchLocation, quote: highlight?.quote), count: historyMessageCount, highlight: highlight != nil), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
                                 strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(subject: MessageHistoryInitialSearchSubject(location: .id(messageId), quote: nil), count: historyMessageCount, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
