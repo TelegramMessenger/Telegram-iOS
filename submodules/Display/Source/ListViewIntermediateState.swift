@@ -332,9 +332,13 @@ struct ListViewState {
                                 case let .custom(getOverflow):
                                     if Thread.isMainThread, case let .Node(_, _, referenceNode, newNode) = node, let listNode = referenceNode?.syncWith({ $0 }) ?? newNode?.syncWith({ $0 }) {
                                         let overflow = getOverflow(listNode)
-                                        offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
-                                        offset += overflow
-                                        offset -= floor((self.visibleSize.height - self.insets.bottom - self.insets.top) * 0.5)
+                                        if overflow == 0.0 {
+                                            offset = self.insets.top - node.frame.minY
+                                        } else {
+                                            offset = (self.visibleSize.height - self.insets.bottom) - node.frame.maxY
+                                            offset += overflow
+                                            offset -= floor((self.visibleSize.height - self.insets.bottom - self.insets.top) * 0.5)
+                                        }
                                     } else {
                                         offset = self.insets.top - node.frame.minY
                                     }

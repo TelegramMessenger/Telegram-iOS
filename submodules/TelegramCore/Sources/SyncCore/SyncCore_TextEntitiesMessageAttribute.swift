@@ -359,7 +359,7 @@ public func trimStringWithEntities(string: String, entities: [MessageTextEntity]
     }
     
     while range.upperBound > range.lowerBound {
-        let c = nsString.character(at: range.lowerBound)
+        let c = nsString.character(at: range.upperBound - 1)
         if c == 0x0a || c == 0x20 {
             range = range.lowerBound ..< (range.upperBound - 1)
         } else {

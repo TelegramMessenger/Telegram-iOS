@@ -73,11 +73,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                     controller.updateTextInputState(updateTextInputState)
                 }
                 var popAndComplete = true
-                if let subject = params.subject, case let .message(messageSubject, _, timecode) = subject {
+                if let subject = params.subject, case let .message(messageSubject, highlight, timecode) = subject {
                     if case let .id(messageId) = messageSubject {
                         let navigationController = params.navigationController
                         let animated = params.animated
-                        controller.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: nil)), animated: isFirst, completion: { [weak navigationController, weak controller] in
+                        controller.navigateToMessage(messageLocation: .id(messageId, NavigateToMessageParams(timestamp: timecode, quote: highlight?.quote)), animated: isFirst, completion: { [weak navigationController, weak controller] in
                             if let navigationController = navigationController, let controller = controller {
                                 let _ = navigationController.popToViewController(controller, animated: animated)
                             }
