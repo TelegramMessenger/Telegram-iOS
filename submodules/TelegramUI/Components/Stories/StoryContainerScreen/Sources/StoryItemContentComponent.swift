@@ -278,17 +278,17 @@ final class StoryItemContentComponent: Component {
                         
                         self.videoPlaybackStatus = status
                         if !self.isSeeking {
-                            self.updateVideoPlaybackProgress()
+                            self.updateVideoPlaybackProgress(emitUpdate: true)
                         }
                     })
                 }
             }
         }
         
-        override func setProgressMode(_ progressMode: StoryContentItem.ProgressMode) {
+        override func setProgressMode(_ progressMode: StoryContentItem.ProgressMode, emitEvents: Bool) {
             if self.progressMode != progressMode {
                 self.progressMode = progressMode
-                self.updateProgressMode(update: true)
+                self.updateProgressMode(update: emitEvents)
                 
                 if let component = self.component, !self.overlaysView.bounds.isEmpty {
                     self.updateOverlays(component: component, size: self.overlaysView.bounds.size, synchronousLoad: false, transition: .immediate)
@@ -336,7 +336,7 @@ final class StoryItemContentComponent: Component {
             }
             
             self.initializeVideoIfReady(update: update)
-            self.updateVideoPlaybackProgress()
+            self.updateVideoPlaybackProgress(emitUpdate: update)
             self.updateProgressTimer()
         }
         
@@ -363,7 +363,7 @@ final class StoryItemContentComponent: Component {
                             
                             if case .file = self.currentMessageMedia {
                                 if !self.isSeeking {
-                                    self.updateVideoPlaybackProgress()
+                                    self.updateVideoPlaybackProgress(emitUpdate: true)
                                 }
                             } else {
                                 if !self.markedAsSeen {
@@ -420,7 +420,7 @@ final class StoryItemContentComponent: Component {
             return effectiveDuration
         }
         
-        private func updateVideoPlaybackProgress(_ scrubbingTimestamp: Double? = nil) {
+        private func updateVideoPlaybackProgress(_ scrubbingTimestamp: Double? = nil, emitUpdate: Bool) {
             guard let videoPlaybackStatus = self.videoPlaybackStatus else {
                 return
             }
@@ -509,7 +509,9 @@ final class StoryItemContentComponent: Component {
             }
             
             let clippedProgress = max(0.0, min(1.0, currentProgress))
-            self.environment?.presentationProgressUpdated(clippedProgress, isBuffering, false)
+            if emitUpdate {
+                self.environment?.presentationProgressUpdated(clippedProgress, isBuffering, false)
+            }
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -549,7 +551,7 @@ final class StoryItemContentComponent: Component {
                 videoNode.seek(timestamp)
             }
             self.isSeeking = true
-            self.updateVideoPlaybackProgress(timestamp)
+            self.updateVideoPlaybackProgress(timestamp, emitUpdate: true)
         }
         
         func seekEnded() {

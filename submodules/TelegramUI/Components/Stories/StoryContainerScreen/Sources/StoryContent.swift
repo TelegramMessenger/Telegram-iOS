@@ -43,7 +43,7 @@ public final class StoryContentItem: Equatable {
     }
     
     open class View: UIView {
-        open func setProgressMode(_ progressMode: ProgressMode) {
+        open func setProgressMode(_ progressMode: ProgressMode, emitEvents: Bool) {
         }
         
         open func rewind() {
