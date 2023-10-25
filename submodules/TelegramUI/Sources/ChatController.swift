@@ -298,6 +298,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     var keepMessageCountersSyncrhonizedDisposable: Disposable?
     var saveMediaDisposable: MetaDisposable?
     var giveawayStatusDisposable: MetaDisposable?
+    var nameColorDisposable: Disposable?
     
     let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -5108,9 +5109,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         |> deliverOnMainQueue).startStrict(next: { [weak self] peerView in
             if let strongSelf = self {
                 let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
+                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                    return state.updatedIsPremium(isPremium)
+                })
+            }
+        })
+        
+        if let chatPeerId = chatLocation.peerId {
+            self.nameColorDisposable = (context.engine.data.subscribe(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] accountPeer, chatPeer in
+                guard let self, let accountPeer, let chatPeer else {
+                    return
+                }
+                var nameColor: PeerNameColor?
+                if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+                    nameColor = chatPeer.nameColor
+                } else {
+                    nameColor = accountPeer.nameColor
+                }
                 var accountPeerColor: ChatPresentationInterfaceState.AccountPeerColor?
-                if let nameColor = peerView.peers[peerView.peerId]?.nameColor {
-                    let colors = strongSelf.context.peerNameColors.get(nameColor)
+                if let nameColor {
+                    let colors = self.context.peerNameColors.get(nameColor)
                     var style: ChatPresentationInterfaceState.AccountPeerColor.Style = .solid
                     if colors.tertiary != nil {
                         style = .tripleDashed
@@ -5119,11 +5141,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     accountPeerColor = ChatPresentationInterfaceState.AccountPeerColor(style: style)
                 }
-                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
-                    return state.updatedIsPremium(isPremium).updatedAccountPeerColor(accountPeerColor)
+                self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
+                    return state.updatedAccountPeerColor(accountPeerColor)
                 })
-            }
-        })
+            })
+        }
         
         do {
             let peerId = chatLocationPeerId
@@ -6802,6 +6824,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.powerSavingMonitoringDisposable?.dispose()
             self.saveMediaDisposable?.dispose()
             self.giveawayStatusDisposable?.dispose()
+            self.nameColorDisposable?.dispose()
             self.choosingStickerActivityDisposable?.dispose()
             self.automaticMediaDownloadSettingsDisposable?.dispose()
             self.stickerSettingsDisposable?.dispose()

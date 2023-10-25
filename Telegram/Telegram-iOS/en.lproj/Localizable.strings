@@ -10313,7 +10313,7 @@ Sorry for the inconvenience.";
 "Story.Guide.PauseDescription" = "Hold and move sideways";
 "Story.Guide.BackTitle" = "Go back";
 "Story.Guide.BackDescription" = "Tap the left edge";
-"Story.Guide.MoveTitle" = "Move between stories";
+"Story.Guide.MoveTitle" = "Move between authors";
 "Story.Guide.MoveDescription" = "Swipe left or right";
 "Story.Guide.Proceed" = "Tap to keep watching";
 
@@ -10401,3 +10401,6 @@ Sorry for the inconvenience.";
 "GiftLink.TelegramPremium_1" = "Telegram Premium for %@ month";
 "GiftLink.TelegramPremium_any" = "Telegram Premium for %@ months";
 "GiftLink.LinkHidden" = "Only the recipient can see the link.";
+
+"ChannelBoost.EnableColors" = "Enable Colors";
+"ChannelBoost.EnableColorsText" = "Your channel needs %1$@ to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";

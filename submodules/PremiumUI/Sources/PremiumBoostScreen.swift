@@ -30,7 +30,7 @@ private struct BoostState {
         }
         
         return (
-            .storiesChannelBoost(peer: peer, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount),
+            .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount),
             boosts
         )
     }
@@ -113,23 +113,15 @@ public func PremiumBoostScreen(
             dismissed()
         }
         
-        var updating = false
-        
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         updateImpl = { [weak controller] in
-            guard !updating else {
-                return
-            }
             if let _ = status.nextLevelBoosts {
                 if let availableBoost = availableBoosts.first {
                     currentMyBoostCount += 1
                     myBoostCount += 1
                     
-                    updating = true
                     let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [availableBoost.slot])
                     |> deliverOnMainQueue).startStandalone(completed: {
-                        updating = false
-
                         updatedState.set(context.engine.peers.getChannelBoostStatus(peerId: peerId)
                         |> map { status in
                             if let status {

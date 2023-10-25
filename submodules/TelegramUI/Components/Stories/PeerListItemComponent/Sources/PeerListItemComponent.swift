@@ -595,6 +595,11 @@ public final class PeerListItemComponent: Component {
             } else {
                 titleAvailableWidth -= 20.0
             }
+            
+            if statusIcon != nil {
+                titleAvailableWidth -= 14.0
+            }
+            
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(

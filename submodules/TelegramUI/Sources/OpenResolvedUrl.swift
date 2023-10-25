@@ -905,11 +905,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                 
                                 let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: forceDark, forceHasPremium: true)
                                 navigationController?.pushViewController(controller)
-                                if let controller = controller as? PremiumIntroScreen {
-                                    Queue.mainQueue().after(0.3, {
-                                        controller.animateSuccess()
-                                    })
-                                }
+                                Queue.mainQueue().after(0.3, {
+                                    controller.animateSuccess()
+                                })
                             })
                         },
                         openPeer: { peer in

@@ -1105,7 +1105,7 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
                 }
                 buttonAnimationName = nil
-            case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount):
+            case let .storiesChannelBoost(peer, boostSubject, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount):
                 if link == nil, !isCurrent, state.initialized {
                     peerShortcutChild = peerShortcut.update(
                         component: Button(
@@ -1177,8 +1177,14 @@ private final class LimitSheetContent: CombinedComponent {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
                         let valueString = strings.ChannelBoost_MoreBoosts(remaining)
                         if level == 0 {
-                            titleText = strings.ChannelBoost_EnableStories
-                            string = strings.ChannelBoost_EnableStoriesText(valueString).string
+                            switch boostSubject {
+                            case .stories:
+                                titleText = strings.ChannelBoost_EnableStories
+                                string = strings.ChannelBoost_EnableStoriesText(valueString).string
+                            case .nameColors:
+                                titleText = strings.ChannelBoost_EnableColors
+                                string = strings.ChannelBoost_EnableColorsText(valueString).string
+                            }
                         } else {
                             titleText = strings.ChannelBoost_IncreaseLimit
                             string = strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
@@ -1422,7 +1428,7 @@ private final class LimitSheetContent: CombinedComponent {
                 var buttonOffset: CGFloat = 0.0
                 var textOffset: CGFloat = 184.0 + topOffset
                                 
-                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _) = component.subject {
                     if let link {
                         let linkButton = linkButton.update(
                             component: SolidRoundedButtonComponent(
@@ -1533,7 +1539,7 @@ private final class LimitSheetContent: CombinedComponent {
                 )
                 
                 var additionalContentHeight: CGFloat = 0.0
-                if case let .storiesChannelBoost(_, _, _, _, _, link, _) = component.subject, link != nil, let openGift = component.openGift {
+                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _) = component.subject, link != nil, let openGift = component.openGift {
                     let orText = orText.update(
                         component: MultilineTextComponent(text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
                         availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
@@ -1602,7 +1608,7 @@ private final class LimitSheetContent: CombinedComponent {
                     height -= 78.0
                 }
                 
-                if case let .storiesChannelBoost(_, isCurrent, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, _, isCurrent, _, _, _, link, _) = component.subject {
                     if link != nil {
                         height += 66.0
                         
@@ -1763,7 +1769,12 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32)
+        
+        public enum BoostSubject {
+            case stories
+            case nameColors
+        }
+        case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32)
     }
     
     private let context: AccountContext
