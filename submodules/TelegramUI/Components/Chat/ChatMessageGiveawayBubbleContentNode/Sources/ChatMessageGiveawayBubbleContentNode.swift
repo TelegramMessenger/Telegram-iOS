@@ -429,7 +429,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                         }
                     }
                 }
-                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 250.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
+                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 240.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
                 maxContentWidth = max(maxContentWidth, channelsWidth)
                 maxContentWidth += 30.0
                 

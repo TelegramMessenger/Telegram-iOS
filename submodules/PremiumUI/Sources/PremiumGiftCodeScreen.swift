@@ -234,7 +234,11 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     link = nil
                 }
                 date = boost.date
-                toPeerId = boost.peer?.id
+                if boost.flags.contains(.isUnclaimed) {
+                    toPeerId = nil
+                } else {
+                    toPeerId = boost.peer?.id
+                }
                 fromPeer = state.peerMap[channelId]
                 months = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
             }
@@ -378,6 +382,28 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         )
                     )
                 ))
+            } else if case let .boost(_, boost) = component.subject {
+                if boost.flags.contains(.isUnclaimed) {
+                    let giftReason = strings.GiftLink_Reason_Unclaimed
+                    tableItems.append(.init(
+                        id: "reason",
+                        title: strings.GiftLink_Reason,
+                        component: AnyComponent(
+                            Button(
+                                content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: boost.giveawayMessageId != nil ? tableLinkColor : tableTextColor)))),
+                                isEnabled: true,
+                                action: {
+                                    if let messageId = boost.giveawayMessageId {
+                                        component.openMessage(messageId)
+                                    }
+                                    Queue.mainQueue().after(1.0) {
+                                        component.cancel(false)
+                                    }
+                                }
+                            )
+                        )
+                    ))
+                }
             }
             tableItems.append(.init(
                 id: "date",

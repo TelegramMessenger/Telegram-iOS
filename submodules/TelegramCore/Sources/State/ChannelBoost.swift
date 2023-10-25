@@ -263,7 +263,6 @@ private final class ChannelBoostersContextImpl {
                             for boost in boosts {
                                 switch boost {
                                 case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug, multiplier):
-                                    let _ = giveawayMessageId
                                     var boostFlags: ChannelBoostersContext.State.Boost.Flags = []
                                     var boostPeer: EnginePeer?
                                     if let userId = userId {
@@ -281,11 +280,11 @@ private final class ChannelBoostersContextImpl {
                                     if (flags & (1 << 3)) != 0 {
                                         boostFlags.insert(.isUnclaimed)
                                     }
-                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1, slug: usedGiftSlug))
+                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1, slug: usedGiftSlug, giveawayMessageId: giveawayMessageId.flatMap { EngineMessage.Id(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                                 }
                             }
                             if populateCache {
-                                if let entry = CodableEntry(CachedChannelBoosters(boosts: resultBoosts, count: count)) {
+                                if let entry = CodableEntry(CachedChannelBoosters(channelPeerId: peerId, boosts: resultBoosts, count: count)) {
                                     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedChannelBoosts, key: CachedChannelBoosters.key(peerId: peerId)), entry: entry)
                                 }
                             }
@@ -340,7 +339,7 @@ private final class ChannelBoostersContextImpl {
         let resultBoosts = Array(self.results.prefix(50))
         let count = self.count
         self.updateDisposables.add(self.account.postbox.transaction({ transaction in
-            if let entry = CodableEntry(CachedChannelBoosters(boosts: resultBoosts, count: count)) {
+            if let entry = CodableEntry(CachedChannelBoosters(channelPeerId: peerId, boosts: resultBoosts, count: count)) {
                 transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedChannelBoosts, key: CachedChannelBoosters.key(peerId: peerId)), entry: entry)
             }
         }).start())
@@ -373,6 +372,7 @@ public final class ChannelBoostersContext {
             public var expires: Int32
             public var multiplier: Int32
             public var slug: String?
+            public var giveawayMessageId: EngineMessage.Id?
         }
         public var boosts: [Boost]
         public var isLoadingMore: Bool
@@ -435,6 +435,8 @@ private final class CachedChannelBoosters: Codable {
             case expires
             case multiplier
             case slug
+            case channelPeerId
+            case giveawayMessageId
         }
         
         var flags: Int32
@@ -444,8 +446,10 @@ private final class CachedChannelBoosters: Codable {
         var expires: Int32
         var multiplier: Int32
         var slug: String?
+        var channelPeerId: EnginePeer.Id
+        var giveawayMessageId: EngineMessage.Id?
         
-        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32, multiplier: Int32, slug: String?) {
+        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32, multiplier: Int32, slug: String?, channelPeerId: EnginePeer.Id, giveawayMessageId: EngineMessage.Id?) {
             self.flags = flags
             self.id = id
             self.peerId = peerId
@@ -453,6 +457,8 @@ private final class CachedChannelBoosters: Codable {
             self.expires = expires
             self.multiplier = multiplier
             self.slug = slug
+            self.channelPeerId = channelPeerId
+            self.giveawayMessageId = giveawayMessageId
         }
 
         init(from decoder: Decoder) throws {
@@ -465,6 +471,8 @@ private final class CachedChannelBoosters: Codable {
             self.expires = try container.decode(Int32.self, forKey: .expires)
             self.multiplier = try container.decode(Int32.self, forKey: .multiplier)
             self.slug = try container.decodeIfPresent(String.self, forKey: .slug)
+            self.channelPeerId = EnginePeer.Id(try container.decode(Int64.self, forKey: .channelPeerId))
+            self.giveawayMessageId = try container.decodeIfPresent(Int32.self, forKey: .giveawayMessageId).flatMap { EngineMessage.Id(peerId: self.channelPeerId, namespace: Namespaces.Message.Cloud, id: $0) }
         }
 
         func encode(to encoder: Encoder) throws {
@@ -477,6 +485,8 @@ private final class CachedChannelBoosters: Codable {
             try container.encode(self.expires, forKey: .expires)
             try container.encode(self.multiplier, forKey: .multiplier)
             try container.encodeIfPresent(self.slug, forKey: .slug)
+            try container.encode(self.channelPeerId.toInt64(), forKey: .channelPeerId)
+            try container.encodeIfPresent(self.giveawayMessageId?.id, forKey: .giveawayMessageId)
         }
     }
     
@@ -489,8 +499,8 @@ private final class CachedChannelBoosters: Codable {
         return key
     }
     
-    init(boosts: [ChannelBoostersContext.State.Boost], count: Int32) {
-        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires, multiplier: $0.multiplier, slug: $0.slug) }
+    init(channelPeerId: EnginePeer.Id, boosts: [ChannelBoostersContext.State.Boost], count: Int32) {
+        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires, multiplier: $0.multiplier, slug: $0.slug, channelPeerId: channelPeerId, giveawayMessageId: $0.giveawayMessageId) }
         self.count = count
     }
     
