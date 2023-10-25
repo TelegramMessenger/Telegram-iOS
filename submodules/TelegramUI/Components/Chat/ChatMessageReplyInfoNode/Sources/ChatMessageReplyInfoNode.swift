@@ -193,14 +193,18 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             let mainColor: UIColor
             let dustColor: UIColor
             var secondaryColor: UIColor?
+            var tertiaryColor: UIColor?
             
             var authorNameColor: UIColor?
             var dashSecondaryColor: UIColor?
+            var dashTertiaryColor: UIColor?
             
             let author = arguments.message?.effectiveAuthor
             
-            authorNameColor = author?.nameColor?.color
-            dashSecondaryColor = author?.nameColor?.dashColors.1
+            let colors = author?.nameColor.flatMap { arguments.context.peerNameColors.get($0) }
+            authorNameColor = colors?.main
+            dashSecondaryColor = colors?.secondary
+            dashTertiaryColor = colors?.tertiary
             
             switch arguments.type {
             case let .bubble(incoming):
@@ -209,6 +213,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if let authorNameColor {
                         mainColor = authorNameColor
                         secondaryColor = dashSecondaryColor
+                        tertiaryColor = dashTertiaryColor
                     } else {
                         mainColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
                     }
@@ -754,6 +759,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     size: backgroundFrame.size,
                     primaryColor: mainColor,
                     secondaryColor: secondaryColor,
+                    thirdColor: tertiaryColor,
                     pattern: pattern,
                     animation: animation
                 )

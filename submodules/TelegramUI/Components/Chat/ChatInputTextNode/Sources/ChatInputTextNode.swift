@@ -761,6 +761,7 @@ private final class QuoteBackgroundView: UIView {
             size: size,
             primaryColor: theme.foreground,
             secondaryColor: theme.isDashed ? .clear : nil,
+            thirdColor: nil,
             pattern: nil,
             animation: .None
         )

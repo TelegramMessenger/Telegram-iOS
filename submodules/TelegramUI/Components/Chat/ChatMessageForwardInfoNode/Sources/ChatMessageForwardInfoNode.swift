@@ -163,11 +163,11 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                         }
                     } else {
                         if incoming {
-                            if let color = peer?.nameColor?.color {
-                                titleColor = color
-                            } else {
+//                            if let color = peer?.nameColor?.color {
+//                                titleColor = color
+//                            } else {
                                 titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
-                            }
+//                            }
                         } else {
                             titleColor = presentationData.theme.theme.chat.message.outgoing.accentTextColor
                         }

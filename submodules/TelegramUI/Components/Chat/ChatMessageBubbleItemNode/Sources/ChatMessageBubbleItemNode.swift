@@ -1871,31 +1871,40 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
-            authorNameColor = (peer as Peer).nameColor?.color
+            let peer = (peer as Peer)
+            let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0) }
+            authorNameColor = nameColors?.main
         } else if let effectiveAuthor = effectiveAuthor {
-            let nameColor: UIColor
+            let nameColor = effectiveAuthor.nameColor ?? .blue
+            let nameColors = item.context.peerNameColors.get(nameColor)
+            let color: UIColor
             if incoming {
-                nameColor = (effectiveAuthor.nameColor ?? .blue).color
+                color = nameColors.main
             } else {
-                nameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                color = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
             }
-            authorNameColor = nameColor
+            authorNameColor = color
         }
                 
         if initialDisplayHeader && displayAuthorInfo {
             if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
                 authorNameString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                authorNameColor = (peer as Peer).nameColor?.color
+                
+                let peer = (peer as Peer)
+                let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0) }
+                authorNameColor = nameColors?.main
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let nameColor: UIColor
+                let nameColor = effectiveAuthor.nameColor ?? .blue
+                let nameColors = item.context.peerNameColors.get(nameColor)
+                let color: UIColor
                 if incoming {
-                    nameColor = (effectiveAuthor.nameColor ?? .blue).color
+                    color = nameColors.main
                 } else {
-                    nameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    color = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
-                authorNameColor = nameColor
+                authorNameColor = color
 
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
                 } else if effectiveAuthor.isScam {
@@ -1903,11 +1912,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else if effectiveAuthor.isFake {
                     currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                 } else if let user = effectiveAuthor as? TelegramUser, let emojiStatus = user.emojiStatus {
-                    currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: nameColor.withMultipliedAlpha(0.4), loopMode: .count(2))
+                    currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: color.withMultipliedAlpha(0.4), loopMode: .count(2))
                 } else if effectiveAuthor.isVerified {
                     currentCredibilityIcon = .verified(fillColor: item.presentationData.theme.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                 } else if effectiveAuthor.isPremium {
-                    currentCredibilityIcon = .premium(color: nameColor.withMultipliedAlpha(0.4))
+                    currentCredibilityIcon = .premium(color: color.withMultipliedAlpha(0.4))
                 }
             }
             if let rawAuthorNameColor = authorNameColor {

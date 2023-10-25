@@ -179,17 +179,21 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             let author = message.author
+            let nameColors = author?.nameColor.flatMap { context.peerNameColors.get($0) }
+            
             let mainColor: UIColor
             var secondaryColor: UIColor?
+            var tertiaryColor: UIColor?
             if !incoming {
                 mainColor = messageTheme.accentTextColor
-                if let _ = author?.nameColor?.dashColors.1 {
+                if let _ = nameColors?.secondary {
                     secondaryColor = .clear
                 }
             } else {
                 var authorNameColor: UIColor?
-                authorNameColor = author?.nameColor?.color
-                secondaryColor = author?.nameColor?.dashColors.1
+                authorNameColor = nameColors?.main
+                secondaryColor = nameColors?.secondary
+                tertiaryColor = nameColors?.tertiary
                 
                 if let authorNameColor {
                     mainColor = authorNameColor
@@ -846,13 +850,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let current = self.backgroundView {
                                 backgroundView = current
                                 animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
-                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: animation)
+                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, pattern: nil, animation: animation)
                             } else {
                                 backgroundView = MessageInlineBlockBackgroundView()
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
                                 self.transformContainer.view.insertSubview(backgroundView, at: 0)
-                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, pattern: nil, animation: .None)
+                                backgroundView.update(size: backgroundFrame.size, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, pattern: nil, animation: .None)
                             }
                         } else {
                             if let backgroundView = self.backgroundView {

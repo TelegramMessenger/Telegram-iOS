@@ -9,25 +9,26 @@ import TelegramUIPreferences
 import MergeLists
 import ItemListUI
 import PresentationDataUtils
+import AccountContext
 
 private enum PeerNameColorEntryId: Hashable {
     case color(Int32)
 }
 
 private enum PeerNameColorEntry: Comparable, Identifiable {
-    case color(Int, PeerNameColor, Bool)
+    case color(Int, PeerNameColor, PeerNameColors.Colors, Bool)
     
     var stableId: PeerNameColorEntryId {
         switch self {
-            case let .color(_, color, _):
+            case let .color(_, color, _, _):
                 return .color(color.rawValue)
         }
     }
     
     static func ==(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
         switch lhs {
-            case let .color(lhsIndex, lhsAccentColor, lhsSelected):
-                if case let .color(rhsIndex, rhsAccentColor, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsAccentColor == rhsAccentColor, lhsSelected == rhsSelected {
+            case let .color(lhsIndex, lhsColor, lhsAccentColor, lhsSelected):
+                if case let .color(rhsIndex, rhsColor, rhsAccentColor, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsColor == rhsColor, lhsAccentColor == rhsAccentColor, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
@@ -37,9 +38,9 @@ private enum PeerNameColorEntry: Comparable, Identifiable {
     
     static func <(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
         switch lhs {
-            case let .color(lhsIndex, _, _):
+            case let .color(lhsIndex, _, _, _):
                 switch rhs {
-                    case let .color(rhsIndex, _, _):
+                    case let .color(rhsIndex, _, _, _):
                         return lhsIndex < rhsIndex
             }
         }
@@ -47,20 +48,22 @@ private enum PeerNameColorEntry: Comparable, Identifiable {
     
     func item(action: @escaping (PeerNameColor) -> Void) -> ListViewItem {
         switch self {
-            case let .color(_, color, selected):
-                return PeerNameColorIconItem(color: color, selected: selected, action: action)
+            case let .color(_, index, colors, selected):
+                return PeerNameColorIconItem(index: index, colors: colors, selected: selected, action: action)
         }
     }
 }
 
 
 private class PeerNameColorIconItem: ListViewItem {
-    let color: PeerNameColor
+    let index: PeerNameColor
+    let colors: PeerNameColors.Colors
     let selected: Bool
     let action: (PeerNameColor) -> Void
     
-    public init(color: PeerNameColor, selected: Bool, action: @escaping (PeerNameColor) -> Void) {
-        self.color = color
+    public init(index: PeerNameColor, colors: PeerNameColors.Colors, selected: Bool, action: @escaping (PeerNameColor) -> Void) {
+        self.index = index
+        self.colors = colors
         self.selected = selected
         self.action = action
     }
@@ -107,22 +110,22 @@ private class PeerNameColorIconItem: ListViewItem {
     
     public var selectable = true
     public func selected(listView: ListView) {
-        self.action(self.color)
+        self.action(self.index)
     }
 }
 
-private func generateRingImage(nameColor: PeerNameColor) -> UIImage? {
+private func generateRingImage(nameColor: PeerNameColors.Colors) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
-        context.setStrokeColor(nameColor.color.cgColor)
+        context.setStrokeColor(nameColor.main.cgColor)
         context.setLineWidth(2.0)
         context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
     })
 }
 
-private func generateFillImage(nameColor: PeerNameColor) -> UIImage? {
+private func generateFillImage(nameColor: PeerNameColors.Colors) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
@@ -131,8 +134,7 @@ private func generateFillImage(nameColor: PeerNameColor) -> UIImage? {
         context.addEllipse(in: circleBounds)
         context.clip()
         
-        let (firstColor, secondColor) = nameColor.dashColors
-        if let secondColor {
+        if let secondColor = nameColor.secondary {
             context.setFillColor(secondColor.cgColor)
             context.fill(circleBounds)
             
@@ -140,10 +142,20 @@ private func generateFillImage(nameColor: PeerNameColor) -> UIImage? {
             context.addLine(to: CGPoint(x: size.width, y: 0.0))
             context.addLine(to: CGPoint(x: 0.0, y: size.height))
             context.closePath()
-            context.setFillColor(firstColor.cgColor)
+            context.setFillColor(nameColor.main.cgColor)
             context.fillPath()
+            
+            if let thirdColor = nameColor.tertiary {
+                context.setFillColor(thirdColor.cgColor)
+                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.rotate(by: .pi / 4.0)
+                
+                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: -9.0, y: -9.0), size: CGSize(width: 18.0, height: 18.0)), cornerRadius: 4.0)
+                context.addPath(path.cgPath)
+                context.fillPath()
+            }
         } else {
-            context.setFillColor(firstColor.cgColor)
+            context.setFillColor(nameColor.main.cgColor)
             context.fill(circleBounds)
         }
     })
@@ -198,7 +210,7 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
             var updatedAccentColor = false
             var updatedSelected = false
             
-            if currentItem == nil || currentItem?.color != item.color {
+            if currentItem == nil || currentItem?.colors != item.colors {
                 updatedAccentColor = true
             }
             if currentItem?.selected != item.selected {
@@ -211,8 +223,8 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
                     strongSelf.item = item
                     
                     if updatedAccentColor {
-                        strongSelf.fillNode.image = generateFillImage(nameColor: item.color)
-                        strongSelf.ringNode.image = generateRingImage(nameColor: item.color)
+                        strongSelf.fillNode.image = generateFillImage(nameColor: item.colors)
+                        strongSelf.ringNode.image = generateRingImage(nameColor: item.colors)
                     }
                     
                     let center = CGPoint(x: 30.0, y: 28.0)
@@ -256,12 +268,12 @@ final class PeerNameColorItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
     let theme: PresentationTheme
-    let colors: [PeerNameColor]
+    let colors: PeerNameColors
     let currentColor: PeerNameColor
     let updated: (PeerNameColor) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, colors: [PeerNameColor], currentColor: PeerNameColor, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, colors: PeerNameColors, currentColor: PeerNameColor, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.colors = colors
         self.currentColor = currentColor
@@ -325,7 +337,7 @@ private func ensureColorVisible(listNode: ListView, color: PeerNameColor, animat
     var resultNode: PeerNameColorIconItemNode?
     listNode.forEachItemNode { node in
         if resultNode == nil, let node = node as? PeerNameColorIconItemNode {
-            if node.item?.color == color {
+            if node.item?.index == color {
                 resultNode = node
             }
         }
@@ -406,7 +418,7 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized || transition.updatePosition || !self.tapping {
-            if let index = item.colors.firstIndex(where: { $0 == item.currentColor }) {
+            if let index = item.colors.displayOrder.firstIndex(where: { $0 == item.currentColor.rawValue }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }
@@ -501,10 +513,13 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [PeerNameColorEntry] = []
                     
-                    var index: Int = 0
-                    for color in item.colors {
-                        entries.append(.color(index, color, color == item.currentColor))
-                        index += 1
+                    var i: Int = 0
+                    for index in item.colors.displayOrder {
+                        let color = PeerNameColor(rawValue: index)
+                        if let colors = item.colors.colors[index] {
+                            entries.append(.color(i, color, colors, color == item.currentColor))
+                        }
+                        i += 1
                     }
                     
                     let action: (PeerNameColor) -> Void = { [weak self] color in

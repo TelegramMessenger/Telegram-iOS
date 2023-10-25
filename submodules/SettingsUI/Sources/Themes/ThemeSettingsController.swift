@@ -369,7 +369,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, mediaSettings: MediaDisplaySettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, isPremium: Bool, chatThemes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]], accountPeer: EnginePeer?) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, presentationThemeSettings: PresentationThemeSettings, mediaSettings: MediaDisplaySettings, themeReference: PresentationThemeReference, availableThemes: [PresentationThemeReference], availableAppIcons: [PresentationAppIcon], currentAppIconName: String?, isPremium: Bool, chatThemes: [PresentationThemeReference], animatedEmojiStickers: [String: [StickerPackItem]], accountPeer: EnginePeer?, nameColors: PeerNameColors) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     let strings = presentationData.strings
@@ -382,7 +382,8 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
     if let accountPeer {
-        entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer.compactDisplayTitle, (accountPeer.nameColor ?? .blue).color))
+        let colors = nameColors.get(accountPeer.nameColor ?? .blue)
+        entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer.compactDisplayTitle, colors.main))
     }
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
@@ -1064,7 +1065,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         chatThemes.insert(.builtin(.dayClassic), at: 0)
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: themeSettingsControllerEntries(presentationData: presentationData, presentationThemeSettings: settings, mediaSettings: mediaSettings, themeReference: themeReference, availableThemes: availableThemes, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName, isPremium: isPremium, chatThemes: chatThemes, animatedEmojiStickers: animatedEmojiStickers, accountPeer: accountPeer, nameColors: context.peerNameColors), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

@@ -1044,6 +1044,7 @@ public protocol AccountContext: AnyObject {
     
     var isPremium: Bool { get }
     var userLimits: EngineConfiguration.UserLimits { get }
+    var peerNameColors: PeerNameColors { get }
     
     var imageCache: AnyObject? { get }
     
@@ -1198,5 +1199,138 @@ public struct StickersSearchConfiguration {
         } else {
             return .defaultValue
         }
+    }
+}
+
+public class PeerNameColors: Equatable {
+    public struct Colors: Equatable {
+        public let main: UIColor
+        public let secondary: UIColor?
+        public let tertiary: UIColor?
+        
+        init(main: UIColor, secondary: UIColor?, tertiary: UIColor?) {
+            self.main = main
+            self.secondary = secondary
+            self.tertiary = tertiary
+        }
+        
+        init(main: UIColor) {
+            self.main = main
+            self.secondary = nil
+            self.tertiary = nil
+        }
+        
+        init?(colors: [UIColor]) {
+            guard let first = colors.first else {
+                return nil
+            }
+            self.main = first
+            if colors.count == 3 {
+                self.secondary = colors[1]
+                self.tertiary = colors[2]
+            } else if colors.count == 2, let second = colors.last {
+                self.secondary = second
+                self.tertiary = nil
+            } else {
+                self.secondary = nil
+                self.tertiary = nil
+            }
+        }
+    }
+    
+    public static var defaultSingleColors: [Int32: Colors] {
+        return [
+            0: Colors(main: UIColor(rgb: 0xcc5049)),
+            1: Colors(main: UIColor(rgb: 0xd67722)),
+            2: Colors(main: UIColor(rgb: 0x955cdb)),
+            3: Colors(main: UIColor(rgb: 0x40a920)),
+            4: Colors(main: UIColor(rgb: 0x309eba)),
+            5: Colors(main: UIColor(rgb: 0x368ad1)),
+            6: Colors(main: UIColor(rgb: 0xc7508b))
+        ]
+    }
+    
+    public static var defaultValue: PeerNameColors {
+        return PeerNameColors(
+            colors: defaultSingleColors,
+            darkColors: [:],
+            displayOrder: [5, 3, 1, 0, 2, 4, 6]
+        )
+    }
+    
+    public let colors: [Int32: Colors]
+    public let darkColors: [Int32: Colors]
+    public let displayOrder: [Int32]
+    
+    public func get(_ color: PeerNameColor) -> Colors {
+        if let colors = self.colors[color.rawValue] {
+            return colors
+        } else {
+            return PeerNameColors.defaultSingleColors[5]!
+        }
+    }
+    
+    fileprivate init(colors: [Int32: Colors], darkColors: [Int32: Colors], displayOrder: [Int32]) {
+        self.colors = colors
+        self.darkColors = darkColors
+        self.displayOrder = displayOrder
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> PeerNameColors {
+        if let data = appConfiguration.data {
+            var colors = PeerNameColors.defaultSingleColors
+            var darkColors: [Int32: Colors] = [:]
+            
+            if let peerColors = data["peer_colors"] as? [String: [Double]] {
+                for (key, values) in peerColors {
+                    if let index = Int32(key) {
+                        let colorsArray = values.map { UIColor(rgb: UInt32($0)) }
+                        if let colorValues = Colors(colors: colorsArray) {
+                            colors[index] = colorValues
+                        }
+                    }
+                }
+            }
+            
+            if let darkPeerColors = data["dark_peer_colors"] as? [String: [Double]] {
+                for (key, values) in darkPeerColors {
+                    if let index = Int32(key) {
+                        let colorsArray = values.map { UIColor(rgb: UInt32($0)) }
+                        if let colorValues = Colors(colors: colorsArray) {
+                            darkColors[index] = colorValues
+                        }
+                    }
+                }
+            }
+            
+            var displayOrder: [Int32] = []
+            if let order = data["peer_colors_available"] as? [Double] {
+                displayOrder = order.map { Int32($0) }
+            }
+            if displayOrder.isEmpty {
+                displayOrder = PeerNameColors.defaultValue.displayOrder
+            }
+            
+            return PeerNameColors(
+                colors: colors,
+                darkColors: darkColors,
+                displayOrder: displayOrder
+            )
+        } else {
+            return .defaultValue
+        }
+    }
+    
+    public static func == (lhs: PeerNameColors, rhs: PeerNameColors) -> Bool {
+        if lhs.colors != rhs.colors {
+            return false
+        }
+        if lhs.darkColors != rhs.darkColors {
+            return false
+        }
+        if lhs.displayOrder != rhs.displayOrder {
+            return false
+        }
+        return true
     }
 }
