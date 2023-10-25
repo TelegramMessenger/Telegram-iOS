@@ -4417,6 +4417,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         attributes: messageAttributes,
                                         inlineStickers: inlineStickers,
                                         mediaReference: nil,
+                                        threadId: nil,
                                         replyToMessageId: nil,
                                         replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
                                         localGroupingKey: nil,

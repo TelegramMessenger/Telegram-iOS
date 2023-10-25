@@ -4033,6 +4033,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     if let item = self.item {
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
+                                if let threadId = item.message.threadId, makeThreadIdMessageId(peerId: item.message.id.peerId, threadId: threadId) == attribute.messageId, let quotedReply = item.message.attributes.first(where: { $0 is QuotedReplyMessageAttribute }) as? QuotedReplyMessageAttribute {
+                                    return .action(InternalBubbleTapAction.Action {
+                                        item.controllerInteraction.attemptedNavigationToPrivateQuote(quotedReply.peerId.flatMap { item.message.peers[$0] })
+                                    })
+                                }
+                                
                                 return .action(InternalBubbleTapAction.Action { [weak self] in
                                     guard let self else {
                                         return

@@ -226,6 +226,7 @@ public extension TelegramEngine {
         public func enqueueOutgoingMessage(
             to peerId: EnginePeer.Id,
             replyTo replyToMessageId: EngineMessageReplySubject?,
+            threadId: Int64? = nil,
             storyId: StoryId? = nil,
             content: EngineOutgoingMessageContent,
             silentPosting: Bool = false,
@@ -261,6 +262,7 @@ public extension TelegramEngine {
                     attributes: attributes,
                     inlineStickers: [:],
                     mediaReference: mediaReference,
+                    threadId: threadId,
                     replyToMessageId: replyToMessageId,
                     replyToStoryId: storyId,
                     localGroupingKey: nil,
@@ -268,8 +270,6 @@ public extension TelegramEngine {
                     bubbleUpEmojiOrStickersets: []
                 )
             }
-            
-            
             
             guard let message = message else {
                 return .complete()
