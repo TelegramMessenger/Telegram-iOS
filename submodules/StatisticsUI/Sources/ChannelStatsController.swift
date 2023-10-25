@@ -907,6 +907,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let boostsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: false)
     let giftsContext = ChannelBoostersContext(account: context.account, peerId: peerId, gift: true)
     
+    var dismissAllTooltipsImpl: (() -> Void)?
     var presentImpl: ((ViewController) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     
@@ -964,6 +965,13 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         presentImpl?(shareController)
     },
     openBoost: { boost in
+        dismissAllTooltipsImpl?()
+        if boost.peer == nil, boost.flags.contains(.isGiveaway) && !boost.flags.contains(.isUnclaimed) {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))
+            return
+        }
+        
         let controller = PremiumGiftCodeScreen(context: context, subject: .boost(peerId, boost), action: {})
         pushImpl?(controller)
     },
@@ -1090,6 +1098,21 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         
         let contextController = ContextController(presentationData: presentationData, source: .extracted(ChannelStatsContextExtractedContentSource(controller: controller, sourceNode: sourceNode, keepInPlace: false)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
         controller.presentInGlobalOverlay(contextController)
+    }
+    dismissAllTooltipsImpl = { [weak controller] in
+        if let controller {
+            controller.window?.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismiss()
+                }
+            })
+            controller.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismiss()
+                }
+                return true
+            })
+        }
     }
     presentImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))

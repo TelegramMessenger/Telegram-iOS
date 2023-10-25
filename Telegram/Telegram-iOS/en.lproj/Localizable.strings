@@ -10293,6 +10293,7 @@ Sorry for the inconvenience.";
 "Stats.Boosts.Unclaimed" = "Unclaimed";
 "Stats.Boosts.GetBoosts" = "Get Boosts via Gifts";
 "Stats.Boosts.GetBoostsInfo" = "Get more boosts for your channel by gifting Premium to your subscribers.";
+"Stats.Boosts.TooltipToBeDistributed" = "The recipient will be selected when the giveaway ends.";
 
 "Notification.PremiumPrize.Title" = "Congratulations!";
 "Notification.PremiumPrize.UnclaimedText" = "You have an unclaimed prize from a giveaway by **%1$@**.\n\nThis prize is a **Telegram Premium** subscription for %2$@.";
@@ -10383,7 +10384,7 @@ Sorry for the inconvenience.";
 "GiftLink.UsedDescription" = "This link was used to activate a **Telegram Premium** subscription.";
 "GiftLink.PersonalDescription" = "This link allows **%@** to activate a **Telegram Premium** subscription.";
 "GiftLink.PersonalUsedDescription" = "This link allowed **%@** to activate a **Telegram Premium** subscription.";
-"GiftLink.UnclaimedDescription" = "This link allows to activate a **Telegram Premium** subscription.";
+"GiftLink.UnclaimedDescription" = "This link allows anyone to activate a **Telegram Premium** subscription.";
 "GiftLink.Footer" = "You can also [send this link]() to a friend as a gift.";
 "GiftLink.UsedFooter" = "This link was used on %@.";
 "GiftLink.NotUsedFooter" = "This link hasn't been used yet.";
