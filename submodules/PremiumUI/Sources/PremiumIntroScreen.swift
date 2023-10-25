@@ -2087,15 +2087,17 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     let context: AccountContext
     let source: PremiumSource
     let forceDark: Bool
+    let forceHasPremium: Bool
     let updateInProgress: (Bool) -> Void
     let present: (ViewController) -> Void
     let push: (ViewController) -> Void
     let completion: () -> Void
     
-    init(context: AccountContext, source: PremiumSource, forceDark: Bool, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+    init(context: AccountContext, source: PremiumSource, forceDark: Bool, forceHasPremium: Bool, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
         self.context = context
         self.source = source
         self.forceDark = forceDark
+        self.forceHasPremium = forceHasPremium
         self.updateInProgress = updateInProgress
         self.present = present
         self.push = push
@@ -2110,6 +2112,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             return false
         }
         if lhs.forceDark != rhs.forceDark {
+            return false
+        }
+        if lhs.forceHasPremium != rhs.forceHasPremium {
             return false
         }
         return true
@@ -2171,7 +2176,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             }
         }
         
-        init(context: AccountContext, source: PremiumSource, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
+        init(context: AccountContext, source: PremiumSource, forceHasPremium: Bool, updateInProgress: @escaping (Bool) -> Void, present: @escaping (ViewController) -> Void, completion: @escaping () -> Void) {
             self.context = context
             self.updateInProgress = updateInProgress
             self.present = present
@@ -2212,6 +2217,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 otherPeerName = .single(nil)
             }
             
+            if forceHasPremium {
+                self.isPremium = true
+            }
+            
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 availableProducts,
@@ -2235,7 +2244,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     }
                     
                     strongSelf.products = products
-                    strongSelf.isPremium = isPremium
+                    strongSelf.isPremium = forceHasPremium || isPremium
                     strongSelf.otherPeerName = otherPeerName
                     
                     if !hadProducts {
@@ -2409,7 +2418,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, source: self.source, updateInProgress: self.updateInProgress, present: self.present, completion: self.completion)
+        return State(context: self.context, source: self.source, forceHasPremium: self.forceHasPremium, updateInProgress: self.updateInProgress, present: self.present, completion: self.completion)
     }
     
     static var body: Body {
@@ -2863,7 +2872,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     public weak var containerView: UIView?
     public var animationColor: UIColor?
     
-    public init(context: AccountContext, modal: Bool = true, source: PremiumSource, forceDark: Bool = false) {
+    public init(context: AccountContext, modal: Bool = true, source: PremiumSource, forceDark: Bool = false, forceHasPremium: Bool = false) {
         self.context = context
             
         var updateInProgressImpl: ((Bool) -> Void)?
@@ -2874,6 +2883,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
             context: context,
             source: source,
             forceDark: forceDark,
+            forceHasPremium: forceHasPremium,
             updateInProgress: { inProgress in
                 updateInProgressImpl?(inProgress)
             },

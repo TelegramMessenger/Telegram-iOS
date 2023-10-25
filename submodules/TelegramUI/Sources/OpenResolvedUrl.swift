@@ -903,7 +903,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             |> deliverOnMainQueue).startStandalone(completed: {
                                 dismissImpl?()
                                 
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: forceDark, dismissed: nil)
+                                let controller = PremiumIntroScreen(context: context, source: .settings, forceDark: forceDark, forceHasPremium: true)
                                 navigationController?.pushViewController(controller)
                                 if let controller = controller as? PremiumIntroScreen {
                                     Queue.mainQueue().after(0.3, {
