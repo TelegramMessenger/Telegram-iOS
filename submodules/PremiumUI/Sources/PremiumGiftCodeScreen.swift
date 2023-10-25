@@ -222,13 +222,17 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     toPeer = nil
                     descriptionText = strings.GiftLink_UnclaimedDescription
                 }
-                if boost.slug == nil {
+                if boost.flags.contains(.isUnclaimed) || boost.slug == nil {
                     additionalText = strings.GiftLink_NotUsedFooter
                 } else {
                     additionalText = ""
                 }
                 buttonText = strings.Common_OK
-                link = nil
+                if boost.flags.contains(.isUnclaimed), let slug = boost.slug {
+                    link = "https://t.me/giftcode/\(slug)"
+                } else {
+                    link = nil
+                }
                 date = boost.date
                 toPeerId = boost.peer?.id
                 fromPeer = state.peerMap[channelId]
