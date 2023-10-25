@@ -89,7 +89,20 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     case .automaticPlayback:
                         openChatMessageMode = .automaticPlayback
                 }
-                let _ = item.controllerInteraction.openMessage(item.message, openChatMessageMode)
+                if !item.controllerInteraction.openMessage(item.message, openChatMessageMode) {
+                    if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
+                        var isConcealed = true
+                        if item.message.text.contains(content.url) {
+                            isConcealed = false
+                        }
+                        if let attribute = item.message.webpagePreviewAttribute {
+                            if attribute.isSafe {
+                                isConcealed = false
+                            }
+                        }
+                        item.controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: content.url, concealed: isConcealed, progress: strongSelf.contentNode.makeProgress()))
+                    }
+                }
             }
         }
         self.contentNode.activateAction = { [weak self] in

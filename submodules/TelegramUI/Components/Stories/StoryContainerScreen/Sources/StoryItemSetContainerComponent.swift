@@ -1641,7 +1641,7 @@ public final class StoryItemSetContainerComponent: Component {
                         }
 
                         if let view = view as? StoryContentItem.View {
-                            view.setProgressMode(itemProgressMode)
+                            view.setProgressMode(itemProgressMode, emitEvents: false)
                         }
                         
                         var isChannel = false
@@ -1871,7 +1871,7 @@ public final class StoryItemSetContainerComponent: Component {
                         if id != centralId {
                             itemMode = .pause
                         }
-                        view.setProgressMode(itemMode)
+                        view.setProgressMode(itemMode, emitEvents: true)
                     }
                 }
             }
@@ -4417,6 +4417,7 @@ public final class StoryItemSetContainerComponent: Component {
                                         attributes: messageAttributes,
                                         inlineStickers: inlineStickers,
                                         mediaReference: nil,
+                                        threadId: nil,
                                         replyToMessageId: nil,
                                         replyToStoryId: StoryId(peerId: component.slice.peer.id, id: component.slice.item.storyItem.id),
                                         localGroupingKey: nil,

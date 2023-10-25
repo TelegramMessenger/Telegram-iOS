@@ -51,19 +51,19 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                         return true
                     }
                     if let media: Media = internalReference.file ?? internalReference.image {
-                        return .message(text: caption, attributes: filteredAttributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                        return .message(text: caption, attributes: filteredAttributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                     } else {
-                        return .message(text: caption, attributes: filteredAttributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                        return .message(text: caption, attributes: filteredAttributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                     }
                 } else {
-                    return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: internalReference.title ?? "", description: internalReference.description ?? "", image: internalReference.image, file: internalReference.file)), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                    return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: TelegramMediaGame(gameId: 0, accessHash: 0, name: "", title: internalReference.title ?? "", description: internalReference.description ?? "", image: internalReference.image, file: internalReference.file)), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                 }
             } else if let file = internalReference.file, internalReference.type == "gif" {
-                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             } else if let image = internalReference.image {
-                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: image), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: image), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             } else if let file = internalReference.file {
-                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             } else {
                 return nil
             }
@@ -75,9 +75,9 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                     let thumbnailResource = thumbnail.resource
                     let imageDimensions = thumbnail.dimensions ?? PixelDimensions(width: 128, height: 128)
                     let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: randomId), representations: [TelegramMediaImageRepresentation(dimensions: imageDimensions, resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
-                    return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: tmpImage), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                    return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: tmpImage), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                 } else {
-                    return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                    return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
                 }
             } else if externalReference.type == "document" || externalReference.type == "gif" || externalReference.type == "audio" || externalReference.type == "voice" {
                 var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
@@ -137,9 +137,9 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
                 }
                 
                 let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: randomId), partialReference: nil, resource: resource, previewRepresentations: previewRepresentations, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: externalReference.content?.mimeType ?? "application/binary", size: nil, attributes: fileAttributes)
-                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: file), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             } else {
-                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+                return .message(text: caption, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
             }
         }
     case let .text(text, entities, disableUrlPreview, previewParameters, replyMarkup):
@@ -155,22 +155,22 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
         if disableUrlPreview {
             attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
         }
-        return .message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        return .message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     case let .mapLocation(media, replyMarkup):
         if let replyMarkup = replyMarkup {
             attributes.append(replyMarkup)
         }
-        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     case let .contact(media, replyMarkup):
         if let replyMarkup = replyMarkup {
             attributes.append(replyMarkup)
         }
-        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     case let .invoice(media, replyMarkup):
         if let replyMarkup = replyMarkup {
             attributes.append(replyMarkup)
         }
-        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        return .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: .standalone(media: media), threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     case let .webpage(text, entities, _, previewParameters, replyMarkup):
         if let entities = entities {
             attributes.append(entities)
@@ -181,6 +181,6 @@ func _internal_outgoingMessageWithChatContextResult(to peerId: PeerId, threadId:
         if let previewParameters = previewParameters {
             attributes.append(previewParameters)
         }
-        return .message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
+        return .message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, threadId: threadId, replyToMessageId: replyToMessageId, replyToStoryId: replyToStoryId, localGroupingKey: nil, correlationId: correlationId, bubbleUpEmojiOrStickersets: [])
     }
 }
