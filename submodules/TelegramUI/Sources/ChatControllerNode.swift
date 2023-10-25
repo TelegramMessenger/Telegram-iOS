@@ -507,23 +507,40 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 source = .custom(messages: messages, messageId: messageIds.first ?? MessageId(peerId: PeerId(0), namespace: 0, id: 0), quote: reply.quote?.text, loadMore: nil)
             case let .link(link):
                 let messages = link.options
-                |> mapToSignal { options -> Signal<(ChatControllerSubject.LinkOptions, Peer, Message?), NoError> in
+                |> mapToSignal { options -> Signal<(ChatControllerSubject.LinkOptions, Peer, Message?, [StoryId: CodableEntry]), NoError> in
+                    let stories: Signal<[StoryId: CodableEntry], NoError>
+                    if case let .Loaded(content) = options.webpage.content, let story = content.story {
+                        stories = context.account.postbox.transaction { transaction -> [StoryId: CodableEntry] in
+                            var result: [StoryId: CodableEntry] = [:]
+                            if let storyValue = transaction.getStory(id: story.storyId) {
+                                result[story.storyId] = storyValue
+                            }
+                            return result
+                        }
+                    } else {
+                        stories = .single([:])
+                    }
+                    
                     if let replyMessageId = options.replyMessageId {
                         return combineLatest(
                             context.account.postbox.messagesAtIds([replyMessageId]),
-                            context.account.postbox.loadedPeerWithId(context.account.peerId)
+                            context.account.postbox.loadedPeerWithId(context.account.peerId),
+                            stories
                         )
-                        |> map { messages, peer -> (ChatControllerSubject.LinkOptions, Peer, Message?) in
-                            return (options, peer, messages.first)
+                        |> map { messages, peer, stories -> (ChatControllerSubject.LinkOptions, Peer, Message?, [StoryId: CodableEntry]) in
+                            return (options, peer, messages.first, stories)
                         }
                     } else {
-                        return context.account.postbox.loadedPeerWithId(context.account.peerId)
-                        |> map { peer -> (ChatControllerSubject.LinkOptions, Peer, Message?) in
-                            return (options, peer, nil)
+                        return combineLatest(
+                            context.account.postbox.loadedPeerWithId(context.account.peerId),
+                            stories
+                        )
+                        |> map { peer, stories -> (ChatControllerSubject.LinkOptions, Peer, Message?, [StoryId: CodableEntry]) in
+                            return (options, peer, nil, stories)
                         }
                     }
                 }
-                |> map { options, accountPeer, replyMessage -> ([Message], Int32, Bool) in
+                |> map { options, accountPeer, replyMessage, stories -> ([Message], Int32, Bool) in
                     var peers = SimpleDictionary<PeerId, Peer>()
                     peers[accountPeer.id] = accountPeer
                     
@@ -534,10 +551,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         media.append(TelegramMediaWebpage(webpageId: options.webpage.webpageId, content: .Loaded(content)))
                     }
                     
+                    let associatedStories: [StoryId: CodableEntry] = stories
+                    
                     var attributes: [MessageAttribute] = []
                     
                     attributes.append(TextEntitiesMessageAttribute(entities: options.messageEntities))
-                    
                     attributes.append(WebpagePreviewMessageAttribute(leadingPreview: !options.linkBelowText, forceLargeMedia: options.largeMedia, isManuallyAdded: true, isSafe: false))
                     
                     if let replyMessage {
@@ -574,7 +592,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         associatedMessageIds: [],
                         associatedMedia: [:],
                         associatedThreadInfo: nil,
-                        associatedStories: [:]
+                        associatedStories: associatedStories
                     )
                     
                     return ([message], 1, false)

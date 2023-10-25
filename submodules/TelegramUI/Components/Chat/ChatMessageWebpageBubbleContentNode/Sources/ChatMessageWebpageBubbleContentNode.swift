@@ -54,7 +54,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         item.controllerInteraction.openTheme(item.message)
                         return
                     } else {
-                        if content.embedUrl == nil && (content.title != nil || content.text != nil) {
+                        if content.embedUrl == nil && (content.title != nil || content.text != nil) && content.story == nil {
                             var shouldOpenUrl = true
                             if let file = content.file {
                                 if !file.isVideo, !file.isVideoSticker, !file.isAnimated, !file.isAnimatedSticker, !file.isSticker, !file.isMusic {
