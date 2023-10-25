@@ -380,27 +380,33 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         underlineLinks = false
                     }
                     
-//                    let author = item.message.author
+                    let author = item.message.author
                     let mainColor: UIColor
-                    let secondaryColor: UIColor? = nil
+                    var secondaryColor: UIColor? = nil
+                    var tertiaryColor: UIColor? = nil
+                    
+                    let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0) }
                     if !incoming {
                         mainColor = messageTheme.accentTextColor
-//                        if let _ = author?.nameColor?.dashColors.1 {
-//                            secondaryColor = .clear
-//                        }
+                        if let _ = nameColors?.secondary {
+                            secondaryColor = .clear
+                        }
+                        if let _ = nameColors?.tertiary {
+                            tertiaryColor = .clear
+                        }
                     } else {
-//                        let authorNameColor: UIColor?
-//                        authorNameColor = author?.nameColor?.color
-//                        secondaryColor = author?.nameColor?.dashColors.1
+                        let authorNameColor = nameColors?.main
+                        secondaryColor = nameColors?.secondary
+                        tertiaryColor = nameColors?.tertiary
                         
-//                        if let authorNameColor {
-//                            mainColor = authorNameColor
-//                        } else {
+                        if let authorNameColor {
+                            mainColor = authorNameColor
+                        } else {
                             mainColor = messageTheme.accentTextColor
-//                        }
+                        }
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {

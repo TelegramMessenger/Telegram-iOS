@@ -432,7 +432,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                 }
                 let availableWidth: CGFloat = max(60.0, availableContentWidth - 210.0 + 6.0)
-                forwardInfoSizeApply = makeForwardInfoLayout(item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
             var notConsumed = false

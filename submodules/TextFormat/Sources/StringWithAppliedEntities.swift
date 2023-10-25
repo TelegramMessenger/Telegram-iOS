@@ -55,7 +55,7 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
     return string
 }
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false) -> NSAttributedString {
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false) -> NSAttributedString {
     let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
     
     var nsString: NSString?
@@ -214,7 +214,7 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
             case .BlockQuote:
                 addFontAttributes(range, .blockQuote)
                 
-                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor), range: range)
+                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor, tertiaryColor: baseQuoteTertiaryTintColor), range: range)
             case .BankCard:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {

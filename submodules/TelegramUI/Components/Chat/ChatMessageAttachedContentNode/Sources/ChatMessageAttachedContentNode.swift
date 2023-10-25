@@ -187,6 +187,9 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                 if let _ = nameColors?.secondary {
                     secondaryColor = .clear
                 }
+                if let _ = nameColors?.tertiary {
+                    tertiaryColor = .clear
+                }
             } else {
                 var authorNameColor: UIColor?
                 authorNameColor = nameColors?.main

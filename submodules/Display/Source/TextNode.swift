@@ -71,11 +71,13 @@ public final class TextNodeBlockQuoteData: NSObject {
     public let title: NSAttributedString?
     public let color: UIColor
     public let secondaryColor: UIColor?
+    public let tertiaryColor: UIColor?
     
-    public init(title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?) {
+    public init(title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?) {
         self.title = title
         self.color = color
         self.secondaryColor = secondaryColor
+        self.tertiaryColor = tertiaryColor
         
         super.init()
     }
@@ -100,6 +102,13 @@ public final class TextNodeBlockQuoteData: NSObject {
                 return false
             }
         } else if (self.secondaryColor == nil) != (other.secondaryColor == nil) {
+            return false
+        }
+        if let lhsTertiaryColor = self.tertiaryColor, let rhsTertiaryColor = other.tertiaryColor {
+            if !lhsTertiaryColor.isEqual(rhsTertiaryColor) {
+                return false
+            }
+        } else if (self.tertiaryColor == nil) != (other.tertiaryColor == nil) {
             return false
         }
         
@@ -141,11 +150,13 @@ private final class TextNodeBlockQuote {
     let frame: CGRect
     let tintColor: UIColor
     let secondaryTintColor: UIColor?
+    let tertiaryTintColor: UIColor?
     
-    init(frame: CGRect, tintColor: UIColor, secondaryTintColor: UIColor?) {
+    init(frame: CGRect, tintColor: UIColor, secondaryTintColor: UIColor?, tertiaryTintColor: UIColor?) {
         self.frame = frame
         self.tintColor = tintColor
         self.secondaryTintColor = secondaryTintColor
+        self.tertiaryTintColor = tertiaryTintColor
     }
 }
 
@@ -1212,6 +1223,7 @@ open class TextNode: ASDisplayNode {
             let isBlockQuote: Bool
             let tintColor: UIColor?
             let secondaryTintColor: UIColor?
+            let tertiaryTintColor: UIColor?
         }
         var stringSegments: [StringSegment] = []
         
@@ -1235,7 +1247,8 @@ open class TextNode: ASDisplayNode {
                         firstCharacterOffset: segmentCharacterOffset,
                         isBlockQuote: false,
                         tintColor: nil,
-                        secondaryTintColor: nil
+                        secondaryTintColor: nil,
+                        tertiaryTintColor: nil
                     ))
                 }
                 
@@ -1247,7 +1260,8 @@ open class TextNode: ASDisplayNode {
                             firstCharacterOffset: effectiveRange.location,
                             isBlockQuote: true,
                             tintColor: value.color,
-                            secondaryTintColor: value.secondaryColor
+                            secondaryTintColor: value.secondaryColor,
+                            tertiaryTintColor: value.tertiaryColor
                         ))
                     }
                     segmentCharacterOffset = effectiveRange.location + effectiveRange.length
@@ -1261,7 +1275,8 @@ open class TextNode: ASDisplayNode {
                         firstCharacterOffset: effectiveRange.location,
                         isBlockQuote: false,
                         tintColor: nil,
-                        secondaryTintColor: nil
+                        secondaryTintColor: nil,
+                        tertiaryTintColor: nil
                     ))
                     segmentCharacterOffset = effectiveRange.location + effectiveRange.length
                 }
@@ -1277,7 +1292,8 @@ open class TextNode: ASDisplayNode {
                         firstCharacterOffset: segmentCharacterOffset,
                         isBlockQuote: false,
                         tintColor: nil,
-                        secondaryTintColor: nil
+                        secondaryTintColor: nil,
+                        tertiaryTintColor: nil
                     ))
                 }
                 
@@ -1290,6 +1306,7 @@ open class TextNode: ASDisplayNode {
             var lines: [TextNodeLine] = []
             var tintColor: UIColor?
             var secondaryTintColor: UIColor?
+            var tertiaryTintColor: UIColor?
             var isBlockQuote: Bool = false
             var additionalWidth: CGFloat = 0.0
         }
@@ -1301,6 +1318,7 @@ open class TextNode: ASDisplayNode {
             calculatedSegment.isBlockQuote = segment.isBlockQuote
             calculatedSegment.tintColor = segment.tintColor
             calculatedSegment.secondaryTintColor = segment.secondaryTintColor
+            calculatedSegment.tertiaryTintColor = segment.tertiaryTintColor
             
             let rawSubstring = segment.substring.string as NSString
             let substringLength = rawSubstring.length
@@ -1512,7 +1530,7 @@ open class TextNode: ASDisplayNode {
             }
             
             if segment.isBlockQuote, let tintColor = segment.tintColor {
-                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor))
+                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor))
             }
         }
         
@@ -2216,9 +2234,19 @@ open class TextNode: ASDisplayNode {
                 if let secondaryTintColor = blockQuote.secondaryTintColor {
                     let isMonochrome = secondaryTintColor.alpha == 0.0
                     
+                    let tertiaryTintColor = blockQuote.tertiaryTintColor
+                    let dashHeight: CGFloat = tertiaryTintColor != nil ? 6.0 : 9.0
+                    
                     do {
                         context.saveGState()
-                    
+                        
+                        let dashOffset: CGFloat
+                        if let _ = tertiaryTintColor {
+                            dashOffset = isMonochrome ? -2.0 : 0.0
+                        } else {
+                            dashOffset = isMonochrome ? -4.0 : 5.0
+                        }
+                        
                         if isMonochrome {
                             context.setFillColor(blockQuote.tintColor.withMultipliedAlpha(0.2).cgColor)
                             context.fill(lineFrame)
@@ -2229,23 +2257,37 @@ open class TextNode: ASDisplayNode {
                             context.setFillColor(secondaryTintColor.cgColor)
                         }
                         
-                        let dashOffset: CGFloat = isMonochrome ? -4.0 : 5.0
-                        context.translateBy(x: blockFrame.minX, y: blockFrame.minY + dashOffset)
-                        
-                        var offset = 0.0
-                        while offset < blockFrame.height {
-                            context.move(to: CGPoint(x: 0.0, y: 3.0))
-                            context.addLine(to: CGPoint(x: lineWidth, y: 0.0))
-                            context.addLine(to: CGPoint(x: lineWidth, y: 9.0))
-                            context.addLine(to: CGPoint(x: 0.0, y: 9.0 + 3.0))
-                            context.closePath()
-                            context.fillPath()
+                        func drawDashes() {
+                            context.translateBy(x: blockFrame.minX, y: blockFrame.minY + dashOffset)
                             
-                            context.translateBy(x: 0.0, y: 18.0)
-                            offset += 18.0
+                            var offset = 0.0
+                            while offset < blockFrame.height {
+                                context.move(to: CGPoint(x: 0.0, y: 3.0))
+                                context.addLine(to: CGPoint(x: lineWidth, y: 0.0))
+                                context.addLine(to: CGPoint(x: lineWidth, y: dashHeight))
+                                context.addLine(to: CGPoint(x: 0.0, y: dashHeight + 3.0))
+                                context.closePath()
+                                context.fillPath()
+                                
+                                context.translateBy(x: 0.0, y: 18.0)
+                                offset += 18.0
+                            }
                         }
                         
+                        drawDashes()
                         context.restoreGState()
+                        
+                        if let tertiaryTintColor {
+                            context.saveGState()
+                            context.translateBy(x: 0.0, y: dashHeight)
+                            if isMonochrome {
+                                context.setFillColor(blockQuote.tintColor.withAlphaComponent(0.4).cgColor)
+                            } else {
+                                context.setFillColor(tertiaryTintColor.cgColor)
+                            }
+                            drawDashes()
+                            context.restoreGState()
+                        }
                     }
                 } else {
                     context.setFillColor(blockQuote.tintColor.cgColor)
