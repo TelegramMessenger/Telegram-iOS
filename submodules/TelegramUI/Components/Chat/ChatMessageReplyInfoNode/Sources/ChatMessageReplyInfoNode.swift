@@ -222,6 +222,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     if dashSecondaryColor != nil {
                         secondaryColor = .clear
                     }
+                    if dashTertiaryColor != nil {
+                        tertiaryColor = .clear
+                    }
                 }
                 dustColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.secondaryTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.secondaryTextColor
             case .standalone:
@@ -229,6 +232,9 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 titleColor = serviceColor.primaryText
                 if dashSecondaryColor != nil {
                     secondaryColor = .clear
+                }
+                if dashTertiaryColor != nil {
+                    tertiaryColor = .clear
                 }
                 
                 mainColor = serviceMessageColorComponents(chatTheme: arguments.presentationData.theme.theme.chat, wallpaper: arguments.presentationData.theme.wallpaper).primaryText

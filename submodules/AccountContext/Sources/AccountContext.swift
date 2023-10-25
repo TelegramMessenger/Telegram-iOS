@@ -1281,10 +1281,10 @@ public class PeerNameColors: Equatable {
             var colors = PeerNameColors.defaultSingleColors
             var darkColors: [Int32: Colors] = [:]
             
-            if let peerColors = data["peer_colors"] as? [String: [Double]] {
+            if let peerColors = data["peer_colors"] as? [String: [String]] {
                 for (key, values) in peerColors {
                     if let index = Int32(key) {
-                        let colorsArray = values.map { UIColor(rgb: UInt32($0)) }
+                        let colorsArray = values.compactMap { UIColor(hexString: $0) }
                         if let colorValues = Colors(colors: colorsArray) {
                             colors[index] = colorValues
                         }
@@ -1292,10 +1292,10 @@ public class PeerNameColors: Equatable {
                 }
             }
             
-            if let darkPeerColors = data["dark_peer_colors"] as? [String: [Double]] {
+            if let darkPeerColors = data["dark_peer_colors"] as? [String: [String]] {
                 for (key, values) in darkPeerColors {
                     if let index = Int32(key) {
-                        let colorsArray = values.map { UIColor(rgb: UInt32($0)) }
+                        let colorsArray = values.compactMap { UIColor(hexString: $0) }
                         if let colorValues = Colors(colors: colorsArray) {
                             darkColors[index] = colorValues
                         }

@@ -259,18 +259,23 @@ private final class ChatInputTextContainer: NSTextContainer {
 public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDelegate, NSTextStorageDelegate {
     public final class Theme: Equatable {
         public final class Quote: Equatable {
+            public enum LineStyle {
+                case solid
+                case doubleDashed
+                case tripleDashed
+            }
             public let background: UIColor
             public let foreground: UIColor
-            public let isDashed: Bool
+            public let lineStyle: LineStyle
             
             public init(
                 background: UIColor,
                 foreground: UIColor,
-                isDashed: Bool
+                lineStyle: LineStyle
             ) {
                 self.background = background
                 self.foreground = foreground
-                self.isDashed = isDashed
+                self.lineStyle = lineStyle
             }
             
             public static func ==(lhs: Quote, rhs: Quote) -> Bool {
@@ -280,7 +285,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
                 if !lhs.foreground.isEqual(rhs.foreground) {
                     return false
                 }
-                if lhs.isDashed != rhs.isDashed {
+                if lhs.lineStyle != rhs.lineStyle {
                     return false
                 }
                 return true
@@ -763,8 +768,8 @@ private final class QuoteBackgroundView: UIView {
         self.backgroundView.update(
             size: size,
             primaryColor: theme.foreground,
-            secondaryColor: theme.isDashed ? .clear : nil,
-            thirdColor: nil,
+            secondaryColor: theme.lineStyle != .solid ? .clear : nil,
+            thirdColor: theme.lineStyle == .tripleDashed ? .clear : nil,
             pattern: nil,
             animation: .None
         )

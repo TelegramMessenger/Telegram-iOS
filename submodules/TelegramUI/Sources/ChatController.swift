@@ -5109,8 +5109,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 let isPremium = peerView.peers[peerView.peerId]?.isPremium ?? false
                 var accountPeerColor: ChatPresentationInterfaceState.AccountPeerColor?
-                if let nameColor = peerView.peers[peerView.peerId]?.nameColor, strongSelf.context.peerNameColors.get(nameColor).secondary != nil {
-                    accountPeerColor = ChatPresentationInterfaceState.AccountPeerColor(isDashed: true)
+                if let nameColor = peerView.peers[peerView.peerId]?.nameColor {
+                    let colors = strongSelf.context.peerNameColors.get(nameColor)
+                    var style: ChatPresentationInterfaceState.AccountPeerColor.Style = .solid
+                    if colors.tertiary != nil {
+                        style = .tripleDashed
+                    } else if colors.secondary != nil {
+                        style = .doubleDashed
+                    }
+                    accountPeerColor = ChatPresentationInterfaceState.AccountPeerColor(style: style)
                 }
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
                     return state.updatedIsPremium(isPremium).updatedAccountPeerColor(accountPeerColor)

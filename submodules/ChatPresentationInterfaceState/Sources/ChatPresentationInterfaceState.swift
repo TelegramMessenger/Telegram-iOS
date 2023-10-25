@@ -339,10 +339,15 @@ public final class ChatPresentationInterfaceState: Equatable {
     }
     
     public struct AccountPeerColor: Equatable {
-        public var isDashed: Bool
+        public enum Style {
+            case solid
+            case doubleDashed
+            case tripleDashed
+        }
+        public var style: Style
         
-        public init(isDashed: Bool) {
-            self.isDashed = isDashed
+        public init(style: Style) {
+            self.style = style
         }
     }
     

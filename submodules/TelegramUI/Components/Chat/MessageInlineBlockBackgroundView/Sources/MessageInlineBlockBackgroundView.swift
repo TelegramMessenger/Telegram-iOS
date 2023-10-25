@@ -93,24 +93,26 @@ private let dashBackgroundTemplateImage: UIImage = {
 }()
 
 private func generateDashTemplateImage(isMonochrome: Bool, isTriple: Bool) -> UIImage {
-    return generateImage(CGSize(width: radius * 2.0, height: isTriple ? 27.0 : 18.0), rotatedContext: { size, context in
+    return generateImage(CGSize(width: radius * 2.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor.white.cgColor)
         
         let dashOffset: CGFloat
         if isTriple {
-            dashOffset = 0.0
+            dashOffset = isMonochrome ? -2.0 : 0.0
         } else {
             dashOffset = isMonochrome ? -4.0 : 5.0
         }
+        
+        let dashHeight: CGFloat = isTriple ? 6.0 : 9.0
         
         context.translateBy(x: 0.0, y: dashOffset)
         
         for _ in 0 ..< 2 {
             context.move(to: CGPoint(x: 0.0, y: 3.0))
             context.addLine(to: CGPoint(x: lineWidth, y: 0.0))
-            context.addLine(to: CGPoint(x: lineWidth, y: 9.0))
-            context.addLine(to: CGPoint(x: 0.0, y: 9.0 + 3.0))
+            context.addLine(to: CGPoint(x: lineWidth, y: dashHeight))
+            context.addLine(to: CGPoint(x: 0.0, y: dashHeight + 3.0))
             context.closePath()
             context.fillPath()
             
@@ -131,6 +133,10 @@ private let dashOpaqueTripleTemplateImage: UIImage = {
 
 private let dashMonochromeTemplateImage: UIImage = {
     return generateDashTemplateImage(isMonochrome: true, isTriple: false)
+}()
+
+private let dashMonochromeTripleTemplateImage: UIImage = {
+    return generateDashTemplateImage(isMonochrome: true, isTriple: true)
 }()
 
 private func generateGradient(gradientWidth: CGFloat, baseAlpha: CGFloat) -> UIImage {
@@ -334,9 +340,13 @@ private final class LineView: UIView {
             }
             
             let templateImage: UIImage
+            let monochromeTemplateImage: UIImage
+            
             if let thirdColor {
-                let thirdDashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -9.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
+                let thirdDashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -12.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
                 templateImage = dashOpaqueTripleTemplateImage
+                monochromeTemplateImage = dashMonochromeTripleTemplateImage
+                
                 let dashThirdBackgroundView: UIImageView
                 if let current = self.dashThirdBackgroundView {
                     dashThirdBackgroundView = current
@@ -350,15 +360,18 @@ private final class LineView: UIView {
                     dashThirdBackgroundView.frame = thirdDashBackgroundFrame
                 }
                 
-                if secondaryColor.alpha == 0.0 {
-                    dashThirdBackgroundView.image = templateImage
-                    dashThirdBackgroundView.tintColor = thirdColor
+                if thirdColor.alpha == 0.0 {
+                    dashThirdBackgroundView.alpha = 0.4
+                    dashThirdBackgroundView.image = monochromeTemplateImage
+                    dashThirdBackgroundView.tintColor = primaryColor
                 } else {
+                    dashThirdBackgroundView.alpha = 1.0
                     dashThirdBackgroundView.image = templateImage
                     dashThirdBackgroundView.tintColor = thirdColor
                 }
             } else {
                 templateImage = dashOpaqueTemplateImage
+                monochromeTemplateImage = dashMonochromeTemplateImage
                 if let dashThirdBackgroundView = self.dashThirdBackgroundView {
                     self.dashThirdBackgroundView = nil
                     dashThirdBackgroundView.removeFromSuperview()
@@ -367,7 +380,7 @@ private final class LineView: UIView {
             
             if secondaryColor.alpha == 0.0 {
                 self.backgroundView.alpha = 0.2
-                dashBackgroundView.image = dashMonochromeTemplateImage
+                dashBackgroundView.image = monochromeTemplateImage
                 dashBackgroundView.tintColor = primaryColor
             } else {
                 self.backgroundView.alpha = 1.0

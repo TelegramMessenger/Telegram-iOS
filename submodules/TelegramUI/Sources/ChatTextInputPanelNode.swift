@@ -1045,11 +1045,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var baseFontSize: CGFloat = 17.0
         var keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
         if let presentationInterfaceState = self.presentationInterfaceState {
+            var lineStyle: ChatInputTextView.Theme.Quote.LineStyle = .solid
+            if let accountPeerColor = presentationInterfaceState.accountPeerColor {
+                switch accountPeerColor.style {
+                case .solid:
+                    lineStyle = .solid
+                case .doubleDashed:
+                    lineStyle = .doubleDashed
+                case .tripleDashed:
+                    lineStyle = .tripleDashed
+                }
+            }
             textInputNode.textView.theme = ChatInputTextView.Theme(
                 quote: ChatInputTextView.Theme.Quote(
                     background: presentationInterfaceState.theme.list.itemAccentColor.withMultipliedAlpha(presentationInterfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
                     foreground: presentationInterfaceState.theme.list.itemAccentColor,
-                    isDashed: presentationInterfaceState.accountPeerColor?.isDashed == true
+                    lineStyle: lineStyle
                 )
             )
             
@@ -1628,11 +1639,22 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 }
                 
                 if let textInputNode = self.textInputNode {
+                    var lineStyle: ChatInputTextView.Theme.Quote.LineStyle = .solid
+                    if let accountPeerColor = interfaceState.accountPeerColor {
+                        switch accountPeerColor.style {
+                        case .solid:
+                            lineStyle = .solid
+                        case .doubleDashed:
+                            lineStyle = .doubleDashed
+                        case .tripleDashed:
+                            lineStyle = .tripleDashed
+                        }
+                    }
                     textInputNode.textView.theme = ChatInputTextView.Theme(
                         quote: ChatInputTextView.Theme.Quote(
                             background: interfaceState.theme.list.itemAccentColor.withMultipliedAlpha(interfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
                             foreground: interfaceState.theme.list.itemAccentColor,
-                            isDashed: interfaceState.accountPeerColor?.isDashed == true
+                            lineStyle: lineStyle
                         )
                     )
                 }
