@@ -17995,8 +17995,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             } else if let embedUrl = content.embedUrl, !embedUrl.isEmpty {
                 progress?.set(.single(false))
-                let _ = self.controllerInteraction?.openMessage(message, .default)
-                return
+                if let controllerInteraction = self.controllerInteraction {
+                    if controllerInteraction.openMessage(message, .default) {
+                        return
+                    }
+                }
             }
         }
         
