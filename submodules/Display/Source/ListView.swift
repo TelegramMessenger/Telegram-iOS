@@ -2953,9 +2953,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                     offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.insets.top
                                     offset += overflow
                                     offset -= floor((self.visibleSize.height - insets.bottom - insets.top) * 0.5)
-                                    //offset += 100.0
-                                    
-                                    //offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + getOverflow(itemNode)
                                 }
                             }
                         case .visible:
