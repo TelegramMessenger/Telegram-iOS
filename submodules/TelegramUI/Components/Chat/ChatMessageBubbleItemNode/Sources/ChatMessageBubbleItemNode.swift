@@ -2841,7 +2841,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         if case let .System(duration, _) = animation {
             legacyTransition = .animated(duration: duration, curve: .spring)
             
-            if let subject = item.associatedData.subject, case .messageOptions = subject {
+            if let subject = item.associatedData.subject, case .messageOptions = subject, !"".isEmpty {
                 useDisplayLinkAnimations = true
             }
         }
@@ -3352,6 +3352,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.contentContainersWrapperNode.view.mask = nil
         }
         
+        var animateTextAndWebpagePositionSwap: Bool?
+        var bottomStatusNodeAnimationSourcePosition: CGPoint?
+        
         if removedContentNodeIndices?.count ?? 0 != 0 || addedContentNodes?.count ?? 0 != 0 || updatedContentNodeOrder {
             var updatedContentNodes = strongSelf.contentNodes
             
@@ -3424,6 +3427,26 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             assert(sortedContentNodes.count == updatedContentNodes.count)
             
+            if animation.isAnimated, let fromTextIndex = strongSelf.contentNodes.firstIndex(where: { $0 is ChatMessageTextBubbleContentNode }), let fromWebpageIndex = strongSelf.contentNodes.firstIndex(where: { $0 is ChatMessageWebpageBubbleContentNode }) {
+                if let toTextIndex = sortedContentNodes.firstIndex(where: { $0 is ChatMessageTextBubbleContentNode }), let toWebpageIndex = sortedContentNodes.firstIndex(where: { $0 is ChatMessageWebpageBubbleContentNode }) {
+                    if fromTextIndex == toWebpageIndex && fromWebpageIndex == toTextIndex {
+                        animateTextAndWebpagePositionSwap = fromTextIndex < toTextIndex
+                        
+                        if let textNode = strongSelf.contentNodes[fromTextIndex] as? ChatMessageTextBubbleContentNode, let webpageNode = strongSelf.contentNodes[fromWebpageIndex] as? ChatMessageWebpageBubbleContentNode {
+                            if fromTextIndex > toTextIndex {
+                                if let statusNode = textNode.statusNode, let contentSuperview = textNode.view.superview, statusNode.view.isDescendant(of: contentSuperview) {
+                                    bottomStatusNodeAnimationSourcePosition = statusNode.view.convert(CGPoint(x: statusNode.bounds.width, y: statusNode.bounds.height), to: contentSuperview)
+                                }
+                            } else {
+                                if let statusNode = webpageNode.contentNode.statusNode, let contentSuperview = webpageNode.view.superview, statusNode.view.isDescendant(of: contentSuperview) {
+                                    bottomStatusNodeAnimationSourcePosition = statusNode.view.convert(CGPoint(x: statusNode.bounds.width, y: statusNode.bounds.height), to: contentSuperview)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             strongSelf.contentNodes = sortedContentNodes
         }
         
@@ -3472,7 +3495,52 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         })
                         strongSelf.setAnimationForKey("contentNode\(contentNodeIndex)Frame", animation: animation)
                     } else {
-                        animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
+                        var useExpensiveSnapshot = false
+                        if case .messageOptions = item.associatedData.subject {
+                            useExpensiveSnapshot = true
+                        }
+                        
+                        if let animateTextAndWebpagePositionSwap, let contentNode = contentNode as? ChatMessageTextBubbleContentNode, let snapshotView = useExpensiveSnapshot ? contentNode.view.snapshotView(afterScreenUpdates: false) :  contentNode.layer.snapshotContentTreeAsView() {
+                            let clippingView = UIView()
+                            clippingView.clipsToBounds = true
+                            clippingView.frame = contentNode.frame
+                            
+                            clippingView.addSubview(snapshotView)
+                            snapshotView.frame = CGRect(origin: CGPoint(), size: contentNode.bounds.size)
+                            
+                            contentNode.view.superview?.insertSubview(clippingView, belowSubview: contentNode.view)
+                            
+                            animation.animator.updateAlpha(layer: clippingView.layer, alpha: 0.0, completion: { [weak clippingView] _ in
+                                clippingView?.removeFromSuperview()
+                            })
+                            
+                            let positionOffset: CGFloat = animateTextAndWebpagePositionSwap ? -1.0 : 1.0
+                            
+                            animation.animator.updatePosition(layer: snapshotView.layer, position: CGPoint(x: snapshotView.center.x, y: snapshotView.center.y + positionOffset * contentNode.frame.height), completion: nil)
+                            
+                            contentNode.frame = contentNodeFrame
+                            
+                            if let statusNode = contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
+                                let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
+                                let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
+                                animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
+                            }
+                            
+                            contentNode.animateClippingTransition(offset: positionOffset * contentNodeFrame.height, animation: animation)
+                            
+                            contentNode.alpha = 0.0
+                            animation.animator.updateAlpha(layer: contentNode.layer, alpha: 1.0, completion: nil)
+                        } else if animateTextAndWebpagePositionSwap != nil, let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+                            if let statusNode = contentNode.contentNode.statusNode, let contentSuperview = contentNode.view.superview, statusNode.view.isDescendant(of: contentSuperview), let bottomStatusNodeAnimationSourcePosition {
+                                let localSourcePosition = statusNode.view.convert(bottomStatusNodeAnimationSourcePosition, from: contentSuperview)
+                                let offset = CGPoint(x: statusNode.bounds.width - localSourcePosition.x, y: statusNode.bounds.height - localSourcePosition.y)
+                                animation.animator.animatePosition(layer: statusNode.layer, from: statusNode.layer.position.offsetBy(dx: -offset.x, dy: -offset.y), to: statusNode.layer.position, completion: nil)
+                            }
+                            
+                            animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
+                        } else {
+                            animation.animator.updateFrame(layer: contentNode.layer, frame: contentNodeFrame, completion: nil)
+                        }
                     }
                 } else if animateAlpha {
                     contentNode.frame = contentNodeFrame

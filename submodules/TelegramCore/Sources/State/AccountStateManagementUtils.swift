@@ -1153,7 +1153,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                             medias.append(mediaValue)
                             
                             if mediaValue is TelegramMediaWebpage {
-                                if let webpageAttributes {
+                                if let webpageAttributes = webpageAttributes {
                                     attributes.append(WebpagePreviewMessageAttribute(leadingPreview: false, forceLargeMedia: webpageAttributes.forceLargeMedia, isManuallyAdded: webpageAttributes.isManuallyAdded, isSafe: webpageAttributes.isSafe))
                                 }
                             }
@@ -1538,27 +1538,43 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
-                                let _ = replyHeader
-                                let _ = replyMedia
-                                let _ = replyToTopId
+                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities):
+                                let _ = topMsgId
                                 
                                 var quote: EngineMessageReplyQuote?
                                 if let quoteText = quoteText {
                                     quote = EngineMessageReplyQuote(
                                         text: quoteText,
                                         entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
-                                        media: textMediaAndExpirationTimerFromApiMedia(replyMedia, accountPeerId).media
+                                        media: nil
                                     )
                                 }
                                 
-                                if let replyToMsgId = replyToMsgId {
-                                    replySubject = EngineMessageReplySubject(
-                                        messageId: MessageId(peerId: replyToPeerId?.peerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId),
-                                        quote: quote
-                                    )
+                                var parsedReplyToPeerId: PeerId?
+                                switch replyToPeerId {
+                                case let .inputPeerChannel(channelId, _):
+                                    parsedReplyToPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                                case let .inputPeerChannelFromMessage(_, _, channelId):
+                                    parsedReplyToPeerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                                case let .inputPeerChat(chatId):
+                                    parsedReplyToPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: PeerId.Id._internalFromInt64Value(chatId))
+                                case .inputPeerEmpty:
+                                    break
+                                case .inputPeerSelf:
+                                    parsedReplyToPeerId = accountPeerId
+                                case let .inputPeerUser(userId, _):
+                                    parsedReplyToPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                case let .inputPeerUserFromMessage(_, _, userId):
+                                    parsedReplyToPeerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
+                                case .none:
+                                    break
                                 }
-                            case .messageReplyStoryHeader:
+                                
+                                replySubject = EngineMessageReplySubject(
+                                    messageId: MessageId(peerId: parsedReplyToPeerId ?? peer.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId),
+                                    quote: quote
+                                )
+                            case .inputReplyToStory:
                                 break
                             }
                         }

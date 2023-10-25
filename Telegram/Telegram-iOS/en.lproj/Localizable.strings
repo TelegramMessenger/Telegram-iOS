@@ -10149,6 +10149,51 @@ Sorry for the inconvenience.";
 
 "Premium.BoostByGiftDescription" = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()";
 
+"ChatContextMenu.QuoteSelectionTip" = "Hold on a word, then move cursor to select more| text to quote.";
+
+"Chat.ReplyPanel.ReplyToQuoteBy" = "Reply to Quote by %@";
+"Chat.ReplyPanel.ReplyTo" = "Reply to %@";
+"Chat.ReplyPanel.AccessibilityReplyToMessageFrom" = "Reply to message. From: %@";
+"Chat.ReplyPanel.AccessibilityReplyToYourMessage" = "Reply to your message.";
+"Chat.ReplyPanel.AccessibilityReplyToMessage" = "Reply to message.";
+"Chat.ReplyPanel.HintReplyOptions" = "Tap here for reply options";
+"Chat.ReplyPanel.HintReplyOptionsShort" = "Tap here for options";
+
+"Chat.ToastQuoteChatUnavailbalePrivateChannel" = "This quote is from a private channel";
+"Chat.ToastQuoteChatUnavailbalePrivateGroup" = "This quote is from a private group";
+"Chat.ToastQuoteChatUnavailbalePrivateChat" = "This quote is from a private chat";
+
+"Chat.TitleQuoteSelection" = "Reply to Quote";
+"Chat.TitleReply" = "Reply to Message";
+"Chat.TitleLinkOptions" = "Link Preview Settings";
+"Chat.SubtitleQuoteSelectionTip" = "You can select a specific part to quote";
+"Chat.SubtitleLinkListTip" = "Tap on a link to generate its preview";
+
+"Chat.ToastQuoteNotFound" = "Quote not found";
+
+"TextFormat.Quote" = "Quote";
+
+"TextSelection.SelectAll" = "Select All";
+
+"Conversation.MessageOptionsApplyChanges" = "Apply Changes";
+"Conversation.ForwardOptionsCancel" = "Do Not Forward";
+"Conversation.MessageOptionsTabForward" = "Forward";
+"Conversation.MessageOptionsQuoteSelectedPart" = "Quote Selected Part";
+"Conversation.MessageOptionsQuoteSelect" = "Select Specific Quote";
+"Conversation.MessageOptionsQuoteRemove" = "Remove Quote";
+"Conversation.MessageOptionsReplyInAnotherChat" = "Reply in Another Chat";
+"Conversation.MessageOptionsReplyCancel" = "Do Not Reply";
+"Conversation.MessageOptionsTabReply" = "Reply";
+"Conversation.MoveReplyToAnotherChatTitle" = "Reply in...";
+"Conversation.MessageOptionsLinkMoveUp" = "Move Up";
+"Conversation.MessageOptionsLinkMoveDown" = "Move Down";
+"Conversation.MessageOptionsShrinkImage" = "Shrink Photo";
+"Conversation.MessageOptionsEnlargeImage" = "Enlarge Photo";
+"Conversation.MessageOptionsShrinkVideo" = "Shrink Video";
+"Conversation.MessageOptionsEnlargeVideo" = "Enlarge Video";
+"Conversation.LinkOptionsCancel" = "Do Not Preview";
+"Conversation.MessageOptionsTabLink" = "Link";
+
 "Stats.Boosts.ShowMoreBoosts_1" = "Show %@ More Boost";
 "Stats.Boosts.ShowMoreBoosts_any" = "Show %@ More Boosts";
 

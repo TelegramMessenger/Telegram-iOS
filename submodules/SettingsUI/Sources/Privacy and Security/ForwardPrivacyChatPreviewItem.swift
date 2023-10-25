@@ -103,8 +103,8 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        self.tooltipContainerNode = ContextMenuContainerNode(blurred: false)
-        self.tooltipContainerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        self.tooltipContainerNode = ContextMenuContainerNode(isBlurred: false, isDark: true)
+        self.tooltipContainerNode.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
         
         self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
@@ -119,7 +119,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         
         self.addSubnode(self.containerNode)
         
-        self.tooltipContainerNode.addSubnode(self.textNode)
+        self.tooltipContainerNode.containerNode.addSubnode(self.textNode)
         
         self.addSubnode(self.tooltipContainerNode)
     }

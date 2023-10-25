@@ -3401,7 +3401,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         
                         if !found {
-                            //TODO:localize
                             let authorName: String = (replyMessage.author.flatMap(EnginePeer.init))?.compactDisplayTitle ?? ""
                             let errorTextData =  self.chatPresentationInterfaceState.strings.Chat_ErrorQuoteOutdatedText(authorName)
                             let errorText = errorTextData.string

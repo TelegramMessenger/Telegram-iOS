@@ -61,11 +61,13 @@ public final class TextSelectionTheme {
     public let selection: UIColor
     public let knob: UIColor
     public let knobDiameter: CGFloat
+    public let isDark: Bool
     
-    public init(selection: UIColor, knob: UIColor, knobDiameter: CGFloat = 12.0) {
+    public init(selection: UIColor, knob: UIColor, knobDiameter: CGFloat = 12.0, isDark: Bool) {
         self.selection = selection
         self.knob = knob
         self.knobDiameter = knobDiameter
+        self.isDark = isDark
     }
 }
 
@@ -738,8 +740,7 @@ public final class TextSelectionNode: ASDisplayNode {
         
         let realFullRange = NSRange(location: 0, length: attributedString.length)
         if range != realFullRange {
-            //TODO:localize
-            actions.append(ContextMenuAction(content: .text(title: "Select All", accessibilityLabel: "Select All"), action: { [weak self] in
+            actions.append(ContextMenuAction(content: .text(title: self.strings.TextSelection_SelectAll, accessibilityLabel: self.strings.TextSelection_SelectAll), action: { [weak self] in
                 guard let self else {
                     return
                 }
@@ -755,7 +756,7 @@ public final class TextSelectionNode: ASDisplayNode {
         
         self.contextMenu?.dismiss()
         
-        let contextMenu = makeContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false, skipCoordnateConversion: self.menuSkipCoordnateConversion)
+        let contextMenu = makeContextMenuController(actions: actions, catchTapsOutside: false, hasHapticFeedback: false, isDark: self.theme.isDark, skipCoordnateConversion: self.menuSkipCoordnateConversion)
         contextMenu.dismissOnTap = { [weak self] view, point in
             guard let self else {
                 return true

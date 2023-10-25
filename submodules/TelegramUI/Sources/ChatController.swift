@@ -2019,26 +2019,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            if params.quote != nil {
-                if let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(fromId), let toPeer = message.peers[id.peerId] {
-                    switch toPeer {
-                    case let channel as TelegramChannel:
-                        if channel.username == nil && channel.usernames.isEmpty {
-                            switch channel.participationStatus {
-                            case .kicked, .left:
-                                self.controllerInteraction?.attemptedNavigationToPrivateQuote(toPeer)
-                                return
-                            case .member:
-                                break
-                            }
-                        }
-                    default:
-                        break
-                    }
+            
+            let continueNavigation: () -> Void = { [weak self] in
+                guard let self else {
+                    return
                 }
+                self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
             }
             
-            self.navigateToMessage(from: fromId, to: .id(id, params), forceInCurrentChat: fromId.peerId == id.peerId)
+            let _ = (self.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: id.peerId)
+            )
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] toPeer in
+                guard let self else {
+                    return
+                }
+                
+                if params.quote != nil {
+                    if let toPeer {
+                        switch toPeer {
+                        case let .channel(channel):
+                            if channel.username == nil && channel.usernames.isEmpty {
+                                switch channel.participationStatus {
+                                case .kicked, .left:
+                                    self.controllerInteraction?.attemptedNavigationToPrivateQuote(toPeer._asPeer())
+                                    return
+                                case .member:
+                                    break
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    } else {
+                        self.controllerInteraction?.attemptedNavigationToPrivateQuote(nil)
+                        return
+                    }
+                }
+                
+                continueNavigation()
+            })
         }, navigateToMessageStandalone: { [weak self] id in
             self?.navigateToMessage(from: nil, to: .id(id, NavigateToMessageParams(timestamp: nil, quote: nil)), forceInCurrentChat: false)
         }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
@@ -4929,18 +4949,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self else {
                 return
             }
-            //TODO:localize
             let text: String
             if let peer = peer as? TelegramChannel {
                 if case .broadcast = peer.info {
-                    text = "This quote is from a private channel"
+                    text = self.presentationData.strings.Chat_ToastQuoteChatUnavailbalePrivateChannel
                 } else {
-                    text = "This quote is from a private group"
+                    text = self.presentationData.strings.Chat_ToastQuoteChatUnavailbalePrivateGroup
                 }
             } else if peer is TelegramGroup {
-                text = "This quote is from a private group"
+                text = self.presentationData.strings.Chat_ToastQuoteChatUnavailbalePrivateGroup
             } else {
-                text = "This quote is from a private chat"
+                text = self.presentationData.strings.Chat_ToastQuoteChatUnavailbalePrivateChat
             }
             self.controllerInteraction?.displayUndo(.info(title: nil, text: text, timeout: nil, customUndoText: nil))
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
@@ -5273,15 +5292,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if !selectionState.canQuote {
                                 return nil
                             }
-                            //TODO:localize
-                            return "You can select a specific part to quote"
+                            return presentationData.strings.Chat_SubtitleQuoteSelectionTip
                         }
                     case let .link(link):
                         subtitleTextSignal = link.options
                         |> map { options -> String? in
                             if options.hasAlternativeLinks {
-                                //TODO:localize
-                                return "Tap on a link to generate its preview"
+                                return presentationData.strings.Chat_SubtitleLinkListTip
                             } else {
                                 return nil
                             }
@@ -5333,12 +5350,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let peer = peerViewMainPeer(peerView) {
                             if case let .messageOptions(_, _, info) = presentationInterfaceState.subject {
                                 if case .reply = info {
-                                    //TODO:localize
                                     let titleContent: ChatTitleContent
                                     if case let .reply(hasQuote) = messageOptionsTitleInfo, hasQuote {
-                                        titleContent = .custom("Reply to Quote", subtitleText, false)
+                                        titleContent = .custom(presentationInterfaceState.strings.Chat_TitleQuoteSelection, subtitleText, false)
                                     } else {
-                                        titleContent = .custom("Reply to Message", subtitleText, false)
+                                        titleContent = .custom(presentationInterfaceState.strings.Chat_TitleReply, subtitleText, false)
                                     }
                                     if strongSelf.chatTitleView?.titleContent != titleContent {
                                         if strongSelf.chatTitleView?.titleContent != nil {
@@ -5347,8 +5363,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         strongSelf.chatTitleView?.titleContent = titleContent
                                     }
                                 } else if case .link = info {
-                                    //TODO:localize
-                                    strongSelf.chatTitleView?.titleContent = .custom("Link Preview Settings", subtitleText, false)
+                                    strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitleLinkOptions, subtitleText, false)
                                 } else if displayedCount == 1 {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Conversation_ForwardOptions_ForwardTitleSingle, subtitleText, false)
                                 } else {
@@ -8012,8 +8027,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if message.text.contains(quote) {
                                 hasQuote = true
                             } else {
-                                //TODO:localize
-                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: "Quote not found", timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
+                                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .info(title: nil, text: strongSelf.presentationData.strings.Chat_ToastQuoteNotFound, timeout: nil, customUndoText: nil), elevatedLayout: false, action: { _ in return true }), in: .current)
                             }
                         }
                         

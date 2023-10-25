@@ -65,7 +65,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     private var contentFile: ChatMessageInteractiveFileNode?
     private var actionButton: ChatMessageAttachedContentButtonNode?
     private var actionButtonSeparator: SimpleLayer?
-    public let statusNode: ChatMessageDateAndStatusNode
+    public var statusNode: ChatMessageDateAndStatusNode?
     
     private var inlineMediaValue: Media?
     
@@ -109,12 +109,10 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     override public init() {
         self.transformContainer = ASDisplayNode()
-        self.statusNode = ChatMessageDateAndStatusNode()
         
         super.init()
         
         self.addSubnode(self.transformContainer)
-        self.addSubnode(self.statusNode)
     }
     
     deinit {
@@ -148,7 +146,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
         let makeContentMedia = ChatMessageInteractiveMediaNode.asyncLayout(self.contentMedia)
         let makeContentFile = ChatMessageInteractiveFileNode.asyncLayout(self.contentFile)
         let makeActionButtonLayout = ChatMessageAttachedContentButtonNode.asyncLayout(self.actionButton)
-        let makeStatusLayout = self.statusNode.asyncLayout()
+        let makeStatusLayout = ChatMessageDateAndStatusNode.asyncLayout(self.statusNode)
         
         return { [weak self] presentationData, automaticDownloadSettings, associatedData, attributes, context, controllerInteraction, message, messageRead, chatLocation, title, subtitle, text, entities, mediaAndFlags, mediaBadge, actionIcon, actionTitle, displayLine, layoutConstants, preparePosition, constrainedSize, animationCache, animationRenderer in
             let isPreview = presentationData.isPreview
@@ -608,35 +606,44 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                 }
                 
-                let statusLayoutAndContinue = makeStatusLayout(ChatMessageDateAndStatusNode.Arguments(
-                    context: context,
-                    presentationData: presentationData,
-                    edited: edited,
-                    impressionCount: viewCount,
-                    dateText: dateText,
-                    type: statusType,
-                    layoutInput: .trailingContent(
-                        contentWidth: trailingContentWidth,
-                        reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions), preferAdditionalInset: false)
-                    ),
-                    constrainedSize: CGSize(width: maxStatusContentWidth, height: CGFloat.greatestFiniteMagnitude),
-                    availableReactions: associatedData.availableReactions,
-                    reactions: dateReactionsAndPeers.reactions,
-                    reactionPeers: dateReactionsAndPeers.peers,
-                    displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
-                    replyCount: dateReplies,
-                    isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
-                    hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message),
-                    animationCache: controllerInteraction.presentationContext.animationCache,
-                    animationRenderer: controllerInteraction.presentationContext.animationRenderer
-                ))
-                actualWidth = max(actualWidth, statusLayoutAndContinue.0)
+                var statusLayoutAndContinue: (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode))?
+                if case let .linear(_, bottom) = position {
+                    switch bottom {
+                    case .None, .Neighbour(_, .footer, _):
+                        let statusLayoutAndContinueValue = makeStatusLayout(ChatMessageDateAndStatusNode.Arguments(
+                            context: context,
+                            presentationData: presentationData,
+                            edited: edited,
+                            impressionCount: viewCount,
+                            dateText: dateText,
+                            type: statusType,
+                            layoutInput: .trailingContent(
+                                contentWidth: trailingContentWidth,
+                                reactionSettings: ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions), preferAdditionalInset: false)
+                            ),
+                            constrainedSize: CGSize(width: maxStatusContentWidth, height: CGFloat.greatestFiniteMagnitude),
+                            availableReactions: associatedData.availableReactions,
+                            reactions: dateReactionsAndPeers.reactions,
+                            reactionPeers: dateReactionsAndPeers.peers,
+                            displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
+                            replyCount: dateReplies,
+                            isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
+                            hasAutoremove: message.isSelfExpiring,
+                            canViewReactionList: canViewMessageReactionList(message: message),
+                            animationCache: controllerInteraction.presentationContext.animationCache,
+                            animationRenderer: controllerInteraction.presentationContext.animationRenderer
+                        ))
+                        statusLayoutAndContinue = statusLayoutAndContinueValue
+                        actualWidth = max(actualWidth, statusLayoutAndContinueValue.0)
+                    default:
+                        break
+                    }
+                }
                 
                 actualWidth += insets.left + insets.right
                 
                 return (actualWidth, { resultingWidth in
-                    let statusSizeAndApply = statusLayoutAndContinue.1(resultingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0)
+                    let statusSizeAndApply = statusLayoutAndContinue?.1(resultingWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - 6.0)
                     
                     let contentMediaSizeAndApply: (CGSize, (ListViewItemUpdateAnimation, Bool) -> ChatMessageInteractiveMediaNode)?
                     if let contentMediaFinalizeLayout {
@@ -820,7 +827,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         }
                     }
                     
-                    if case let .linear(_, bottom) = position {
+                    if case let .linear(_, bottom) = position, let statusSizeAndApply {
                         switch bottom {
                         case .None, .Neighbour(_, .footer, _):
                             let bottomStatusContentHeight = statusBackgroundSpacing + statusSizeAndApply.0.height
@@ -1103,7 +1110,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                         
                         if let item = contentDisplayOrder.first(where: { $0.item == .actionButton }), let (actionButtonSize, actionButtonApply) = actionButtonSizeAndApply {
                             var actionButtonFrame = CGRect(origin: CGPoint(x: insets.left, y: item.offsetY), size: actionButtonSize)
-                            if let _ = message.adAttribute {
+                            if let _ = message.adAttribute, let statusSizeAndApply {
                                 actionButtonFrame.origin.y += statusSizeAndApply.0.height
                             }
                             
@@ -1155,38 +1162,40 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             actionButtonSeparator.removeFromSuperlayer()
                         }
                         
-                        do {
-                            statusSizeAndApply.1(animation)
-                            
-                            var statusFrame = CGRect(origin: CGPoint(x: actualSize.width - insets.right - statusSizeAndApply.0.width, y: actualSize.height - layoutConstants.text.bubbleInsets.bottom - statusSizeAndApply.0.height), size: statusSizeAndApply.0)
+                        if let statusSizeAndApply {
+                            var statusFrame = CGRect(origin: CGPoint(x: actualSize.width - backgroundInsets.right - statusSizeAndApply.0.width, y: actualSize.height - layoutConstants.text.bubbleInsets.bottom - statusSizeAndApply.0.height), size: statusSizeAndApply.0)
                             if let _ = message.adAttribute, let (actionButtonSize, _) = actionButtonSizeAndApply {
                                 statusFrame.origin.y -= actionButtonSize.height + statusBackgroundSpacing
                             }
-                            animation.animator.updateFrame(layer: self.statusNode.layer, frame: statusFrame, completion: nil)
                             
-                            self.statusNode.reactionSelected = { [weak self] value in
-                                guard let self, let message = self.message else {
-                                    return
+                            let statusNode = statusSizeAndApply.1(self.statusNode == nil ? .None : animation)
+                            if self.statusNode !== statusNode {
+                                self.statusNode?.removeFromSupernode()
+                                self.statusNode = statusNode
+                                self.addSubnode(statusNode)
+                                
+                                statusNode.reactionSelected = { [weak self] value in
+                                    guard let self, let message = self.message else {
+                                        return
+                                    }
+                                    controllerInteraction.updateMessageReaction(message, .reaction(value))
                                 }
-                                controllerInteraction.updateMessageReaction(message, .reaction(value))
-                            }
-                            
-                            self.statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
-                                guard let self, let message = self.message else {
-                                    gesture?.cancel()
-                                    return
+                                
+                                statusNode.openReactionPreview = { [weak self] gesture, sourceNode, value in
+                                    guard let self, let message = self.message else {
+                                        gesture?.cancel()
+                                        return
+                                    }
+                                    controllerInteraction.openMessageReactionContextMenu(message, sourceNode, gesture, value)
                                 }
-                                controllerInteraction.openMessageReactionContextMenu(message, sourceNode, gesture, value)
+                                
+                                statusNode.frame = statusFrame
+                            } else {
+                                animation.animator.updateFrame(layer: statusNode.layer, frame: statusFrame, completion: nil)
                             }
-                            
-                            if case let .linear(_, bottom) = position {
-                                switch bottom {
-                                case .None, .Neighbour(_, .footer, _):
-                                    animation.animator.updateAlpha(layer: self.statusNode.layer, alpha: 1.0, completion: nil)
-                                default:
-                                    animation.animator.updateAlpha(layer: self.statusNode.layer, alpha: 0.0, completion: nil)
-                                }
-                            }
+                        } else if let statusNode = self.statusNode {
+                            self.statusNode = nil
+                            statusNode.removeFromSupernode()
                         }
                     })
                 })
@@ -2243,8 +2252,8 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
     }
     
     public func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
-        if !self.statusNode.isHidden {
-            if let result = self.statusNode.reactionView(value: value) {
+        if let statusNode = self.statusNode, !statusNode.isHidden {
+            if let result = statusNode.reactionView(value: value) {
                 return result
             }
         }

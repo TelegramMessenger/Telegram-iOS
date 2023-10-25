@@ -242,26 +242,33 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     let icon: UIImage?
                     icon = UIImage(bundleImageName: "Chat/Input/Accessory Panels/PanelTextChannelIcon")?.withRenderingMode(.alwaysTemplate)
                     
-                    //TODO:localize
-                    if let _ = strongSelf.quote {
-                        if let icon {
-                            let string = "Reply to Quote by "
-                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
-                            titleText.append(.icon(icon))
-                            titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
+                    if let icon {
+                        let rawString: PresentationStrings.FormattedString
+                        if strongSelf.quote != nil {
+                            rawString = strongSelf.strings.Chat_ReplyPanel_ReplyToQuoteBy(peer.debugDisplayTitle)
+                        } else {
+                            rawString = strongSelf.strings.Chat_ReplyPanel_ReplyTo(peer.debugDisplayTitle)
                         }
-                    } else {
-                        if let icon {
-                            let string = "Reply to "
-                            titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
+                        if let nameRange = rawString.ranges.first {
+                            titleText = []
+                            
+                            let rawNsString = rawString.string as NSString
+                            if nameRange.range.lowerBound != 0 {
+                                titleText.append(.text(NSAttributedString(string: rawNsString.substring(with: NSRange(location: 0, length: nameRange.range.lowerBound)), font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
+                            }
                             titleText.append(.icon(icon))
                             titleText.append(.text(NSAttributedString(string: peer.debugDisplayTitle, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
+                            
+                            if nameRange.range.upperBound != rawNsString.length {
+                                titleText.append(.text(NSAttributedString(string: rawNsString.substring(with: NSRange(location: nameRange.range.upperBound, length: rawNsString.length - nameRange.range.upperBound)), font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
+                            }
+                        } else {
+                            titleText.append(.text(NSAttributedString(string: rawString.string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor)))
                         }
                     }
                 } else {
                     if let _ = strongSelf.quote {
-                        //TODO:localize
-                        let string = "Reply to Quote by \(authorName)"
+                        let string = strongSelf.strings.Chat_ReplyPanel_ReplyToQuoteBy(authorName).string
                         titleText = [.text(NSAttributedString(string: string, font: Font.medium(15.0), textColor: strongSelf.theme.chat.inputPanel.panelControlAccentColor))]
                     } else {
                         let string = strongSelf.strings.Conversation_ReplyMessagePanelTitle(authorName).string
@@ -297,11 +304,11 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                                 
                 let headerString: String
                 if let message = message, message.flags.contains(.Incoming), let author = message.author {
-                    headerString = "Reply to message. From: \(EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder))"
+                    headerString = strongSelf.strings.Chat_ReplyPanel_AccessibilityReplyToMessageFrom(EnginePeer(author).displayTitle(strings: strings, displayOrder: nameDisplayOrder)).string
                 } else if let message = message, !message.flags.contains(.Incoming) {
-                    headerString = "Reply to your message"
+                    headerString = strongSelf.strings.Chat_ReplyPanel_AccessibilityReplyToYourMessage
                 } else {
-                    headerString = "Reply to message"
+                    headerString = strongSelf.strings.Chat_ReplyPanel_AccessibilityReplyToMessage
                 }
                 strongSelf.actionArea.accessibilityLabel = "\(headerString).\n\(text)"
                 
@@ -326,11 +333,10 @@ public final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         Queue.mainQueue().after(3.0) {
                             if let snapshotView = strongSelf.textNode.view.snapshotContentTree() {
                                 let text: String
-                                //TODO:localize
                                 if let (size, _, _) = strongSelf.validLayout, size.width > 320.0 {
-                                    text = "Tap here for reply options"
+                                    text = strongSelf.strings.Chat_ReplyPanel_HintReplyOptions
                                 } else {
-                                    text = "Tap here for forwarding options"
+                                    text = strongSelf.strings.Chat_ReplyPanel_HintReplyOptionsShort
                                 }
                                 strongSelf.textIsOptions = true
                                 

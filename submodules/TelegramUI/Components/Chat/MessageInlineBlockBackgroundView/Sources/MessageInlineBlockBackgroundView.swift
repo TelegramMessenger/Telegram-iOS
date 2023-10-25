@@ -674,14 +674,14 @@ public final class MessageInlineBlockBackgroundView: UIView {
             }
             
             let placements: [Placement] = [
-                Placement(CGPoint(x: 176.0, y: 13.0), 38.0),
-                Placement(CGPoint(x: 51.0, y: 45.0), 58.0),
-                Placement(CGPoint(x: 349.0, y: 36.0), 58.0),
-                Placement(CGPoint(x: 132.0, y: 64.0), 46.0),
-                Placement(CGPoint(x: 241.0, y: 64.0), 54.0),
-                Placement(CGPoint(x: 68.0, y: 121.0), 44.0),
-                Placement(CGPoint(x: 178.0, y: 122.0), 47.0),
-                Placement(CGPoint(x: 315.0, y: 122.0), 47.0),
+                Placement(CGPoint(x: 180.0, y: 13.0), 38.0),
+                Placement(CGPoint(x: 55.0, y: 47.0), 58.0),
+                Placement(CGPoint(x: 364.0, y: 26.0), 58.0),
+                Placement(CGPoint(x: 133.0, y: 74.0), 46.0),
+                Placement(CGPoint(x: 262.0, y: 67.0), 54.0),
+                Placement(CGPoint(x: 62.0, y: 125.0), 44.0),
+                Placement(CGPoint(x: 171.0, y: 135.0), 47.0),
+                Placement(CGPoint(x: 320.0, y: 124.0), 47.0),
             ]
             
             for placement in placements {
@@ -698,7 +698,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 
                 let itemSize = CGSize(width: placement.size / 3.0, height: placement.size / 3.0)
                 patternContentLayer.frame = CGRect(origin: CGPoint(x: size.width - placement.position.x / 3.0 - itemSize.width * 0.5, y: placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
-                var alphaFraction = abs(placement.position.x) / 400.0
+                var alphaFraction = abs(placement.position.x) / 500.0
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
                 patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)
                 

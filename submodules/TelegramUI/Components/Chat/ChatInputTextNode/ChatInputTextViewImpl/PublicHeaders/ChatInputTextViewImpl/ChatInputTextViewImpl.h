@@ -20,6 +20,8 @@
 @property (nonatomic, copy) bool (^ _Nullable shouldReturn)();
 @property (nonatomic, copy) void (^ _Nullable backspaceWhileEmpty)();
 
+- (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(NSTextContainer * _Nullable)textContainer disableTiling:(bool)disableTiling;
+
 @end
 
 #endif /* Lottie_h */
