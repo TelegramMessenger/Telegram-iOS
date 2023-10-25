@@ -128,7 +128,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
     case let .messageActionSetSameChatWallPaper(wallpaper):
         return TelegramMediaAction(action: .setSameChatWallpaper(wallpaper: TelegramWallpaper(apiWallpaper: wallpaper)))
     case let .messageActionGiftCode(flags, boostPeer, months, slug):
-        return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 1)) != 0, boostPeerId: boostPeer?.peerId, months: months))
+        return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer?.peerId, months: months))
     case .messageActionGiveawayLaunch:
         return TelegramMediaAction(action: .giveawayLaunched)
     }
