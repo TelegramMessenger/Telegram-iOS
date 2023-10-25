@@ -152,7 +152,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     isConcealed = false
                 }
             }
-            return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)), activate: { [weak self] in
+            return ChatMessageBubbleContentTapAction(content: .url(ChatMessageBubbleContentTapAction.Url(url: content.url, concealed: isConcealed, allowInlineWebpageResolution: true)), hasLongTapAction: false, activate: { [weak self] in
                 guard let self else {
                     return nil
                 }

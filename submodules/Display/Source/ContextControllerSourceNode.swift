@@ -2,6 +2,12 @@ import Foundation
 import AsyncDisplayKit
 
 open class ContextControllerSourceNode: ContextReferenceContentNode {
+    public enum ShouldBegin {
+        case none
+        case `default`
+        case customActivationProcess
+    }
+    
     public private(set) var contextGesture: ContextGesture?
     
     public var isGestureEnabled: Bool = true {
@@ -18,15 +24,19 @@ open class ContextControllerSourceNode: ContextReferenceContentNode {
     
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var shouldBegin: ((CGPoint) -> Bool)?
+    public var shouldBeginWithCustomActivationProcess: ((CGPoint) -> ShouldBegin)?
     public var customActivationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
     public weak var additionalActivationProgressLayer: CALayer?
     public var targetNodeForActivationProgress: ASDisplayNode?
     public var targetNodeForActivationProgressContentRect: CGRect?
     
+    private var ignoreCurrentActivationProcess: Bool = false
+    
     public func cancelGesture() {
         self.contextGesture?.cancel()
         self.contextGesture?.isEnabled = false
         self.contextGesture?.isEnabled = self.isGestureEnabled
+        self.ignoreCurrentActivationProcess = false
     }
     
     override open func didLoad() {
@@ -40,10 +50,26 @@ open class ContextControllerSourceNode: ContextReferenceContentNode {
         contextGesture.isEnabled = self.isGestureEnabled
         
         contextGesture.shouldBegin = { [weak self] point in
-            guard let strongSelf = self, !strongSelf.bounds.width.isZero else {
+            guard let self, !self.bounds.width.isZero else {
                 return false
             }
-            return strongSelf.shouldBegin?(point) ?? true
+            if let shouldBeginWithCustomActivationProcess = self.shouldBeginWithCustomActivationProcess {
+                let result = shouldBeginWithCustomActivationProcess(point)
+                switch result {
+                case .none:
+                    self.ignoreCurrentActivationProcess = false
+                    return false
+                case .default:
+                    self.ignoreCurrentActivationProcess = false
+                    return true
+                case .customActivationProcess:
+                    self.ignoreCurrentActivationProcess = true
+                    return true
+                }
+            } else {
+                self.ignoreCurrentActivationProcess = false
+                return self.shouldBegin?(point) ?? true
+            }
         }
         
         contextGesture.activationProgress = { [weak self] progress, update in
@@ -52,7 +78,7 @@ open class ContextControllerSourceNode: ContextReferenceContentNode {
             }
             if let customActivationProgress = strongSelf.customActivationProgress {
                 customActivationProgress(progress, update)
-            } else if strongSelf.animateScale {
+            } else if strongSelf.animateScale && !strongSelf.ignoreCurrentActivationProcess {
                 let targetNode: ASDisplayNode
                 let targetContentRect: CGRect
                 if let targetNodeForActivationProgress = strongSelf.targetNodeForActivationProgress {

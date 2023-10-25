@@ -142,9 +142,9 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                 switch action {
                 case .action, .optionalAction:
                     break
-                case let .openContextMenu(tapMessage, selectAll, subFrame):
+                case let .openContextMenu(openContextMenu):
                     strongSelf.recognizer?.cancel()
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
+                    item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, strongSelf, openContextMenu.subFrame, gesture, nil)
                     if (strongSelf.appliedCurrentlyPlaying ?? false) && strongSelf.interactiveVideoNode.isPlaying {
                         strongSelf.wasPlaying = true
                         strongSelf.interactiveVideoNode.pause()
@@ -940,7 +940,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                     }
                     switch action {
                     case let .action(f):
-                        f()
+                        f.action()
                     case let .optionalAction(f):
                         f()
                     case .openContextMenu:
@@ -966,7 +966,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                                 item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
                             })
                         } else if let attribute = attribute as? QuotedReplyMessageAttribute {
-                            return .action({
+                            return .action(InternalBubbleTapAction.Action {
                                 item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                             })
                         }
@@ -995,7 +995,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
                     }
                     
                     if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
-                        return .action({})
+                        return .action(InternalBubbleTapAction.Action {})
                     } else {
                         return .optionalAction(performAction)
                     }
@@ -1004,7 +1004,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureReco
             return nil
         case .longTap, .doubleTap, .secondaryTap:
             if let item = self.item, self.interactiveVideoNode.frame.contains(location) {
-                return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.interactiveVideoNode.frame)
+                return .openContextMenu(InternalBubbleTapAction.OpenContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.interactiveVideoNode.frame))
             }
         case .hold:
             break
