@@ -97,35 +97,7 @@ final class StoryInteractionGuideComponent: Component {
             
             let strings = component.strings
             
-            let sideInset: CGFloat = 48.0
-            
-            let titleSize = self.titleLabel.update(
-                transition: .immediate,
-                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Title, font: Font.semibold(20.0), textColor: .white, paragraphAlignment: .center)))),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
-            )
-            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: 146.0), size: titleSize)
-            if let view = self.titleLabel.view {
-                if view.superview == nil {
-                    self.containerView.addSubview(view)
-                }
-                view.frame = titleFrame
-            }
-            
-            let textSize = self.descriptionLabel.update(
-                transition: .immediate,
-                component: AnyComponent(BalancedTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Description, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .center)), maximumNumberOfLines: 0, lineSpacing: 0.2)),
-                environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
-            )
-            let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textSize.width) / 2.0), y: titleFrame.maxY + 7.0), size: textSize)
-            if let view = self.descriptionLabel.view {
-                if view.superview == nil {
-                    self.containerView.addSubview(view)
-                }
-                view.frame = textFrame
-            }
+            let sideInset: CGFloat = min(48.0, floor(availableSize.width * 0.1))
             
             let items: [AnyComponentWithIdentity<Empty>] = [
                 AnyComponentWithIdentity(
@@ -205,20 +177,30 @@ final class StoryInteractionGuideComponent: Component {
                     )
                 )
             ]
-            
             let itemsSize = self.guideItems.update(
                 transition: transition,
                 component: AnyComponent(List(items)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
-            let itemsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemsSize.width) / 2.0), y: textFrame.maxY + 40.0), size: itemsSize)
-            if let view = self.guideItems.view {
-                if view.superview == nil {
-                    self.containerView.addSubview(view)
-                }
-                view.frame = itemsFrame
-            }
+            
+            let textSpacing: CGFloat = 7.0
+            let itemsSpacing: CGFloat = 36.0
+            let buttonSpacing: CGFloat = 50.0
+            
+            let titleSize = self.titleLabel.update(
+                transition: .immediate,
+                component: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Title, font: Font.semibold(20.0), textColor: .white, paragraphAlignment: .center)))),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+            )
+           
+            let textSize = self.descriptionLabel.update(
+                transition: .immediate,
+                component: AnyComponent(BalancedTextComponent(text: .plain(NSAttributedString(string: strings.Story_Guide_Description, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.6), paragraphAlignment: .center)), maximumNumberOfLines: 0, lineSpacing: 0.2)),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+            )
             
             let buttonSize = self.proceedButton.update(
                 transition: .immediate,
@@ -231,6 +213,34 @@ final class StoryInteractionGuideComponent: Component {
                 environment: {},
                 containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
             )
+            
+            let totalHeight = titleSize.height + textSpacing + textSize.height + itemsSpacing + itemsSize.height + buttonSpacing + buttonSize.height
+            let originY = floorToScreenPixels((availableSize.height - totalHeight) / 2.0)
+            
+            let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - titleSize.width) / 2.0), y: originY), size: titleSize)
+            if let view = self.titleLabel.view {
+                if view.superview == nil {
+                    self.containerView.addSubview(view)
+                }
+                view.frame = titleFrame
+            }
+            
+            let textFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - textSize.width) / 2.0), y: titleFrame.maxY + 7.0), size: textSize)
+            if let view = self.descriptionLabel.view {
+                if view.superview == nil {
+                    self.containerView.addSubview(view)
+                }
+                view.frame = textFrame
+            }
+            
+            let itemsFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - itemsSize.width) / 2.0), y: textFrame.maxY + 40.0), size: itemsSize)
+            if let view = self.guideItems.view {
+                if view.superview == nil {
+                    self.containerView.addSubview(view)
+                }
+                view.frame = itemsFrame
+            }
+            
             let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((availableSize.width - buttonSize.width) / 2.0), y: itemsFrame.maxY + 57.0), size: buttonSize)
             if let view = self.proceedButton.view {
                 if view.superview == nil {
@@ -329,10 +339,8 @@ private final class GuideItemComponent: Component {
         private var isPlaying = false
         func update(component: GuideItemComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.component = component
-            
-            let sideInset: CGFloat = 48.0
-            
-            let originX = availableSize.width / 2.0 - 110.0
+                        
+            let originX = availableSize.width / 2.0 - 120.0
             
             let animationSize = self.animation.update(
                 transition: .immediate,
@@ -380,6 +388,7 @@ private final class GuideItemComponent: Component {
                 }
             }
             
+            let availableTextWidth = availableSize.width - originX - 60.0 - 18.0
             let titleSize = self.titleLabel.update(
                 transition: .immediate,
                 component: AnyComponent(
@@ -389,7 +398,7 @@ private final class GuideItemComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                containerSize: CGSize(width: availableTextWidth, height: availableSize.height)
             )
             let titleFrame = CGRect(origin: CGPoint(x: originX + 60.0, y: 25.0), size: titleSize)
             if let view = self.titleLabel.view {
@@ -408,7 +417,7 @@ private final class GuideItemComponent: Component {
                     )
                 ),
                 environment: {},
-                containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                containerSize: CGSize(width: availableTextWidth, height: availableSize.height)
             )
             let textFrame = CGRect(origin: CGPoint(x: originX + 60.0, y: titleFrame.maxY + 2.0), size: textSize)
             if let view = self.descriptionLabel.view {
@@ -420,7 +429,7 @@ private final class GuideItemComponent: Component {
             
             let size = CGSize(width: availableSize.width, height: 53.0 + titleSize.height + textSize.height)
             
-            self.selectionView.frame = CGRect(origin: .zero, size: size).insetBy(dx: 12.0, dy: 8.0)
+            self.selectionView.frame = CGRect(origin: .zero, size: size).insetBy(dx: 10.0, dy: 8.0)
             transition.setAlpha(view: self.selectionView, alpha: component.isPlaying ? 1.0 : 0.0)
             
             self.containerView.bounds = CGRect(origin: .zero, size: size)

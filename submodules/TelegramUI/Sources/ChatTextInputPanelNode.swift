@@ -1050,7 +1050,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
             let dashSecondaryColor: UIColor?
             let dashTertiaryColor: UIColor?
             
-            if let context = self.context, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, let nameColor = peer.nameColor {
+            if let _ = self.context, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, let nameColor = peer.nameColor {
                 let _ = nameColor
                 
                 lineStyle = .solid
