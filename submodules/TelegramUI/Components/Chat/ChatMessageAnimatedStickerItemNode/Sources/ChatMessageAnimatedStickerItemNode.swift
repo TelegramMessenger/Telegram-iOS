@@ -190,8 +190,8 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 switch action {
                 case .action, .optionalAction:
                     break
-                case let .openContextMenu(tapMessage, selectAll, subFrame):
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
+                case let .openContextMenu(openContextMenu):
+                    item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, strongSelf, openContextMenu.subFrame, gesture, nil)
                 }
             }
         }
@@ -289,7 +289,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if let action = strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
                 switch action {
                 case let .action(f):
-                    f()
+                    f.action()
                     recognizer.cancel()
                 case let .optionalAction(f):
                     f()
@@ -1697,14 +1697,14 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     switch action {
                     case let .action(f):
-                        f()
+                        f.action()
                     case let .optionalAction(f):
                         f()
-                    case let .openContextMenu(tapMessage, selectAll, subFrame):
+                    case let .openContextMenu(openContextMenu):
                         if canAddMessageReactions(message: item.message) {
                             item.controllerInteraction.updateMessageReaction(item.message, .default)
                         } else {
-                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil, nil)
+                            item.controllerInteraction.openMessageContextMenu(openContextMenu.tapMessage, openContextMenu.selectAll, self, openContextMenu.subFrame, nil, nil)
                         }
                     }
                 } else if case .tap = gesture {
@@ -1976,7 +1976,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
                             })
                         } else if let attribute = attribute as? QuotedReplyMessageAttribute {
-                            return .action({
+                            return .action(InternalBubbleTapAction.Action {
                                 item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                             })
                         }
@@ -2005,7 +2005,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     }
                     
                     if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
-                        return .action({})
+                        return .action(InternalBubbleTapAction.Action {})
                     } else {
                         return .optionalAction(performAction)
                     }
@@ -2246,7 +2246,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             return nil
         case .longTap, .doubleTap, .secondaryTap:
             if let item = self.item, self.imageNode.frame.contains(location) {
-                return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.imageNode.frame)
+                return .openContextMenu(InternalBubbleTapAction.OpenContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.imageNode.frame))
             }
         case .hold:
             break

@@ -615,9 +615,33 @@ public final class ChatMessageAccessibilityData {
 }
 
 public enum InternalBubbleTapAction {
-    case action(() -> Void)
+    public struct Action {
+        public var action: () -> Void
+        public var contextMenuOnLongPress: Bool
+        
+        public init(_ action: @escaping () -> Void, contextMenuOnLongPress: Bool = false) {
+            self.action = action
+            self.contextMenuOnLongPress = contextMenuOnLongPress
+        }
+    }
+    
+    public struct OpenContextMenu {
+        public var tapMessage: Message
+        public var selectAll: Bool
+        public var subFrame: CGRect
+        public var disableDefaultPressAnimation: Bool
+        
+        public init(tapMessage: Message, selectAll: Bool, subFrame: CGRect, disableDefaultPressAnimation: Bool = false) {
+            self.tapMessage = tapMessage
+            self.selectAll = selectAll
+            self.subFrame = subFrame
+            self.disableDefaultPressAnimation = disableDefaultPressAnimation
+        }
+    }
+    
+    case action(Action)
     case optionalAction(() -> Void)
-    case openContextMenu(tapMessage: Message, selectAll: Bool, subFrame: CGRect)
+    case openContextMenu(OpenContextMenu)
 }
 
 open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
