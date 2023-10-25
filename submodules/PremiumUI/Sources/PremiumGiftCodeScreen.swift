@@ -22,7 +22,6 @@ import TelegramStringFormatting
 import UndoUI
 import InvisibleInkDustNode
 
-//TODO:localize
 private final class PremiumGiftCodeSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -188,15 +187,15 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 gloss = !giftCode.isUsed
                 if let usedDate = giftCode.usedDate {
                     let dateString = stringForMediumDate(timestamp: usedDate, strings: strings, dateTimeFormat: dateTimeFormat)
-                    titleText = "Used Gift Link"
-                    descriptionText = "This link was used to activate a **Telegram Premium** subscription."
-                    additionalText = "This link was used on \(dateString)."
+                    titleText = strings.GiftLink_UsedTitle
+                    descriptionText = strings.GiftLink_UsedDescription
+                    additionalText = strings.GiftLink_UsedFooter(dateString).string
                     buttonText = strings.Common_OK
                 } else {
-                    titleText = "Gift Link"
-                    descriptionText = "This link allows you to activate a **Telegram Premium** subscription."
-                    additionalText = "You can also [send this link]() to a friend as a gift."
-                    buttonText = "Use Link"
+                    titleText = strings.GiftLink_Title
+                    descriptionText = strings.GiftLink_Description
+                    additionalText = strings.GiftLink_Footer
+                    buttonText = strings.GiftLink_UseLink
                 }
                 link = "https://t.me/giftcode/\(giftCode.slug)"
                 date = giftCode.date
@@ -209,16 +208,20 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 }
                 months = giftCode.months
             case let .boost(channelId, boost):
-                titleText = "Gift Link"
+                titleText = strings.GiftLink_Title
                 if let peer = boost.peer, !boost.flags.contains(.isUnclaimed) {
                     toPeer = boost.peer
-                    descriptionText = "This link allows \(peer.compactDisplayTitle) to activate a **Telegram Premium** subscription."
+                    if boost.slug == nil {
+                        descriptionText = strings.GiftLink_PersonalDescription(peer.compactDisplayTitle).string
+                    } else {
+                        descriptionText = strings.GiftLink_PersonalUsedDescription(peer.compactDisplayTitle).string
+                    }
                 } else {
                     toPeer = nil
-                    descriptionText = "This link allows to activate a **Telegram Premium** subscription."
+                    descriptionText = strings.GiftLink_UnclaimedDescription
                 }
                 if boost.slug == nil {
-                    additionalText = "This link hasn't been used yet."
+                    additionalText = strings.GiftLink_NotUsedFooter
                 } else {
                     additionalText = ""
                 }
@@ -293,7 +296,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         
             tableItems.append(.init(
                 id: "from",
-                title: "From",
+                title: strings.GiftLink_From,
                 component: AnyComponent(
                     Button(
                         content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
@@ -311,7 +314,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: "To",
+                    title: strings.GiftLink_To,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
@@ -329,16 +332,16 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             } else if toPeerId == nil {
                 tableItems.append(.init(
                     id: "to",
-                    title: "To",
+                    title: strings.GiftLink_To,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "No recipient", font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.GiftLink_NoRecipient, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
-            let giftTitle = "Telegram Premium for \(months) months"
+            let giftTitle = strings.GiftLink_TelegramPremium(months)
             tableItems.append(.init(
                 id: "gift",
-                title: "Gift",
+                title: strings.GiftLink_Gift,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: giftTitle, font: tableFont, textColor: tableTextColor)))
                 )
@@ -347,13 +350,13 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             if case let .giftCode(giftCode) = component.subject {
                 let giftReason: String
                 if giftCode.toPeerId == nil {
-                    giftReason = "Incomplete Giveaway"
+                    giftReason = strings.GiftLink_Reason_Unclaimed
                 } else {
-                    giftReason = giftCode.isGiveaway ? "Giveaway" : "You were selected by the channel"
+                    giftReason = giftCode.isGiveaway ? strings.GiftLink_Reason_Giveaway : strings.GiftLink_Reason_Gift
                 }
                 tableItems.append(.init(
                     id: "reason",
-                    title: "Reason",
+                    title: strings.GiftLink_Reason,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: giftCode.messageId != nil ? tableLinkColor : tableTextColor)))),
@@ -372,7 +375,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             }
             tableItems.append(.init(
                 id: "date",
-                title: "Date",
+                title: strings.GiftLink_Date,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
@@ -659,7 +662,7 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
             self.dismissAllTooltips()
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Only the recipient can see the code.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true }), in: .window(.root))
+            self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.GiftLink_LinkHidden, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true }), in: .window(.root))
         }
     }
     

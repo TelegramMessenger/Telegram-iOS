@@ -42,23 +42,25 @@ public func giveawayInfoController(context: AccountContext, updatedPresentationD
         
         let intro: String
         if case .almostOver = status {
-            intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+            intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
         } else {
-            intro = "The giveaway is sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+            intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
         }
         
         let ending: String
         if giveaway.flags.contains(.onlyNewSubscribers) {
+            let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
             if giveaway.channelPeerIds.count > 1 {
-                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels after **\(startDate)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_OngoingNewMany(untilDate, randomUsers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), startDate).string
             } else {
-                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_OngoingNew(untilDate, randomUsers, peerName, startDate).string
             }
         } else {
+            let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
             if giveaway.channelPeerIds.count > 1 {
-                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)** and **\(giveaway.channelPeerIds.count - 1)** other listed channels."
+                ending = presentationData.strings.Chat_Giveaway_Info_OngoingMany(untilDate, randomSubscribers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
             } else {
-                ending = "On **\(untilDate)**, Telegram will automatically select **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_Ongoing(untilDate, randomSubscribers, peerName).string
             }
         }
         
@@ -66,27 +68,26 @@ public func giveawayInfoController(context: AccountContext, updatedPresentationD
         switch status {
         case .notQualified:
             if giveaway.channelPeerIds.count > 1 {
-                participation = "To take part in this giveaway please join the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels) before **\(untilDate)**."
+                participation = presentationData.strings.Chat_Giveaway_Info_NotQualifiedMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), untilDate).string
             } else {
-                participation = "To take part in this giveaway please join the channel **\(peerName)** before **\(untilDate)**."
+                participation = presentationData.strings.Chat_Giveaway_Info_NotQualified(peerName, untilDate).string
             }
         case let .notAllowed(reason):
             switch reason {
             case let .joinedTooEarly(joinedOn):
                 let joinDate = stringForDate(timestamp: joinedOn, strings: presentationData.strings)
-                participation = "You are not eligible to participate in this giveaway, because you joined this channel on **\(joinDate)**, which is before the contest started."
+                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedJoinedEarly(joinDate).string
             case let .channelAdmin(adminId):
                 let _ = adminId
-                participation = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**\(peerName)**)."
-            case let .disallowedCountry(countryCode):
-                let _ = countryCode
-                participation = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway."
+                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedAdmin(peerName).string
+            case .disallowedCountry:
+                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedCountry
             }
         case .participating:
             if giveaway.channelPeerIds.count > 1 {
-                participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)** (**\(giveaway.channelPeerIds.count - 1)** other listed channels)."
+                participation = presentationData.strings.Chat_Giveaway_Info_ParticipatingMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
             } else {
-                participation = "You are participating in this giveaway, because you have joined the channel **\(peerName)**."
+                participation = presentationData.strings.Chat_Giveaway_Info_Participating(peerName).string
             }
         case .almostOver:
             participation = presentationData.strings.Chat_Giveaway_Info_AlmostOver
@@ -102,20 +103,22 @@ public func giveawayInfoController(context: AccountContext, updatedPresentationD
         let finishDate = stringForDate(timestamp: finish, strings: presentationData.strings)
         title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
         
-        let intro = "The giveaway was sponsored by the admins of **\(peerName)**, who acquired **\(giveaway.quantity) Telegram Premium** subscriptions for **\(giveaway.months)** months for its followers."
+        let intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
         
         var ending: String
         if giveaway.flags.contains(.onlyNewSubscribers) {
+            let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
             if giveaway.channelPeerIds.count > 1 {
-                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** and other listed channels after **\(startDate)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_EndedNewMany(finishDate, randomUsers, peerName, startDate).string
             } else {
-                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random users that joined **\(peerName)** after **\(startDate)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_EndedNew(finishDate, randomUsers, peerName, startDate).string
             }
         } else {
+            let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
             if giveaway.channelPeerIds.count > 1 {
-                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)** and other listed channels."
+                ending = presentationData.strings.Chat_Giveaway_Info_EndedMany(finishDate, randomSubscribers, peerName).string
             } else {
-                ending = "On **\(finishDate)**, Telegram automatically selected **\(giveaway.quantity)** random subscribers of **\(peerName)**."
+                ending = presentationData.strings.Chat_Giveaway_Info_Ended(finishDate, randomSubscribers, peerName).string
             }
         }
         

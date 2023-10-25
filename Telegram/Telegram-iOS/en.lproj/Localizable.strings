@@ -10159,9 +10159,11 @@ Sorry for the inconvenience.";
 "ReassignBoost.ExpiresOn" = "Boost expires on %@";
 "ReassignBoost.WaitForCooldown" = "Wait until the boost is available or get **%1$@** more boosts by gifting a **Telegram Premium** subscription.";
 
-"ReassignBoost.Success" = "Wait until the boost is available or get **%1$@** more boosts by gifting a **Telegram Premium** subscription.";
-
-//"\(replacedBoosts) boosts are reassigned from \(inChannels) other channel."
+"ReassignBoost.Success" = "%1$@ are reassigned from %2$@.";
+"ReassignBoost.Boosts_1" = "%@ boost";
+"ReassignBoost.Boosts_any" = "%@ boosts";
+"ReassignBoost.OtherChannels_1" = "%@ other channel";
+"ReassignBoost.OtherChannels_any" = "%@ other channels";
 
 "ChannelBoost.MoreBoosts.Title" = "More Boosts Needed";
 "ChannelBoost.MoreBoosts.Text" = "To boost **%1$@** again, gift **Telegram Premium** to a friend and get **%2$@** additional boosts.";
@@ -10269,24 +10271,36 @@ Sorry for the inconvenience.";
 
 "Chat.Giveaway.Info.Title" = "About This Giveaway";
 "Chat.Giveaway.Info.EndedTitle" = "Giveaway Ended";
-
 "Chat.Giveaway.Info.AlmostOver" = "The giveaway is almost over.";
-
+"Chat.Giveaway.Info.OngoingIntro" = "The giveaway is sponsored by the admins of **%1$@**, who acquired %2$@ for %3$@ for its followers.";
+"Chat.Giveaway.Info.OngoingNewMany" = "On **%1$@**, Telegram will automatically select %2$@ that joined **%3$@** and %4$@ after **%5$@**.";
+"Chat.Giveaway.Info.OngoingNew" = "On **%1$@**, Telegram will automatically select %2$@ that joined **%3$@** after **%4$@**.";
+"Chat.Giveaway.Info.OngoingMany" = "On **%1$@**, Telegram will automatically select %2$@ of **%3$@** and %4$@.";
+"Chat.Giveaway.Info.Ongoing" = "On **%1$@**, Telegram will automatically select %2$@ of **%3$@**.";
+"Chat.Giveaway.Info.EndedIntro" = "The giveaway was sponsored by the admins of **%1$@**, who acquired %2$@ for %3$@ for its followers.";
+"Chat.Giveaway.Info.EndedNewMany" = "On **%1$@**, Telegram automatically selected %2$@ that joined **%3$@** and other listed channels after **%4$@**.";
+"Chat.Giveaway.Info.EndedNew" = "On **%1$@**, Telegram automatically selected %2$@ that joined **%3$@** after **%4$@**.";
+"Chat.Giveaway.Info.EndedMany" = "On **%1$@**, Telegram automatically selected %2$@ of **%3$@** and other listed channels.";
+"Chat.Giveaway.Info.Ended" = "On **%1$@**, Telegram automatically selected %2$@ of **%3$@**.";
+"Chat.Giveaway.Info.NotAllowedJoinedEarly" = "You are not eligible to participate in this giveaway, because you joined this channel on **%@**, which is before the contest started.";
+"Chat.Giveaway.Info.NotAllowedAdmin" = "You are not eligible to participate in this giveaway, because you are an admin of participating channel (**%@**).";
+"Chat.Giveaway.Info.NotAllowedCountry" = "You are not eligible to participate in this giveaway, because your country is not included in the terms of the giveaway.";
+"Chat.Giveaway.Info.NotQualified" = "To take part in this giveaway please join the channel **%1$@** before **%2$@**.";
+"Chat.Giveaway.Info.NotQualifiedMany" = "To take part in this giveaway please join the channel **%1$@** (and %2$@) before **%3$@**.";
+"Chat.Giveaway.Info.Participating" = "You are participating in this giveaway, because you have joined the channel **%1$@**.";
+"Chat.Giveaway.Info.ParticipatingMany" = "You are participating in this giveaway, because you have joined the channel **%1$@** (and %2$@).";
+"Chat.Giveaway.Info.OtherChannels_1" = "**%@** other listed channel";
+"Chat.Giveaway.Info.OtherChannels_any" = "**%@** other listed channels";
 "Chat.Giveaway.Info.Subscriptions_1" = "**%@ Telegram Premium** subscription";
 "Chat.Giveaway.Info.Subscriptions_any" = "**%@ Telegram Premium** subscriptions";
-
 "Chat.Giveaway.Info.RandomUsers_1" = "**%@** random user";
 "Chat.Giveaway.Info.RandomUsers_any" = "**%@** random user";
-
 "Chat.Giveaway.Info.RandomSubscribers_1" = "**%@** random subscriber";
 "Chat.Giveaway.Info.RandomSubscribers_any" = "**%@** random subscribers";
-
 "Chat.Giveaway.Info.Months_1" = "**%@** month";
 "Chat.Giveaway.Info.Months_any" = "**%@** months";
-
 "Chat.Giveaway.Info.ActivatedLinks_1" = "%@ winner already used their gift link.";
 "Chat.Giveaway.Info.ActivatedLinks_any" = "%@ of the winners already used their gift links.";
-
 "Chat.Giveaway.Info.Refunded" = "The channel cancelled the prizes by reversing the payment for them.";
 "Chat.Giveaway.Info.Won" = "You won a prize in this giveaway. %@";
 "Chat.Giveaway.Info.DidntWin" = "You didn't win a prize in this giveaway.";
@@ -10298,3 +10312,44 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Toast.AlmostOver" = "The giveaway is almost over.";
 "Chat.Giveaway.Toast.Ended" = "The giveaway is ended.";
 "Chat.Giveaway.Toast.LearnMore" = "Learn More";
+
+"Chat.Giveaway.Message.PrizeTitle" = "Giveaway Prizes";
+"Chat.Giveaway.Message.PrizeText" = "%1$@ for %2$@.";
+"Chat.Giveaway.Message.Subscriptions_1" = "**%@** Telegram Premium Subscription";
+"Chat.Giveaway.Message.Subscriptions_many" = "**%@** Telegram Premium Subscriptions";
+"Chat.Giveaway.Message.Months_1" = "**%@** month";
+"Chat.Giveaway.Message.Months_many" = "**%@** months";
+"Chat.Giveaway.Message.ParticipantsTitle" = "Participants";
+"Chat.Giveaway.Message.ParticipantsNewMany" = "All users who join the channels below after this date:";
+"Chat.Giveaway.Message.ParticipantsNew" = "All users who join this channel after this date:";
+"Chat.Giveaway.Message.ParticipantsMany" = "All subscribers of the channels below:";
+"Chat.Giveaway.Message.Participants" = "All subscribers of this channel:";
+"Chat.Giveaway.Message.CountriesFrom" = "from %@";
+"Chat.Giveaway.Message.CountriesDelimiter" = ", ";
+"Chat.Giveaway.Message.CountriesLastDelimiter" = " and ";
+"Chat.Giveaway.Message.DateTitle" = "Winners Selection Date";
+"Chat.Giveaway.Message.LearnMore" = "LEARN MORE";
+
+"GiftLink.Title" = "Gift Link";
+"GiftLink.UsedTitle" = "Used Gift Link";
+"GiftLink.Description" = "This link allows you to activate a **Telegram Premium** subscription.";
+"GiftLink.UsedDescription" = "This link was used to activate a **Telegram Premium** subscription.";
+"GiftLink.PersonalDescription" = "This link allows **%@** to activate a **Telegram Premium** subscription.";
+"GiftLink.PersonalUsedDescription" = "This link allowed **%@** to activate a **Telegram Premium** subscription.";
+"GiftLink.UnclaimedDescription" = "This link allows to activate a **Telegram Premium** subscription.";
+"GiftLink.Footer" = "You can also [send this link]() to a friend as a gift.";
+"GiftLink.UsedFooter" = "This link was used on %@.";
+"GiftLink.NotUsedFooter" = "This link hasn't been used yet.";
+"GiftLink.UseLink" = "Use Link";
+"GiftLink.Gift" = "Gift";
+"GiftLink.From" = "From";
+"GiftLink.To" = "To";
+"GiftLink.Reason" = "Reason";
+"GiftLink.Reason.Giveaway" = "Giveaway";
+"GiftLink.Reason.Gift" = "You were selected by the channel";
+"GiftLink.Reason.Unclaimed" = "Incomplete Giveaway";
+"GiftLink.Date" = "Date";
+"GiftLink.NoRecipient" = "No recipient";
+"GiftLink.TelegramPremium_1" = "Telegram Premium for %@ month";
+"GiftLink.TelegramPremium_any" = "Telegram Premium for %@ months";
+"GiftLink.LinkHidden" = "Only the recipient can see the link.";
