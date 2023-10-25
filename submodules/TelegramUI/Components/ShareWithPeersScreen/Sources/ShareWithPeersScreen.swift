@@ -25,7 +25,6 @@ import TelegramUIPreferences
 import UndoUI
 import TelegramStringFormatting
 
-//TODO:localize
 final class ShareWithPeersScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -941,9 +940,9 @@ final class ShareWithPeersScreenComponent: Component {
                             sectionTitle = environment.strings.Story_Privacy_WhoCanViewHeader
                         } else if section.id == 1 {
                             if case .members = component.stateContext.subject {
-                                sectionTitle = "SUBSCRIBERS"
+                                sectionTitle = environment.strings.BoostGift_Subscribers_SectionTitle
                             } else if case .channels = component.stateContext.subject {
-                                sectionTitle = "CHANNELS"
+                                sectionTitle = environment.strings.BoostGift_Channels_SectionTitle
                             } else {
                                 sectionTitle = environment.strings.Story_Privacy_ContactsHeader
                             }
@@ -1390,7 +1389,7 @@ final class ShareWithPeersScreenComponent: Component {
                         } else {
                             if case .members = component.stateContext.subject {
                                 if let invitedAt = stateValue.invitedAt[peer.id] {
-                                    subtitle = "joined \(stringForMediumDate(timestamp: invitedAt, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat))"
+                                    subtitle = environment.strings.BoostGift_Subscribers_Joined(stringForMediumDate(timestamp: invitedAt, strings: environment.strings, dateTimeFormat: environment.dateTimeFormat)).string
                                 } else {
                                     subtitle = nil
                                 }
@@ -1445,7 +1444,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.error()
                                             
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(component.context.userLimits.maxGiveawayChannelsCount) channels.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: environment.strings.BoostGift_Channels_MaximumReached("\(component.context.userLimits.maxGiveawayChannelsCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         if case .channels = component.stateContext.subject {
@@ -1453,11 +1452,11 @@ final class ShareWithPeersScreenComponent: Component {
                                                 let alertController = textAlertController(
                                                     context: component.context,
                                                     forceTheme: environment.theme,
-                                                    title: "Channel is Private",
-                                                    text: "Are you sure you want to add a private channel? Users won't be able to join it without an invite link.",
+                                                    title: environment.strings.BoostGift_Channels_PrivateChannel_Title,
+                                                    text: environment.strings.BoostGift_Channels_PrivateChannel_Text,
                                                     actions: [
                                                         TextAlertAction(type: .genericAction, title: environment.strings.Common_Cancel, action: {}),
-                                                        TextAlertAction(type: .defaultAction, title: "Add", action: {
+                                                        TextAlertAction(type: .defaultAction, title: environment.strings.BoostGift_Channels_PrivateChannel_Add, action: {
                                                             togglePeer()
                                                         })
                                                     ]
@@ -1475,7 +1474,7 @@ final class ShareWithPeersScreenComponent: Component {
                                             self.hapticFeedback.error()
                                             
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum 10 subscribers.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                            controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: environment.strings.BoostGift_Subscribers_MaximumReached("\(10)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                             return
                                         }
                                         togglePeer()
@@ -2018,9 +2017,9 @@ final class ShareWithPeersScreenComponent: Component {
                 let placeholder: String
                 switch component.stateContext.subject {
                 case .members:
-                    placeholder = "Search Subscribers"
+                    placeholder = environment.strings.BoostGift_Subscribers_Search
                 case .channels:
-                    placeholder = "Search Channels"
+                    placeholder = environment.strings.BoostGift_Channels_Search
                 case .chats:
                     placeholder = environment.strings.Story_Privacy_SearchChats
                 default:
@@ -2367,13 +2366,13 @@ final class ShareWithPeersScreenComponent: Component {
             case .contactsSearch:
                 title = ""
             case .members:
-                title = "Gift Premium"
-                actionButtonTitle = "Save Recipients"
-                subtitle = "select up to 10 subscribers"
+                title = environment.strings.BoostGift_Subscribers_Title
+                subtitle = environment.strings.BoostGift_Subscribers_Subtitle("\(10)").string
+                actionButtonTitle = environment.strings.BoostGift_Subscribers_Save
             case .channels:
-                title = "Add Channels"
-                actionButtonTitle = "Save Channels"
-                subtitle = "select up to \(component.context.userLimits.maxGiveawayChannelsCount) channels"
+                title = environment.strings.BoostGift_Channels_Title
+                subtitle = environment.strings.BoostGift_Channels_Subtitle("\(component.context.userLimits.maxGiveawayChannelsCount)").string
+                actionButtonTitle = environment.strings.BoostGift_Channels_Save
             }
             
             let titleComponent: AnyComponent<Empty>

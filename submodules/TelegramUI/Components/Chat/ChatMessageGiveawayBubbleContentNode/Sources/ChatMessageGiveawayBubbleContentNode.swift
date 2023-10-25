@@ -222,11 +222,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             
             let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 1)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: .white)
             
-//TODO:localize
-            let prizeTitleString = NSAttributedString(string: "Giveaway Prizes", font: titleFont, textColor: textColor)
+            let prizeTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_PrizeTitle, font: titleFont, textColor: textColor)
             var prizeTextString: NSAttributedString?
             if let giveaway {
-                prizeTextString = parseMarkdownIntoAttributedString("**\(giveaway.quantity)** Telegram Premium Subscriptions for **\(giveaway.months)** months.", attributes: MarkdownAttributes(
+                prizeTextString = parseMarkdownIntoAttributedString(item.presentationData.strings.Chat_Giveaway_Message_PrizeText(
+                    item.presentationData.strings.Chat_Giveaway_Message_Subscriptions(giveaway.quantity),
+                    item.presentationData.strings.Chat_Giveaway_Message_Months(giveaway.months)
+                ).string, attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: textFont, textColor: textColor),
                     bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
                     link: MarkdownAttributeSet(font: textFont, textColor: textColor),
@@ -236,22 +238,22 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                 ), textAlignment: .center)
             }
             
-            let participantsTitleString = NSAttributedString(string: "Participants", font: titleFont, textColor: textColor)
+            let participantsTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_ParticipantsTitle, font: titleFont, textColor: textColor)
             let participantsText: String
             let countriesText: String
             
             if let giveaway {
                 if giveaway.flags.contains(.onlyNewSubscribers) {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = "All users who join the channels below after this date:"
+                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNewMany
                     } else {
-                        participantsText = "All users who join this channel after this date:"
+                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsNew
                     }
                 } else {
                     if giveaway.channelPeerIds.count > 1 {
-                        participantsText = "All subscribers of the channels below:"
+                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_ParticipantsMany
                     } else {
-                        participantsText = "All subscribers of this channel:"
+                        participantsText = item.presentationData.strings.Chat_Giveaway_Message_Participants
                     }
                 }
                 if !giveaway.countries.isEmpty {
@@ -270,13 +272,13 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                         for i in 0 ..< countryNames.count {
                             countries.append(countryNames[i])
                             if i == countryNames.count - 2 {
-                                countries.append(" and ")
+                                countries.append(item.presentationData.strings.Chat_Giveaway_Message_CountriesLastDelimiter)
                             } else if i < countryNames.count - 2 {
-                                countries.append(", ")
+                                countries.append(item.presentationData.strings.Chat_Giveaway_Message_CountriesDelimiter)
                             }
                         }
                     }
-                    countriesText = "from \(countries)"
+                    countriesText = item.presentationData.strings.Chat_Giveaway_Message_CountriesFrom(countries).string
                 } else {
                     countriesText = ""
                 }
@@ -289,7 +291,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             
             let countriesTextString = NSAttributedString(string: countriesText, font: textFont, textColor: textColor)
             
-            let dateTitleString = NSAttributedString(string: "Winners Selection Date", font: titleFont, textColor: textColor)
+            let dateTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_DateTitle, font: titleFont, textColor: textColor)
             var dateTextString: NSAttributedString?
             if let giveaway {
                 dateTextString = NSAttributedString(string: stringForFullDate(timestamp: giveaway.untilDate, strings: item.presentationData.strings, dateTimeFormat: item.presentationData.dateTimeFormat), font: textFont, textColor: textColor)
@@ -392,7 +394,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
                 
-                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, "LEARN MORE", titleColor, false, true)
+                let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, nil, false, item.presentationData.strings.Chat_Giveaway_Message_LearnMore.uppercased(), titleColor, false, true)
                 
                 let months = giveaway?.months ?? 0
                 let animationName: String

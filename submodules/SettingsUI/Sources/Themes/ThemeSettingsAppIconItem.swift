@@ -365,12 +365,6 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                     name = item.strings.Appearance_AppIconBlack
                                 case "PremiumTurbo":
                                     name = item.strings.Appearance_AppIconTurbo
-                                case "PremiumDuck":
-                                    name = item.strings.Appearance_AppIconDuck
-                                case "PremiumCoffee":
-                                    name = item.strings.Appearance_AppIconCoffee
-                                case "PremiumSteam":
-                                    name = item.strings.Appearance_AppIconSteam
                                 default:
                                     name = icon.name
                             }

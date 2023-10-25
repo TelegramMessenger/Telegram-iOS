@@ -108,6 +108,8 @@ swift_library(
         "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
         "//submodules/CountrySelectionUI",
         "//submodules/TelegramUI/Components/Stories/PeerListItemComponent",
+        "//submodules/InvisibleInkDustNode",
+        "//submodules/AlertUI",
     ],
     visibility = [
         "//visibility:public",

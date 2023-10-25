@@ -8,8 +8,6 @@ import TelegramPresentationData
 import UndoUI
 import PresentationDataUtils
 
-//TODO:localize
-
 private struct BoostState {
     let level: Int32
     let currentLevelBoosts: Int32
@@ -106,7 +104,7 @@ public func PremiumBoostScreen(
             
             Queue.mainQueue().after(0.3) {
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: "\(replacedBoosts) boosts are reassigned from \(inChannels) other channel.", round: false, undoText: nil), elevatedLayout: false, position: .bottom, action: { _ in return true })
+                let undoController = UndoOverlayController(presentationData: presentationData, content: .image(image: generateTintedImage(image: UIImage(bundleImageName: "Premium/BoostReplaceIcon"), color: .white)!, title: nil, text: presentationData.strings.ReassignBoost_Success(presentationData.strings.ReassignBoost_Boosts(replacedBoosts), presentationData.strings.ReassignBoost_OtherChannels(inChannels)).string, round: false, undoText: nil), elevatedLayout: false, position: .bottom, action: { _ in return true })
                 controller.present(undoController, in: .current)
             }
         }
@@ -182,11 +180,12 @@ public func PremiumBoostScreen(
                     }
                 } else {
                     if isPremium {
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
                         let controller = textAlertController(
                             sharedContext: context.sharedContext,
                             updatedPresentationData: nil,
-                            title: "More Boosts Needed",
-                            text: "To boost **\(peer.compactDisplayTitle)**, get more boosts by gifting **Telegram Premium** to a friend.",
+                            title: presentationData.strings.ChannelBoost_MoreBoosts_Title,
+                            text: presentationData.strings.ChannelBoost_MoreBoosts_Text(peer.compactDisplayTitle, "\(premiumConfiguration.boostsPerGiftCount)").string,
                             actions: [
                                 TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
                             ],

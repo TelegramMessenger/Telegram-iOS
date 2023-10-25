@@ -10,6 +10,14 @@ public struct MyBoostStatus: Equatable {
         public let date: Int32
         public let expires: Int32
         public let cooldownUntil: Int32?
+        
+        public init(slot: Int32, peer: EnginePeer?, date: Int32, expires: Int32, cooldownUntil: Int32?) {
+            self.slot = slot
+            self.peer = peer
+            self.date = date
+            self.expires = expires
+            self.cooldownUntil = cooldownUntil
+        }
     }
     
     public let boosts: [Boost]
@@ -175,7 +183,7 @@ private final class ChannelBoostersContextImpl {
                 var result: [ChannelBoostersContext.State.Boost] = []
                 for boost in cachedResult.boosts {
                     let peer = boost.peerId.flatMap { transaction.getPeer($0) }
-                    result.append(ChannelBoostersContext.State.Boost(flags: ChannelBoostersContext.State.Boost.Flags(rawValue: boost.flags), id: boost.id, peer: peer.flatMap { EnginePeer($0) }, date: boost.date, expires: boost.expires, multiplier: boost.multiplier))
+                    result.append(ChannelBoostersContext.State.Boost(flags: ChannelBoostersContext.State.Boost.Flags(rawValue: boost.flags), id: boost.id, peer: peer.flatMap { EnginePeer($0) }, date: boost.date, expires: boost.expires, multiplier: boost.multiplier, slug: boost.slug))
                 }
                 return (result, cachedResult.count, true)
             } else {
@@ -211,7 +219,7 @@ private final class ChannelBoostersContextImpl {
     }
     
     func loadMore() {
-        if self.isLoadingMore {
+        if self.isLoadingMore || !self.canLoadMore {
             return
         }
         self.isLoadingMore = true
@@ -256,7 +264,6 @@ private final class ChannelBoostersContextImpl {
                                 switch boost {
                                 case let .boost(flags, id, userId, giveawayMessageId, date, expires, usedGiftSlug, multiplier):
                                     let _ = giveawayMessageId
-                                    let _ = usedGiftSlug
                                     var boostFlags: ChannelBoostersContext.State.Boost.Flags = []
                                     var boostPeer: EnginePeer?
                                     if let userId = userId {
@@ -274,7 +281,7 @@ private final class ChannelBoostersContextImpl {
                                     if (flags & (1 << 3)) != 0 {
                                         boostFlags.insert(.isUnclaimed)
                                     }
-                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1))
+                                    resultBoosts.append(ChannelBoostersContext.State.Boost(flags: boostFlags, id: id, peer: boostPeer, date: date, expires: expires, multiplier: multiplier ?? 1, slug: usedGiftSlug))
                                 }
                             }
                             if populateCache {
@@ -305,11 +312,19 @@ private final class ChannelBoostersContextImpl {
             }
             strongSelf.isLoadingMore = false
             strongSelf.hasLoadedOnce = true
-            strongSelf.canLoadMore = !boosters.isEmpty
+            strongSelf.canLoadMore = !boosters.isEmpty && nextOffset != nil
             if strongSelf.canLoadMore {
-                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
+                var resultsCount: Int32 = 0
+                for result in strongSelf.results {
+                    resultsCount += result.multiplier
+                }
+                strongSelf.count = max(updatedCount, resultsCount)
             } else {
-                strongSelf.count = Int32(strongSelf.results.count)
+                var resultsCount: Int32 = 0
+                for result in strongSelf.results {
+                    resultsCount += result.multiplier
+                }
+                strongSelf.count = resultsCount
             }
             strongSelf.updateState()
         }))
@@ -357,6 +372,7 @@ public final class ChannelBoostersContext {
             public var date: Int32
             public var expires: Int32
             public var multiplier: Int32
+            public var slug: String?
         }
         public var boosts: [Boost]
         public var isLoadingMore: Bool
@@ -418,6 +434,7 @@ private final class CachedChannelBoosters: Codable {
             case date
             case expires
             case multiplier
+            case slug
         }
         
         var flags: Int32
@@ -426,14 +443,16 @@ private final class CachedChannelBoosters: Codable {
         var date: Int32
         var expires: Int32
         var multiplier: Int32
+        var slug: String?
         
-        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32, multiplier: Int32) {
+        init(flags: Int32, id: String, peerId: EnginePeer.Id?, date: Int32, expires: Int32, multiplier: Int32, slug: String?) {
             self.flags = flags
             self.id = id
             self.peerId = peerId
             self.date = date
             self.expires = expires
             self.multiplier = multiplier
+            self.slug = slug
         }
 
         init(from decoder: Decoder) throws {
@@ -445,6 +464,7 @@ private final class CachedChannelBoosters: Codable {
             self.date = try container.decode(Int32.self, forKey: .date)
             self.expires = try container.decode(Int32.self, forKey: .expires)
             self.multiplier = try container.decode(Int32.self, forKey: .multiplier)
+            self.slug = try container.decodeIfPresent(String.self, forKey: .slug)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -456,6 +476,7 @@ private final class CachedChannelBoosters: Codable {
             try container.encode(self.date, forKey: .date)
             try container.encode(self.expires, forKey: .expires)
             try container.encode(self.multiplier, forKey: .multiplier)
+            try container.encodeIfPresent(self.slug, forKey: .slug)
         }
     }
     
@@ -469,7 +490,7 @@ private final class CachedChannelBoosters: Codable {
     }
     
     init(boosts: [ChannelBoostersContext.State.Boost], count: Int32) {
-        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires, multiplier: $0.multiplier) }
+        self.boosts = boosts.map { CachedBoost(flags: $0.flags.rawValue, id: $0.id, peerId: $0.peer?.id, date: $0.date, expires: $0.expires, multiplier: $0.multiplier, slug: $0.slug) }
         self.count = count
     }
     

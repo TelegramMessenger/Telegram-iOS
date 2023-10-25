@@ -47,7 +47,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     
     case colorHeader(String)
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
-    case colorPicker(colors: [PeerNameColor], currentColor: PeerNameColor)
+    case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor)
     case colorDescription(String)
     case backgroundEmojiHeader(String)
     case backgroundEmoji(EmojiPagerContentComponent, UIColor)
@@ -185,6 +185,7 @@ private struct PeerNameColorScreenState: Equatable {
 }
 
 private func peerNameColorScreenEntries(
+    nameColors: PeerNameColors,
     presentationData: PresentationData,
     state: PeerNameColorScreenState,
     peer: EnginePeer?,
@@ -194,11 +195,6 @@ private func peerNameColorScreenEntries(
     var entries: [PeerNameColorScreenEntry] = []
     
     if let peer {
-        var allColors: [PeerNameColor] = [
-            .blue
-        ]
-        allColors.append(contentsOf: PeerNameColor.allCases.filter { $0 != .blue})
-        
         let nameColor: PeerNameColor
         if let updatedNameColor = state.updatedNameColor {
             nameColor = updatedNameColor
@@ -207,6 +203,8 @@ private func peerNameColorScreenEntries(
         } else {
             nameColor = .blue
         }
+        
+        let colors = nameColors.get(nameColor)
         
         let backgroundEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
@@ -250,14 +248,14 @@ private func peerNameColorScreenEntries(
             items: [messageItem]
         ))
         entries.append(.colorPicker(
-            colors: allColors,
+            colors: nameColors,
             currentColor: nameColor
         ))
         entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
         
         if let emojiContent {
             entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
-            entries.append(.backgroundEmoji(emojiContent, nameColor.color))
+            entries.append(.backgroundEmoji(emojiContent, colors.main))
         }
     }
     
@@ -314,6 +312,7 @@ public func PeerNameColorScreen(
         peerId = channelId
     }
     
+    
     let emojiContent = combineLatest(
         statePromise.get(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
@@ -325,12 +324,13 @@ public func PeerNameColorScreen(
         } else {
             selectedEmojiId = peer?.backgroundEmojiId
         }
-        let nameColor: UIColor
+        let nameColor: PeerNameColor
         if let updatedNameColor = state.updatedNameColor {
-            nameColor = updatedNameColor.color
+            nameColor = updatedNameColor
         } else {
-            nameColor = (peer?.nameColor ?? .blue).color
+            nameColor = (peer?.nameColor ?? .blue)
         }
+        let color = context.peerNameColors.get(nameColor)
         
         let selectedItems: [EngineMedia.Id]
         if let selectedEmojiId, selectedEmojiId != 0 {
@@ -351,7 +351,7 @@ public func PeerNameColorScreen(
             areCustomEmojiEnabled: true,
             chatPeerId: context.account.peerId,
             selectedItems: Set(selectedItems),
-            backgroundIconColor: nameColor
+            backgroundIconColor: color.main
         )
     }
     
@@ -547,6 +547,7 @@ public func PeerNameColorScreen(
         )
         
         let entries = peerNameColorScreenEntries(
+            nameColors: context.peerNameColors,
             presentationData: presentationData,
             state: state,
             peer: peer,

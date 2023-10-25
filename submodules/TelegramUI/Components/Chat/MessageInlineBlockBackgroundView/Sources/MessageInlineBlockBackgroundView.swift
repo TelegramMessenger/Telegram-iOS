@@ -92,24 +92,31 @@ private let dashBackgroundTemplateImage: UIImage = {
     return generateDashBackgroundTemplateImage()
 }()
 
-private func generateDashTemplateImage(isMonochrome: Bool) -> UIImage {
+private func generateDashTemplateImage(isMonochrome: Bool, isTriple: Bool) -> UIImage {
     return generateImage(CGSize(width: radius * 2.0, height: 18.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor.white.cgColor)
         
-        let dashOffset: CGFloat = isMonochrome ? -4.0 : 5.0
+        let dashOffset: CGFloat
+        if isTriple {
+            dashOffset = isMonochrome ? -2.0 : 0.0
+        } else {
+            dashOffset = isMonochrome ? -4.0 : 5.0
+        }
+        
+        let dashHeight: CGFloat = isTriple ? 6.0 : 9.0
         
         context.translateBy(x: 0.0, y: dashOffset)
         
         for _ in 0 ..< 2 {
             context.move(to: CGPoint(x: 0.0, y: 3.0))
             context.addLine(to: CGPoint(x: lineWidth, y: 0.0))
-            context.addLine(to: CGPoint(x: lineWidth, y: 9.0))
-            context.addLine(to: CGPoint(x: 0.0, y: 9.0 + 3.0))
+            context.addLine(to: CGPoint(x: lineWidth, y: dashHeight))
+            context.addLine(to: CGPoint(x: 0.0, y: dashHeight + 3.0))
             context.closePath()
             context.fillPath()
             
-            context.translateBy(x: 0.0, y: 18.0)
+            context.translateBy(x: 0.0, y: size.height)
         }
         
         context.clear(CGRect(origin: CGPoint(x: lineWidth, y: 0.0), size: CGSize(width: size.width - lineWidth, height: size.height)))
@@ -117,11 +124,19 @@ private func generateDashTemplateImage(isMonochrome: Bool) -> UIImage {
 }
 
 private let dashOpaqueTemplateImage: UIImage = {
-    return generateDashTemplateImage(isMonochrome: false)
+    return generateDashTemplateImage(isMonochrome: false, isTriple: false)
+}()
+
+private let dashOpaqueTripleTemplateImage: UIImage = {
+    return generateDashTemplateImage(isMonochrome: false, isTriple: true)
 }()
 
 private let dashMonochromeTemplateImage: UIImage = {
-    return generateDashTemplateImage(isMonochrome: true)
+    return generateDashTemplateImage(isMonochrome: true, isTriple: false)
+}()
+
+private let dashMonochromeTripleTemplateImage: UIImage = {
+    return generateDashTemplateImage(isMonochrome: true, isTriple: true)
 }()
 
 private func generateGradient(gradientWidth: CGFloat, baseAlpha: CGFloat) -> UIImage {
@@ -175,6 +190,7 @@ private final class PatternContentsTarget: MultiAnimationRenderTarget {
 private final class LineView: UIView {
     private let backgroundView: UIImageView
     private var dashBackgroundView: UIImageView?
+    private var dashThirdBackgroundView: UIImageView?
     
     private var params: Params?
     private var isAnimating: Bool = false
@@ -183,12 +199,14 @@ private final class LineView: UIView {
         var size: CGSize
         var primaryColor: UIColor
         var secondaryColor: UIColor?
+        var thirdColor: UIColor?
         var displayProgress: Bool
         
-        init(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, displayProgress: Bool) {
+        init(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, thirdColor: UIColor?, displayProgress: Bool) {
             self.size = size
             self.primaryColor = primaryColor
             self.secondaryColor = secondaryColor
+            self.thirdColor = thirdColor
             self.displayProgress = displayProgress
         }
     }
@@ -231,6 +249,21 @@ private final class LineView: UIView {
                     }
                     dashBackgroundView.layer.add(animation, forKey: "progress")
                 }
+                if let dashThirdBackgroundView = self.dashThirdBackgroundView {
+                    if dashThirdBackgroundView.layer.animation(forKey: "progress") == nil {
+                        let animation = dashThirdBackgroundView.layer.makeAnimation(from: 18.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "position.y", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2, delay: 0.0, mediaTimingFunction: nil, removeOnCompletion: true, additive: true)
+                        animation.repeatCount = 1.0
+                        self.isAnimating = true
+                        animation.completion = { [weak self] _ in
+                            guard let self else {
+                                return
+                            }
+                            self.isAnimating = false
+                            self.updateAnimations()
+                        }
+                        dashThirdBackgroundView.layer.add(animation, forKey: "progress")
+                    }
+                }
             } else {
                 let phaseDuration: Double = 1.0
                 if self.backgroundView.layer.animation(forKey: "progress") == nil {
@@ -271,11 +304,12 @@ private final class LineView: UIView {
         self.layer.masksToBounds = params.secondaryColor != nil || self.isAnimating
     }
     
-    func update(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, displayProgress: Bool, animation: ListViewItemUpdateAnimation) {
+    func update(size: CGSize, primaryColor: UIColor, secondaryColor: UIColor?, thirdColor: UIColor?, displayProgress: Bool, animation: ListViewItemUpdateAnimation) {
         let params = Params(
             size: size,
             primaryColor: primaryColor,
             secondaryColor: secondaryColor,
+            thirdColor: thirdColor,
             displayProgress: displayProgress
         )
         if self.params == params {
@@ -305,13 +339,52 @@ private final class LineView: UIView {
                 dashBackgroundView.frame = dashBackgroundFrame
             }
             
+            let templateImage: UIImage
+            let monochromeTemplateImage: UIImage
+            
+            if let thirdColor {
+                let thirdDashBackgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -12.0), size: CGSize(width: radius * 2.0, height: size.height + 18.0))
+                templateImage = dashOpaqueTripleTemplateImage
+                monochromeTemplateImage = dashMonochromeTripleTemplateImage
+                
+                let dashThirdBackgroundView: UIImageView
+                if let current = self.dashThirdBackgroundView {
+                    dashThirdBackgroundView = current
+                    
+                    animation.animator.updateFrame(layer: dashThirdBackgroundView.layer, frame: thirdDashBackgroundFrame, completion: nil)
+                } else {
+                    dashThirdBackgroundView = UIImageView()
+                    self.dashThirdBackgroundView = dashThirdBackgroundView
+                    self.addSubview(dashThirdBackgroundView)
+                    
+                    dashThirdBackgroundView.frame = thirdDashBackgroundFrame
+                }
+                
+                if thirdColor.alpha == 0.0 {
+                    dashThirdBackgroundView.alpha = 0.4
+                    dashThirdBackgroundView.image = monochromeTemplateImage
+                    dashThirdBackgroundView.tintColor = primaryColor
+                } else {
+                    dashThirdBackgroundView.alpha = 1.0
+                    dashThirdBackgroundView.image = templateImage
+                    dashThirdBackgroundView.tintColor = thirdColor
+                }
+            } else {
+                templateImage = dashOpaqueTemplateImage
+                monochromeTemplateImage = dashMonochromeTemplateImage
+                if let dashThirdBackgroundView = self.dashThirdBackgroundView {
+                    self.dashThirdBackgroundView = nil
+                    dashThirdBackgroundView.removeFromSuperview()
+                }
+            }
+            
             if secondaryColor.alpha == 0.0 {
                 self.backgroundView.alpha = 0.2
-                dashBackgroundView.image = dashMonochromeTemplateImage
+                dashBackgroundView.image = monochromeTemplateImage
                 dashBackgroundView.tintColor = primaryColor
             } else {
                 self.backgroundView.alpha = 1.0
-                dashBackgroundView.image = dashOpaqueTemplateImage
+                dashBackgroundView.image = templateImage
                 dashBackgroundView.tintColor = secondaryColor
             }
         } else {
@@ -365,6 +438,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         var size: CGSize
         var primaryColor: UIColor
         var secondaryColor: UIColor?
+        var thirdColor: UIColor?
         var pattern: Pattern?
         var displayProgress: Bool
         
@@ -372,12 +446,14 @@ public final class MessageInlineBlockBackgroundView: UIView {
             size: CGSize,
             primaryColor: UIColor,
             secondaryColor: UIColor?,
+            thirdColor: UIColor?,
             pattern: Pattern?,
             displayProgress: Bool
         ) {
             self.size = size
             self.primaryColor = primaryColor
             self.secondaryColor = secondaryColor
+            self.thirdColor = thirdColor
             self.pattern = pattern
             self.displayProgress = displayProgress
         }
@@ -393,6 +469,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                         size: params.size,
                         primaryColor: params.primaryColor,
                         secondaryColor: params.secondaryColor,
+                        thirdColor: params.thirdColor,
                         pattern: params.pattern,
                         animation: .None
                     )
@@ -502,6 +579,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         size: CGSize,
         primaryColor: UIColor,
         secondaryColor: UIColor?,
+        thirdColor: UIColor?,
         pattern: Pattern?,
         animation: ListViewItemUpdateAnimation
     ) {
@@ -509,6 +587,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             size: size,
             primaryColor: primaryColor,
             secondaryColor: secondaryColor,
+            thirdColor: thirdColor,
             pattern: pattern,
             displayProgress: self.displayProgress
         )
@@ -588,6 +667,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             size: lineFrame.size,
             primaryColor: params.primaryColor,
             secondaryColor: params.secondaryColor,
+            thirdColor: params.thirdColor,
             displayProgress: params.displayProgress,
             animation: animation
         )

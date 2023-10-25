@@ -891,17 +891,26 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 forceDark = true
             }
             let _ = (context.engine.payments.checkPremiumGiftCode(slug: slug)
-            |> deliverOnMainQueue).startStandalone(next: { giftCode in
+            |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] giftCode in
                 if let giftCode {
                     var dismissImpl: (() -> Void)?
                     let controller = PremiumGiftCodeScreen(
                         context: context,
-                        giftCode: giftCode,
+                        subject: .giftCode(giftCode),
                         forceDark: forceDark,
-                        action: {
-                            dismissImpl?()
-                        
-                            let _ = context.engine.payments.applyPremiumGiftCode(slug: slug).startStandalone()
+                        action: { [weak navigationController] in
+                            let _ = (context.engine.payments.applyPremiumGiftCode(slug: slug)
+                            |> deliverOnMainQueue).startStandalone(completed: {
+                                dismissImpl?()
+                                
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: forceDark, dismissed: nil)
+                                navigationController?.pushViewController(controller)
+                                if let controller = controller as? PremiumIntroScreen {
+                                    Queue.mainQueue().after(0.3, {
+                                        controller.animateSuccess()
+                                    })
+                                }
+                            })
                         },
                         openPeer: { peer in
                             if peer.id != context.account.peerId {
@@ -941,7 +950,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         }
                     )
                     dismissImpl = { [weak controller] in
-                        controller?.dismiss()
+                        controller?.dismissAnimated()
                     }
                     navigationController?.pushViewController(controller)
                 } else {

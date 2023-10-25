@@ -4708,7 +4708,7 @@ public final class StoryItemSetContainerComponent: Component {
                 
                 let seekLabelSize = self.seekLabel.update(
                     transition: .immediate,
-                    component: AnyComponent(Text(text: "Slide left or right to seek", font: Font.semibold(14.0), color: .white)),
+                    component: AnyComponent(Text(text: component.strings.Story_SlideToSeek, font: Font.semibold(14.0), color: .white)),
                     environment: {},
                     containerSize: availableSize
                 )

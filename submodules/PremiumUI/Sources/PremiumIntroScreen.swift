@@ -1522,10 +1522,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 guard let self else {
                     return
                 }
-                var newPerks: [String] = []
-                if !dismissedPremiumAppIconsBadge {
-                    newPerks.append(PremiumPerk.appIcons.identifier)
-                }
+                let newPerks: [String] = []
                 self.newPerks = newPerks
                 self.updated()
             })
@@ -1856,7 +1853,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .animatedUserpics
                             case .appIcons:
                                 demoSubject = .appIcons
-                                let _ = ApplicationSpecificNotice.setDismissedPremiumAppIconsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
+//                                let _ = ApplicationSpecificNotice.setDismissedPremiumAppIconsBadge(accountManager: accountContext.sharedContext.accountManager).startStandalone()
                             case .animatedEmoji:
                                 demoSubject = .animatedEmoji
                             case .emojiStatus:
@@ -2918,8 +2915,8 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
         }
         
         completionImpl = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.view.addSubview(ConfettiView(frame: strongSelf.view.bounds))
+            if let self {
+                self.animateSuccess()
             }
         }
     }
@@ -2931,6 +2928,10 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
     @objc private func cancelPressed() {
         self.dismiss()
         self.wasDismissed?()
+    }
+    
+    public func animateSuccess() {
+        self.view.addSubview(ConfettiView(frame: self.view.bounds))
     }
     
     public override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

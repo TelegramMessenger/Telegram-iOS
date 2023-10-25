@@ -19,8 +19,6 @@ import PeerListItemComponent
 import TelegramStringFormatting
 import AvatarNode
 
-//TODO:localize
-
 private final class ReplaceBoostScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
@@ -104,7 +102,6 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
     }
     
     static var body: Body {
-//        let closeButton = Child(Button.self)
         let header = Child(ReplaceBoostHeaderComponent.self)
         let description = Child(MultilineTextComponent.self)
         let boostsBackground = Child(RoundedRectangle.self)
@@ -117,7 +114,6 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
             let theme = environment.theme
             let strings = environment.strings
             
-//            let topInset: CGFloat = environment.navigationHeight + 22.0
             let textSideInset: CGFloat = 32.0
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             
@@ -168,8 +164,13 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 return (TelegramTextAttributes.URL, contents)
             })
             
-            let channelName = state.peer?.compactDisplayTitle ?? ""
-            let descriptionString = "To boost **\(channelName)**, reassign a previous boost or gift **Telegram Premium** to a friend to get **3** additional boosts."
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.component.context.currentAppConfiguration.with({ $0 }))
+            
+            var channelName = state.peer?.compactDisplayTitle ?? ""
+            if channelName.count > 48 {
+                channelName = "\(channelName.prefix(48))..."
+            }
+            let descriptionString = strings.ReassignBoost_Description(channelName, "\(premiumConfiguration.boostsPerGiftCount)").string
             
             let description = description.update(
                 component: MultilineTextComponent(
@@ -201,11 +202,11 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 if let cooldownUntil = boost.cooldownUntil, cooldownUntil > state.currentTime {
                     let duration = cooldownUntil - state.currentTime
                     let durationValue = stringForDuration(duration, position: nil)
-                    subtitle = "Available in \(durationValue)"
+                    subtitle = strings.ReassignBoost_AvailableIn(durationValue).string
                     isEnabled = false
                 } else {
                     let expiresValue = stringForDate(timestamp: boost.expires, strings: strings)
-                    subtitle = "Boost expires on \(expiresValue)"
+                    subtitle = strings.ReassignBoost_ExpiresOn(expiresValue).string
                 }
                 
                 let accountContext = context.component.context
@@ -242,7 +243,8 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                                         selectedSlotsUpdated(state.selectedSlots)
                                     } else {
                                         let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
-                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "Wait until the boost is available or get **3** more boosts by gifting a **Telegram Premium** subscription.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
+         
+                                        let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: strings.ReassignBoost_WaitForCooldown("\(premiumConfiguration.boostsPerGiftCount)").string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true })
                                         presentController(undoController)
                                     }
                                 })
@@ -254,7 +256,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
             let boosts = boosts.update(
                 component: List(boostItems),
                 environment: {},
-                availableSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 1000.0),
+                availableSize: CGSize(width: availableSize.width - sideInset * 2.0, height: 100000.0),
                 transition: context.transition
             )
             
@@ -272,9 +274,7 @@ private final class ReplaceBoostScreenComponent: CombinedComponent {
                 .position(CGPoint(x: availableSize.width / 2.0, y: 226 + boosts.size.height / 2.0))
             )
             
-            let contentSize = CGSize(width: availableSize.width, height: 226.0 + boosts.size.height)
-                        
-            return contentSize
+            return CGSize(width: availableSize.width, height: 226.0 + boosts.size.height + environment.safeInsets.bottom + 91.0)
         }
     }
 }
@@ -293,6 +293,8 @@ public class ReplaceBoostScreen: ViewController {
         let hostView: ComponentHostView<ViewControllerComponentContainer.Environment>
         
         private let footerView: FooterView
+        private var footerHeight: CGFloat = 0.0
+        private var bottomOffset: CGFloat = 1000.0
         
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
@@ -350,6 +352,7 @@ public class ReplaceBoostScreen: ViewController {
                 }
                 self.controller?.replaceBoosts?(self.selectedSlots)
             }
+            self.footerView.updateBackgroundAlpha(1.0, transition: .immediate)
         }
         
         override func didLoad() {
@@ -382,9 +385,22 @@ public class ReplaceBoostScreen: ViewController {
             return true
         }
         
+        private func updateFooterAlpha() {
+            guard let (layout, _) = self.currentLayout else {
+                return
+            }
+            let contentFrame = self.scrollView.convert(self.hostView.frame, to: self.view)
+            let bottomOffset = contentFrame.maxY - layout.size.height
+            
+            let backgroundAlpha: CGFloat = min(30.0, max(0.0, bottomOffset)) / 30.0
+            self.footerView.updateBackgroundAlpha(backgroundAlpha, transition: .immediate)
+        }
+        
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             let contentOffset = self.scrollView.contentOffset.y
             self.controller?.navigationBar?.updateBackgroundAlpha(min(30.0, contentOffset) / 30.0, transition: .immediate)
+            
+            self.updateFooterAlpha()
         }
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -429,6 +445,7 @@ public class ReplaceBoostScreen: ViewController {
         }
                 
         func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: Transition) {
+            let hadLayout = self.currentLayout != nil
             self.currentLayout = (layout, navigationHeight)
             
             if let controller = self.controller, let navigationBar = controller.navigationBar, navigationBar.view.superview !== self.wrappingView {
@@ -541,9 +558,11 @@ public class ReplaceBoostScreen: ViewController {
             let footerInsets = UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.safeInsets.right)
             
             transition.setFrame(view: self.footerView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: layout.size))
-            let _ = self.footerView.update(size: layout.size, insets: footerInsets, theme: self.presentationData.theme, count: Int32(self.selectedSlots.count))
+            self.footerHeight = self.footerView.update(size: layout.size, insets: footerInsets, theme: self.presentationData.theme, strings: self.presentationData.strings, count: Int32(self.selectedSlots.count))
             
-            self.footerView.updateBackgroundAlpha(0.0, transition: .immediate)
+            if !hadLayout {
+                self.updateFooterAlpha()
+            }
         }
         
         private var didPlayAppearAnimation = false
@@ -574,7 +593,7 @@ public class ReplaceBoostScreen: ViewController {
                     factor = 0.15
                 }
                 if self.scrollView.contentSize.height > 0.0 && self.scrollView.contentSize.height < layout.size.height / 2.0 {
-                    return layout.size.height - self.scrollView.contentSize.height - layout.intrinsicInsets.bottom - 154.0
+                    return layout.size.height - self.scrollView.contentSize.height - layout.intrinsicInsets.bottom - 30.0
                 } else {
                     return floor(max(layout.size.width, layout.size.height) * factor)
                 }
@@ -673,6 +692,8 @@ public class ReplaceBoostScreen: ViewController {
                     self.bounds = bounds
                 
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                
+                    self.updateFooterAlpha()
                 case .ended:
                     guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
                         return
@@ -760,10 +781,14 @@ public class ReplaceBoostScreen: ViewController {
                         self.bounds = bounds
                         self.layer.animateBounds(from: previousBounds, to: self.bounds, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue)
                     }
+                
+                    self.updateFooterAlpha()
                 case .cancelled:
                     self.panGestureArguments = nil
                     
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
+                
+                    self.updateFooterAlpha()
                 default:
                     break
             }
@@ -812,9 +837,9 @@ public class ReplaceBoostScreen: ViewController {
             presentControllerImpl?(c)
         }))
         
-        self.title = "Reassign Boosts"
+        self.title = presentationData.strings.ReassignBoost_Title
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Close, style: .plain, target: self, action: #selector(self.cancelPressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -890,6 +915,11 @@ public class ReplaceBoostScreen: ViewController {
         self.node.updateIsVisible(isVisible: true)
     }
     
+    override open func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        self.dismissAllTooltips()
+    }
+    
     override open func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
@@ -953,10 +983,10 @@ private final class FooterView: UIView {
     
     fileprivate var inProgress = false
     
-    private var currentLayout: (CGSize, UIEdgeInsets, PresentationTheme, Int32)?
-    func update(size: CGSize, insets: UIEdgeInsets, theme: PresentationTheme, count: Int32) -> CGFloat {
+    private var currentLayout: (CGSize, UIEdgeInsets, PresentationTheme, PresentationStrings, Int32)?
+    func update(size: CGSize, insets: UIEdgeInsets, theme: PresentationTheme, strings: PresentationStrings, count: Int32) -> CGFloat {
         let hadLayout = self.currentLayout != nil
-        self.currentLayout = (size, insets, theme, count)
+        self.currentLayout = (size, insets, theme, strings, count)
         
         self.backgroundNode.updateColor(color: theme.rootController.tabBar.backgroundColor, transition: .immediate)
         self.separatorView.backgroundColor = theme.rootController.tabBar.separatorColor
@@ -988,7 +1018,7 @@ private final class FooterView: UIView {
                     content: AnyComponentWithIdentity(
                         id: AnyHashable(0),
                         component: AnyComponent(ButtonTextContentComponent(
-                            text: "Reassign Boosts",
+                            text: strings.ReassignBoost_ReassignBoosts,
                             badge: Int(count),
                             textColor: theme.list.itemCheckColors.foregroundColor,
                             badgeBackground: theme.list.itemCheckColors.foregroundColor,
@@ -1005,8 +1035,8 @@ private final class FooterView: UIView {
                             return
                         }
                         self.inProgress = true
-                        if let (size, insets, theme, count) = self.currentLayout {
-                            let _ = self.update(size: size, insets: insets, theme: theme, count: count)
+                        if let (size, insets, theme, strings, count) = self.currentLayout {
+                            let _ = self.update(size: size, insets: insets, theme: theme, strings: strings, count: count)
                         }
                         self.action()
                     }

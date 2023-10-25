@@ -20,44 +20,48 @@ import AvatarNode
 import TextFormat
 import TelegramStringFormatting
 import UndoUI
+import InvisibleInkDustNode
 
 private final class PremiumGiftCodeSheetContent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let giftCode: PremiumGiftCodeInfo
+    let subject: PremiumGiftCodeScreen.Subject
     let action: () -> Void
     let cancel: (Bool) -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let copyLink: (String) -> Void
     let shareLink: (String) -> Void
+    let displayHiddenTooltip: () -> Void
     
     init(
         context: AccountContext,
-        giftCode: PremiumGiftCodeInfo,
+        subject: PremiumGiftCodeScreen.Subject,
         action: @escaping () -> Void,
         cancel: @escaping  (Bool) -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         copyLink: @escaping (String) -> Void,
-        shareLink: @escaping (String) -> Void
+        shareLink: @escaping (String) -> Void,
+        displayHiddenTooltip: @escaping () -> Void
     ) {
         self.context = context
-        self.giftCode = giftCode
+        self.subject = subject
         self.action = action
         self.cancel = cancel
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.copyLink = copyLink
         self.shareLink = shareLink
+        self.displayHiddenTooltip = displayHiddenTooltip
     }
     
     static func ==(lhs: PremiumGiftCodeSheetContent, rhs: PremiumGiftCodeSheetContent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.giftCode != rhs.giftCode {
+        if lhs.subject != rhs.subject {
             return false
         }
         return true
@@ -72,15 +76,25 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
-        init(context: AccountContext, giftCode: PremiumGiftCodeInfo) {
+        var inProgress = false
+        
+        init(context: AccountContext, subject: PremiumGiftCodeScreen.Subject) {
             self.context = context
             
             super.init()
             
             var peerIds: [EnginePeer.Id] = []
-            peerIds.append(giftCode.fromPeerId)
-            if let toPeerId = giftCode.toPeerId {
-                peerIds.append(toPeerId)
+            switch subject {
+            case let .giftCode(giftCode):
+                peerIds.append(giftCode.fromPeerId)
+                if let toPeerId = giftCode.toPeerId {
+                    peerIds.append(toPeerId)
+                }
+            case let .boost(channelId, boost):
+                peerIds.append(channelId)
+                if let peerId = boost.peer?.id {
+                    peerIds.append(peerId)
+                }
             }
             
             self.disposable = (context.engine.data.get(
@@ -111,7 +125,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
     }
     
     func makeState() -> State {
-        return State(context: self.context, giftCode: self.giftCode)
+        return State(context: self.context, subject: self.subject)
     }
     
     static var body: Body {
@@ -133,7 +147,7 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             let accountContext = context.component.context
             
             let state = context.state
-            let giftCode = component.giftCode
+            let subject = component.subject
             
             let sideInset: CGFloat = 16.0 + environment.safeInsets.left
             let textSideInset: CGFloat = 32.0 + environment.safeInsets.left
@@ -161,17 +175,64 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             let descriptionText: String
             let additionalText: String
             let buttonText: String
-            if let usedDate = giftCode.usedDate {
-                let dateString = stringForMediumDate(timestamp: usedDate, strings: strings, dateTimeFormat: dateTimeFormat)
-                titleText = "Used Gift Link"
-                descriptionText = "This link was used to activate a **Telegram Premium** subscription."
-                additionalText = "This link was used on \(dateString)."
+            
+            let link: String?
+            let date: Int32
+            let fromPeer: EnginePeer?
+            var toPeerId: EnginePeer.Id?
+            let toPeer: EnginePeer?
+            let months: Int32
+            
+            var gloss = false
+            switch subject {
+            case let .giftCode(giftCode):
+                gloss = !giftCode.isUsed
+                if let usedDate = giftCode.usedDate {
+                    let dateString = stringForMediumDate(timestamp: usedDate, strings: strings, dateTimeFormat: dateTimeFormat)
+                    titleText = strings.GiftLink_UsedTitle
+                    descriptionText = strings.GiftLink_UsedDescription
+                    additionalText = strings.GiftLink_UsedFooter(dateString).string
+                    buttonText = strings.Common_OK
+                } else {
+                    titleText = strings.GiftLink_Title
+                    descriptionText = strings.GiftLink_Description
+                    additionalText = strings.GiftLink_Footer
+                    buttonText = strings.GiftLink_UseLink
+                }
+                link = "https://t.me/giftcode/\(giftCode.slug)"
+                date = giftCode.date
+                fromPeer = state.peerMap[giftCode.fromPeerId]
+                toPeerId = giftCode.toPeerId
+                if let toPeerId = giftCode.toPeerId {
+                    toPeer = state.peerMap[toPeerId]
+                } else {
+                    toPeer = nil
+                }
+                months = giftCode.months
+            case let .boost(channelId, boost):
+                titleText = strings.GiftLink_Title
+                if let peer = boost.peer, !boost.flags.contains(.isUnclaimed) {
+                    toPeer = boost.peer
+                    if boost.slug == nil {
+                        descriptionText = strings.GiftLink_PersonalDescription(peer.compactDisplayTitle).string
+                    } else {
+                        descriptionText = strings.GiftLink_PersonalUsedDescription(peer.compactDisplayTitle).string
+                    }
+                } else {
+                    toPeer = nil
+                    descriptionText = strings.GiftLink_UnclaimedDescription
+                }
+                if boost.slug == nil {
+                    additionalText = strings.GiftLink_NotUsedFooter
+                } else {
+                    additionalText = ""
+                }
                 buttonText = strings.Common_OK
-            } else {
-                titleText = "Gift Link"
-                descriptionText = "This link allows you to activate a **Telegram Premium** subscription."
-                additionalText = "You can also [send this link]() to a friend as a gift."
-                buttonText = "Use Link"
+                link = nil
+                date = boost.date
+                toPeerId = boost.peer?.id
+                fromPeer = state.peerMap[channelId]
+                months = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
             }
             
             let title = title.update(
@@ -213,14 +274,17 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                 transition: .immediate
             )
             
-            let link = "https://t.me/giftcode/\(giftCode.slug)"
             let linkButton = linkButton.update(
                 component: Button(
                     content: AnyComponent(
                         LinkButtonContentComponent(theme: environment.theme, text: link)
                     ),
                     action: {
-                        component.copyLink(link)
+                        if let link {
+                            component.copyLink(link)
+                        } else {
+                            component.displayHiddenTooltip()
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 50.0),
@@ -231,11 +295,10 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
             let tableTextColor = theme.list.itemPrimaryTextColor
             let tableLinkColor = theme.list.itemAccentColor
             var tableItems: [TableComponent.Item] = []
-            
-            let fromPeer = state.peerMap[giftCode.fromPeerId]
+                        
             tableItems.append(.init(
                 id: "from",
-                title: "From",
+                title: strings.GiftLink_From,
                 component: AnyComponent(
                     Button(
                         content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: fromPeer)),
@@ -250,17 +313,16 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     )
                 )
             ))
-            if let toPeerId = giftCode.toPeerId {
-                let toPeer = state.peerMap[toPeerId]
+            if let toPeer {
                 tableItems.append(.init(
                     id: "to",
-                    title: "To",
+                    title: strings.GiftLink_To,
                     component: AnyComponent(
                         Button(
                             content: AnyComponent(PeerCellComponent(context: context.component.context, textColor: tableLinkColor, peer: toPeer)),
                             action: {
-                                if let peer = toPeer, peer.id != accountContext.account.peerId {
-                                    component.openPeer(peer)
+                                if toPeer.id != accountContext.account.peerId {
+                                    component.openPeer(toPeer)
                                     Queue.mainQueue().after(1.0, {
                                         component.cancel(false)
                                     })
@@ -269,58 +331,55 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         )
                     )
                 ))
-            } else if giftCode.isGiveaway {
+            } else if toPeerId == nil {
                 tableItems.append(.init(
                     id: "to",
-                    title: "To",
+                    title: strings.GiftLink_To,
                     component: AnyComponent(
-                        MultilineTextComponent(text: .plain(NSAttributedString(string: "No recipient", font: tableFont, textColor: tableTextColor)))
+                        MultilineTextComponent(text: .plain(NSAttributedString(string: strings.GiftLink_NoRecipient, font: tableFont, textColor: tableTextColor)))
                     )
                 ))
             }
-            let giftTitle: String
-            if giftCode.months == 12 {
-                giftTitle = "Telegram Premium for 1 year"
-            } else {
-                giftTitle = "Telegram Premium for \(giftCode.months) months"
-            }
+            let giftTitle = strings.GiftLink_TelegramPremium(months)
             tableItems.append(.init(
                 id: "gift",
-                title: "Gift",
+                title: strings.GiftLink_Gift,
                 component: AnyComponent(
                     MultilineTextComponent(text: .plain(NSAttributedString(string: giftTitle, font: tableFont, textColor: tableTextColor)))
                 )
             ))
             
-            let giftReason: String
-            if giftCode.toPeerId == nil {
-                giftReason = "Incomplete Giveaway"
-            } else {
-                giftReason = giftCode.isGiveaway ? "Giveaway" : "You were selected by the channel"
+            if case let .giftCode(giftCode) = component.subject {
+                let giftReason: String
+                if giftCode.toPeerId == nil {
+                    giftReason = strings.GiftLink_Reason_Unclaimed
+                } else {
+                    giftReason = giftCode.isGiveaway ? strings.GiftLink_Reason_Giveaway : strings.GiftLink_Reason_Gift
+                }
+                tableItems.append(.init(
+                    id: "reason",
+                    title: strings.GiftLink_Reason,
+                    component: AnyComponent(
+                        Button(
+                            content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: giftCode.messageId != nil ? tableLinkColor : tableTextColor)))),
+                            isEnabled: true,
+                            action: {
+                                if let messageId = giftCode.messageId {
+                                    component.openMessage(messageId)
+                                }
+                                Queue.mainQueue().after(1.0) {
+                                    component.cancel(false)
+                                }
+                            }
+                        )
+                    )
+                ))
             }
             tableItems.append(.init(
-                id: "reason",
-                title: "Reason",
-                component: AnyComponent(
-                    Button(
-                        content: AnyComponent(MultilineTextComponent(text: .plain(NSAttributedString(string: giftReason, font: tableFont, textColor: giftCode.messageId != nil ? tableLinkColor : tableTextColor)))),
-                        isEnabled: true,
-                        action: {
-                            if let messageId = giftCode.messageId {
-                                component.openMessage(messageId)
-                            }
-                            Queue.mainQueue().after(1.0) {
-                                component.cancel(false)
-                            }
-                        }
-                    )
-                )
-            ))
-            tableItems.append(.init(
                 id: "date",
-                title: "Date",
+                title: strings.GiftLink_Date,
                 component: AnyComponent(
-                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: giftCode.date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
+                    MultilineTextComponent(text: .plain(NSAttributedString(string: stringForMediumDate(timestamp: date, strings: strings, dateTimeFormat: dateTimeFormat), font: tableFont, textColor: tableTextColor)))
                 )
             ))
             
@@ -348,7 +407,9 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                         }
                     },
                     tapAction: { attributes, _ in
-                        component.shareLink("https://t.me/giftcode/\(giftCode.slug)")
+                        if let link {
+                            component.shareLink(link)
+                        }
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
@@ -363,15 +424,20 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     fontSize: 17.0,
                     height: 50.0,
                     cornerRadius: 10.0,
-                    gloss: !giftCode.isUsed,
+                    gloss: gloss,
                     iconName: nil,
                     animationName: nil,
                     iconPosition: .left,
-                    action: {
-                        if giftCode.isUsed {
-                            component.cancel(true)
-                        } else {
+                    isLoading: state.inProgress,
+                    action: { [weak state] in
+                        if gloss {
                             component.action()
+                            if let state {
+                                state.inProgress = true
+                                state.updated()
+                            }
+                        } else {
+                            component.cancel(true)
                         }
                     }
                 ),
@@ -430,36 +496,39 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
-    let giftCode: PremiumGiftCodeInfo
+    let subject: PremiumGiftCodeScreen.Subject
     let action: () -> Void
     let openPeer: (EnginePeer) -> Void
     let openMessage: (EngineMessage.Id) -> Void
     let copyLink: (String) -> Void
     let shareLink: (String) -> Void
+    let displayHiddenTooltip: () -> Void
     
     init(
         context: AccountContext,
-        giftCode: PremiumGiftCodeInfo,
+        subject: PremiumGiftCodeScreen.Subject,
         action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void,
         openMessage: @escaping (EngineMessage.Id) -> Void,
         copyLink: @escaping (String) -> Void,
-        shareLink: @escaping (String) -> Void
+        shareLink: @escaping (String) -> Void,
+        displayHiddenTooltip: @escaping () -> Void
     ) {
         self.context = context
-        self.giftCode = giftCode
+        self.subject = subject
         self.action = action
         self.openPeer = openPeer
         self.openMessage = openMessage
         self.copyLink = copyLink
         self.shareLink = shareLink
+        self.displayHiddenTooltip = displayHiddenTooltip
     }
     
     static func ==(lhs: PremiumGiftCodeSheetComponent, rhs: PremiumGiftCodeSheetComponent) -> Bool {
         if lhs.context !== rhs.context {
             return false
         }
-        if lhs.giftCode != rhs.giftCode {
+        if lhs.subject != rhs.subject {
             return false
         }
         return true
@@ -477,7 +546,7 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                 component: SheetComponent<EnvironmentType>(
                     content: AnyComponent<EnvironmentType>(PremiumGiftCodeSheetContent(
                         context: context.component.context,
-                        giftCode: context.component.giftCode,
+                        subject: context.component.subject,
                         action: context.component.action,
                         cancel: { animate in
                             if animate {
@@ -493,9 +562,11 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                         openPeer: context.component.openPeer,
                         openMessage: context.component.openMessage,
                         copyLink: context.component.copyLink,
-                        shareLink: context.component.shareLink
+                        shareLink: context.component.shareLink,
+                        displayHiddenTooltip: context.component.displayHiddenTooltip
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: true,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -534,6 +605,11 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
 }
 
 public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
+    public enum Subject: Equatable {
+        case giftCode(PremiumGiftCodeInfo)
+        case boost(EnginePeer.Id, ChannelBoostersContext.State.Boost)
+    }
+    
     private let context: AccountContext
     public var disposed: () -> Void = {}
     
@@ -541,7 +617,7 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
     
     public init(
         context: AccountContext,
-        giftCode: PremiumGiftCodeInfo,
+        subject: PremiumGiftCodeScreen.Subject,
         forceDark: Bool = false,
         action: @escaping () -> Void,
         openPeer: @escaping (EnginePeer) -> Void = { _ in },
@@ -551,9 +627,27 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
         self.context = context
         
         var copyLinkImpl: ((String) -> Void)?
-        super.init(context: context, component: PremiumGiftCodeSheetComponent(context: context, giftCode: giftCode, action: action, openPeer: openPeer, openMessage: openMessage, copyLink: { link in
-            copyLinkImpl?(link)
-        }, shareLink: shareLink), navigationBarAppearance: .none, statusBarStyle: .ignore, theme: forceDark ? .dark : .default)
+        var displayHiddenTooltipImpl: (() -> Void)?
+        super.init(
+            context: context,
+            component: PremiumGiftCodeSheetComponent(
+                context: context,
+                subject: subject,
+                action: action,
+                openPeer: openPeer,
+                openMessage: openMessage,
+                copyLink: { link in
+                    copyLinkImpl?(link)
+                }, 
+                shareLink: shareLink,
+                displayHiddenTooltip: {
+                    displayHiddenTooltipImpl?()
+                }
+            ),
+            navigationBarAppearance: .none,
+            statusBarStyle: .ignore,
+            theme: forceDark ? .dark : .default
+        )
         
         self.navigationPresentation = .flatModal
         
@@ -563,8 +657,20 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
             guard let self else {
                 return
             }
+            self.dismissAllTooltips()
+            
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             self.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, position: .top, action: { _ in return true }), in: .window(.root))
+        }
+        
+        displayHiddenTooltipImpl = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.dismissAllTooltips()
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            self.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.GiftLink_LinkHidden, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, action: { _ in return true }), in: .window(.root))
         }
     }
     
@@ -581,15 +687,40 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
         
         self.view.disablesInteractiveModalDismiss = true
     }
+    
+    public override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        self.dismissAllTooltips()
+    }
+    
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        }
+    }
+    
+    fileprivate func dismissAllTooltips() {
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismiss()
+            }
+            return true
+        })
+    }
 }
 
 private final class LinkButtonContentComponent: CombinedComponent {
     let theme: PresentationTheme
-    let text: String
+    let text: String?
     
     public init(
         theme: PresentationTheme,
-        text: String
+        text: String?
     ) {
         self.theme = theme
         self.text = text
@@ -609,6 +740,7 @@ private final class LinkButtonContentComponent: CombinedComponent {
         let background = Child(RoundedRectangle.self)
         let text = Child(MultilineTextComponent.self)
         let icon = Child(BundleIconComponent.self)
+        let dust = Child(DustComponent.self)
         
         return { context in
             let component = context.component
@@ -621,36 +753,48 @@ private final class LinkButtonContentComponent: CombinedComponent {
                 transition: context.transition
             )
             
-            let text = text.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: component.text.replacingOccurrences(of: "https://", with: ""),
-                        font: Font.regular(17.0),
-                        textColor: component.theme.list.itemPrimaryTextColor,
-                        paragraphAlignment: .natural
-                    )),
-                    horizontalAlignment: .center,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset - sideInset, height: CGFloat.greatestFiniteMagnitude),
-                transition: .immediate
-            )
-            
-            let icon = icon.update(
-                component: BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.theme.list.itemAccentColor),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
             )
-            context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
-            )
-            context.add(icon
-                .position(CGPoint(x: context.availableSize.width - icon.size.width / 2.0 - 14.0, y: context.availableSize.height / 2.0))
-            )
+            
+            if let _ = component.text {
+                let text = text.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: (component.text ?? "").replacingOccurrences(of: "https://", with: ""),
+                            font: Font.regular(17.0),
+                            textColor: component.theme.list.itemPrimaryTextColor,
+                            paragraphAlignment: .natural
+                        )),
+                        horizontalAlignment: .center,
+                        maximumNumberOfLines: 1
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset - sideInset, height: CGFloat.greatestFiniteMagnitude),
+                    transition: .immediate
+                )
+                
+                let icon = icon.update(
+                    component: BundleIconComponent(name: "Chat/Context Menu/Copy", tintColor: component.theme.list.itemAccentColor),
+                    availableSize: context.availableSize,
+                    transition: context.transition
+                )
+                context.add(icon
+                    .position(CGPoint(x: context.availableSize.width - icon.size.width / 2.0 - 14.0, y: context.availableSize.height / 2.0))
+                )
+                context.add(text
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+                )
+            } else {
+                let dust = dust.update(
+                    component: DustComponent(color: component.theme.list.itemSecondaryTextColor),
+                    availableSize: CGSize(width: context.availableSize.width * 0.8, height: context.availableSize.height * 0.54),
+                    transition: context.transition
+                )
+                context.add(dust
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
+                )
+            }
+
             return context.availableSize
         }
     }
@@ -944,6 +1088,56 @@ private final class PeerCellComponent: Component {
             }
             
             return size
+        }
+    }
+
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class DustComponent: Component {
+    let color: UIColor
+
+    init(color: UIColor) {
+        self.color = color
+    }
+
+    static func ==(lhs: DustComponent, rhs: DustComponent) -> Bool {
+        if lhs.color != rhs.color {
+            return false
+        }
+        return true
+    }
+
+    final class View: UIView {
+        private let dustView = InvisibleInkDustView(textNode: nil, enableAnimations: true)
+                
+        private var component: DustComponent?
+        private weak var state: EmptyComponentState?
+        
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            
+            self.addSubview(self.dustView)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: DustComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.component = component
+            self.state = state
+                                    
+            let rects: [CGRect] = [CGRect(origin: .zero, size: availableSize).insetBy(dx: 5.0, dy: 5.0)]
+            self.dustView.update(size: availableSize, color: component.color, textColor: component.color, rects: rects, wordRects: rects)
+            
+            return availableSize
         }
     }
 

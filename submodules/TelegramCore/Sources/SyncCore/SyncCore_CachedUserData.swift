@@ -114,7 +114,7 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     }
 }
 
-public enum PeerNameColor: Int32, CaseIterable {
+public enum PeerNameColor: Equatable {
     case red
     case orange
     case violet
@@ -122,13 +122,49 @@ public enum PeerNameColor: Int32, CaseIterable {
     case cyan
     case blue
     case pink
-    case redDash
-    case orangeDash
-    case violetDash
-    case greenDash
-    case cyanDash
-    case blueDash
-    case pinkDash
+    case other(Int32)
+    
+    public init(rawValue: Int32) {
+        switch rawValue {
+        case 0:
+            self = .red
+        case 1:
+            self = .orange
+        case 2:
+            self = .violet
+        case 3:
+            self = .green
+        case 4:
+            self = .cyan
+        case 5:
+            self = .blue
+        case 6:
+            self = .pink
+        default:
+            self = .other(rawValue)
+        }
+    }
+    
+    public var rawValue: Int32 {
+        switch self {
+        case .red:
+            return 0
+        case .orange:
+            return 1
+        case .violet:
+            return 2
+        case .green:
+            return 3
+        case .cyan:
+            return 4
+        case .blue:
+            return 5
+        case .pink:
+            return 6
+        case let .other(value):
+            return value
+        }
+    }
 }
 
 public struct PeerEmojiStatus: Equatable, Codable {

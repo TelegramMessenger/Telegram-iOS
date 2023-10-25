@@ -277,7 +277,9 @@ final class StoryItemContentComponent: Component {
                         }
                         
                         self.videoPlaybackStatus = status
-                        self.updateVideoPlaybackProgress()
+                        if !self.isSeeking {
+                            self.updateVideoPlaybackProgress()
+                        }
                     })
                 }
             }
@@ -360,7 +362,9 @@ final class StoryItemContentComponent: Component {
                             }
                             
                             if case .file = self.currentMessageMedia {
-                                self.updateVideoPlaybackProgress()
+                                if !self.isSeeking {
+                                    self.updateVideoPlaybackProgress()
+                                }
                             } else {
                                 if !self.markedAsSeen {
                                     self.markedAsSeen = true
@@ -536,6 +540,7 @@ final class StoryItemContentComponent: Component {
             )
         }
         
+        private var isSeeking = false
         func seekTo(_ timestamp: Double, apply: Bool) {
             guard let videoNode = self.videoNode else {
                 return
@@ -543,7 +548,12 @@ final class StoryItemContentComponent: Component {
             if apply {
                 videoNode.seek(timestamp)
             }
+            self.isSeeking = true
             self.updateVideoPlaybackProgress(timestamp)
+        }
+        
+        func seekEnded() {
+            self.isSeeking = false
         }
 
         func update(component: StoryItemContentComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<StoryContentItem.Environment>, transition: Transition) -> CGSize {

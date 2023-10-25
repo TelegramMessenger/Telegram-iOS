@@ -189,7 +189,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
         
-    //TODO:localize
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
@@ -226,24 +225,24 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             textSpacing += 13.0
                             
                             if unclaimed {
-                                title = "Unclaimed Prize"
+                                title = item.presentationData.strings.Notification_PremiumPrize_Unclaimed
                             } else {
-                                title = "Congratulations!"
+                                title = item.presentationData.strings.Notification_PremiumPrize_Title
                             }
                             var peerName = ""
                             if let channelId, let channel = item.message.peers[channelId] {
                                 peerName = EnginePeer(channel).compactDisplayTitle
                             }
                             if unclaimed {
-                                text = "You have an unclaimed prize from a giveaway by **\(peerName)**.\n\nThis prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
+                                text = item.presentationData.strings.Notification_PremiumPrize_UnclaimedText(peerName, item.presentationData.strings.Notification_PremiumPrize_Months(monthsValue)).string
                             } else if fromGiveaway {
-                                text = "You won a prize in a giveaway organized by **\(peerName)**.\n\nYour prize is a **Telegram Premium** subscription for **\(monthsValue)** months."
+                                text = item.presentationData.strings.Notification_PremiumPrize_GiveawayText(peerName, item.presentationData.strings.Notification_PremiumPrize_Months(monthsValue)).string
                             } else {
-                                text = "You've received a gift from **\(peerName)**.\n\nYour gift is a **Telegram Premium** subscription for **\(monthsValue)** months."
+                                text = item.presentationData.strings.Notification_PremiumPrize_GiftText(peerName, item.presentationData.strings.Notification_PremiumPrize_Months(monthsValue)).string
                             }
                             
                             months = monthsValue
-                            buttonTitle = "Open Gift Link"
+                            buttonTitle = item.presentationData.strings.Notification_PremiumPrize_View
                             hasServiceMessage = false
                         default:
                             break

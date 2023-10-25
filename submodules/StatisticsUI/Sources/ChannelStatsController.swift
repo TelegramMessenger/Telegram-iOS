@@ -22,7 +22,7 @@ import ShareController
 import ItemListPeerActionItem
 import PremiumUI
 
-private let maxUsersDisplayedLimit: Int32 = 50
+private let maxUsersDisplayedLimit: Int32 = 5
 
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
@@ -31,20 +31,20 @@ private final class ChannelStatsControllerArguments {
     let contextAction: (MessageId, ASDisplayNode, ContextGesture?) -> Void
     let copyBoostLink: (String) -> Void
     let shareBoostLink: (String) -> Void
-    let openPeer: (EnginePeer) -> Void
+    let openBoost: (ChannelBoostersContext.State.Boost) -> Void
     let expandBoosters: () -> Void
     let openGifts: () -> Void
     let createPrepaidGiveaway: (PrepaidGiveaway) -> Void
     let updateGiftsSelected: (Bool) -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openPeer: @escaping (EnginePeer) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openMessage: @escaping (MessageId) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openMessageStats = openMessage
         self.contextAction = contextAction
         self.copyBoostLink = copyBoostLink
         self.shareBoostLink = shareBoostLink
-        self.openPeer = openPeer
+        self.openBoost = openBoost
         self.expandBoosters = expandBoosters
         self.openGifts = openGifts
         self.createPrepaidGiveaway = createPrepaidGiveaway
@@ -118,7 +118,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case boostersTitle(PresentationTheme, String)
     case boostersPlaceholder(PresentationTheme, String)
     case boosterTabs(PresentationTheme, String, String, Bool)
-    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, EnginePeer?, Int32, ChannelBoostersContext.State.Boost.Flags, Int32, Int32)
+    case booster(Int32, PresentationTheme, PresentationDateTimeFormat, ChannelBoostersContext.State.Boost)
     case boostersExpand(PresentationTheme, String)
     case boostersInfo(PresentationTheme, String)
     
@@ -232,7 +232,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2102
             case .boosterTabs:
                 return 2103
-            case let .booster(index, _, _, _, _, _, _, _):
+            case let .booster(index, _, _, _):
                 return 2104 + index
             case .boostersExpand:
                 return 10000
@@ -439,8 +439,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .booster(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsPeer, lhsCount, lhsFlags, lhsDate, lhsExpires):
-                if case let .booster(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsPeer, rhsCount, rhsFlags, rhsDate, rhsExpires) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsPeer == rhsPeer, lhsCount == rhsCount, lhsFlags == rhsFlags, lhsDate == rhsDate, lhsExpires == rhsExpires {
+            case let .booster(lhsIndex, lhsTheme, lhsDateTimeFormat, lhsBoost):
+                if case let .booster(rhsIndex, rhsTheme, rhsDateTimeFormat, rhsBoost) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsBoost == rhsBoost {
                     return true
                 } else {
                     return false
@@ -548,39 +548,50 @@ private enum StatsEntry: ItemListNodeEntry {
                 return BoostsTabsItem(theme: presentationData.theme, boostsText: boostText, giftsText: giftText, selectedTab: giftSelected ? .gifts : .boosts, sectionId: self.section, selectionUpdated: { tab in
                     arguments.updateGiftsSelected(tab == .gifts)
                 })
-            case let .booster(_, _, _, peer, count, flags, date, expires):
-                let expiresValue = stringForDate(timestamp: expires, strings: presentationData.strings)
+            case let .booster(_, _, _, boost):
+                let count = boost.multiplier
+                let expiresValue = stringForDate(timestamp: boost.expires, strings: presentationData.strings)
                 let expiresString: String
                 
-                let durationMonths = Int32(round(Float(expires - date) / (86400.0 * 30.0)))
-                let durationString = "\(durationMonths)m"
-                
+                let durationMonths = Int32(round(Float(boost.expires - boost.date) / (86400.0 * 30.0)))
+                let durationString = presentationData.strings.Stats_Boosts_ShortMonth("\(durationMonths)").string
+            
                 let title: String
                 let icon: GiftOptionItem.Icon
                 var label: String?
-                if flags.contains(.isGiveaway) {
-                    label = "🏆 Giveaway"
-                } else if flags.contains(.isGift) {
-                    label = "🎁 Gift"
+                if boost.flags.contains(.isGiveaway) {
+                    label = "🏆 \(presentationData.strings.Stats_Boosts_Giveaway)"
+                } else if boost.flags.contains(.isGift) {
+                    label = "🎁 \(presentationData.strings.Stats_Boosts_Gift)"
                 }
-                if let peer {
+            
+                let color: GiftOptionItem.Icon.Color
+                if durationMonths > 11 {
+                    color = .red
+                } else if durationMonths > 5 {
+                    color = .blue
+                } else {
+                    color = .green
+                }
+            
+                if boost.flags.contains(.isUnclaimed) {
+                    title = presentationData.strings.Stats_Boosts_Unclaimed
+                    icon = .image(color: color, name: "Premium/Unclaimed")
+                    expiresString = "\(durationString) • \(expiresValue)"
+                } else if let peer = boost.peer {
                     title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     icon = .peer(peer)
-                    expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
-                } else {
-                    let color: GiftOptionItem.Icon.Color
-                    if durationMonths > 11 {
-                        color = .red
-                    } else if durationMonths > 5 {
-                        color = .blue
+                    if let _ = label {
+                        expiresString = expiresValue
                     } else {
-                        color = .green
+                        expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
                     }
-                    if flags.contains(.isUnclaimed) {
-                        title = "Unclaimed"
+                } else {
+                    if boost.flags.contains(.isUnclaimed) {
+                        title = presentationData.strings.Stats_Boosts_Unclaimed
                         icon = .image(color: color, name: "Premium/Unclaimed")
-                    } else if flags.contains(.isGiveaway) {
-                        title = "To be distributed"
+                    } else if boost.flags.contains(.isGiveaway) {
+                        title = presentationData.strings.Stats_Boosts_ToBeDistributed
                         icon = .image(color: color, name: "Premium/ToBeDistributed")
                     } else {
                         title = "Unknown"
@@ -588,9 +599,9 @@ private enum StatsEntry: ItemListNodeEntry {
                     }
                     expiresString = "\(durationString) • \(expiresValue)"
                 }
-                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, label: label.flatMap { .semitransparent($0) }, sectionId: self.section, action: peer != nil && peer?.id != arguments.context.account.peerId  ? {
-                    arguments.openPeer(peer!)
-                } : nil)
+                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: icon, title: title, titleFont: .bold, titleBadge: count > 1 ? "\(count)" : nil, subtitle: expiresString, label: label.flatMap { .semitransparent($0) }, sectionId: self.section, action: {
+                    arguments.openBoost(boost)
+                })
             case let .boostersExpand(theme, title):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.downArrowImage(theme), title: title, sectionId: self.section, editing: false, action: {
                     arguments.expandBoosters()
@@ -626,7 +637,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 default:
                     color = .blue
                 }
-                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
+                return GiftOptionItem(presentationData: presentationData, context: arguments.context, icon: .image(color: color, name: "Premium/Giveaway"), title: title, titleFont: .bold, titleBadge: "\(prepaidGiveaway.quantity * 4)", subtitle: subtitle, label: nil, sectionId: self.section, action: {
                     arguments.createPrepaidGiveaway(prepaidGiveaway)
                 })
         }
@@ -763,15 +774,14 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostOverviewTitle(presentationData.theme, presentationData.strings.Stats_Boosts_OverviewHeader))
             entries.append(.boostOverview(presentationData.theme, boostData))
             
-//TODO:localize
             if !boostData.prepaidGiveaways.isEmpty {
-                entries.append(.boostPrepaidTitle(presentationData.theme, "PREPAID GIVEAWAYS"))
+                entries.append(.boostPrepaidTitle(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysTitle))
                 var i: Int32 = 0
                 for giveaway in boostData.prepaidGiveaways {
-                    entries.append(.boostPrepaid(i, presentationData.theme, "\(giveaway.quantity) Telegram Premium", "\(giveaway.months)-month subscriptions", giveaway))
+                    entries.append(.boostPrepaid(i, presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawayCount(giveaway.quantity), presentationData.strings.Stats_Boosts_PrepaidGiveawayMonths("\(giveaway.months)").string, giveaway))
                     i += 1
                 }
-                entries.append(.boostPrepaidInfo(presentationData.theme, "Select a giveaway you already paid for to set it up."))
+                entries.append(.boostPrepaidInfo(presentationData.theme, presentationData.strings.Stats_Boosts_PrepaidGiveawaysInfo))
             }
             
             let boostersTitle: String
@@ -802,7 +812,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             }
             
             if boostsCount > 0 && giftsCount > 0 && boostsCount != giftsCount {
-                entries.append(.boosterTabs(presentationData.theme, "\(boostsCount) Boosts", "\(giftsCount) Gifts", state.giftsSelected))
+                entries.append(.boosterTabs(presentationData.theme, presentationData.strings.Stats_Boosts_TabBoosts(boostsCount), presentationData.strings.Stats_Boosts_TabGifts(giftsCount), state.giftsSelected))
             }
             
             let selectedState: ChannelBoostersContext.State?
@@ -824,12 +834,12 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 }
                 
                 for booster in boosters {
-                    entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster.peer, booster.multiplier, booster.flags, booster.date, booster.expires))
+                    entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster))
                     boosterIndex += 1
                 }
                 
                 if !effectiveExpanded {
-                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.PeopleNearby_ShowMorePeople(Int32(selectedState.count) - maxUsersDisplayedLimit)))
+                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.Stats_Boosts_ShowMoreBoosts(Int32(selectedState.count) - maxUsersDisplayedLimit)))
                 }
             }
             
@@ -842,8 +852,8 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             entries.append(.boostLinkInfo(presentationData.theme, presentationData.strings.Stats_Boosts_LinkInfo))
             
             if giveawayAvailable {
-                entries.append(.gifts(presentationData.theme, "Get Boosts via Gifts"))
-                entries.append(.giftsInfo(presentationData.theme, "Get more boosts for your channel by gifting Premium to your subscribers."))
+                entries.append(.gifts(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoosts))
+                entries.append(.giftsInfo(presentationData.theme, presentationData.strings.Stats_Boosts_GetBoostsInfo))
             }
         }
     }
@@ -899,7 +909,6 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     
     var presentImpl: ((ViewController) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
-    var navigateToProfileImpl: ((EnginePeer) -> Void)?
     
     let arguments = ChannelStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
         return statsContext.loadDetailedGraph(graph, x: x)
@@ -954,8 +963,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         }
         presentImpl?(shareController)
     },
-    openPeer: { peer in
-        navigateToProfileImpl?(peer)
+    openBoost: { boost in
+        let controller = PremiumGiftCodeScreen(context: context, subject: .boost(peerId, boost), action: {})
+        pushImpl?(controller)
     },
     expandBoosters: {
         updateState { $0.withUpdatedBoostersExpanded(true) }
@@ -1086,11 +1096,6 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     pushImpl = { [weak controller] c in
         controller?.push(c)
-    }
-    navigateToProfileImpl = { [weak controller] peer in
-        if let navigationController = controller?.navigationController as? NavigationController, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: peer.largeProfileImage != nil, fromChat: false, requestsContext: nil) {
-            navigationController.pushViewController(controller)
-        }
     }
     return controller
 }
