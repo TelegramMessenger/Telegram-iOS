@@ -76,6 +76,8 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
         
         var cachedCloseImage: (UIImage, PresentationTheme)?
         
+        var inProgress = false
+        
         init(context: AccountContext, subject: PremiumGiftCodeScreen.Subject) {
             self.context = context
             
@@ -426,9 +428,14 @@ private final class PremiumGiftCodeSheetContent: CombinedComponent {
                     iconName: nil,
                     animationName: nil,
                     iconPosition: .left,
-                    action: {
+                    isLoading: state.inProgress,
+                    action: { [weak state] in
                         if gloss {
                             component.action()
+                            if let state {
+                                state.inProgress = true
+                                state.updated()
+                            }
                         } else {
                             component.cancel(true)
                         }
@@ -559,6 +566,7 @@ private final class PremiumGiftCodeSheetComponent: CombinedComponent {
                         displayHiddenTooltip: context.component.displayHiddenTooltip
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: true,
                     animateOut: animateOut
                 ),
                 environment: {
@@ -683,6 +691,12 @@ public class PremiumGiftCodeScreen: ViewControllerComponentContainer {
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         self.dismissAllTooltips()
+    }
+    
+    public func dismissAnimated() {
+        if let view = self.node.hostView.findTaggedView(tag: SheetComponent<ViewControllerComponentContainer.Environment>.View.Tag()) as? SheetComponent<ViewControllerComponentContainer.Environment>.View {
+            view.dismissAnimated()
+        }
     }
     
     fileprivate func dismissAllTooltips() {

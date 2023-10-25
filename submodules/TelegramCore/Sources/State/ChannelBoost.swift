@@ -219,7 +219,7 @@ private final class ChannelBoostersContextImpl {
     }
     
     func loadMore() {
-        if self.isLoadingMore {
+        if self.isLoadingMore || !self.canLoadMore {
             return
         }
         self.isLoadingMore = true
@@ -312,11 +312,19 @@ private final class ChannelBoostersContextImpl {
             }
             strongSelf.isLoadingMore = false
             strongSelf.hasLoadedOnce = true
-            strongSelf.canLoadMore = !boosters.isEmpty
+            strongSelf.canLoadMore = !boosters.isEmpty && nextOffset != nil
             if strongSelf.canLoadMore {
-                strongSelf.count = max(updatedCount, Int32(strongSelf.results.count))
+                var resultsCount: Int32 = 0
+                for result in strongSelf.results {
+                    resultsCount += result.multiplier
+                }
+                strongSelf.count = max(updatedCount, resultsCount)
             } else {
-                strongSelf.count = Int32(strongSelf.results.count)
+                var resultsCount: Int32 = 0
+                for result in strongSelf.results {
+                    resultsCount += result.multiplier
+                }
+                strongSelf.count = resultsCount
             }
             strongSelf.updateState()
         }))

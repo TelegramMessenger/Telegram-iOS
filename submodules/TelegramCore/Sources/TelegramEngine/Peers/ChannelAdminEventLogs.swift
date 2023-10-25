@@ -348,12 +348,10 @@ func channelAdminLogEvents(accountPeerId: PeerId, postbox: Postbox, network: Net
                                     action = .toggleForum(isForum: newValue == .boolTrue)
                                 case let .channelAdminLogEventActionToggleAntiSpam(newValue):
                                     action = .toggleAntiSpam(isEnabled: newValue == .boolTrue)
-                                default:
-                                    action = .toggleInvites(false)
-//                                case let .channelAdminLogEventActionChangeColor(prevValue, newValue):
-//                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
-//                                case let .channelAdminLogEventActionChangeBackgroundEmoji(prevValue, newValue):
-//                                    action = .changeBackgroundEmojiId(prev: prevValue, new: newValue)
+                                case let .channelAdminLogEventActionChangeColor(prevValue, newValue):
+                                    action = .changeNameColor(prev: PeerNameColor(rawValue: prevValue), new: PeerNameColor(rawValue: newValue))
+                                case let .channelAdminLogEventActionChangeBackgroundEmoji(prevValue, newValue):
+                                    action = .changeBackgroundEmojiId(prev: prevValue, new: newValue)
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

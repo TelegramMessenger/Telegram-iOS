@@ -10119,6 +10119,7 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.MessageChangedNameColorSet" = "%1$@ set name color to %2$@";
 "Channel.AdminLog.MessageChangedBackgroundEmojiSet" = "%1$@ set background emoji to %2$@";
+"Channel.AdminLog.MessageChangedBackgroundEmojiRemoved" = "%1$@ removed background emoji";
 
 "Appearance.NameColor" = "Your Name Color";
 
@@ -10277,7 +10278,8 @@ Sorry for the inconvenience.";
 "BoostGift.Channels.Save" = "Save Channels";
 
 "Stats.Boosts.PrepaidGiveawaysTitle" = "PREPAID GIVEAWAYS";
-"Stats.Boosts.PrepaidGiveawayCount_any" = "%@ Telegram Premium";
+"Stats.Boosts.PrepaidGiveawayCount_1" = "%@ Telegram Premium";
+"Stats.Boosts.PrepaidGiveawayCount_any" = "%@ Telegram Premiums";
 "Stats.Boosts.PrepaidGiveawayMonths" = "%@-month subscriptions";
 "Stats.Boosts.PrepaidGiveawaysInfo" = "Select a giveaway you already paid for to set it up.";
 "Stats.Boosts.ShortMonth" = "%@m";
@@ -10361,9 +10363,9 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Message.PrizeTitle" = "Giveaway Prizes";
 "Chat.Giveaway.Message.PrizeText" = "%1$@ for %2$@.";
 "Chat.Giveaway.Message.Subscriptions_1" = "**%@** Telegram Premium Subscription";
-"Chat.Giveaway.Message.Subscriptions_many" = "**%@** Telegram Premium Subscriptions";
+"Chat.Giveaway.Message.Subscriptions_any" = "**%@** Telegram Premium Subscriptions";
 "Chat.Giveaway.Message.Months_1" = "**%@** month";
-"Chat.Giveaway.Message.Months_many" = "**%@** months";
+"Chat.Giveaway.Message.Months_any" = "**%@** months";
 "Chat.Giveaway.Message.ParticipantsTitle" = "Participants";
 "Chat.Giveaway.Message.ParticipantsNewMany" = "All users who join the channels below after this date:";
 "Chat.Giveaway.Message.ParticipantsNew" = "All users who join this channel after this date:";
