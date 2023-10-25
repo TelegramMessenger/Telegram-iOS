@@ -33,7 +33,7 @@ public final class ContextMenuContainerNode: ASDisplayNode {
             self.containerNode.view.addSubview(effectView)
             self.effectView = effectView
         } else {
-            self.containerNode.backgroundColor = isDark ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0xF8F8F6)
+            self.containerNode.backgroundColor = isDark ? UIColor(rgb: 0x2f2f2f) : UIColor(rgb: 0xF8F8F6)
         }
         
         self.layer.shadowColor = UIColor.black.cgColor
