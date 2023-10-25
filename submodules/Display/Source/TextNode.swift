@@ -2242,7 +2242,7 @@ open class TextNode: ASDisplayNode {
                         
                         let dashOffset: CGFloat
                         if let _ = tertiaryTintColor {
-                            dashOffset = isMonochrome ? -2.0 : 0.0
+                            dashOffset = isMonochrome ? -7.0 : 5.0
                         } else {
                             dashOffset = isMonochrome ? -4.0 : 5.0
                         }
@@ -2255,6 +2255,10 @@ open class TextNode: ASDisplayNode {
                             context.setFillColor(blockQuote.tintColor.cgColor)
                             context.fill(lineFrame)
                             context.setFillColor(secondaryTintColor.cgColor)
+                        }
+                        
+                        if let _ = tertiaryTintColor {
+                            context.translateBy(x: 0.0, y: dashHeight)
                         }
                         
                         func drawDashes() {
@@ -2279,7 +2283,6 @@ open class TextNode: ASDisplayNode {
                         
                         if let tertiaryTintColor {
                             context.saveGState()
-                            context.translateBy(x: 0.0, y: dashHeight)
                             if isMonochrome {
                                 context.setFillColor(blockQuote.tintColor.withAlphaComponent(0.4).cgColor)
                             } else {
