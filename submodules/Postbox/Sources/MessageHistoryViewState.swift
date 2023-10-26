@@ -1514,6 +1514,43 @@ final class HistoryViewLoadedState {
         return updated
     }
     
+    func updatePeers(postbox: PostboxImpl, updatedPeers: [PeerId: Peer]) -> Bool {
+        var updated = false
+        for space in self.orderedEntriesBySpace.keys {
+            let spaceUpdated = self.orderedEntriesBySpace[space]!.mutableScan({ entry in
+                switch entry {
+                case let .MessageEntry(value, reloadAssociatedMessages, reloadPeers):
+                    let message = value.message
+                    var rebuild = false
+                    var peers = message.peers
+                    var author = message.author
+                    for (peerId, _) in message.peers {
+                        if let updatedPeer = updatedPeers[peerId] {
+                            peers[peerId] = updatedPeer
+                            rebuild = true
+                        }
+                    }
+                    if let authorValue = author, let updatedAuthor = updatedPeers[authorValue.id] {
+                        author = updatedAuthor
+                        rebuild = true
+                    }
+                    
+                    if rebuild {
+                        let updatedMessage = message.withUpdatedPeers(peers).withUpdatedAuthor(author)
+                        return .MessageEntry(MessageHistoryMessageEntry(message: updatedMessage, location: value.location, monthLocation: value.monthLocation, attributes: value.attributes), reloadAssociatedMessages: reloadAssociatedMessages, reloadPeers: reloadPeers)
+                    }
+                case .IntermediateMessageEntry:
+                    break
+                }
+                return nil
+            })
+            if spaceUpdated {
+                updated = true
+            }
+        }
+        return updated
+    }
+    
     func add(entry: MutableMessageHistoryEntry) -> Bool {
         if let ignoreMessagesInTimestampRange = self.ignoreMessagesInTimestampRange {
             if ignoreMessagesInTimestampRange.contains(entry.index.timestamp) {
