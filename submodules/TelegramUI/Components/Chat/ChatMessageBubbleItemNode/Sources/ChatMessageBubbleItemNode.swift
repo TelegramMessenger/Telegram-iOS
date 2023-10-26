@@ -4034,12 +4034,12 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadId = item.message.threadId, makeThreadIdMessageId(peerId: item.message.id.peerId, threadId: threadId) == attribute.messageId, let quotedReply = item.message.attributes.first(where: { $0 is QuotedReplyMessageAttribute }) as? QuotedReplyMessageAttribute {
-                                    return .action(InternalBubbleTapAction.Action {
+                                    return .action(InternalBubbleTapAction.Action({
                                         item.controllerInteraction.attemptedNavigationToPrivateQuote(quotedReply.peerId.flatMap { item.message.peers[$0] })
-                                    })
+                                    }, contextMenuOnLongPress: true))
                                 }
                                 
-                                return .action(InternalBubbleTapAction.Action { [weak self] in
+                                return .action(InternalBubbleTapAction.Action({ [weak self] in
                                     guard let self else {
                                         return
                                     }
@@ -4048,15 +4048,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                         progress = replyInfoNode.makeProgress()
                                     }
                                     item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text, progress: progress))
-                                })
+                                }, contextMenuOnLongPress: true))
                             } else if let attribute = attribute as? ReplyStoryAttribute {
-                                return .action(InternalBubbleTapAction.Action {
+                                return .action(InternalBubbleTapAction.Action({
                                     item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
-                                })
+                                }, contextMenuOnLongPress: true))
                             } else if let attribute = attribute as? QuotedReplyMessageAttribute {
-                                return .action(InternalBubbleTapAction.Action {
+                                return .action(InternalBubbleTapAction.Action({
                                     item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
-                                })
+                                }, contextMenuOnLongPress: true))
                             }
                         }
                     }
@@ -4265,23 +4265,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         return .action(InternalBubbleTapAction.Action {})
                     }
                     if let replyInfoNode = self.replyInfoNode, self.item?.controllerInteraction.tapMessage == nil, replyInfoNode.frame.contains(location) {
-                        if let item = self.item {
-                            for attribute in item.message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    return .action(InternalBubbleTapAction.Action {
-                                        item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
-                                    })
-                                } else if let attribute = attribute as? ReplyStoryAttribute {
-                                    return .action(InternalBubbleTapAction.Action {
-                                        item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
-                                    })
-                                } else if let attribute = attribute as? QuotedReplyMessageAttribute {
-                                    return .action(InternalBubbleTapAction.Action {
-                                        item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
-                                    })
-                                }
-                            }
-                        }
+                        return .openContextMenu(InternalBubbleTapAction.OpenContextMenu(tapMessage: item.content.firstMessage, selectAll: false, subFrame: self.backgroundNode.frame, disableDefaultPressAnimation: true))
                     }
                     
                     var tapMessage: Message? = item.content.firstMessage

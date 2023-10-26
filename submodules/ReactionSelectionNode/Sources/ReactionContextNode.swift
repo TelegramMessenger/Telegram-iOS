@@ -1677,7 +1677,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: emojiContentLayout,
-            externalBackground: EmojiPagerContentComponent.ExternalBackground(
+            externalBackground: self.backgroundNode.vibrancyEffectView == nil ? nil : EmojiPagerContentComponent.ExternalBackground(
                 effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
             ),
             externalExpansionView: self.view,
