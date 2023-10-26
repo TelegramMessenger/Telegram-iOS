@@ -176,6 +176,8 @@ public func PremiumBoostScreen(
                         }
                     } else if let boost = occupiedBoosts.first, let occupiedPeer = boost.peer {
                         let replaceController = replaceBoostConfirmationController(context: context, fromPeers: [occupiedPeer], toPeer: peer, commit: {
+                            currentMyBoostCount += 1
+                            myBoostCount += 1
                             let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [boost.slot])
                             |> deliverOnMainQueue).startStandalone(completed: { [weak controller] in
                                 let _ = (updatedState.get()
