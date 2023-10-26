@@ -769,8 +769,13 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                         )] as? TelegramMediaFile
                     )
                 }
+                var isTransparent: Bool = false
+                if case .standalone = arguments.type {
+                    isTransparent = true
+                }
                 node.backgroundView.update(
                     size: backgroundFrame.size,
+                    isTransparent: isTransparent,
                     primaryColor: mainColor,
                     secondaryColor: secondaryColor,
                     thirdColor: tertiaryColor,

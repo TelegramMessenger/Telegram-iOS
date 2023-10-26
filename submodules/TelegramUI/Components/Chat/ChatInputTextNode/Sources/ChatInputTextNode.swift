@@ -806,6 +806,7 @@ private final class QuoteBackgroundView: UIView {
         
         self.backgroundView.update(
             size: size,
+            isTransparent: false,
             primaryColor: theme.foreground,
             secondaryColor: theme.lineStyle != .solid ? .clear : nil,
             thirdColor: theme.lineStyle == .tripleDashed ? .clear : nil,
