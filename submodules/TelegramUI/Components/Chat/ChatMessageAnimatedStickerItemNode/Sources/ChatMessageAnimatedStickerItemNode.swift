@@ -305,7 +305,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if let item = self.item {
             let _ = item
             replyRecognizer.allowBothDirections = false//!item.context.sharedContext.immediateExperimentalUISettings.unidirectionalSwipeToReply
-            self.view.disablesInteractiveTransitionGestureRecognizer = true
+            self.view.disablesInteractiveTransitionGestureRecognizer = false
         }
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
