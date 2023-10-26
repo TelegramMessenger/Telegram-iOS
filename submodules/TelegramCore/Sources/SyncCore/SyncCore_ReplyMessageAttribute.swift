@@ -51,6 +51,7 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
     public let peerId: PeerId?
     public let authorName: String?
     public let quote: EngineMessageReplyQuote?
+    public let isQuote: Bool
     
     public var associatedMessageIds: [MessageId] {
         return []
@@ -64,16 +65,18 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
         }
     }
     
-    public init(peerId: PeerId?, authorName: String?, quote: EngineMessageReplyQuote?) {
+    public init(peerId: PeerId?, authorName: String?, quote: EngineMessageReplyQuote?, isQuote: Bool) {
         self.peerId = peerId
         self.authorName = authorName
         self.quote = quote
+        self.isQuote = isQuote
     }
     
     required public init(decoder: PostboxDecoder) {
         self.peerId = decoder.decodeOptionalInt64ForKey("p").flatMap(PeerId.init)
         self.authorName = decoder.decodeOptionalStringForKey("a")
         self.quote = decoder.decodeCodable(EngineMessageReplyQuote.self, forKey: "qu")
+        self.isQuote = decoder.decodeBoolForKey("iq", orElse: true)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -94,14 +97,16 @@ public class QuotedReplyMessageAttribute: MessageAttribute {
         } else {
             encoder.encodeNil(forKey: "qu")
         }
+        
+        encoder.encodeBool(self.isQuote, forKey: "iq")
     }
 }
 
 extension QuotedReplyMessageAttribute {
-    convenience init(apiHeader: Api.MessageFwdHeader, quote: EngineMessageReplyQuote?) {
+    convenience init(apiHeader: Api.MessageFwdHeader, quote: EngineMessageReplyQuote?, isQuote: Bool) {
         switch apiHeader {
         case let .messageFwdHeader(_, fromId, fromName, _, _, _, _, _, _):
-            self.init(peerId: fromId?.peerId, authorName: fromName, quote: quote)
+            self.init(peerId: fromId?.peerId, authorName: fromName, quote: quote, isQuote: isQuote)
         }
     }
 }

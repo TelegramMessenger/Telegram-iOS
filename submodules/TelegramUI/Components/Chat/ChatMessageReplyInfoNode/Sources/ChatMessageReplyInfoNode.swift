@@ -547,7 +547,15 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var adjustedConstrainedTextSize = contrainedTextSize
             var textCutout: TextNodeCutout?
             var textCutoutWidth: CGFloat = 0.0
-            if arguments.quote != nil || arguments.replyForward?.quote != nil {
+            
+            var isQuote = false
+            if arguments.quote != nil {
+                isQuote = true
+            } else if let replyForward = arguments.replyForward, replyForward.quote != nil, replyForward.isQuote {
+                isQuote = true
+            }
+            
+            if isQuote {
                 additionalTitleWidth += 10.0
                 maxTitleNumberOfLines = 2
                 maxTextNumberOfLines = 5
@@ -770,7 +778,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     animation: animation
                 )
                 
-                if arguments.quote != nil || arguments.replyForward?.quote != nil {
+                if isQuote {
                     let quoteIconView: UIImageView
                     if let current = node.quoteIconView {
                         quoteIconView = current

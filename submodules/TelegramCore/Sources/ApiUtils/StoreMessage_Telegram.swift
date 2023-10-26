@@ -590,6 +590,8 @@ extension StoreMessage {
                         let isForumTopic = (innerFlags & (1 << 3)) != 0
                         
                         var quote: EngineMessageReplyQuote?
+                        let isQuote = (innerFlags & (1 << 9)) != 0
+                        
                         if quoteText != nil || replyMedia != nil {
                             quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
@@ -626,7 +628,7 @@ extension StoreMessage {
                             attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
                         }
                         if let replyHeader = replyHeader {
-                            attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote))
+                            attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
                         }
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
@@ -867,8 +869,9 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
                         var quote: EngineMessageReplyQuote?
+                        let isQuote = (innerFlags & (1 << 9)) != 0
                         if quoteText != nil || replyMedia != nil {
                             quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
@@ -894,7 +897,7 @@ extension StoreMessage {
                             }
                             attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
                         } else if let replyHeader = replyHeader {
-                            attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote))
+                            attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
                         }
                     case let .messageReplyStoryHeader(userId, storyId):
                         attributes.append(ReplyStoryAttribute(storyId: StoryId(peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), id: storyId)))
