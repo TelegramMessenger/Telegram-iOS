@@ -250,10 +250,12 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             var contentMediaAutomaticDownload: InteractiveMediaNodeAutodownloadMode = .none
             
             var mediaAndFlags = mediaAndFlags
-            if let mediaAndFlagsValue = mediaAndFlags, let _ = mediaAndFlagsValue.0 as? TelegramMediaStory {
-                var flags = mediaAndFlagsValue.1
-                flags.remove(.preferMediaInline)
-                mediaAndFlags = (mediaAndFlagsValue.0, flags)
+            if let mediaAndFlagsValue = mediaAndFlags {
+                if mediaAndFlagsValue.0 is TelegramMediaStory || mediaAndFlagsValue.0 is WallpaperPreviewMedia {
+                    var flags = mediaAndFlagsValue.1
+                    flags.remove(.preferMediaInline)
+                    mediaAndFlags = (mediaAndFlagsValue.0, flags)
+                }
             }
             
             var contentMediaAspectFilled = false
