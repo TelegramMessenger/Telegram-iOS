@@ -698,6 +698,11 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         
         return result
     }
+    
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result
+    }
 }
 
 private final class CustomTextSelectionRect: UITextSelectionRect {
