@@ -200,17 +200,17 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
             case .Pre:
-                string.addAttribute(NSAttributedString.Key.font, value: fixedFont, range: range)
+                addFontAttributes(range, .monospace)
                 if nsString == nil {
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
             case .Code:
-                string.addAttribute(NSAttributedString.Key.font, value: fixedFont, range: range)
+                addFontAttributes(range, .monospace)
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
+                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Code), value: nsString!.substring(with: range), range: range)
             case .BlockQuote:
                 addFontAttributes(range, .blockQuote)
                 
