@@ -10145,6 +10145,11 @@ Sorry for the inconvenience.";
 "NameColor.BackgroundEmoji.Title" = "ADD ICONS TO REPLIES";
 "NameColor.BackgroundEmoji.Remove" = "REMOVE ICON";
 
+"NameColor.UnsavedChanges.Title" = "Unsaved Changes";
+"NameColor.UnsavedChanges.Text" = "You have changed your color or icon settings. Apply changes?";
+"NameColor.UnsavedChanges.Discard" = "Discard";
+"NameColor.UnsavedChanges.Apply" = "Apply";
+
 "Chat.ErrorQuoteOutdatedTitle" = "Quote Outdated";
 "Chat.ErrorQuoteOutdatedText" = "**%@** updated the message you are quoting. Edit your quote to make it up-to-date.";
 "Chat.ErrorQuoteOutdatedActionEdit" = "Edit";
