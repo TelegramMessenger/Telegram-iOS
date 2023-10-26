@@ -271,16 +271,28 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         if let attributedText = textInputView.attributedText, !attributedText.string.isEmpty {
             self.animateInputField = true
             if let textInputView = self.textInputView as? ChatInputTextView {
-                self.fromMessageTextNode.textView.theme = textInputView.theme
-                
-                let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
-                self.toMessageTextNode.textView.theme = ChatInputTextView.Theme(
-                    quote: ChatInputTextView.Theme.Quote(
-                        background: mainColor.withMultipliedAlpha(0.1),
-                        foreground: mainColor,
-                        lineStyle: textInputView.theme?.quote.lineStyle ?? .solid
+                if let textTheme = textInputView.theme {
+                    self.fromMessageTextNode.textView.theme = textTheme
+                    
+                    let mainColor = presentationData.theme.chat.message.outgoing.accentControlColor
+                    let mappedLineStyle: ChatInputTextView.Theme.Quote.LineStyle
+                    switch textTheme.quote.lineStyle {
+                    case .solid:
+                        mappedLineStyle = .solid(color: mainColor)
+                    case .doubleDashed:
+                        mappedLineStyle = .doubleDashed(mainColor: mainColor, secondaryColor: .clear)
+                    case .tripleDashed:
+                        mappedLineStyle = .tripleDashed(mainColor: mainColor, secondaryColor: .clear, tertiaryColor: .clear)
+                    }
+                    
+                    self.toMessageTextNode.textView.theme = ChatInputTextView.Theme(
+                        quote: ChatInputTextView.Theme.Quote(
+                            background: mainColor.withMultipliedAlpha(0.1),
+                            foreground: mainColor,
+                            lineStyle: mappedLineStyle
+                        )
                     )
-                )
+                }
             }
             self.fromMessageTextNode.attributedText = attributedText
             

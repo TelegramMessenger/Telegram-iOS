@@ -837,14 +837,14 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
             return
         }
         
-        if let (updatedUrlPreviewUrl, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewUrl {
-            if let webpage = webpageCache[updatedUrlPreviewUrl] {
+        if let (updatedUrlPreviewState, signal) = urlPreviewStateForInputText(NSAttributedString(string: url), context: selfController.context, currentQuery: nil), let updatedUrlPreviewState {
+            if let webpage = webpageCache[updatedUrlPreviewState.detectedUrl] {
                 progress?.set(.single(false))
                 
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
                     if state.interfaceState.editMessage != nil {
                         if var urlPreview = state.editingUrlPreview {
-                            urlPreview.url = updatedUrlPreviewUrl
+                            urlPreview.url = updatedUrlPreviewState.detectedUrl
                             urlPreview.webPage = webpage
                             
                             return state.updatedEditingUrlPreview(urlPreview)
@@ -853,7 +853,7 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                         }
                     } else {
                         if var urlPreview = state.urlPreview {
-                            urlPreview.url = updatedUrlPreviewUrl
+                            urlPreview.url = updatedUrlPreviewState.detectedUrl
                             urlPreview.webPage = webpage
                             
                             return state.updatedUrlPreview(urlPreview)
@@ -876,9 +876,9 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                     selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, { state in
                         if state.interfaceState.editMessage != nil {
                             if let webpage = result(nil), var urlPreview = state.editingUrlPreview {
-                                urlPreview.url = updatedUrlPreviewUrl
+                                urlPreview.url = updatedUrlPreviewState.detectedUrl
                                 urlPreview.webPage = webpage
-                                webpageCache[updatedUrlPreviewUrl] = webpage
+                                webpageCache[updatedUrlPreviewState.detectedUrl] = webpage
                                 
                                 return state.updatedEditingUrlPreview(urlPreview)
                             } else {
@@ -886,9 +886,9 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
                             }
                         } else {
                             if let webpage = result(nil), var urlPreview = state.urlPreview {
-                                urlPreview.url = updatedUrlPreviewUrl
+                                urlPreview.url = updatedUrlPreviewState.detectedUrl
                                 urlPreview.webPage = webpage
-                                webpageCache[updatedUrlPreviewUrl] = webpage
+                                webpageCache[updatedUrlPreviewState.detectedUrl] = webpage
                                 
                                 return state.updatedUrlPreview(urlPreview)
                             } else {

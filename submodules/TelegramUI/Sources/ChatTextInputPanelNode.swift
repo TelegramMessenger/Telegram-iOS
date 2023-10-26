@@ -470,6 +470,46 @@ final class ChatTextViewForOverlayContent: UIView, ChatInputPanelViewForOverlayC
     }
 }
 
+private func makeTextInputTheme(context: AccountContext, interfaceState: ChatPresentationInterfaceState) -> ChatInputTextView.Theme {
+    let lineStyle: ChatInputTextView.Theme.Quote.LineStyle
+    let authorNameColor: UIColor
+    
+    if let peer = interfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, let nameColor = peer.nameColor {
+        let colors = context.peerNameColors.get(nameColor)
+        authorNameColor = colors.main
+        
+        if let secondary = colors.secondary, let tertiary = colors.tertiary {
+            lineStyle = .tripleDashed(mainColor: colors.main, secondaryColor: secondary, tertiaryColor: tertiary)
+        } else if let secondary = colors.secondary {
+            lineStyle = .doubleDashed(mainColor: colors.main, secondaryColor: secondary)
+        } else {
+            lineStyle = .solid(color: colors.main)
+        }
+    } else if let accountPeerColor = interfaceState.accountPeerColor {
+        authorNameColor = interfaceState.theme.list.itemAccentColor
+        
+        switch accountPeerColor.style {
+        case .solid:
+            lineStyle = .solid(color: authorNameColor)
+        case .doubleDashed:
+            lineStyle = .doubleDashed(mainColor: authorNameColor, secondaryColor: .clear)
+        case .tripleDashed:
+            lineStyle = .tripleDashed(mainColor: authorNameColor, secondaryColor: .clear, tertiaryColor: .clear)
+        }
+    } else {
+        lineStyle = .solid(color: interfaceState.theme.list.itemAccentColor)
+        authorNameColor = interfaceState.theme.list.itemAccentColor
+    }
+        
+    return ChatInputTextView.Theme(
+        quote: ChatInputTextView.Theme.Quote(
+            background: authorNameColor.withMultipliedAlpha(interfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
+            foreground: authorNameColor,
+            lineStyle: lineStyle
+        )
+    )
+}
+
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, ChatInputTextNodeDelegate {
     let clippingNode: ASDisplayNode
     var textPlaceholderNode: ImmediateTextNode
@@ -1044,61 +1084,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         var tintColor: UIColor = .blue
         var baseFontSize: CGFloat = 17.0
         var keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
-        if let presentationInterfaceState = self.presentationInterfaceState {
-            var lineStyle: ChatInputTextView.Theme.Quote.LineStyle = .solid
-            let authorNameColor: UIColor
-            let dashSecondaryColor: UIColor?
-            let dashTertiaryColor: UIColor?
-            
-            if let _ = self.context, let peer = presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, case .broadcast = peer.info, let nameColor = peer.nameColor {
-                let _ = nameColor
-                
-                lineStyle = .solid
-                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
-                dashSecondaryColor = nil
-                dashTertiaryColor = nil
-                
-                /*let colors = context.peerNameColors.get(nameColor)
-                
-                authorNameColor = colors.main
-                dashSecondaryColor = colors.secondary
-                dashTertiaryColor = colors.tertiary
-                
-                if dashSecondaryColor != nil {
-                    lineStyle = .doubleDashed
-                } else {
-                    lineStyle = .solid
-                }*/
-            } else if let accountPeerColor = presentationInterfaceState.accountPeerColor {
-                switch accountPeerColor.style {
-                case .solid:
-                    lineStyle = .solid
-                case .doubleDashed:
-                    lineStyle = .doubleDashed
-                case .tripleDashed:
-                    lineStyle = .tripleDashed
-                }
-                
-                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
-                dashSecondaryColor = .clear
-                dashTertiaryColor = nil
-            } else {
-                lineStyle = .solid
-                authorNameColor = presentationInterfaceState.theme.list.itemAccentColor
-                dashSecondaryColor = nil
-                dashTertiaryColor = nil
-            }
-            
-            let _ = dashSecondaryColor
-            let _ = dashTertiaryColor
-                
-            textInputNode.textView.theme = ChatInputTextView.Theme(
-                quote: ChatInputTextView.Theme.Quote(
-                    background: authorNameColor.withMultipliedAlpha(presentationInterfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
-                    foreground: authorNameColor,
-                    lineStyle: lineStyle
-                )
-            )
+        if let context = self.context, let presentationInterfaceState = self.presentationInterfaceState {
+            textInputNode.textView.theme = makeTextInputTheme(context: context, interfaceState: presentationInterfaceState)
             
             textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
             tintColor = presentationInterfaceState.theme.list.itemAccentColor
@@ -1674,25 +1661,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     textInputNode.tintColorDidChange()
                 }
                 
-                if let textInputNode = self.textInputNode {
-                    var lineStyle: ChatInputTextView.Theme.Quote.LineStyle = .solid
-                    if let accountPeerColor = interfaceState.accountPeerColor {
-                        switch accountPeerColor.style {
-                        case .solid:
-                            lineStyle = .solid
-                        case .doubleDashed:
-                            lineStyle = .doubleDashed
-                        case .tripleDashed:
-                            lineStyle = .tripleDashed
-                        }
-                    }
-                    textInputNode.textView.theme = ChatInputTextView.Theme(
-                        quote: ChatInputTextView.Theme.Quote(
-                            background: interfaceState.theme.list.itemAccentColor.withMultipliedAlpha(interfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
-                            foreground: interfaceState.theme.list.itemAccentColor,
-                            lineStyle: lineStyle
-                        )
-                    )
+                if let textInputNode = self.textInputNode, let context = self.context {
+                    textInputNode.textView.theme = makeTextInputTheme(context: context, interfaceState: interfaceState)
                 }
                 
                 let keyboardAppearance = interfaceState.theme.rootController.keyboardColor.keyboardAppearance

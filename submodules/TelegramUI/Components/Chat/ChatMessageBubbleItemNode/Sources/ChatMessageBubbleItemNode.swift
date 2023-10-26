@@ -4166,7 +4166,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         })
                     case let .textMention(name):
                         return .action(InternalBubbleTapAction.Action {
-                            self.item?.controllerInteraction.openPeerMention(name)
+                            self.item?.controllerInteraction.openPeerMention(name, tapAction.activate?())
                         })
                     case let .botCommand(command):
                         if let item = self.item {
