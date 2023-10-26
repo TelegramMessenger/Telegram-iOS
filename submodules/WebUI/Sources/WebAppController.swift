@@ -413,6 +413,32 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 })
             })
                 
+            self.setupWebView()
+        }
+        
+        deinit {
+            self.placeholderDisposable?.dispose()
+            self.iconDisposable?.dispose()
+            self.keepAliveDisposable?.dispose()
+            self.paymentDisposable?.dispose()
+            
+            self.webView?.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
+        }
+        
+        override func didLoad() {
+            super.didLoad()
+            
+            guard let webView = self.webView else {
+                return
+            }
+            self.view.addSubview(webView)
+            webView.scrollView.insertSubview(self.topOverscrollNode.view, at: 0)
+        }
+        
+        func setupWebView() {
+            guard let controller = self.controller else {
+                return
+            }
             if let url = controller.url, controller.source != .menu {
                 self.queryId = controller.queryId
                 if let parsedUrl = URL(string: url) {
@@ -433,7 +459,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
             } else {
                 if controller.source.isSimple {
-                    let _ = (context.engine.messages.requestSimpleWebView(botId: controller.botId, url: nil, source: .settings, themeParams: generateWebAppThemeParams(presentationData.theme))
+                    let _ = (self.context.engine.messages.requestSimpleWebView(botId: controller.botId, url: nil, source: .settings, themeParams: generateWebAppThemeParams(presentationData.theme))
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
                             return
@@ -443,7 +469,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                         }
                     })
                 } else {
-                    let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
+                    let _ = (self.context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.source == .menu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
                     |> deliverOnMainQueue).start(next: { [weak self] result in
                         guard let strongSelf = self else {
                             return
@@ -467,25 +493,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             }
-        }
-        
-        deinit {
-            self.placeholderDisposable?.dispose()
-            self.iconDisposable?.dispose()
-            self.keepAliveDisposable?.dispose()
-            self.paymentDisposable?.dispose()
-            
-            self.webView?.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
-        }
-        
-        override func didLoad() {
-            super.didLoad()
-            
-            guard let webView = self.webView else {
-                return
-            }
-            self.view.addSubview(webView)
-            webView.scrollView.insertSubview(self.topOverscrollNode.view, at: 0)
         }
         
         @objc fileprivate func mainButtonPressed() {
@@ -1622,6 +1629,10 @@ public final class WebAppController: ViewController, AttachmentContainable {
     
     public func prepareForReuse() {
         self.updateTabBarAlpha(1.0, .immediate)
+    }
+    
+    public func refresh() {
+        self.controllerNode.setupWebView()
     }
     
     public func requestDismiss(completion: @escaping () -> Void) {

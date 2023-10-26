@@ -10411,3 +10411,5 @@ Sorry for the inconvenience.";
 "ChannelBoost.EnableColors" = "Enable Colors";
 "ChannelBoost.EnableColorsText" = "Your channel needs %1$@ to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
 "ChannelBoost.BoostAgain" = "Boost Again";
+
+"Settings.New" = "NEW";

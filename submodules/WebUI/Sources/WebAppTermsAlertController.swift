@@ -353,7 +353,8 @@ public func webAppTermsAlertController(
     context: AccountContext,
     updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
     bot: AttachMenuBot,
-    completion: @escaping (Bool) -> Void
+    completion: @escaping (Bool) -> Void,
+    dismissed: @escaping () -> Void = {}
 ) -> AlertController {
     let theme = defaultDarkColorPresentationTheme
     let presentationData: PresentationData
@@ -369,6 +370,7 @@ public func webAppTermsAlertController(
         completion(true)
         dismissImpl?(true)
     }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+        dismissed()
         dismissImpl?(true)
     })]
     
@@ -382,6 +384,11 @@ public func webAppTermsAlertController(
         })
     }
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode)
+    controller.dismissed = { outside in
+        if outside {
+            dismissed()
+        }
+    }
     dismissImpl = { [weak controller] animated in
         if animated {
             controller?.dismissAnimated()

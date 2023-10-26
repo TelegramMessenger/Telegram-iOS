@@ -471,7 +471,7 @@ func _internal_acceptAttachMenuBotDisclaimer(postbox: Postbox, botId: PeerId) ->
     } |> ignoreValues
 }
 
-public struct AttachMenuBot {
+public struct AttachMenuBot: Equatable {
     public let peer: EnginePeer
     public let shortName: String
     public let icons: [AttachMenuBots.Bot.IconName: TelegramMediaFile]
