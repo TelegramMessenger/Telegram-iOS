@@ -14,7 +14,7 @@ private struct BoostState {
     let nextLevelBoosts: Int32?
     let boosts: Int32
     
-    func displayData(peer: EnginePeer, isCurrent: Bool, myBoostCount: Int32, currentMyBoostCount: Int32, replacedBoosts: Int32? = nil) -> (subject: PremiumLimitScreen.Subject, count: Int32) {
+    func displayData(peer: EnginePeer, isCurrent: Bool, canBoostAgain: Bool, myBoostCount: Int32, currentMyBoostCount: Int32, replacedBoosts: Int32? = nil) -> (subject: PremiumLimitScreen.Subject, count: Int32) {
         var currentLevel = self.level
         var nextLevelBoosts = self.nextLevelBoosts
         var currentLevelBoosts = self.currentLevelBoosts
@@ -30,7 +30,7 @@ private struct BoostState {
         }
         
         return (
-            .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount),
+            .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: currentLevel, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: nil, myBoostCount: myBoostCount, canBoostAgain: canBoostAgain),
             boosts
         )
     }
@@ -86,7 +86,10 @@ public func PremiumBoostScreen(
         var updateImpl: (() -> Void)?
         var dismissImpl: (() -> Void)?
         
-        let (initialSubject, initialCount) = initialState.displayData(peer: peer, isCurrent: isCurrent, myBoostCount: myBoostCount, currentMyBoostCount: 0, replacedBoosts: replacedBoosts?.0)
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
+        let canBoostAgain = premiumConfiguration.boostsPerGiftCount > 0
+        
+        let (initialSubject, initialCount) = initialState.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: 0, replacedBoosts: replacedBoosts?.0)
         let controller = PremiumLimitScreen(context: context, subject: initialSubject, count: initialCount, forceDark: forceDark, action: {
             let dismiss = false
             updateImpl?()
@@ -99,7 +102,7 @@ public func PremiumBoostScreen(
                 
         if let (replacedBoosts, inChannels) = replacedBoosts {
             currentMyBoostCount += 1
-            let (subject, count) = initialState.displayData(peer: peer, isCurrent: isCurrent, myBoostCount: myBoostCount, currentMyBoostCount: 1, replacedBoosts: nil)
+            let (subject, count) = initialState.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: 1, replacedBoosts: nil)
             controller.updateSubject(subject, count: count)
             
             Queue.mainQueue().after(0.3) {
@@ -138,7 +141,7 @@ public func PremiumBoostScreen(
                         guard let state else {
                             return
                         }
-                        let (subject, count) = state.displayData(peer: peer, isCurrent: isCurrent, myBoostCount: myBoostCount, currentMyBoostCount: currentMyBoostCount)
+                        let (subject, count) = state.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: currentMyBoostCount)
                         controller?.updateSubject(subject, count: count)
                     })
                     
@@ -172,18 +175,21 @@ public func PremiumBoostScreen(
                     }
                 } else {
                     if isPremium {
-                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with({ $0 }))
-                        let controller = textAlertController(
-                            sharedContext: context.sharedContext,
-                            updatedPresentationData: nil,
-                            title: presentationData.strings.ChannelBoost_MoreBoosts_Title,
-                            text: presentationData.strings.ChannelBoost_MoreBoosts_Text(peer.compactDisplayTitle, "\(premiumConfiguration.boostsPerGiftCount)").string,
-                            actions: [
-                                TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
-                            ],
-                            parseMarkdown: true
-                        )
-                        presentController(controller)
+                        if !canBoostAgain {
+                            dismissImpl?()
+                        } else {
+                            let controller = textAlertController(
+                                sharedContext: context.sharedContext,
+                                updatedPresentationData: nil,
+                                title: presentationData.strings.ChannelBoost_MoreBoosts_Title,
+                                text: presentationData.strings.ChannelBoost_MoreBoosts_Text(peer.compactDisplayTitle, "\(premiumConfiguration.boostsPerGiftCount)").string,
+                                actions: [
+                                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                                ],
+                                parseMarkdown: true
+                            )
+                            presentController(controller)
+                        }
                     } else {
                         let controller = textAlertController(
                             sharedContext: context.sharedContext,

@@ -1000,7 +1000,7 @@ public enum PremiumLimitSubject {
     case expiringStories
     case storiesWeekly
     case storiesMonthly
-    case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32)
+    case storiesChannelBoost(peer: EnginePeer, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)
 }
 
 public protocol ComposeController: ViewController {
