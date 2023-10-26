@@ -1882,11 +1882,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         
         if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .broadcast = peer.info, item.content.firstMessage.adAttribute == nil {
             let peer = (peer as Peer)
-            let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0) }
+            let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
             authorNameColor = nameColors?.main
         } else if let effectiveAuthor = effectiveAuthor {
             let nameColor = effectiveAuthor.nameColor ?? .blue
-            let nameColors = item.context.peerNameColors.get(nameColor)
+            let nameColors = item.context.peerNameColors.get(nameColor, dark: item.presentationData.theme.theme.overallDarkAppearance)
             let color: UIColor
             if incoming {
                 color = nameColors.main
@@ -1901,13 +1901,13 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 authorNameString = EnginePeer(peer).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
                 let peer = (peer as Peer)
-                let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0) }
+                let nameColors = peer.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
                 authorNameColor = nameColors?.main
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
                 let nameColor = effectiveAuthor.nameColor ?? .blue
-                let nameColors = item.context.peerNameColors.get(nameColor)
+                let nameColors = item.context.peerNameColors.get(nameColor, dark: item.presentationData.theme.theme.overallDarkAppearance)
                 let color: UIColor
                 if incoming {
                     color = nameColors.main

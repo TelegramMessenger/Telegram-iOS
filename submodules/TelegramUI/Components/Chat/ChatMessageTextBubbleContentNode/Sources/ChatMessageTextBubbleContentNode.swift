@@ -385,7 +385,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     var secondaryColor: UIColor? = nil
                     var tertiaryColor: UIColor? = nil
                     
-                    let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0) }
+                    let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
                     if !incoming {
                         mainColor = messageTheme.accentTextColor
                         if let _ = nameColors?.secondary {
