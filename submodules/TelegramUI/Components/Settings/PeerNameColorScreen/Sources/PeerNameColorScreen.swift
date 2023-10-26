@@ -49,7 +49,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
     case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor)
     case colorDescription(String)
-    case backgroundEmojiHeader(String)
+    case backgroundEmojiHeader(String, String?)
     case backgroundEmoji(EmojiPagerContentComponent, UIColor)
     
     var section: ItemListSectionId {
@@ -121,8 +121,8 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .backgroundEmojiHeader(text):
-            if case .backgroundEmojiHeader(text) = rhs {
+        case let .backgroundEmojiHeader(text, action):
+            if case .backgroundEmojiHeader(text, action) = rhs {
                 return true
             } else {
                 return false
@@ -170,8 +170,10 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             )
         case let .colorDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .backgroundEmojiHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .backgroundEmojiHeader(text, action):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action != nil ? {
+                arguments.updateBackgroundEmojiId(0)
+            } : nil, sectionId: self.section)
         case let .backgroundEmoji(emojiContent, backgroundIconColor):
             return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, sectionId: self.section)
         }
@@ -204,7 +206,7 @@ private func peerNameColorScreenEntries(
             nameColor = .blue
         }
         
-        let colors = nameColors.get(nameColor)
+        let colors = nameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
         
         let backgroundEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
@@ -254,7 +256,7 @@ private func peerNameColorScreenEntries(
         entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
         
         if let emojiContent {
-            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
+            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title, backgroundEmojiId != nil ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
             entries.append(.backgroundEmoji(emojiContent, colors.main))
         }
     }
@@ -312,12 +314,12 @@ public func PeerNameColorScreen(
         peerId = channelId
     }
     
-    
     let emojiContent = combineLatest(
+        context.sharedContext.presentationData,
         statePromise.get(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
     )
-    |> mapToSignal { state, peer -> Signal<EmojiPagerContentComponent, NoError> in
+    |> mapToSignal { presentationData, state, peer -> Signal<EmojiPagerContentComponent, NoError> in
         var selectedEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
             selectedEmojiId = updatedBackgroundEmojiId
@@ -330,7 +332,7 @@ public func PeerNameColorScreen(
         } else {
             nameColor = (peer?.nameColor ?? .blue)
         }
-        let color = context.peerNameColors.get(nameColor)
+        let color = context.peerNameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
         
         let selectedItems: [EngineMedia.Id]
         if let selectedEmojiId, selectedEmojiId != 0 {

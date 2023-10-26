@@ -10143,6 +10143,7 @@ Sorry for the inconvenience.";
 "NameColor.TooltipPremium.Account" = "Subscribe to [Telegram Premium]() to choose a custom color for your name.";
 
 "NameColor.BackgroundEmoji.Title" = "ADD ICONS TO REPLIES";
+"NameColor.BackgroundEmoji.Remove" = "REMOVE ICON";
 
 "Chat.ErrorQuoteOutdatedTitle" = "Quote Outdated";
 "Chat.ErrorQuoteOutdatedText" = "**%@** updated the message you are quoting. Edit your quote to make it up-to-date.";

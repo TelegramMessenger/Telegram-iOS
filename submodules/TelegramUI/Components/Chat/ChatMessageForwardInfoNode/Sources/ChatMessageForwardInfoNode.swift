@@ -165,7 +165,7 @@ public class ChatMessageForwardInfoNode: ASDisplayNode {
                     } else {
                         if incoming {
                             if let nameColor = peer?.nameColor {
-                                titleColor = context.peerNameColors.get(nameColor).main
+                                titleColor = context.peerNameColors.get(nameColor, dark: presentationData.theme.theme.overallDarkAppearance).main
                             } else {
                                 titleColor = presentationData.theme.theme.chat.message.incoming.accentTextColor
                             }

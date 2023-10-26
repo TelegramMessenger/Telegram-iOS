@@ -138,20 +138,27 @@ private func generateFillImage(nameColor: PeerNameColors.Colors) -> UIImage? {
             context.setFillColor(secondColor.cgColor)
             context.fill(circleBounds)
             
-            context.move(to: .zero)
-            context.addLine(to: CGPoint(x: size.width, y: 0.0))
-            context.addLine(to: CGPoint(x: 0.0, y: size.height))
-            context.closePath()
-            context.setFillColor(nameColor.main.cgColor)
-            context.fillPath()
-            
             if let thirdColor = nameColor.tertiary {
+                context.move(to: CGPoint(x: size.width, y: 0.0))
+                context.addLine(to: CGPoint(x: size.width, y: size.height))
+                context.addLine(to: CGPoint(x: 0.0, y: size.height))
+                context.closePath()
+                context.setFillColor(nameColor.main.cgColor)
+                context.fillPath()
+                
                 context.setFillColor(thirdColor.cgColor)
                 context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
                 context.rotate(by: .pi / 4.0)
                 
                 let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: -9.0, y: -9.0), size: CGSize(width: 18.0, height: 18.0)), cornerRadius: 4.0)
                 context.addPath(path.cgPath)
+                context.fillPath()
+            } else {
+                context.move(to: .zero)
+                context.addLine(to: CGPoint(x: size.width, y: 0.0))
+                context.addLine(to: CGPoint(x: 0.0, y: size.height))
+                context.closePath()
+                context.setFillColor(nameColor.main.cgColor)
                 context.fillPath()
             }
         } else {

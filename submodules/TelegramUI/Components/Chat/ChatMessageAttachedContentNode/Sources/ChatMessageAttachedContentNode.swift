@@ -177,7 +177,7 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             let messageTheme = incoming ? presentationData.theme.theme.chat.message.incoming : presentationData.theme.theme.chat.message.outgoing
             let author = message.author
-            let nameColors = author?.nameColor.flatMap { context.peerNameColors.get($0) }
+            let nameColors = author?.nameColor.flatMap { context.peerNameColors.get($0, dark: presentationData.theme.theme.overallDarkAppearance) }
             
             let mainColor: UIColor
             var secondaryColor: UIColor?

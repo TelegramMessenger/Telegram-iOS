@@ -201,7 +201,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let author = arguments.message?.effectiveAuthor
             
-            let colors = author?.nameColor.flatMap { arguments.context.peerNameColors.get($0) }
+            let colors = author?.nameColor.flatMap { arguments.context.peerNameColors.get($0, dark: arguments.presentationData.theme.theme.overallDarkAppearance) }
             authorNameColor = colors?.main
             dashSecondaryColor = colors?.secondary
             dashTertiaryColor = colors?.tertiary
