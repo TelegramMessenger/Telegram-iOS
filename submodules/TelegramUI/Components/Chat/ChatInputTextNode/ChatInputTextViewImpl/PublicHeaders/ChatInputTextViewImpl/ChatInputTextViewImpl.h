@@ -19,6 +19,7 @@
 @property (nonatomic, copy) bool (^ _Nullable shouldRespondToAction)(SEL _Nullable);
 @property (nonatomic, copy) bool (^ _Nullable shouldReturn)();
 @property (nonatomic, copy) void (^ _Nullable backspaceWhileEmpty)();
+@property (nonatomic, copy) void (^ _Nullable dropAutocorrectioniOS16)();
 
 - (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(NSTextContainer * _Nullable)textContainer disableTiling:(bool)disableTiling;
 

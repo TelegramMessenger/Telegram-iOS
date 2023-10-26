@@ -331,7 +331,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             if !ignoreHeaders {
                 var replyMessage: Message?
                 var replyForward: QuotedReplyMessageAttribute?
-                var replyQuote: EngineMessageReplyQuote?
+                var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
                 var replyStory: StoryId?
                 
                 for attribute in item.message.attributes {
@@ -361,7 +361,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         } else {
                             replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                         }
-                        replyQuote = replyAttribute.quote
+                        replyQuote = replyAttribute.quote.flatMap { ($0, replyAttribute.isQuote) }
                     } else if let attribute = attribute as? QuotedReplyMessageAttribute {
                         replyForward = attribute
                     } else if let attribute = attribute as? ReplyStoryAttribute {
@@ -1291,7 +1291,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
+                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil))
                                             return
                                         } else if let attribute = attribute as? ReplyStoryAttribute {
                                             item.controllerInteraction.navigateToStory(item.message, attribute.storyId)

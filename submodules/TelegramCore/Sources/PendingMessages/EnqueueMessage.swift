@@ -563,6 +563,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     if let replyToMessageId = replyToMessageId {
                         var threadMessageId: MessageId?
                         var quote = replyToMessageId.quote
+                        let isQuote = quote != nil
                         if let replyMessage = transaction.getMessage(replyToMessageId.messageId) {
                             threadMessageId = replyMessage.effectiveReplyThreadMessageId
                             if quote == nil, replyToMessageId.messageId.peerId != peerId {
@@ -579,7 +580,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                                 quote = EngineMessageReplyQuote(text: replyMessage.text, entities: messageTextEntitiesInRange(entities: replyMessage.textEntitiesAttribute?.entities ?? [], range: NSRange(location: 0, length: nsText.length), onlyQuoteable: true), media: replyMedia)
                             }
                         }
-                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote))
+                        attributes.append(ReplyMessageAttribute(messageId: replyToMessageId.messageId, threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))
                     }
                     if let replyToStoryId = replyToStoryId {
                         attributes.append(ReplyStoryAttribute(storyId: replyToStoryId))

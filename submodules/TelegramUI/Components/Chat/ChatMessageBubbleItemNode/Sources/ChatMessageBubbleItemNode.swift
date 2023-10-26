@@ -1615,7 +1615,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var inlineBotNameString: String?
         var replyMessage: Message?
         var replyForward: QuotedReplyMessageAttribute?
-        var replyQuote: EngineMessageReplyQuote?
+        var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
         var replyStory: StoryId?
         var replyMarkup: ReplyMarkupMessageAttribute?
         var authorNameColor: UIColor?
@@ -1632,7 +1632,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
-                replyQuote = attribute.quote
+                replyQuote = attribute.quote.flatMap { ($0, attribute.isQuote) }
             } else if let attribute = attribute as? QuotedReplyMessageAttribute {
                 replyForward = attribute
             } else if let attribute = attribute as? ReplyStoryAttribute {
@@ -4047,7 +4047,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     if let replyInfoNode = self.replyInfoNode {
                                         progress = replyInfoNode.makeProgress()
                                     }
-                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text, progress: progress))
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil, progress: progress))
                                 }, contextMenuOnLongPress: true))
                             } else if let attribute = attribute as? ReplyStoryAttribute {
                                 return .action(InternalBubbleTapAction.Action({

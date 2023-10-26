@@ -2849,8 +2849,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         var hasTracking = false
         var hasTrackingView = false
-        if textInputNode.selectedRange.length == 0 && textInputNode.selectedRange.location > 0 {
-            let selectedSubstring = textInputNode.textView.attributedText.attributedSubstring(from: NSRange(location: 0, length: textInputNode.selectedRange.location))
+        if textInputNode.selectedRange.length == 0, textInputNode.selectedRange.location > 0, let attributedText = textInputNode.textView.attributedText {
+            let selectedSubstring = attributedText.attributedSubstring(from: NSRange(location: 0, length: textInputNode.selectedRange.location))
             if let lastCharacter = selectedSubstring.string.last, String(lastCharacter).isSingleEmoji {
                 let queryLength = (String(lastCharacter) as NSString).length
                 if selectedSubstring.attribute(ChatTextInputAttributes.customEmoji, at: selectedSubstring.length - queryLength, effectiveRange: nil) == nil {

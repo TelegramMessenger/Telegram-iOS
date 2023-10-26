@@ -32,7 +32,6 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
     }
     
     private var selectionChangedForEditedText: Bool = false
-    private var isPreservingSelection: Bool = false
     
     public var textView: ChatInputTextView {
         return self.view as! ChatInputTextView
@@ -81,20 +80,7 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         get {
             return self.textView.attributedText
         } set(value) {
-            if self.textView.attributedText != value {
-                let selectedRange = self.textView.selectedRange;
-                let preserveSelectedRange = selectedRange.location != self.textView.textStorage.length
-                
-                self.textView.attributedText = value ?? NSAttributedString()
-                
-                if preserveSelectedRange {
-                    self.isPreservingSelection = true
-                    self.textView.selectedRange = selectedRange
-                    self.isPreservingSelection = false
-                }
-                
-                self.textView.updateTextContainerInset()
-            }
+            self.textView.attributedText = value
         }
     }
     
@@ -164,7 +150,7 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
     }
 
     @objc public func textViewDidChangeSelection(_ textView: UITextView) {
-        if self.isPreservingSelection {
+        if self.textView.isPreservingSelection {
             return
         }
         
@@ -186,6 +172,9 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
     @objc public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         guard let delegate = self.delegate else {
             return true
+        }
+        if self.textView.isPreservingText {
+            return false
         }
         return delegate.chatInputTextNode(shouldChangeTextIn: range, replacementText: text)
     }
@@ -306,6 +295,30 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         }
     }
     
+    override public var attributedText: NSAttributedString? {
+        get {
+            return super.attributedText
+        } set(value) {
+            if self.attributedText != value {
+                let selectedRange = self.selectedRange
+                let preserveSelectedRange = selectedRange.location != self.textStorage.length
+                
+                super.attributedText = value ?? NSAttributedString()
+                
+                if preserveSelectedRange {
+                    self.isPreservingSelection = true
+                    self.selectedRange = selectedRange
+                    self.isPreservingSelection = false
+                }
+                
+                self.updateTextContainerInset()
+            }
+        }
+    }
+    
+    fileprivate var isPreservingSelection: Bool = false
+    fileprivate var isPreservingText: Bool = false
+    
     public weak var customDelegate: ChatInputTextNodeDelegate?
     
     public var theme: Theme? {
@@ -390,6 +403,27 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         
         self.customTextStorage.delegate = self
         self.measurementTextStorage.delegate = self
+        
+        self.dropAutocorrectioniOS16 = { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            self.isPreservingSelection = true
+            self.isPreservingText = true
+            
+            let rangeCopy = self.selectedRange
+            var fakeRange = rangeCopy
+            if fakeRange.location != 0 {
+                fakeRange.location -= 1
+            }
+            self.unmarkText()
+            self.selectedRange = fakeRange
+            self.selectedRange = rangeCopy
+            
+            self.isPreservingSelection = false
+            self.isPreservingText = false
+        }
         
         self.shouldCopy = { [weak self] in
             guard let self else {
@@ -542,7 +576,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         
         if self.measurementTextStorage != self.attributedText || self.measurementTextContainer.size != measureSize || self.measurementTextContainer.rightInset != rightInset {
             self.measurementTextContainer.rightInset = rightInset
-            self.measurementTextStorage.setAttributedString(self.attributedText)
+            self.measurementTextStorage.setAttributedString(self.attributedText ?? NSAttributedString())
             self.measurementTextContainer.size = measureSize
             self.measurementLayoutManager.invalidateLayout(forCharacterRange: NSRange(location: 0, length: self.measurementTextStorage.length), actualCharacterRange: nil)
             self.measurementLayoutManager.ensureLayout(for: self.measurementTextContainer)
@@ -772,6 +806,7 @@ private final class QuoteBackgroundView: UIView {
         
         self.backgroundView.update(
             size: size,
+            isTransparent: false,
             primaryColor: theme.foreground,
             secondaryColor: theme.lineStyle != .solid ? .clear : nil,
             thirdColor: theme.lineStyle == .tripleDashed ? .clear : nil,
