@@ -147,31 +147,49 @@ public func PremiumBoostScreen(
                     
                     availableBoosts.removeFirst()
                 } else if !occupiedBoosts.isEmpty, let myBoostStatus {
-                    var dismissReplaceImpl: (() -> Void)?
-                    let replaceController = ReplaceBoostScreen(context: context, peerId: peerId, myBoostStatus: myBoostStatus, replaceBoosts: { slots in
-                        var channelIds = Set<EnginePeer.Id>()
-                        for boost in myBoostStatus.boosts {
-                            if slots.contains(boost.slot) {
-                                if let peer = boost.peer {
-                                    channelIds.insert(peer.id)
+                    if canBoostAgain {
+                        var dismissReplaceImpl: (() -> Void)?
+                        let replaceController = ReplaceBoostScreen(context: context, peerId: peerId, myBoostStatus: myBoostStatus, replaceBoosts: { slots in
+                            var channelIds = Set<EnginePeer.Id>()
+                            for boost in myBoostStatus.boosts {
+                                if slots.contains(boost.slot) {
+                                    if let peer = boost.peer {
+                                        channelIds.insert(peer.id)
+                                    }
                                 }
                             }
-                        }
-                        
-                        let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: slots).startStandalone(completed: {
-                            let _ = combineLatest(queue: Queue.mainQueue(),
-                                context.engine.peers.getChannelBoostStatus(peerId: peerId),
-                                context.engine.peers.getMyBoostStatus()
-                            ).startStandalone(next: { boostStatus, myBoostStatus in
-                                dismissReplaceImpl?()
-                                PremiumBoostScreen(context: context, contentContext: contentContext, peerId: peerId, isCurrent: isCurrent, status: boostStatus, myBoostStatus: myBoostStatus, replacedBoosts: (Int32(slots.count), Int32(channelIds.count)), forceDark: forceDark, openPeer: openPeer, presentController: presentController, pushController: pushController, dismissed: dismissed)
+                            
+                            let _ = context.engine.peers.applyChannelBoost(peerId: peerId, slots: slots).startStandalone(completed: {
+                                let _ = combineLatest(queue: Queue.mainQueue(),
+                                                      context.engine.peers.getChannelBoostStatus(peerId: peerId),
+                                                      context.engine.peers.getMyBoostStatus()
+                                ).startStandalone(next: { boostStatus, myBoostStatus in
+                                    dismissReplaceImpl?()
+                                    PremiumBoostScreen(context: context, contentContext: contentContext, peerId: peerId, isCurrent: isCurrent, status: boostStatus, myBoostStatus: myBoostStatus, replacedBoosts: (Int32(slots.count), Int32(channelIds.count)), forceDark: forceDark, openPeer: openPeer, presentController: presentController, pushController: pushController, dismissed: dismissed)
+                                })
                             })
                         })
-                    })
-                    dismissImpl?()
-                    pushController(replaceController)
-                    dismissReplaceImpl = { [weak replaceController] in
-                        replaceController?.dismiss(animated: true)
+                        dismissImpl?()
+                        pushController(replaceController)
+                        dismissReplaceImpl = { [weak replaceController] in
+                            replaceController?.dismiss(animated: true)
+                        }
+                    } else if let boost = occupiedBoosts.first, let occupiedPeer = boost.peer {
+                        let replaceController = replaceBoostConfirmationController(context: context, fromPeers: [occupiedPeer], toPeer: peer, commit: {
+                            let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [boost.slot])
+                            |> deliverOnMainQueue).startStandalone(completed: { [weak controller] in
+                                let _ = (updatedState.get()
+                                |> take(1)
+                                |> deliverOnMainQueue).startStandalone(next: { [weak controller] state in
+                                    guard let state else {
+                                        return
+                                    }
+                                    let (subject, count) = state.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: currentMyBoostCount)
+                                    controller?.updateSubject(subject, count: count)
+                                })
+                            })
+                        })
+                        presentController(replaceController)
                     }
                 } else {
                     if isPremium {
