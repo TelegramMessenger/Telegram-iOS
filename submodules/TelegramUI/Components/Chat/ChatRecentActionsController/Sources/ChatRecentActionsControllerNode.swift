@@ -264,7 +264,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             if peer.id != context.account.peerId {
                 self?.openPeer(peer: peer)
             }
-        }, openPeerMention: { [weak self] name in
+        }, openPeerMention: { [weak self] name, _ in
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
             let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer

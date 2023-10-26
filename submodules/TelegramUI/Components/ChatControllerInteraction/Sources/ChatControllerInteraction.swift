@@ -112,7 +112,7 @@ public final class ChatControllerInteraction {
     
     public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
-    public let openPeerMention: (String) -> Void
+    public let openPeerMention: (String, Promise<Bool>?) -> Void
     public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     public let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
     public let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
@@ -230,7 +230,7 @@ public final class ChatControllerInteraction {
     public init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
         openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void,
-        openPeerMention: @escaping (String) -> Void,
+        openPeerMention: @escaping (String, Promise<Bool>?) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,
         updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,

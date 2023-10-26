@@ -466,7 +466,7 @@ public final class ChatBotInfoItemNode: ListViewItemNode {
                                 })
                             }
                         case let .textMention(name):
-                            self.item?.controllerInteraction.openPeerMention(name)
+                            self.item?.controllerInteraction.openPeerMention(name, tapAction.activate?())
                         case let .botCommand(command):
                             self.item?.controllerInteraction.sendBotCommand(nil, command)
                         case let .hashtag(peerName, hashtag):

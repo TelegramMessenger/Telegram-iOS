@@ -2413,7 +2413,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return strongSelf.openMessage(id: message.id)
         }, openPeer: { [weak self] peer, navigation, _, _ in
             self?.openPeer(peerId: peer.id, navigation: navigation)
-        }, openPeerMention: { _ in
+        }, openPeerMention: { _, _ in
         }, openMessageContextMenu: { [weak self] message, _, node, frame, anyRecognizer, _ in
             guard let strongSelf = self, let node = node as? ContextExtractedContentContainingNode else {
                 return

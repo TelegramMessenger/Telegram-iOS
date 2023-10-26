@@ -326,8 +326,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     var contextQueryStates: [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)] = [:]
     var searchQuerySuggestionState: (ChatPresentationInputQuery?, Disposable)?
-    var urlPreviewQueryState: (String?, Disposable)?
-    var editingUrlPreviewQueryState: (String?, Disposable)?
+    var urlPreviewQueryState: (UrlPreviewState?, Disposable)?
+    var editingUrlPreviewQueryState: (UrlPreviewState?, Disposable)?
     var replyMessageState: (EngineMessage.Id, Disposable)?
     var searchState: ChatSearchState?
     
@@ -1113,7 +1113,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }, openPeerMention: { [weak self] mention in
                     if let strongSelf = self {
-                        strongSelf.controllerInteraction?.openPeerMention(mention)
+                        strongSelf.controllerInteraction?.openPeerMention(mention, nil)
                     }
                 }, openPeer: { [weak self] peer in
                     if let strongSelf = self {
@@ -1205,8 +1205,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 fromReactionMessageId = fromMessage?.id
             }
             self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: fromReactionMessageId, expandAvatar: expandAvatar)
-        }, openPeerMention: { [weak self] name in
-            self?.openPeerMention(name)
+        }, openPeerMention: { [weak self] name, progress in
+            self?.openPeerMention(name, progress: progress)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
@@ -14549,7 +14549,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .textMention(mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeerMention(mention)
+                    strongSelf.controllerInteraction?.openPeerMention(mention, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
                 }
@@ -14642,7 +14642,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .textMention(mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeerMention(mention)
+                    strongSelf.controllerInteraction?.openPeerMention(mention, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
                 }
@@ -14756,7 +14756,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             case let .textMention(mention):
                 switch action {
                 case .tap:
-                    strongSelf.controllerInteraction?.openPeerMention(mention)
+                    strongSelf.controllerInteraction?.openPeerMention(mention, nil)
                 case .longTap:
                     strongSelf.controllerInteraction?.longTap(.mention(mention), nil)
                 }
@@ -17075,7 +17075,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil) {
+    func openPeerMention(_ name: String, navigation: ChatControllerInteractionNavigateToPeer = .default, sourceMessageId: MessageId? = nil, progress: Promise<Bool>? = nil) {
         let _ = self.presentVoiceMessageDiscardAlert(action: {
             let disposable: MetaDisposable
             if let resolvePeerByNameDisposable = self.resolvePeerByNameDisposable {
@@ -17085,23 +17085,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.resolvePeerByNameDisposable = disposable
             }
             var resolveSignal = self.context.engine.peers.resolvePeerByName(name: name, ageLimit: 10)
-            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
-                guard case let .result(result) = result else {
-                    return .complete()
-                }
-                return .single(result)
-            }
             
             var cancelImpl: (() -> Void)?
             let presentationData = self.presentationData
             let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
-                    cancelImpl?()
-                }))
-                self?.present(controller, in: .window(.root))
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
+                if progress != nil {
+                    return ActionDisposable {
+                    }
+                } else {
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
+                        cancelImpl?()
+                    }))
+                    self?.present(controller, in: .window(.root))
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
                     }
                 }
             }
@@ -17119,22 +17118,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.resolvePeerByNameDisposable?.set(nil)
             }
             disposable.set((resolveSignal
-            |> take(1)
-            |> mapToSignal { peer -> Signal<Peer?, NoError> in
-                return .single(peer?._asPeer())
-            }
-            |> deliverOnMainQueue).start(next: { [weak self] peer in
-                if let strongSelf = self {
-                    if let peer = peer {
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                switch result {
+                case .progress:
+                    progress?.set(.single(true))
+                case let .result(peer):
+                    progress?.set(.single(false))
+                    
+                    if let peer {
                         var navigation = navigation
                         if case .default = navigation {
-                            if let peer = peer as? TelegramUser, peer.botInfo != nil {
+                            if case let .user(user) = peer, user.botInfo != nil {
                                 navigation = .chat(textInputState: nil, subject: nil, peekData: nil)
                             }
                         }
-                        strongSelf.openResolved(result: .peer(peer, navigation), sourceMessageId: sourceMessageId)
+                        self.openResolved(result: .peer(peer._asPeer(), navigation), sourceMessageId: sourceMessageId)
                     } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: nil, text: strongSelf.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: nil, text: self.presentationData.strings.Resolve_ErrorNotFound, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
                 }
             }))

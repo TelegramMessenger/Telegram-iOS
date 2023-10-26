@@ -220,7 +220,7 @@ func updateChatPresentationInterfaceStateImpl(
         }
     }
     
-    if let (updatedUrlPreviewUrl, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0) {
+    if let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0) {
         selfController.urlPreviewQueryState?.1.dispose()
         var inScope = true
         var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
@@ -260,7 +260,7 @@ func updateChatPresentationInterfaceStateImpl(
             }
         }
         
-        selfController.urlPreviewQueryState = (updatedUrlPreviewUrl, (filteredPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] (result) in
+        selfController.urlPreviewQueryState = (updatedUrlPreviewState, (filteredPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] (result) in
             guard let selfController else {
                 return
             }
@@ -269,9 +269,9 @@ func updateChatPresentationInterfaceStateImpl(
                 inScopeResult = result
             } else {
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = result($0.urlPreview?.webPage) {
+                    if let updatedUrlPreviewState, let webpage = result($0.urlPreview?.webPage) {
                         let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                            url: updatedUrlPreviewUrl,
+                            url: updatedUrlPreviewState.detectedUrl,
                             webPage: webpage,
                             positionBelowText: $0.urlPreview?.positionBelowText ?? true,
                             largeMedia: $0.urlPreview?.largeMedia
@@ -285,9 +285,9 @@ func updateChatPresentationInterfaceStateImpl(
         }))
         inScope = false
         if let inScopeResult = inScopeResult {
-            if let updatedUrlPreviewUrl = updatedUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.webPage) {
+            if let updatedUrlPreviewState, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.webPage) {
                 let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                    url: updatedUrlPreviewUrl,
+                    url: updatedUrlPreviewState.detectedUrl,
                     webPage: webpage,
                     positionBelowText: updatedChatPresentationInterfaceState.urlPreview?.positionBelowText ?? true,
                     largeMedia: updatedChatPresentationInterfaceState.urlPreview?.largeMedia
@@ -301,11 +301,11 @@ func updateChatPresentationInterfaceStateImpl(
     
     let isEditingMedia: Bool = updatedChatPresentationInterfaceState.editMessageState?.content != .plaintext
     let editingUrlPreviewText: NSAttributedString? = isEditingMedia ? nil : updatedChatPresentationInterfaceState.interfaceState.editMessage?.inputState.inputText
-    if let (updatedEditingUrlPreviewUrl, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: selfController.context, currentQuery: selfController.editingUrlPreviewQueryState?.0) {
+    if let (updatedEditingUrlPreviewState, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: selfController.context, currentQuery: selfController.editingUrlPreviewQueryState?.0) {
         selfController.editingUrlPreviewQueryState?.1.dispose()
         var inScope = true
         var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
-        selfController.editingUrlPreviewQueryState = (updatedEditingUrlPreviewUrl, (updatedEditingUrlPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] result in
+        selfController.editingUrlPreviewQueryState = (updatedEditingUrlPreviewState, (updatedEditingUrlPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] result in
             guard let selfController else {
                 return
             }
@@ -314,9 +314,9 @@ func updateChatPresentationInterfaceStateImpl(
                 inScopeResult = result
             } else {
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = result($0.editingUrlPreview?.webPage) {
+                    if let updatedEditingUrlPreviewState, let webpage = result($0.editingUrlPreview?.webPage) {
                         let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                            url: updatedEditingUrlPreviewUrl,
+                            url: updatedEditingUrlPreviewState.detectedUrl,
                             webPage: webpage,
                             positionBelowText: $0.editingUrlPreview?.positionBelowText ?? true,
                             largeMedia: $0.editingUrlPreview?.largeMedia
@@ -330,9 +330,9 @@ func updateChatPresentationInterfaceStateImpl(
         }))
         inScope = false
         if let inScopeResult = inScopeResult {
-            if let updatedEditingUrlPreviewUrl = updatedEditingUrlPreviewUrl, let webpage = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.webPage) {
+            if let updatedEditingUrlPreviewState, let webpage = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.webPage) {
                 let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                    url: updatedEditingUrlPreviewUrl,
+                    url: updatedEditingUrlPreviewState.detectedUrl,
                     webPage: webpage,
                     positionBelowText: updatedChatPresentationInterfaceState.editingUrlPreview?.positionBelowText ?? true,
                     largeMedia: updatedChatPresentationInterfaceState.editingUrlPreview?.largeMedia

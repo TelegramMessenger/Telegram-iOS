@@ -248,10 +248,10 @@ private final class ChatInputTextContainer: NSTextContainer {
 public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDelegate, NSTextStorageDelegate {
     public final class Theme: Equatable {
         public final class Quote: Equatable {
-            public enum LineStyle {
-                case solid
-                case doubleDashed
-                case tripleDashed
+            public enum LineStyle: Equatable {
+                case solid(color: UIColor)
+                case doubleDashed(mainColor: UIColor, secondaryColor: UIColor)
+                case tripleDashed(mainColor: UIColor, secondaryColor: UIColor, tertiaryColor: UIColor)
             }
             public let background: UIColor
             public let foreground: UIColor
@@ -804,12 +804,27 @@ private final class QuoteBackgroundView: UIView {
         
         self.iconView.frame = CGRect(origin: CGPoint(x: size.width - 4.0 - quoteIcon.size.width, y: 4.0), size: quoteIcon.size)
         
+        var primaryColor: UIColor
+        var secondaryColor: UIColor?
+        var tertiaryColor: UIColor?
+        switch theme.lineStyle {
+        case let .solid(color):
+            primaryColor = color
+        case let .doubleDashed(mainColor, secondaryColorValue):
+            primaryColor = mainColor
+            secondaryColor = secondaryColorValue
+        case let .tripleDashed(mainColor, secondaryColorValue, tertiaryColorValue):
+            primaryColor = mainColor
+            secondaryColor = secondaryColorValue
+            tertiaryColor = tertiaryColorValue
+        }
+        
         self.backgroundView.update(
             size: size,
             isTransparent: false,
-            primaryColor: theme.foreground,
-            secondaryColor: theme.lineStyle != .solid ? .clear : nil,
-            thirdColor: theme.lineStyle == .tripleDashed ? .clear : nil,
+            primaryColor: primaryColor,
+            secondaryColor: secondaryColor,
+            thirdColor: tertiaryColor,
             pattern: nil,
             animation: .None
         )
