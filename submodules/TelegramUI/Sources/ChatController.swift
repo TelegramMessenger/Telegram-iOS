@@ -774,7 +774,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .pinnedMessageUpdated:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text)))
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil)))
                                     break
                                 }
                             }
@@ -783,7 +783,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .gameScore:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text)))
+                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil)))
                                     break
                                 }
                             }
@@ -17034,7 +17034,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     
                                     if let navigationController = strongSelf.effectiveNavigationController {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil) }))
+                                        var quote: String?
+                                        if case let .id(_, params) = messageLocation {
+                                            quote = params.quote
+                                        }
+                                        
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: messageLocation.messageId.flatMap { .message(id: .id($0), highlight: ChatControllerSubject.MessageHighlight(quote: quote), timecode: nil) }))
                                     }
                                 })
                                 completion?()

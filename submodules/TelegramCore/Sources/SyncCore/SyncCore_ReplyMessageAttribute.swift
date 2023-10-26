@@ -6,15 +6,17 @@ public class ReplyMessageAttribute: MessageAttribute {
     public let messageId: MessageId
     public let threadMessageId: MessageId?
     public let quote: EngineMessageReplyQuote?
+    public let isQuote: Bool
     
     public var associatedMessageIds: [MessageId] {
         return [self.messageId]
     }
     
-    public init(messageId: MessageId, threadMessageId: MessageId?, quote: EngineMessageReplyQuote?) {
+    public init(messageId: MessageId, threadMessageId: MessageId?, quote: EngineMessageReplyQuote?, isQuote: Bool) {
         self.messageId = messageId
         self.threadMessageId = threadMessageId
         self.quote = quote
+        self.isQuote = isQuote
     }
     
     required public init(decoder: PostboxDecoder) {
@@ -28,6 +30,7 @@ public class ReplyMessageAttribute: MessageAttribute {
         }
         
         self.quote = decoder.decodeCodable(EngineMessageReplyQuote.self, forKey: "qu")
+        self.isQuote = decoder.decodeBoolForKey("iq", orElse: self.quote != nil)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -44,6 +47,7 @@ public class ReplyMessageAttribute: MessageAttribute {
         } else {
             encoder.encodeNil(forKey: "qu")
         }
+        encoder.encodeBool(self.isQuote, forKey: "iq")
     }
 }
 

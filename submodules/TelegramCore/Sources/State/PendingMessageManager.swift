@@ -793,7 +793,9 @@ public final class PendingMessageManager {
                         if peerId != replyAttribute.messageId.peerId {
                             replyPeerId = replyAttribute.messageId.peerId
                         }
-                        replyQuote = replyAttribute.quote
+                        if replyAttribute.isQuote {
+                            replyQuote = replyAttribute.quote
+                        }
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyToStoryId = attribute.storyId
                     } else if let _ = attribute as? ForwardSourceInfoAttribute {
@@ -1160,7 +1162,9 @@ public final class PendingMessageManager {
                         if peer.id != replyAttribute.messageId.peerId {
                             replyPeerId = replyAttribute.messageId.peerId
                         }
-                        replyQuote = replyAttribute.quote
+                        if replyAttribute.isQuote {
+                            replyQuote = replyAttribute.quote
+                        }
                     } else if let attribute = attribute as? ReplyStoryAttribute {
                         replyToStoryId = attribute.storyId
                     } else if let outgoingInfo = attribute as? OutgoingMessageInfoAttribute {

@@ -603,9 +603,7 @@ extension StoreMessage {
                                     if isForumTopic {
                                         let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
                                         threadMessageId = threadIdValue
-                                        if replyPeerId == peerId {
-                                            threadId = makeMessageThreadId(threadIdValue)
-                                        }
+                                        threadId = makeMessageThreadId(threadIdValue)
                                     }
                                 } else {
                                     let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
@@ -625,7 +623,7 @@ extension StoreMessage {
                                     threadId = makeMessageThreadId(threadIdValue)
                                 }
                             }
-                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))
                         }
                         if let replyHeader = replyHeader {
                             attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
@@ -895,7 +893,7 @@ extension StoreMessage {
                             default:
                                 break
                             }
-                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote))
+                            attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId, quote: quote, isQuote: isQuote))
                         } else if let replyHeader = replyHeader {
                             attributes.append(QuotedReplyMessageAttribute(apiHeader: replyHeader, quote: quote, isQuote: isQuote))
                         }

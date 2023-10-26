@@ -80,7 +80,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         public let type: ChatMessageReplyInfoType
         public let message: Message?
         public let replyForward: QuotedReplyMessageAttribute?
-        public let quote: EngineMessageReplyQuote?
+        public let quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
         public let story: StoryId?
         public let parentMessage: Message
         public let constrainedSize: CGSize
@@ -95,7 +95,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             type: ChatMessageReplyInfoType,
             message: Message?,
             replyForward: QuotedReplyMessageAttribute?,
-            quote: EngineMessageReplyQuote?,
+            quote: (quote: EngineMessageReplyQuote, isQuote: Bool)?,
             story: StoryId?,
             parentMessage: Message,
             constrainedSize: CGSize,
@@ -410,7 +410,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 var text: String
                 var messageEntities: [MessageTextEntity]
                 
-                if let quote = arguments.quote, !quote.text.isEmpty {
+                if let quote = arguments.quote?.quote, !quote.text.isEmpty {
                     text = quote.text
                     messageEntities = quote.entities
                 } else {
@@ -549,7 +549,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             var textCutoutWidth: CGFloat = 0.0
             
             var isQuote = false
-            if arguments.quote != nil {
+            if let quote = arguments.quote, quote.isQuote {
                 isQuote = true
             } else if let replyForward = arguments.replyForward, replyForward.quote != nil, replyForward.isQuote {
                 isQuote = true

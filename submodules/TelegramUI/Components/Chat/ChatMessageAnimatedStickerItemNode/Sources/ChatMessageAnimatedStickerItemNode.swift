@@ -1079,7 +1079,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             var replyMessage: Message?
             var replyForward: QuotedReplyMessageAttribute?
-            var replyQuote: EngineMessageReplyQuote?
+            var replyQuote: (quote: EngineMessageReplyQuote, isQuote: Bool)?
             var replyStory: StoryId?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
@@ -1106,7 +1106,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     } else {
                         replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                     }
-                    replyQuote = replyAttribute.quote
+                    replyQuote = replyAttribute.quote.flatMap { ($0, replyAttribute.isQuote) }
                 } else if let quoteReplyAttribute = attribute as? QuotedReplyMessageAttribute {
                     replyForward = quoteReplyAttribute
                 } else if let attribute = attribute as? ReplyStoryAttribute {
@@ -2043,7 +2043,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             return .optionalAction({
-                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.quote?.text))
+                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil))
                             })
                         } else if let attribute = attribute as? ReplyStoryAttribute {
                             return .optionalAction({

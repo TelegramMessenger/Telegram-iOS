@@ -164,7 +164,7 @@ public func standaloneSendEnqueueMessages(
         }
         
         if let replyToMessageId = message.replyToMessageId {
-            attributes.append(ReplyMessageAttribute(messageId: replyToMessageId, threadMessageId: nil, quote: nil))
+            attributes.append(ReplyMessageAttribute(messageId: replyToMessageId, threadMessageId: nil, quote: nil, isQuote: false))
         }
         if let forwardOptions = message.forwardOptions {
             attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions.hideNames, hideCaptions: forwardOptions.hideCaptions))

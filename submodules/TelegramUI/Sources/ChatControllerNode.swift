@@ -566,7 +566,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             mappedQuote = EngineMessageReplyQuote(text: quote, entities: [], media: nil)
                         }
                         
-                        attributes.append(ReplyMessageAttribute(messageId: replyMessage.id, threadMessageId: nil, quote: mappedQuote))
+                        attributes.append(ReplyMessageAttribute(messageId: replyMessage.id, threadMessageId: nil, quote: mappedQuote, isQuote: mappedQuote != nil))
                     }
                     
                     let message = Message(
