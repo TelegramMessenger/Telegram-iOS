@@ -120,6 +120,18 @@ public enum ChatHistoryEntry: Identifiable, Comparable {
                         if lhsMessage.stableVersion != rhsMessage.stableVersion {
                             return false
                         }
+                        
+                        if lhsMessage.peers.count != rhsMessage.peers.count {
+                            return false
+                        }
+                        for (id, peer) in lhsMessage.peers {
+                            if let otherPeer = rhsMessage.peers[id] {
+                                if !peer.isEqual(otherPeer) {
+                                    return false
+                                }
+                            }
+                        }
+                        
                         if lhsMessage.media.count != rhsMessage.media.count {
                             return false
                         }
