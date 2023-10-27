@@ -16,19 +16,19 @@ private enum PeerNameColorEntryId: Hashable {
 }
 
 private enum PeerNameColorEntry: Comparable, Identifiable {
-    case color(Int, PeerNameColor, PeerNameColors.Colors, Bool)
+    case color(Int, PeerNameColor, PeerNameColors.Colors, Bool, Bool)
     
     var stableId: PeerNameColorEntryId {
         switch self {
-            case let .color(_, color, _, _):
+            case let .color(_, color, _, _, _):
                 return .color(color.rawValue)
         }
     }
     
     static func ==(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
         switch lhs {
-            case let .color(lhsIndex, lhsColor, lhsAccentColor, lhsSelected):
-                if case let .color(rhsIndex, rhsColor, rhsAccentColor, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsColor == rhsColor, lhsAccentColor == rhsAccentColor, lhsSelected == rhsSelected {
+            case let .color(lhsIndex, lhsColor, lhsAccentColor, lhsIsDark, lhsSelected):
+                if case let .color(rhsIndex, rhsColor, rhsAccentColor, rhsIsDark, rhsSelected) = rhs, lhsIndex == rhsIndex, lhsColor == rhsColor, lhsAccentColor == rhsAccentColor, lhsIsDark == rhsIsDark, lhsSelected == rhsSelected {
                     return true
                 } else {
                     return false
@@ -38,9 +38,9 @@ private enum PeerNameColorEntry: Comparable, Identifiable {
     
     static func <(lhs: PeerNameColorEntry, rhs: PeerNameColorEntry) -> Bool {
         switch lhs {
-            case let .color(lhsIndex, _, _, _):
+            case let .color(lhsIndex, _, _, _, _):
                 switch rhs {
-                    case let .color(rhsIndex, _, _, _):
+                    case let .color(rhsIndex, _, _, _, _):
                         return lhsIndex < rhsIndex
             }
         }
@@ -48,8 +48,8 @@ private enum PeerNameColorEntry: Comparable, Identifiable {
     
     func item(action: @escaping (PeerNameColor) -> Void) -> ListViewItem {
         switch self {
-            case let .color(_, index, colors, selected):
-                return PeerNameColorIconItem(index: index, colors: colors, selected: selected, action: action)
+            case let .color(_, index, colors, isDark, selected):
+                return PeerNameColorIconItem(index: index, colors: colors, isDark: isDark, selected: selected, action: action)
         }
     }
 }
@@ -58,12 +58,14 @@ private enum PeerNameColorEntry: Comparable, Identifiable {
 private class PeerNameColorIconItem: ListViewItem {
     let index: PeerNameColor
     let colors: PeerNameColors.Colors
+    let isDark: Bool
     let selected: Bool
     let action: (PeerNameColor) -> Void
     
-    public init(index: PeerNameColor, colors: PeerNameColors.Colors, selected: Bool, action: @escaping (PeerNameColor) -> Void) {
+    public init(index: PeerNameColor, colors: PeerNameColors.Colors, isDark: Bool, selected: Bool, action: @escaping (PeerNameColor) -> Void) {
         self.index = index
         self.colors = colors
+        self.isDark = isDark
         self.selected = selected
         self.action = action
     }
@@ -125,7 +127,7 @@ private func generateRingImage(nameColor: PeerNameColors.Colors) -> UIImage? {
     })
 }
 
-func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, isDark: Bool, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
     return generateImage(bounds, rotatedContext: { contextSize, context in
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
         context.clear(bounds)
@@ -135,6 +137,13 @@ func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, bounds: CGSize
         context.clip()
         
         if let secondColor = nameColor.secondary {
+            var firstColor = nameColor.main
+            var secondColor = secondColor
+            if isDark, nameColor.tertiary == nil {
+                firstColor = secondColor
+                secondColor = nameColor.main
+            }
+            
             context.setFillColor(secondColor.cgColor)
             context.fill(circleBounds)
             
@@ -143,7 +152,7 @@ func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, bounds: CGSize
                 context.addLine(to: CGPoint(x: contextSize.width, y: contextSize.height))
                 context.addLine(to: CGPoint(x: 0.0, y: contextSize.height))
                 context.closePath()
-                context.setFillColor(nameColor.main.cgColor)
+                context.setFillColor(firstColor.cgColor)
                 context.fillPath()
                 
                 context.setFillColor(thirdColor.cgColor)
@@ -160,7 +169,7 @@ func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, bounds: CGSize
                 context.addLine(to: CGPoint(x: contextSize.width, y: 0.0))
                 context.addLine(to: CGPoint(x: 0.0, y: contextSize.height))
                 context.closePath()
-                context.setFillColor(nameColor.main.cgColor)
+                context.setFillColor(firstColor.cgColor)
                 context.fillPath()
             }
         } else {
@@ -232,7 +241,7 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
                     strongSelf.item = item
                     
                     if updatedAccentColor {
-                        strongSelf.fillNode.image = generatePeerNameColorImage(nameColor: item.colors)
+                        strongSelf.fillNode.image = generatePeerNameColorImage(nameColor: item.colors, isDark: item.isDark)
                         strongSelf.ringNode.image = generateRingImage(nameColor: item.colors)
                     }
                     
@@ -526,7 +535,7 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     for index in item.colors.displayOrder {
                         let color = PeerNameColor(rawValue: index)
                         let colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
-                        entries.append(.color(i, color, colors, color == item.currentColor))
+                        entries.append(.color(i, color, colors, item.theme.overallDarkAppearance, color == item.currentColor))
                         
                         i += 1
                     }

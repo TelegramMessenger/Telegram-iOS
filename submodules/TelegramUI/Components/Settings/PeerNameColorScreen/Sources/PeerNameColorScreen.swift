@@ -599,7 +599,7 @@ public func PeerNameColorScreen(
                 if let navigationController = controller?.navigationController as? NavigationController {
                     Queue.mainQueue().after(0.25) {
                         if let lastController = navigationController.viewControllers.last as? ViewController {
-                            let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_YourColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                            let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, isDark: presentationData.theme.overallDarkAppearance,  bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_YourColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
                             lastController.present(tipController, in: .window(.root))
                         }
                     }
@@ -651,7 +651,7 @@ public func PeerNameColorScreen(
                     if let navigationController = controller?.navigationController as? NavigationController {
                         Queue.mainQueue().after(0.25) {
                             if let lastController = navigationController.viewControllers.last as? ViewController {
-                                let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_ChannelColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                                let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, isDark: presentationData.theme.overallDarkAppearance, bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_ChannelColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
                                 lastController.present(tipController, in: .window(.root))
                             }
                         }
