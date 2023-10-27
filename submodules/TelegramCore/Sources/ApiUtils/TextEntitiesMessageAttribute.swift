@@ -28,8 +28,8 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 apiEntities.append(.messageEntityItalic(offset: offset, length: length))
             case .Code:
                 apiEntities.append(.messageEntityCode(offset: offset, length: length))
-            case .Pre:
-                apiEntities.append(.messageEntityPre(offset: offset, length: length, language: ""))
+            case let .Pre(language):
+                apiEntities.append(.messageEntityPre(offset: offset, length: length, language: language ?? ""))
             case let .TextUrl(url):
                 apiEntities.append(.messageEntityTextUrl(offset: offset, length: length, url: url))
             case let .TextMention(peerId):
