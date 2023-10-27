@@ -13,7 +13,7 @@ public enum MessageTextEntityType: Equatable {
     case Bold
     case Italic
     case Code
-    case Pre
+    case Pre(language: String?)
     case TextUrl(url: String)
     case TextMention(peerId: PeerId)
     case PhoneNumber
@@ -56,7 +56,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             case 8:
                 self.type = .Code
             case 9:
-                self.type = .Pre
+                self.type = .Pre(language: decoder.decodeOptionalStringForKey("language"))
             case 10:
                 self.type = .TextUrl(url: decoder.decodeStringForKey("url", orElse: ""))
             case 11:
@@ -112,7 +112,7 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
             case 8:
                 self.type = .Code
             case 9:
-                self.type = .Pre
+                self.type = .Pre(language: try? container.decodeIfPresent(String.self, forKey: "language"))
             case 10:
                 let url = (try? container.decode(String.self, forKey: "url")) ?? ""
                 self.type = .TextUrl(url: url)
@@ -163,8 +163,13 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 encoder.encodeInt32(7, forKey: "_rawValue")
             case .Code:
                 encoder.encodeInt32(8, forKey: "_rawValue")
-            case .Pre:
+            case let .Pre(language):
                 encoder.encodeInt32(9, forKey: "_rawValue")
+                if let language = language {
+                    encoder.encodeString(language, forKey: "language")
+                } else {
+                    encoder.encodeNil(forKey: "language")
+                }
             case let .TextUrl(url):
                 encoder.encodeInt32(10, forKey: "_rawValue")
                 encoder.encodeString(url, forKey: "url")
@@ -221,8 +226,9 @@ public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
                 try container.encode(7 as Int32, forKey: "_rawValue")
             case .Code:
                 try container.encode(8 as Int32, forKey: "_rawValue")
-            case .Pre:
+            case let .Pre(language):
                 try container.encode(9 as Int32, forKey: "_rawValue")
+                try container.encodeIfPresent(language, forKey: "language")
             case let .TextUrl(url):
                 try container.encode(10 as Int32, forKey: "_rawValue")
                 try container.encode(url, forKey: "url")

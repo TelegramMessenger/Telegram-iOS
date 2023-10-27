@@ -732,8 +732,8 @@ private func parseEntities(_ entities: [SecretApi46.MessageEntity]?) -> TextEnti
                     result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
                 case let .messageEntityCode(offset, length):
                     result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-                case let .messageEntityPre(offset, length, _):
-                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+                case let .messageEntityPre(offset, length, language):
+                    result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre(language: language)))
                 case let .messageEntityTextUrl(offset, length, url):
                     result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
                 case .messageEntityUnknown:
@@ -945,8 +945,8 @@ private func parseEntities(_ entities: [SecretApi73.MessageEntity]) -> TextEntit
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
             case let .messageEntityCode(offset, length):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-            case let .messageEntityPre(offset, length, _):
-                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+            case let .messageEntityPre(offset, length, language):
+                result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre(language: language)))
             case let .messageEntityTextUrl(offset, length, url):
                 result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
             case .messageEntityUnknown:
@@ -1177,8 +1177,8 @@ private func parseEntities(_ entities: [SecretApi101.MessageEntity]) -> TextEnti
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
         case let .messageEntityCode(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-        case let .messageEntityPre(offset, length, _):
-            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+        case let .messageEntityPre(offset, length, language):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre(language: language)))
         case let .messageEntityTextUrl(offset, length, url):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
         case let .messageEntityStrike(offset, length):
@@ -1214,8 +1214,8 @@ private func parseEntities(_ entities: [SecretApi144.MessageEntity]) -> TextEnti
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Italic))
         case let .messageEntityCode(offset, length):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Code))
-        case let .messageEntityPre(offset, length, _):
-            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre))
+        case let .messageEntityPre(offset, length, language):
+            result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .Pre(language: language)))
         case let .messageEntityTextUrl(offset, length, url):
             result.append(MessageTextEntity(range: Int(offset) ..< Int(offset + length), type: .TextUrl(url: url)))
         case let .messageEntityStrike(offset, length):
