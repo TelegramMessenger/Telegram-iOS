@@ -250,7 +250,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 let rawTitleString = author.flatMap(EnginePeer.init)?.displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder) ?? arguments.strings.User_DeletedAccount
                 titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
                 
-                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) || arguments.parentMessage.forwardInfo != nil {
+                if let forwardInfo = message.forwardInfo {
                     if let author = forwardInfo.author {
                         let rawTitleString = EnginePeer(author).displayTitle(strings: arguments.strings, displayOrder: arguments.presentationData.nameDisplayOrder)
                         titleString = NSAttributedString(string: rawTitleString, font: titleFont, textColor: titleColor)
