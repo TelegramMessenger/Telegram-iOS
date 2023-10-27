@@ -514,7 +514,7 @@ private final class StoryContainerScreenComponent: Component {
                 
                 var apply = true
                 let currentTime = CACurrentMediaTime()
-                if let previousTime = self.previousSeekTime, currentTime - previousTime < 0.1 {
+                if let previousTime = self.previousSeekTime, currentTime - previousTime < 0.15 {
                     apply = false
                 }
                 if apply {

@@ -1541,7 +1541,7 @@ private final class LimitSheetContent: CombinedComponent {
                 var additionalContentHeight: CGFloat = 0.0
                 if case let .storiesChannelBoost(_, _, _, _, _, _, link, _, _) = component.subject, link != nil, let openGift = component.openGift {
                     let orText = orText.update(
-                        component: MultilineTextComponent(text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
+                        component: MultilineTextComponent(text: .plain(NSAttributedString(string: environment.strings.ChannelBoost_Or, font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
                         availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
                         transition: .immediate
                     )
@@ -1571,7 +1571,7 @@ private final class LimitSheetContent: CombinedComponent {
                         state.cachedChevronImage = (generateTintedImage(image: UIImage(bundleImageName: "Settings/TextArrowRight"), color: linkColor)!, environment.theme)
                     }
                     
-                    let giftString = environment.strings.Premium_BoostByGiftDescription
+                    let giftString = environment.strings.Premium_BoostByGiftDescription2
                     let giftAttributedString = parseMarkdownIntoAttributedString(giftString, attributes: markdownAttributes).mutableCopy() as! NSMutableAttributedString
                     
                     if let range = giftAttributedString.string.range(of: ">"), let chevronImage = state.cachedChevronImage?.0 {

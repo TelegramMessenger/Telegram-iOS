@@ -175,23 +175,42 @@ public func PremiumBoostScreen(
                             replaceController?.dismiss(animated: true)
                         }
                     } else if let boost = occupiedBoosts.first, let occupiedPeer = boost.peer {
-                        let replaceController = replaceBoostConfirmationController(context: context, fromPeers: [occupiedPeer], toPeer: peer, commit: {
-                            currentMyBoostCount += 1
-                            myBoostCount += 1
-                            let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [boost.slot])
-                            |> deliverOnMainQueue).startStandalone(completed: { [weak controller] in
-                                let _ = (updatedState.get()
-                                |> take(1)
-                                |> deliverOnMainQueue).startStandalone(next: { [weak controller] state in
-                                    guard let state else {
-                                        return
-                                    }
-                                    let (subject, count) = state.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: currentMyBoostCount)
-                                    controller?.updateSubject(subject, count: count)
+                        if let cooldown = boost.cooldownUntil {
+                            let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                            let timeout = cooldown - currentTime
+                            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime, preferLowerValue: false)
+                            let controller = textAlertController(
+                                sharedContext: context.sharedContext,
+                                updatedPresentationData: nil,
+                                title: presentationData.strings.ChannelBoost_Error_BoostTooOftenTitle,
+                                text: presentationData.strings.ChannelBoost_Error_BoostTooOftenText(valueText).string,
+                                actions: [
+                                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                                ],
+                                parseMarkdown: true
+                            )
+                            presentController(controller)
+                        } else {
+                            let replaceController = replaceBoostConfirmationController(context: context, fromPeers: [occupiedPeer], toPeer: peer, commit: {
+                                currentMyBoostCount += 1
+                                myBoostCount += 1
+                                let _ = (context.engine.peers.applyChannelBoost(peerId: peerId, slots: [boost.slot])
+                                |> deliverOnMainQueue).startStandalone(completed: { [weak controller] in
+                                    let _ = (updatedState.get()
+                                    |> take(1)
+                                    |> deliverOnMainQueue).startStandalone(next: { [weak controller] state in
+                                        guard let state else {
+                                            return
+                                        }
+                                        let (subject, count) = state.displayData(peer: peer, isCurrent: isCurrent, canBoostAgain: canBoostAgain, myBoostCount: myBoostCount, currentMyBoostCount: currentMyBoostCount)
+                                        controller?.updateSubject(subject, count: count)
+                                    })
                                 })
                             })
-                        })
-                        presentController(replaceController)
+                            presentController(replaceController)
+                        }
+                    } else {
+                        dismissImpl?()
                     }
                 } else {
                     if isPremium {
