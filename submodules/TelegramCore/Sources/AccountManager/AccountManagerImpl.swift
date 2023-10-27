@@ -92,11 +92,23 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             return nil
         }
         self.guardValueBox = guardValueBox
-        guard let valueBox = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: nil, upgradeProgress: { _ in }) else {
-            postboxLog("Could not open value box at \(basePath + "/db")")
+        
+        var valueBox: SqliteValueBox?
+        for i in 0 ..< 3 {
+            if let valueBoxValue = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: nil, upgradeProgress: { _ in }) {
+                valueBox = valueBoxValue
+                break
+            } else {
+                postboxLog("Could not open value box at \(basePath + "/db") (try \(i))")
+                postboxLogSync()
+                
+                Thread.sleep(forTimeInterval: 0.1 + 0.5 * Double(i))
+            }
+        }
+        guard let valueBox else {
+            postboxLog("Giving up on opening value box at \(basePath + "/db")")
             postboxLogSync()
             preconditionFailure()
-            return nil
         }
         self.valueBox = valueBox
         
@@ -537,7 +549,7 @@ public final class AccountManager<Types: AccountManagerTypes> {
                 preconditionFailure()
             }
         })
-        self.mediaBox = MediaBox(basePath: basePath + "/media")
+        self.mediaBox = MediaBox(basePath: basePath + "/media", isMainProcess: removeDatabaseOnError)
     }
     
     public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier<Types>) -> T) -> Signal<T, NoError> {

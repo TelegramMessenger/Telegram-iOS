@@ -408,18 +408,18 @@ public final class AccountViewTracker {
                 for messageId in addedMessageIds {
                     if self.webpageDisposables[messageId] == nil {
                         if let (_, url) = localWebpages[messageId] {
-                            self.webpageDisposables[messageId] = (webpagePreview(account: account, url: url) |> mapToSignal { result -> Signal<Void, NoError> in
-                                guard case let .result(webpage) = result else {
+                            self.webpageDisposables[messageId] = (webpagePreview(account: account, urls: [url]) |> mapToSignal { result -> Signal<Void, NoError> in
+                                guard case let .result(webpageResult) = result else {
                                     return .complete()
                                 }
                                 return account.postbox.transaction { transaction -> Void in
-                                    if let webpage = webpage {
+                                    if let webpageResult = webpageResult {
                                         transaction.updateMessage(messageId, update: { currentMessage in
                                             let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
                                             var media = currentMessage.media
                                             for i in 0 ..< media.count {
                                                 if let _ = media[i] as? TelegramMediaWebpage {
-                                                    media[i] = webpage
+                                                    media[i] = webpageResult.webpage
                                                     break
                                                 }
                                             }

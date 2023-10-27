@@ -163,20 +163,37 @@ public final class StorageBox {
         
         private var queuedInternalTransactions = Atomic<[() -> Void]>(value: [])
         
-        init(queue: Queue, logger: StorageBox.Logger, basePath: String) {
+        init(queue: Queue, logger: StorageBox.Logger, basePath: String, isMainProcess: Bool) {
             self.queue = queue
             self.logger = logger
             self.basePath = basePath
             
             let databasePath = self.basePath + "/db"
             let _ = try? FileManager.default.createDirectory(atPath: databasePath, withIntermediateDirectories: true)
-            var valueBox = SqliteValueBox(basePath: databasePath, queue: queue, isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in })
-            if valueBox == nil {
-                let _ = try? FileManager.default.removeItem(atPath: databasePath)
-                valueBox = SqliteValueBox(basePath: databasePath, queue: queue, isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, encryptionParameters: nil, upgradeProgress: { _ in })
+            
+            var valueBox: SqliteValueBox?
+            for i in 0 ..< 3 {
+                if let valueBoxValue = SqliteValueBox(basePath: basePath + "/db", queue: queue, isTemporary: false, isReadOnly: false, useCaches: isMainProcess, removeDatabaseOnError: isMainProcess, encryptionParameters: nil, upgradeProgress: { _ in }) {
+                    valueBox = valueBoxValue
+                    break
+                } else {
+                    postboxLog("Could not open value box at \(basePath + "/db") (try \(i))")
+                    postboxLogSync()
+                    
+                    Thread.sleep(forTimeInterval: 0.1 + 0.5 * Double(i))
+                }
             }
-            guard let valueBox = valueBox else {
-                preconditionFailure("Could not open database")
+            
+            if valueBox == nil, isMainProcess {
+                postboxLog("Removing value box at \(basePath + "/db")")
+                let _ = try? FileManager.default.removeItem(atPath: databasePath)
+                valueBox = SqliteValueBox(basePath: databasePath, queue: queue, isTemporary: false, isReadOnly: false, useCaches: isMainProcess, removeDatabaseOnError: isMainProcess, encryptionParameters: nil, upgradeProgress: { _ in })
+            }
+            
+            guard let valueBox else {
+                postboxLog("Giving up on opening value box at \(basePath + "/db")")
+                postboxLogSync()
+                preconditionFailure()
             }
             self.valueBox = valueBox
             
@@ -1025,11 +1042,11 @@ public final class StorageBox {
     private let queue: Queue
     private let impl: QueueLocalObject<Impl>
     
-    public init(logger: StorageBox.Logger, basePath: String) {
+    public init(logger: StorageBox.Logger, basePath: String, isMainProcess: Bool) {
         let queue = StorageBox.sharedQueue
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, logger: logger, basePath: basePath)
+            return Impl(queue: queue, logger: logger, basePath: basePath, isMainProcess: isMainProcess)
         })
     }
     

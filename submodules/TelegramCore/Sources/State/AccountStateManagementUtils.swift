@@ -994,7 +994,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                                 let _ = url
                                 updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                             default:
-                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
+                                if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
                                     updatedState.updateMedia(webpage.webpageId, media: webpage)
                                 }
                         }
@@ -1217,7 +1217,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         let _ = url
                         updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                     default:
-                        if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
+                        if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
                             updatedState.updateMedia(webpage.webpageId, media: webpage)
                         }
                 }
@@ -2993,7 +2993,7 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                             let _ = url
                             updatedState.updateMedia(MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), media: nil)
                         default:
-                            if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage, url: nil) {
+                            if let webpage = telegramMediaWebpageFromApiWebpage(apiWebpage) {
                                 updatedState.updateMedia(webpage.webpageId, media: webpage)
                             }
                         }

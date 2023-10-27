@@ -4034,7 +4034,15 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         for attribute in item.message.attributes {
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadId = item.message.threadId, makeThreadIdMessageId(peerId: item.message.id.peerId, threadId: threadId) == attribute.messageId, let quotedReply = item.message.attributes.first(where: { $0 is QuotedReplyMessageAttribute }) as? QuotedReplyMessageAttribute {
-                                    return .action(InternalBubbleTapAction.Action({
+                                    return .action(InternalBubbleTapAction.Action({ [weak self, weak replyInfoNode] in
+                                        guard let self, let item = self.item, let replyInfoNode else {
+                                            return
+                                        }
+                                        if attribute.isQuote, !replyInfoNode.isQuoteExpanded {
+                                            replyInfoNode.isQuoteExpanded = true
+                                            item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                                            return
+                                        }
                                         item.controllerInteraction.attemptedNavigationToPrivateQuote(quotedReply.peerId.flatMap { item.message.peers[$0] })
                                     }, contextMenuOnLongPress: true))
                                 }
@@ -4054,7 +4062,16 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     item.controllerInteraction.navigateToStory(item.message, attribute.storyId)
                                 }, contextMenuOnLongPress: true))
                             } else if let attribute = attribute as? QuotedReplyMessageAttribute {
-                                return .action(InternalBubbleTapAction.Action({
+                                return .action(InternalBubbleTapAction.Action({ [weak self, weak replyInfoNode] in
+                                    guard let self, let item = self.item, let replyInfoNode else {
+                                        return
+                                    }
+                                    if attribute.isQuote, !replyInfoNode.isQuoteExpanded {
+                                        replyInfoNode.isQuoteExpanded = true
+                                        item.controllerInteraction.requestMessageUpdate(item.message.id, false)
+                                        return
+                                    }
+                                    
                                     item.controllerInteraction.attemptedNavigationToPrivateQuote(attribute.peerId.flatMap { item.message.peers[$0] })
                                 }, contextMenuOnLongPress: true))
                             }

@@ -1368,7 +1368,7 @@ func debugRestoreState(basePath: String, name: String) {
     }
 }
 
-public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool, useCaches: Bool, removeDatabaseOnError: Bool) -> Signal<PostboxResult, NoError> {
+public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, encryptionParameters: ValueBoxEncryptionParameters, timestampForAbsoluteTimeBasedOperations: Int32, isMainProcess: Bool, isTemporary: Bool, isReadOnly: Bool, useCopy: Bool, useCaches: Bool, removeDatabaseOnError: Bool) -> Signal<PostboxResult, NoError> {
     let queue = Postbox.sharedQueue
     return Signal { subscriber in
         queue.async {
@@ -1496,7 +1496,7 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
                 let endTime = CFAbsoluteTimeGetCurrent()
                 postboxLog("Postbox load took \((endTime - startTime) * 1000.0) ms")
                 
-                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isTemporary: isTemporary, tempDir: tempDir, useCaches: useCaches)))
+                subscriber.putNext(.postbox(Postbox(queue: queue, basePath: basePath, seedConfiguration: seedConfiguration, valueBox: valueBox, timestampForAbsoluteTimeBasedOperations: timestampForAbsoluteTimeBasedOperations, isMainProcess: isMainProcess, isTemporary: isTemporary, tempDir: tempDir, useCaches: useCaches)))
 
                 postboxLog("openPostbox, putCompletion")
 
@@ -4168,6 +4168,7 @@ public class Postbox {
         seedConfiguration: SeedConfiguration,
         valueBox: SqliteValueBox,
         timestampForAbsoluteTimeBasedOperations: Int32,
+        isMainProcess: Bool,
         isTemporary: Bool,
         tempDir: TempBoxDirectory?,
         useCaches: Bool
@@ -4177,7 +4178,7 @@ public class Postbox {
         self.seedConfiguration = seedConfiguration
 
         postboxLog("MediaBox path: \(basePath + "/media")")
-        self.mediaBox = MediaBox(basePath: basePath + "/media")
+        self.mediaBox = MediaBox(basePath: basePath + "/media", isMainProcess: isMainProcess)
 
         let isInTransaction = self.isInTransaction
         

@@ -136,6 +136,7 @@ private final class MediaBoxKeepResourceContext {
 
 public final class MediaBox {
     public let basePath: String
+    public let isMainProcess: Bool
     
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
@@ -187,15 +188,16 @@ public final class MediaBox {
         let _ = try? FileManager.default.createDirectory(atPath: self.basePath + "/short-cache", withIntermediateDirectories: true, attributes: nil)
     }()
     
-    public init(basePath: String) {
+    public init(basePath: String, isMainProcess: Bool) {
         self.basePath = basePath
+        self.isMainProcess = isMainProcess
         
         self.storageBox = StorageBox(logger: StorageBox.Logger(impl: { string in
             postboxLog(string)
-        }), basePath: basePath + "/storage")
+        }), basePath: basePath + "/storage", isMainProcess: isMainProcess)
         self.cacheStorageBox = StorageBox(logger: StorageBox.Logger(impl: { string in
             postboxLog(string)
-        }), basePath: basePath + "/cache-storage")
+        }), basePath: basePath + "/cache-storage", isMainProcess: isMainProcess)
         
         self.timeBasedCleanup = TimeBasedCleanup(storageBox: self.storageBox, generalPaths: [
             self.basePath + "/cache",

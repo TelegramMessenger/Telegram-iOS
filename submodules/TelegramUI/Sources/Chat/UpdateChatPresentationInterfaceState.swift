@@ -223,7 +223,7 @@ func updateChatPresentationInterfaceStateImpl(
     if let (updatedUrlPreviewState, updatedUrlPreviewSignal) = urlPreviewStateForInputText(updatedChatPresentationInterfaceState.interfaceState.composeInputState.inputText, context: selfController.context, currentQuery: selfController.urlPreviewQueryState?.0) {
         selfController.urlPreviewQueryState?.1.dispose()
         var inScope = true
-        var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
+        var inScopeResult: ((TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?)?
         let linkPreviews: Signal<Bool, NoError>
         if case let .peer(peerId) = selfController.chatLocation, peerId.namespace == Namespaces.Peer.SecretChat {
             linkPreviews = interactiveChatLinkPreviewsEnabled(accountManager: selfController.context.sharedContext.accountManager, displayAlert: { [weak selfController] f in
@@ -252,7 +252,7 @@ func updateChatPresentationInterfaceStateImpl(
         }
         let filteredPreviewSignal = linkPreviews
         |> take(1)
-        |> mapToSignal { value -> Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError> in
+        |> mapToSignal { value -> Signal<(TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?, NoError> in
             if value {
                 return updatedUrlPreviewSignal
             } else {
@@ -260,7 +260,7 @@ func updateChatPresentationInterfaceStateImpl(
             }
         }
         
-        selfController.urlPreviewQueryState = (updatedUrlPreviewState, (filteredPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] (result) in
+        selfController.urlPreviewQueryState = (updatedUrlPreviewState, (filteredPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] result in
             guard let selfController else {
                 return
             }
@@ -269,9 +269,9 @@ func updateChatPresentationInterfaceStateImpl(
                 inScopeResult = result
             } else {
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    if let updatedUrlPreviewState, let webpage = result($0.urlPreview?.webPage) {
+                    if let (webpage, webpageUrl) = result($0.urlPreview?.webPage) {
                         let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                            url: updatedUrlPreviewState.detectedUrl,
+                            url: webpageUrl,
                             webPage: webpage,
                             positionBelowText: $0.urlPreview?.positionBelowText ?? true,
                             largeMedia: $0.urlPreview?.largeMedia
@@ -285,9 +285,9 @@ func updateChatPresentationInterfaceStateImpl(
         }))
         inScope = false
         if let inScopeResult = inScopeResult {
-            if let updatedUrlPreviewState, let webpage = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.webPage) {
+            if let (webpage, webpageUrl) = inScopeResult(updatedChatPresentationInterfaceState.urlPreview?.webPage) {
                 let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                    url: updatedUrlPreviewState.detectedUrl,
+                    url: webpageUrl,
                     webPage: webpage,
                     positionBelowText: updatedChatPresentationInterfaceState.urlPreview?.positionBelowText ?? true,
                     largeMedia: updatedChatPresentationInterfaceState.urlPreview?.largeMedia
@@ -304,7 +304,7 @@ func updateChatPresentationInterfaceStateImpl(
     if let (updatedEditingUrlPreviewState, updatedEditingUrlPreviewSignal) = urlPreviewStateForInputText(editingUrlPreviewText, context: selfController.context, currentQuery: selfController.editingUrlPreviewQueryState?.0) {
         selfController.editingUrlPreviewQueryState?.1.dispose()
         var inScope = true
-        var inScopeResult: ((TelegramMediaWebpage?) -> TelegramMediaWebpage?)?
+        var inScopeResult: ((TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?)?
         selfController.editingUrlPreviewQueryState = (updatedEditingUrlPreviewState, (updatedEditingUrlPreviewSignal |> deliverOnMainQueue).startStrict(next: { [weak selfController] result in
             guard let selfController else {
                 return
@@ -314,9 +314,9 @@ func updateChatPresentationInterfaceStateImpl(
                 inScopeResult = result
             } else {
                 selfController.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    if let updatedEditingUrlPreviewState, let webpage = result($0.editingUrlPreview?.webPage) {
+                    if let (webpage, webpageUrl) = result($0.editingUrlPreview?.webPage) {
                         let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                            url: updatedEditingUrlPreviewState.detectedUrl,
+                            url: webpageUrl,
                             webPage: webpage,
                             positionBelowText: $0.editingUrlPreview?.positionBelowText ?? true,
                             largeMedia: $0.editingUrlPreview?.largeMedia
@@ -330,9 +330,9 @@ func updateChatPresentationInterfaceStateImpl(
         }))
         inScope = false
         if let inScopeResult = inScopeResult {
-            if let updatedEditingUrlPreviewState, let webpage = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.webPage) {
+            if let (webpage, webpageUrl) = inScopeResult(updatedChatPresentationInterfaceState.editingUrlPreview?.webPage) {
                 let updatedPreview = ChatPresentationInterfaceState.UrlPreview(
-                    url: updatedEditingUrlPreviewState.detectedUrl,
+                    url: webpageUrl,
                     webPage: webpage,
                     positionBelowText: updatedChatPresentationInterfaceState.editingUrlPreview?.positionBelowText ?? true,
                     largeMedia: updatedChatPresentationInterfaceState.editingUrlPreview?.largeMedia

@@ -30,12 +30,12 @@ public final class TextLoadingEffectView: UIView {
         
         self.maskContentsView = UIView()
         self.maskHighlightNode = LinkHighlightingNode(color: .black)
-        self.maskHighlightNode.useModernPathCalculation = true
+        //self.maskHighlightNode.useModernPathCalculation = true
         
         self.maskBorderContentsView = UIView()
         self.maskBorderHighlightNode = LinkHighlightingNode(color: .black)
         self.maskBorderHighlightNode.borderOnly = true
-        self.maskBorderHighlightNode.useModernPathCalculation = true
+        //self.maskBorderHighlightNode.useModernPathCalculation = true
         self.maskBorderContentsView.addSubview(self.maskBorderHighlightNode.view)
         
         self.backgroundView = UIImageView()
