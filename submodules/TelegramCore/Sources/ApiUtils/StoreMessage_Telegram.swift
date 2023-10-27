@@ -343,7 +343,7 @@ func textMediaAndExpirationTimerFromApiMedia(_ media: Api.MessageMedia?, _ peerI
                 return (TelegramMediaExpiredContent(data: .file), nil, nil, nil, nil)
             }
         case let .messageMediaWebPage(flags, webpage):
-            if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage, url: nil) {
+            if let mediaWebpage = telegramMediaWebpageFromApiWebpage(webpage) {
                 var webpageForceLargeMedia: Bool?
                 if (flags & (1 << 0)) != 0 {
                     webpageForceLargeMedia = true

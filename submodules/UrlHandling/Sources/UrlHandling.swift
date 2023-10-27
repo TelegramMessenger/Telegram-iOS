@@ -1157,14 +1157,14 @@ public func resolveUrlImpl(context: AccountContext, peerId: PeerId?, url: String
 }
 
 public func resolveInstantViewUrl(account: Account, url: String) -> Signal<ResolveUrlResult, NoError> {
-    return webpagePreview(account: account, url: url)
+    return webpagePreview(account: account, urls: [url])
     |> mapToSignal { result -> Signal<ResolveUrlResult, NoError> in
         switch result {
         case .progress:
             return .single(.progress)
-        case let .result(webpage):
-            if let webpage = webpage {
-                if case let .Loaded(content) = webpage.content {
+        case let .result(webpageResult):
+            if let webpageResult = webpageResult {
+                if case let .Loaded(content) = webpageResult.webpage.content {
                     if content.instantPage != nil {
                         var anchorValue: String?
                         if let anchorRange = url.range(of: "#") {
@@ -1173,7 +1173,7 @@ public func resolveInstantViewUrl(account: Account, url: String) -> Signal<Resol
                                 anchorValue = String(anchor)
                             }
                         }
-                        return .single(.result(.instantView(webpage, anchorValue)))
+                        return .single(.result(.instantView(webpageResult.webpage, anchorValue)))
                     } else {
                         return .single(.result(.externalUrl(url)))
                     }

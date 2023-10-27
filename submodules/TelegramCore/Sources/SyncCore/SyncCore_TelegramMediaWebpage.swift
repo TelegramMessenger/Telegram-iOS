@@ -333,6 +333,15 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
 public enum TelegramMediaWebpageContent {
     case Pending(Int32, String?)
     case Loaded(TelegramMediaWebpageLoadedContent)
+    
+    public var url: String? {
+        switch self {
+        case let .Pending(_, value):
+            return value
+        case let .Loaded(content):
+            return content.url
+        }
+    }
 }
 
 public final class TelegramMediaWebpage: Media, Equatable {

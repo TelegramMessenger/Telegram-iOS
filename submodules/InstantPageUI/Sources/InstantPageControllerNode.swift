@@ -1308,14 +1308,14 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             if let anchorRange = externalUrl.range(of: "#") {
                                 anchor = String(externalUrl[anchorRange.upperBound...])
                             }
-                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.context.account, url: externalUrl, webpageId: webpageId)
+                            strongSelf.loadWebpageDisposable.set((webpagePreviewWithProgress(account: strongSelf.context.account, urls: [externalUrl], webpageId: webpageId)
                             |> deliverOnMainQueue).start(next: { result in
                                 if let strongSelf = self {
                                     switch result {
-                                        case let .result(webpage):
-                                            if let webpage = webpage, case .Loaded = webpage.content {
+                                        case let .result(webpageResult):
+                                            if let webpageResult = webpageResult, case .Loaded = webpageResult.webpage.content {
                                                 strongSelf.loadProgress.set(1.0)
-                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpage, sourceLocation: strongSelf.sourceLocation, anchor: anchor))
+                                                strongSelf.pushController(InstantPageController(context: strongSelf.context, webPage: webpageResult.webpage, sourceLocation: strongSelf.sourceLocation, anchor: anchor))
                                             }
                                             break
                                         case let .progress(progress):

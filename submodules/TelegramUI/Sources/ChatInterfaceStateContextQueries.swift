@@ -507,10 +507,10 @@ func detectUrls(_ inputText: NSAttributedString?) -> [String] {
 }
 
 struct UrlPreviewState {
-    var detectedUrl: String
+    var detectedUrls: [String]
 }
 
-func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: UrlPreviewState?) -> (UrlPreviewState?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: UrlPreviewState?) -> (UrlPreviewState?, Signal<(TelegramMediaWebpage?) -> (TelegramMediaWebpage, String)?, NoError>)? {
     guard let _ = inputText else {
         if currentQuery != nil {
             return (nil, .single({ _ in return nil }))
@@ -519,15 +519,19 @@ func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: Acco
         }
     }
     if let _ = dataDetector {
-        let detectedUrl = detectUrls(inputText).first
-        if detectedUrl != currentQuery?.detectedUrl {
-            if let detectedUrl = detectedUrl {
-                return (UrlPreviewState(detectedUrl: detectedUrl), webpagePreview(account: context.account, url: detectedUrl)
-                |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
-                    guard case let .result(result) = result else {
+        let detectedUrls = detectUrls(inputText)
+        if detectedUrls != currentQuery?.detectedUrls {
+            if !detectedUrls.isEmpty {
+                return (UrlPreviewState(detectedUrls: detectedUrls), webpagePreview(account: context.account, urls: detectedUrls)
+                |> mapToSignal { result -> Signal<(TelegramMediaWebpage, String)?, NoError> in
+                    guard case let .result(webpageResult) = result else {
                         return .complete()
                     }
-                    return .single(result)
+                    if let webpageResult {
+                        return .single((webpageResult.webpage, webpageResult.sourceUrl))
+                    } else {
+                        return .single(nil)
+                    }
                 }
                 |> map { value in
                     return { _ in return value }
