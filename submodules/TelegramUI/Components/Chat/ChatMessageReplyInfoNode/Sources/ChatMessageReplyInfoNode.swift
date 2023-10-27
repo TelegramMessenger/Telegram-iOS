@@ -139,6 +139,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
     
     private var currentProgressDisposable: Disposable?
     
+    public var isQuoteExpanded: Bool = false
+    
     override public init() {
         self.backgroundView = MessageInlineBlockBackgroundView(frame: CGRect())
         
@@ -176,6 +178,8 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
         let textNodeLayout = TextNodeWithEntities.asyncLayout(maybeNode?.textNode)
         let imageNodeLayout = TransformImageNode.asyncLayout(maybeNode?.imageNode)
         let previousMediaReference = maybeNode?.previousMediaReference
+        
+        let isQuoteExpanded = maybeNode?.isQuoteExpanded ?? false
         
         return { arguments in
             let fontSize = floor(arguments.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
@@ -558,7 +562,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
             if isQuote {
                 additionalTitleWidth += 10.0
                 maxTitleNumberOfLines = 2
-                maxTextNumberOfLines = 5
+                maxTextNumberOfLines = isQuoteExpanded ? 50 : 5
                 if imageTextInset != 0.0 {
                     adjustedConstrainedTextSize.width += imageTextInset
                     textCutout = TextNodeCutout(topLeft: CGSize(width: imageTextInset + 6.0, height: 10.0))
@@ -649,13 +653,14 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 node.previousMediaReference = updatedMediaReference
                 
                 node.titleNode?.displaysAsynchronously = !arguments.presentationData.isPreview
-                node.textNode?.textNode.displaysAsynchronously = !arguments.presentationData.isPreview
+                //node.textNode?.textNode.displaysAsynchronously = !arguments.presentationData.isPreview
                 
                 let titleNode = titleApply()
                 var textArguments: TextNodeWithEntities.Arguments?
                 if let cache = arguments.animationCache, let renderer = arguments.animationRenderer {
                     textArguments = TextNodeWithEntities.Arguments(context: arguments.context, cache: cache, renderer: renderer, placeholderColor: placeholderColor, attemptSynchronous: attemptSynchronous)
                 }
+                let previousTextContents = node.textNode?.textNode.layer.contents
                 let textNode = textApply(textArguments)
                 textNode.visibilityRect = node.visibility ? CGRect.infinite : nil
                 
@@ -667,6 +672,10 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 if node.textNode == nil {
                     textNode.textNode.isUserInteractionEnabled = false
+                    textNode.textNode.contentMode = .topLeft
+                    textNode.textNode.clipsToBounds = true
+                    textNode.textNode.contentsScale = UIScreenScale
+                    textNode.textNode.displaysAsynchronously = false
                     node.textNode = textNode
                     node.contentNode.addSubnode(textNode.textNode)
                 }
@@ -694,7 +703,28 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 titleNode.frame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0, y: spacing - textInsets.top + 1.0), size: titleLayout.size)
                 
                 let textFrame = CGRect(origin: CGPoint(x: leftInset - textInsets.left - 2.0 - textCutoutWidth, y: titleNode.frame.maxY - textInsets.bottom + spacing - textInsets.top - 2.0), size: textLayout.size)
-                textNode.textNode.frame = textFrame.offsetBy(dx: (isExpiredStory || isStory) ? 18.0 : 0.0, dy: 0.0)
+                let effectiveTextFrame = textFrame.offsetBy(dx: (isExpiredStory || isStory) ? 18.0 : 0.0, dy: 0.0)
+                
+                if textNode.textNode.bounds.isEmpty || !animation.isAnimated || textNode.textNode.bounds.height == effectiveTextFrame.height {
+                    textNode.textNode.frame = effectiveTextFrame
+                } else {
+                    if textNode.textNode.bounds.height != effectiveTextFrame.height {
+                        animation.animator.updateFrame(layer: textNode.textNode.layer, frame: effectiveTextFrame, completion: nil)
+                        
+                        textNode.textNode.layer.setNeedsDisplay()
+                        textNode.textNode.layer.display()
+                    } else {
+                        animation.animator.updateFrame(layer: textNode.textNode.layer, frame: effectiveTextFrame, completion: nil)
+                    }
+                    
+                    if let previousTextContents, let updatedContents = textNode.textNode.contents {
+                        let previousTextContents = previousTextContents as AnyObject
+                        let updatedContents = updatedContents as AnyObject
+                        if previousTextContents !== updatedContents {
+                            textNode.textNode.layer.animate(from: previousTextContents, to: updatedContents, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.2)
+                        }
+                    }
+                }
                 
                 if isExpiredStory || isStory {
                     let expiredStoryIconView: UIImageView
@@ -784,16 +814,21 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                 )
                 
                 if isQuote {
+                    let quoteIconFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 4.0 - quoteIcon.size.width, y: backgroundFrame.minY + 4.0), size: quoteIcon.size)
+                    
                     let quoteIconView: UIImageView
                     if let current = node.quoteIconView {
                         quoteIconView = current
+                        
+                        animation.animator.updateFrame(layer: quoteIconView.layer, frame: quoteIconFrame, completion: nil)
                     } else {
                         quoteIconView = UIImageView(image: quoteIcon)
                         node.quoteIconView = quoteIconView
                         node.contentNode.view.addSubview(quoteIconView)
+                            
+                        quoteIconView.frame = quoteIconFrame
                     }
                     quoteIconView.tintColor = mainColor
-                    quoteIconView.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - 4.0 - quoteIcon.size.width, y: backgroundFrame.minY + 4.0), size: quoteIcon.size)
                 } else {
                     if let quoteIconView = node.quoteIconView {
                         node.quoteIconView = nil
