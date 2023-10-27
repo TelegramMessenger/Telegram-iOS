@@ -818,25 +818,24 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     var appIndex = 1000
     if let settings = data.globalSettings {
         for bot in settings.bots {
-            if bot.flags.contains(.showInSettings) {
-                let iconSignal: Signal<UIImage?, NoError>
-                if let peer = PeerReference(bot.peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
-                    let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
-                    iconSignal = instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true)
-                    |> map { generator -> UIImage? in
-                        let size = CGSize(width: 29.0, height: 29.0)
-                        let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
-                        return context?.generateImage()
-                    }
-                    let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).startStandalone()
-                } else {
-                    iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
+            let iconSignal: Signal<UIImage?, NoError>
+            if let peer = PeerReference(bot.peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
+                let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
+                iconSignal = instantPageImageFile(account: context.account, userLocation: .other, fileReference: fileReference, fetched: true)
+                |> map { generator -> UIImage? in
+                    let size = CGSize(width: 29.0, height: 29.0)
+                    let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: size, boundingSize: size, intrinsicInsets: .zero))
+                    return context?.generateImage()
                 }
-                items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), text: bot.shortName, icon: nil, iconSignal: iconSignal, action: {
-                    interaction.openBotApp(bot)
-                }))
-                appIndex += 1
+                let _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).startStandalone()
+            } else {
+                iconSignal = .single(UIImage(bundleImageName: "Settings/Menu/Websites")!)
             }
+            let label: PeerInfoScreenDisclosureItem.Label = bot.flags.contains(.notActivated) || bot.flags.contains(.showInSettingsDisclaimer) ? .titleBadge(presentationData.strings.Settings_New, presentationData.theme.list.itemAccentColor) : .none
+            items[.apps]!.append(PeerInfoScreenDisclosureItem(id: bot.peer.id.id._internalGetInt64Value(), label: label, text: bot.shortName, icon: nil, iconSignal: iconSignal, action: {
+                interaction.openBotApp(bot)
+            }))
+            appIndex += 1
         }
     }
     
@@ -4756,6 +4755,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 guard let self else {
                     return
                 }
+                let showInstalledTooltip = !bot.flags.contains(.showInSettingsDisclaimer)
                 if bot.flags.contains(.showInSettingsDisclaimer) {
                     let _ = self.context.engine.messages.acceptAttachMenuBotDisclaimer(botId: bot.peer.id).startStandalone()
                 }
@@ -4763,7 +4763,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
                     |> deliverOnMainQueue).startStandalone(error: { _ in
                     }, completed: {
-                        proceed(true)
+                        proceed(showInstalledTooltip)
                     })
                 } else {
                     proceed(false)

@@ -13551,6 +13551,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     completion(controller, controller.mediaPickerContext)
                     strongSelf.controllerNavigationDisposable.set(nil)
+                    
+                    if bot.flags.contains(.notActivated) {
+                        let alertController = webAppTermsAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, bot: bot, completion: { [weak self] allowWrite in
+                            guard let self else {
+                                return
+                            }
+                            if bot.flags.contains(.showInSettingsDisclaimer) {
+                                let _ = self.context.engine.messages.acceptAttachMenuBotDisclaimer(botId: bot.peer.id).startStandalone()
+                            }
+                            let _ = (self.context.engine.messages.addBotToAttachMenu(botId: bot.peer.id, allowWrite: allowWrite)
+                            |> deliverOnMainQueue).startStandalone(error: { _ in
+                            }, completed: { [weak controller] in
+                                controller?.refresh()
+                            })
+                        },
+                        dismissed: {
+                            strongSelf.attachmentController?.dismiss(animated: true)
+                        })
+                        strongSelf.present(alertController, in: .window(.root))
+                    }
                 default:
                     break
                 }

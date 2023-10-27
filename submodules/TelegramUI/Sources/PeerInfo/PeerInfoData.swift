@@ -13,6 +13,7 @@ import TelegramNotices
 import AccountUtils
 import DeviceAccess
 import PeerInfoVisualMediaPaneNode
+import PhotoResources
 
 enum PeerInfoUpdatingAvatar {
     case none
@@ -494,20 +495,56 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     
     let botsKey = ValueBoxKey(length: 8)
     botsKey.setInt64(0, value: 0)
+    
+    var iconLoaded: [EnginePeer.Id: Bool] = [:]
     let bots = context.engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.attachMenuBots, id: botsKey))
     |> mapToSignal { entry -> Signal<[AttachMenuBot], NoError> in
         let bots: [AttachMenuBots.Bot] = entry?.get(AttachMenuBots.self)?.bots ?? []
         return context.engine.data.subscribe(
             EngineDataMap(bots.map(\.peerId).map(TelegramEngine.EngineData.Item.Peer.Peer.init))
         )
-        |> map { peersMap -> [AttachMenuBot] in
-            var result: [AttachMenuBot] = []
+        |> mapToSignal { peersMap -> Signal<[AttachMenuBot], NoError> in
+            var result: [Signal<AttachMenuBot?, NoError>] = []
             for bot in bots {
                 if let maybePeer = peersMap[bot.peerId], let peer = maybePeer {
-                    result.append(AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags))
+                    let resultBot = AttachMenuBot(peer: peer, shortName: bot.name, icons: bot.icons, peerTypes: bot.peerTypes, flags: bot.flags)
+                    if bot.flags.contains(.showInSettings) {
+                        if let peer = PeerReference(peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
+                            let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
+                            let signal: Signal<AttachMenuBot?, NoError>
+                            if let _ = iconLoaded[peer.id] {
+                                signal = .single(resultBot)
+                            } else {
+                                signal = .single(nil)
+                                |> then(
+                                    preloadedBotIcon(account: context.account, fileReference: fileReference)
+                                    |> filter { $0 }
+                                    |> map { _ -> AttachMenuBot? in
+                                        return resultBot
+                                    }
+                                    |> afterNext { _ in
+                                        iconLoaded[peer.id] = true
+                                    }
+                                )
+                            }
+                            result.append(signal)
+                        } else {
+                            result.append(.single(resultBot))
+                        }
+                    }
                 }
             }
-            return result
+            return combineLatest(result)
+            |> map { bots in
+                var result: [AttachMenuBot] = []
+                for bot in bots {
+                    if let bot {
+                        result.append(bot)
+                    }
+                }
+                return result
+            }
+            |> distinctUntilChanged
         }
     }
     
