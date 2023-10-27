@@ -105,7 +105,7 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
                 Thread.sleep(forTimeInterval: 0.1 + 0.5 * Double(i))
             }
         }
-        guard let valueBox else {
+        guard let valueBox = valueBox else {
             postboxLog("Giving up on opening value box at \(basePath + "/db")")
             postboxLogSync()
             preconditionFailure()
