@@ -1105,7 +1105,7 @@ private final class LimitSheetContent: CombinedComponent {
                     string = strings.Premium_MaxStoriesMonthlyNoPremiumText("\(limit)").string
                 }
                 buttonAnimationName = nil
-            case let .storiesChannelBoost(peer, boostSubject, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount):
+            case let .storiesChannelBoost(peer, boostSubject, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount, canBoostAgain):
                 if link == nil, !isCurrent, state.initialized {
                     peerShortcutChild = peerShortcut.update(
                         component: Button(
@@ -1231,8 +1231,8 @@ private final class LimitSheetContent: CombinedComponent {
                         alternateBadge = "X\(myBoostCount)"
                     }
                     let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
-                    if let _ = remaining {
-                        actionButtonText = "Boost Again"
+                    if let _ = remaining, canBoostAgain {
+                        actionButtonText = strings.ChannelBoost_BoostAgain
                     } else {
                         buttonIconName = nil
                         actionButtonText = environment.strings.Common_OK
@@ -1428,7 +1428,7 @@ private final class LimitSheetContent: CombinedComponent {
                 var buttonOffset: CGFloat = 0.0
                 var textOffset: CGFloat = 184.0 + topOffset
                                 
-                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _, _) = component.subject {
                     if let link {
                         let linkButton = linkButton.update(
                             component: SolidRoundedButtonComponent(
@@ -1539,7 +1539,7 @@ private final class LimitSheetContent: CombinedComponent {
                 )
                 
                 var additionalContentHeight: CGFloat = 0.0
-                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _) = component.subject, link != nil, let openGift = component.openGift {
+                if case let .storiesChannelBoost(_, _, _, _, _, _, link, _, _) = component.subject, link != nil, let openGift = component.openGift {
                     let orText = orText.update(
                         component: MultilineTextComponent(text: .plain(NSAttributedString(string: "or", font: Font.regular(15.0), textColor: textColor.withAlphaComponent(0.8), paragraphAlignment: .center))),
                         availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: context.availableSize.height),
@@ -1608,7 +1608,7 @@ private final class LimitSheetContent: CombinedComponent {
                     height -= 78.0
                 }
                 
-                if case let .storiesChannelBoost(_, _, isCurrent, _, _, _, link, _) = component.subject {
+                if case let .storiesChannelBoost(_, _, isCurrent, _, _, _, link, _, _) = component.subject {
                     if link != nil {
                         height += 66.0
                         
@@ -1774,7 +1774,7 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
             case stories
             case nameColors
         }
-        case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32)
+        case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)
     }
     
     private let context: AccountContext

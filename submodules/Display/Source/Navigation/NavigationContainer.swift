@@ -142,12 +142,12 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
             }
             return .right
         })
-        panRecognizer.dynamicEdgeWidth = { [weak self] _ in
+        /*panRecognizer.dynamicEdgeWidth = { [weak self] _ in
             guard let self, let controller = self.controllers.last, let value = controller.interactiveNavivationGestureEdgeWidth else {
                 return .constant(16.0)
             }
             return value
-        }
+        }*/
         if #available(iOS 13.4, *) {
             panRecognizer.allowedScrollTypesMask = .continuous
         }

@@ -1,3 +1,4 @@
+
 import Foundation
 import UIKit
 import SwiftSignalKit
@@ -342,30 +343,21 @@ private final class ReplaceBoostConfirmationAlertContentNode: AlertContentNode {
 }
 
 func replaceBoostConfirmationController(context: AccountContext, fromPeers: [EnginePeer], toPeer: EnginePeer, commit: @escaping () -> Void) -> AlertController {
-    let fromPeers = [fromPeers.first!, fromPeers.first!]
-    
-    let theme = defaultDarkColorPresentationTheme
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let strings = presentationData.strings
     
-    let text: String
-    if fromPeers.count > 1 {
-        text = "To boost **\(toPeer.compactDisplayTitle)**, reassign a previous boost from:"
-        //strings.ChannelBoost_ReplaceBoost(previousPeer.compactDisplayTitle, toPeer.compactDisplayTitle).string
-    } else {
-        text = strings.ChannelBoost_ReplaceBoost(fromPeers.first!.compactDisplayTitle, toPeer.compactDisplayTitle).string
-    }
+    let text = strings.ChannelBoost_ReplaceBoost(fromPeers.first!.compactDisplayTitle, toPeer.compactDisplayTitle).string
     
     var dismissImpl: ((Bool) -> Void)?
     var contentNode: ReplaceBoostConfirmationAlertContentNode?
     let actions: [TextAlertAction] = [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
         dismissImpl?(true)
-    }), TextAlertAction(type: .defaultAction, title: "Reassign", action: {
+    }), TextAlertAction(type: .defaultAction, title: strings.ChannelBoost_Replace, action: {
         dismissImpl?(true)
         commit()
     })]
     
-    contentNode = ReplaceBoostConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: theme, strings: strings, fromPeers: fromPeers, toPeer: toPeer, text: text, actions: actions)
+    contentNode = ReplaceBoostConfirmationAlertContentNode(context: context, theme: AlertControllerTheme(presentationData: presentationData), ptheme: presentationData.theme, strings: strings, fromPeers: fromPeers, toPeer: toPeer, text: text, actions: actions)
     
     let controller = AlertController(theme: AlertControllerTheme(presentationData: presentationData), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in

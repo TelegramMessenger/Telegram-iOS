@@ -1492,7 +1492,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _, _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _, _ in }, navigateToMessageStandalone: { _ in
             }, navigateToThreadMessage: { _, _, _ in
@@ -1812,8 +1812,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSubject = .storiesWeekly
         case .storiesMonthly:
             mappedSubject = .storiesMonthly
-        case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount):
-            mappedSubject = .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: level, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: link, myBoostCount: myBoostCount)
+        case let .storiesChannelBoost(peer, isCurrent, level, currentLevelBoosts, nextLevelBoosts, link, myBoostCount, canBoostAgain):
+            mappedSubject = .storiesChannelBoost(peer: peer, boostSubject: .stories, isCurrent: isCurrent, level: level, currentLevelBoosts: currentLevelBoosts, nextLevelBoosts: nextLevelBoosts, link: link, myBoostCount: myBoostCount, canBoostAgain: canBoostAgain)
         }
         return PremiumLimitScreen(context: context, subject: mappedSubject, count: count, forceDark: forceDark, cancel: cancel, action: action)
     }

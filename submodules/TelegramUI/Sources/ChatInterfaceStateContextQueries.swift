@@ -506,7 +506,11 @@ func detectUrls(_ inputText: NSAttributedString?) -> [String] {
     return detectedUrls
 }
 
-func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: String?) -> (String?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
+struct UrlPreviewState {
+    var detectedUrl: String
+}
+
+func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: AccountContext, currentQuery: UrlPreviewState?) -> (UrlPreviewState?, Signal<(TelegramMediaWebpage?) -> TelegramMediaWebpage?, NoError>)? {
     guard let _ = inputText else {
         if currentQuery != nil {
             return (nil, .single({ _ in return nil }))
@@ -516,9 +520,9 @@ func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: Acco
     }
     if let _ = dataDetector {
         let detectedUrl = detectUrls(inputText).first
-        if detectedUrl != currentQuery {
+        if detectedUrl != currentQuery?.detectedUrl {
             if let detectedUrl = detectedUrl {
-                return (detectedUrl, webpagePreview(account: context.account, url: detectedUrl)
+                return (UrlPreviewState(detectedUrl: detectedUrl), webpagePreview(account: context.account, url: detectedUrl)
                 |> mapToSignal { result -> Signal<TelegramMediaWebpage?, NoError> in
                     guard case let .result(result) = result else {
                         return .complete()

@@ -385,7 +385,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     var secondaryColor: UIColor? = nil
                     var tertiaryColor: UIColor? = nil
                     
-                    let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0) }
+                    let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
                     if !incoming {
                         mainColor = messageTheme.accentTextColor
                         if let _ = nameColors?.secondary {
@@ -766,7 +766,38 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return ChatMessageBubbleContentTapAction(content: .peerMention(peerId: peerMention.peerId, mention: peerMention.mention, openProfile: false))
             } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return ChatMessageBubbleContentTapAction(content: .textMention(peerName))
+                var urlRange: NSRange?
+                if let (_, _, urlRangeValue) = self.textNode.textNode.attributeSubstringWithRange(name: TelegramTextAttributes.PeerTextMention, index: index) {
+                    urlRange = urlRangeValue
+                }
+                
+                return ChatMessageBubbleContentTapAction(content: .textMention(peerName), activate: { [weak self] in
+                    guard let self else {
+                        return nil
+                    }
+                    
+                    let promise = Promise<Bool>()
+                    
+                    self.linkProgressDisposable?.dispose()
+                    
+                    if self.linkProgressRange != nil {
+                        self.linkProgressRange = nil
+                        self.updateLinkProgressState()
+                    }
+                    
+                    self.linkProgressDisposable = (promise.get() |> deliverOnMainQueue).startStrict(next: { [weak self] value in
+                        guard let self else {
+                            return
+                        }
+                        let updatedRange: NSRange? = value ? urlRange : nil
+                        if self.linkProgressRange != updatedRange {
+                            self.linkProgressRange = updatedRange
+                            self.updateLinkProgressState()
+                        }
+                    })
+                    
+                    return promise
+                })
             } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return ChatMessageBubbleContentTapAction(content: .botCommand(botCommand))
             } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {

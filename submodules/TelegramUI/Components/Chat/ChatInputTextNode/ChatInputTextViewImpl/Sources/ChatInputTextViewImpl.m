@@ -12,6 +12,12 @@
 
 @end
 
+@interface ChatInputTextViewImpl () <UIGestureRecognizerDelegate> {
+    UIGestureRecognizer *_tapRecognizer;
+}
+
+@end
+
 @implementation ChatInputTextViewImpl
 
 - (instancetype _Nonnull)initWithFrame:(CGRect)frame textContainer:(NSTextContainer * _Nullable)textContainer disableTiling:(bool)disableTiling {
@@ -26,8 +32,38 @@
 #pragma clang diagnostic pop
             }
         }
+        
+        if (@available(iOS 17.0, *)) {
+        } else {
+            _tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(workaroundTapGesture:)];
+            _tapRecognizer.cancelsTouchesInView = false;
+            _tapRecognizer.delaysTouchesBegan = false;
+            _tapRecognizer.delaysTouchesEnded = false;
+            _tapRecognizer.delegate = self;
+            [self addGestureRecognizer:_tapRecognizer];
+        }
     }
     return self;
+}
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer {
+    return true;
+}
+
+- (void)workaroundTapGesture:(UITapGestureRecognizer *)recognizer {
+    if (recognizer.state == UIGestureRecognizerStateEnded) {
+        static Class promptClass = nil;
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+            promptClass = NSClassFromString([[NSString alloc] initWithFormat:@"%@AutocorrectInlinePrompt", @"UI"]);
+        });
+        UIView *result = [self hitTest:[recognizer locationInView:self] withEvent:nil];
+        if (result != nil && [result class] == promptClass) {
+            if (_dropAutocorrectioniOS16) {
+                _dropAutocorrectioniOS16();
+            }
+        }
+    }
 }
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender

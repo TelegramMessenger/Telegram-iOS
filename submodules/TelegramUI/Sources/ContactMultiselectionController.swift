@@ -459,23 +459,12 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                 }
                 chatsNode.updateState { state in
                     var state = state
-                    if "".isEmpty {
-                        if !state.selectedAdditionalCategoryIds.contains(id) {
-                            for id in state.selectedAdditionalCategoryIds {
-                                removedTokenIds.append(id)
-                                state.selectedAdditionalCategoryIds.remove(id)
-                            }
-                            state.selectedAdditionalCategoryIds.insert(id)
-                            addedToken = categoryToken
-                        }
+                    if state.selectedAdditionalCategoryIds.contains(id) {
+                        state.selectedAdditionalCategoryIds.remove(id)
+                        removedTokenIds.append(id)
                     } else {
-                        if state.selectedAdditionalCategoryIds.contains(id) {
-                            state.selectedAdditionalCategoryIds.remove(id)
-                            removedTokenIds.append(id)
-                        } else {
-                            state.selectedAdditionalCategoryIds.insert(id)
-                            addedToken = categoryToken
-                        }
+                        state.selectedAdditionalCategoryIds.insert(id)
+                        addedToken = categoryToken
                     }
                     
                     return state

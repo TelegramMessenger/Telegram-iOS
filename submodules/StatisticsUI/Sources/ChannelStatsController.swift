@@ -968,6 +968,12 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     },
     openBoost: { boost in
         dismissAllTooltipsImpl?()
+        
+        if let peer = boost.peer, !boost.flags.contains(.isGiveaway) && !boost.flags.contains(.isGift) {
+            navigateToChatImpl?(peer)
+            return
+        }
+        
         if boost.peer == nil, boost.flags.contains(.isGiveaway) && !boost.flags.contains(.isUnclaimed) {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             presentImpl?(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.Stats_Boosts_TooltipToBeDistributed, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }))

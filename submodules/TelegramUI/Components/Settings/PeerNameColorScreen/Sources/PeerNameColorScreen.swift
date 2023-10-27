@@ -49,7 +49,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
     case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor)
     case colorDescription(String)
-    case backgroundEmojiHeader(String)
+    case backgroundEmojiHeader(String, String?)
     case backgroundEmoji(EmojiPagerContentComponent, UIColor)
     
     var section: ItemListSectionId {
@@ -121,8 +121,8 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .backgroundEmojiHeader(text):
-            if case .backgroundEmojiHeader(text) = rhs {
+        case let .backgroundEmojiHeader(text, action):
+            if case .backgroundEmojiHeader(text, action) = rhs {
                 return true
             } else {
                 return false
@@ -170,8 +170,10 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             )
         case let .colorDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-        case let .backgroundEmojiHeader(text):
-            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .backgroundEmojiHeader(text, action):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action != nil ? {
+                arguments.updateBackgroundEmojiId(0)
+            } : nil, sectionId: self.section)
         case let .backgroundEmoji(emojiContent, backgroundIconColor):
             return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, sectionId: self.section)
         }
@@ -204,7 +206,7 @@ private func peerNameColorScreenEntries(
             nameColor = .blue
         }
         
-        let colors = nameColors.get(nameColor)
+        let colors = nameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
         
         let backgroundEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
@@ -254,7 +256,7 @@ private func peerNameColorScreenEntries(
         entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
         
         if let emojiContent {
-            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title))
+            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title, backgroundEmojiId != nil ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
             entries.append(.backgroundEmoji(emojiContent, colors.main))
         }
     }
@@ -281,8 +283,8 @@ public func PeerNameColorScreen(
     var presentImpl: ((ViewController) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
-    
-//    var openQuickReactionImpl: (() -> Void)?
+    var attemptNavigationImpl: ((@escaping () -> Void) -> Bool)?
+    var applyChangesImpl: (() -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -312,12 +314,12 @@ public func PeerNameColorScreen(
         peerId = channelId
     }
     
-    
     let emojiContent = combineLatest(
+        context.sharedContext.presentationData,
         statePromise.get(),
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
     )
-    |> mapToSignal { state, peer -> Signal<EmojiPagerContentComponent, NoError> in
+    |> mapToSignal { presentationData, state, peer -> Signal<EmojiPagerContentComponent, NoError> in
         var selectedEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
             selectedEmojiId = updatedBackgroundEmojiId
@@ -330,7 +332,7 @@ public func PeerNameColorScreen(
         } else {
             nameColor = (peer?.nameColor ?? .blue)
         }
-        let color = context.peerNameColors.get(nameColor)
+        let color = context.peerNameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
         
         let selectedItems: [EngineMedia.Id]
         if let selectedEmojiId, selectedEmojiId != 0 {
@@ -399,59 +401,7 @@ public func PeerNameColorScreen(
             inProgress: state.inProgress,
             action: {
                 if !isLocked {
-                    let state = stateValue.with { $0 }
-                                        
-                    let nameColor = state.updatedNameColor ?? peer?.nameColor
-                    let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer?.backgroundEmojiId
-                    
-                    switch subject {
-                    case .account:
-                        let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
-                        dismissImpl?()
-                    case let .channel(peerId):
-                        updateState { state in
-                            var updatedState = state
-                            updatedState.inProgress = true
-                            return updatedState
-                        }
-                        let _ = (context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0)
-                        |> deliverOnMainQueue).startStandalone(next: {
-                        }, error: { error in
-                            if case .channelBoostRequired = error {
-                                let _ = combineLatest(
-                                    queue: Queue.mainQueue(),
-                                    context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
-                                    context.engine.peers.getChannelBoostStatus(peerId: peerId)
-                                ).startStandalone(next: { peer, status in
-                                    guard let peer, let status else {
-                                        return
-                                    }
-                                    
-                                    let link = status.url
-                                    let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0), count: Int32(status.boosts), action: {
-                                        UIPasteboard.general.string = link
-                                        presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
-                                        return true
-                                    }, openStats: nil, openGift: {
-                                        let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
-                                        pushImpl?(controller)
-                                    })
-                                    pushImpl?(controller)
-                                    
-                                    HapticFeedback().impact(.light)
-                                })
-                            } else {
-                                
-                            }
-                            updateState { state in
-                                var updatedState = state
-                                updatedState.inProgress = false
-                                return updatedState
-                            }
-                        }, completed: {
-                            dismissImpl?()
-                        })
-                    }
+                    applyChangesImpl?()
                 } else {
                     HapticFeedback().impact(.light)
                     let controller = UndoOverlayController(
@@ -596,7 +546,97 @@ public func PeerNameColorScreen(
         }
         controller.dismiss()
     }
-    
+    controller.attemptNavigation = { f in
+        return attemptNavigationImpl?(f) ?? true
+    }
+    attemptNavigationImpl = { f in
+        if !context.isPremium {
+            f()
+            return true
+        }
+        let state = stateValue.with({ $0 })
+        var hasChanges = false
+        if state.updatedNameColor != nil || state.updatedBackgroundEmojiId != nil {
+            hasChanges = true
+        }
+        if hasChanges {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: presentationData.strings.NameColor_UnsavedChanges_Title, text: presentationData.strings.NameColor_UnsavedChanges_Text, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.NameColor_UnsavedChanges_Discard, action: {
+                    f()
+                    dismissImpl?()
+                }),
+                TextAlertAction(type: .defaultAction, title: presentationData.strings.NameColor_UnsavedChanges_Apply, action: {
+                    applyChangesImpl?()
+                })
+            ]))
+            return false
+        } else {
+            f()
+            return true
+        }
+    }
+    applyChangesImpl = {
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).startStandalone(next: { peer in
+            guard let peer else {
+                return
+            }
+            let state = stateValue.with { $0 }
+                                
+            let nameColor = state.updatedNameColor ?? peer.nameColor
+            let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer.backgroundEmojiId
+            
+            switch subject {
+            case .account:
+                let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                dismissImpl?()
+            case let .channel(peerId):
+                updateState { state in
+                    var updatedState = state
+                    updatedState.inProgress = true
+                    return updatedState
+                }
+                let _ = (context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0)
+                |> deliverOnMainQueue).startStandalone(next: {
+                }, error: { error in
+                    if case .channelBoostRequired = error {
+                        let _ = combineLatest(
+                            queue: Queue.mainQueue(),
+                            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
+                            context.engine.peers.getChannelBoostStatus(peerId: peerId)
+                        ).startStandalone(next: { peer, status in
+                            guard let peer, let status else {
+                                return
+                            }
+                            
+                            let link = status.url
+                            let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: {
+                                UIPasteboard.general.string = link
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
+                                return true
+                            }, openStats: nil, openGift: {
+                                let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
+                                pushImpl?(controller)
+                            })
+                            pushImpl?(controller)
+                            
+                            HapticFeedback().impact(.light)
+                        })
+                    } else {
+                        
+                    }
+                    updateState { state in
+                        var updatedState = state
+                        updatedState.inProgress = false
+                        return updatedState
+                    }
+                }, completed: {
+                    dismissImpl?()
+                })
+            }
+        })
+    }
     return controller
 }
-

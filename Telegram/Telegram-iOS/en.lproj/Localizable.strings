@@ -10143,6 +10143,12 @@ Sorry for the inconvenience.";
 "NameColor.TooltipPremium.Account" = "Subscribe to [Telegram Premium]() to choose a custom color for your name.";
 
 "NameColor.BackgroundEmoji.Title" = "ADD ICONS TO REPLIES";
+"NameColor.BackgroundEmoji.Remove" = "REMOVE ICON";
+
+"NameColor.UnsavedChanges.Title" = "Unsaved Changes";
+"NameColor.UnsavedChanges.Text" = "You have changed your color or icon settings. Apply changes?";
+"NameColor.UnsavedChanges.Discard" = "Discard";
+"NameColor.UnsavedChanges.Apply" = "Apply";
 
 "Chat.ErrorQuoteOutdatedTitle" = "Quote Outdated";
 "Chat.ErrorQuoteOutdatedText" = "**%@** updated the message you are quoting. Edit your quote to make it up-to-date.";
@@ -10404,3 +10410,6 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.EnableColors" = "Enable Colors";
 "ChannelBoost.EnableColorsText" = "Your channel needs %1$@ to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+"ChannelBoost.BoostAgain" = "Boost Again";
+
+"Settings.New" = "NEW";

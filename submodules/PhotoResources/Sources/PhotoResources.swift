@@ -2421,6 +2421,25 @@ public func chatMessageImageFile(account: Account, userLocation: MediaResourceUs
     }
 }
 
+public func preloadedBotIcon(account: Account, fileReference: FileMediaReference) -> Signal<Bool, NoError> {
+    let signal = Signal<Bool, NoError> { subscriber in
+        let fetched = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource)).start()
+        let dataDisposable = account.postbox.mediaBox.resourceData(fileReference.media.resource, option: .incremental(waitUntilFetchStatus: false)).start(next: { data in
+            if data.complete {
+                subscriber.putNext(true)
+                subscriber.putCompletion()
+            } else {
+                subscriber.putNext(false)
+            }
+        })
+        return ActionDisposable {
+            fetched.dispose()
+            dataDisposable.dispose()
+        }
+    }
+    return signal
+}
+
 public func instantPageImageFile(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessageFileDatas(account: account, userLocation: userLocation, fileReference: fileReference, progressive: false, fetched: fetched)
     |> map { value in
