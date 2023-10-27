@@ -10150,6 +10150,8 @@ Sorry for the inconvenience.";
 "NameColor.UnsavedChanges.Discard" = "Discard";
 "NameColor.UnsavedChanges.Apply" = "Apply";
 
+"NameColor.YourColorUpdated" = "Your name color has been updated.";
+
 "Chat.ErrorQuoteOutdatedTitle" = "Quote Outdated";
 "Chat.ErrorQuoteOutdatedText" = "**%@** updated the message you are quoting. Edit your quote to make it up-to-date.";
 "Chat.ErrorQuoteOutdatedActionEdit" = "Edit";

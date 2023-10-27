@@ -25,12 +25,20 @@ struct ChatPreviewMessageItem: Equatable {
         if lhs.text != rhs.text {
             return false
         }
+        if lhs.nameColor != rhs.nameColor {
+            return false
+        }
+        if lhs.backgroundEmojiId != rhs.backgroundEmojiId {
+            return false
+        }
         return true
     }
     
     let outgoing: Bool
     let reply: (String, String)?
     let text: String
+    let nameColor: PeerNameColor
+    let backgroundEmojiId: Int64?
 }
 
 class ThemeSettingsChatPreviewItem: ListViewItem, ItemListItem {
@@ -155,7 +163,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
                 
                 let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
                 if let (author, text) = messageItem.reply {
-                    peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: author, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: .blue, backgroundEmojiId: nil)
+                    peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: author, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: messageItem.nameColor, backgroundEmojiId: messageItem.backgroundEmojiId)
                     messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: text, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])
                 }
                 

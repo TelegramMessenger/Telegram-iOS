@@ -375,16 +375,26 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     let strings = presentationData.strings
     let title = presentationData.autoNightModeTriggered ? strings.Appearance_ColorThemeNight.uppercased() : strings.Appearance_ColorTheme.uppercased()
     entries.append(.themeListHeader(presentationData.theme, title))
-    entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (presentationData.strings.Appearance_PreviewReplyAuthor, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText)]))
+    
+    let nameColor: PeerNameColor
+    var authorName = presentationData.strings.Appearance_PreviewReplyAuthor
+    if let accountPeer {
+        nameColor = accountPeer.nameColor ?? .blue
+        if accountPeer._asPeer().hasCustomNameColor {
+            authorName = accountPeer.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder)
+        }
+    } else {
+        nameColor = .blue
+    }
+    
+    entries.append(.chatPreview(presentationData.theme, presentationData.chatWallpaper, presentationData.chatFontSize, presentationData.chatBubbleCorners, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (authorName, presentationData.strings.Appearance_PreviewReplyText), text: presentationData.strings.Appearance_PreviewIncomingText, nameColor: nameColor, backgroundEmojiId: accountPeer?.backgroundEmojiId), ChatPreviewMessageItem(outgoing: true, reply: nil, text: presentationData.strings.Appearance_PreviewOutgoingText, nameColor: .blue, backgroundEmojiId: nil)]))
     
     entries.append(.themes(presentationData.theme, presentationData.strings, chatThemes, themeReference, presentationThemeSettings.automaticThemeSwitchSetting.force || presentationData.autoNightModeTriggered, animatedEmojiStickers, presentationThemeSettings.themeSpecificAccentColors, presentationThemeSettings.themeSpecificChatWallpapers))
     entries.append(.chatTheme(presentationData.theme, strings.Settings_ChatThemes))
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
     
-    if let accountPeer {
-        let colors = nameColors.get(accountPeer.nameColor ?? .blue)
-        entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer.compactDisplayTitle, colors.main))
-    }
+    let colors = nameColors.get(nameColor)
+    entries.append(.nameColor(presentationData.theme, strings.Appearance_NameColor, accountPeer?.compactDisplayTitle ?? "", colors.main))
     
     entries.append(.autoNight(presentationData.theme, strings.Appearance_NightTheme, presentationThemeSettings.automaticThemeSwitchSetting.force, !presentationData.autoNightModeTriggered || presentationThemeSettings.automaticThemeSwitchSetting.force))
     let autoNightMode: String

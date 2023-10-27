@@ -523,9 +523,9 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     var i: Int = 0
                     for index in item.colors.displayOrder {
                         let color = PeerNameColor(rawValue: index)
-                        if let colors = item.colors.colors[index] {
-                            entries.append(.color(i, color, colors, color == item.currentColor))
-                        }
+                        let colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
+                        entries.append(.color(i, color, colors, color == item.currentColor))
+                        
                         i += 1
                     }
                     

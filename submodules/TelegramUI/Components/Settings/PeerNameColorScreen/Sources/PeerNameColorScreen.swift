@@ -576,7 +576,7 @@ public func PeerNameColorScreen(
             return true
         }
     }
-    applyChangesImpl = {
+    applyChangesImpl = { [weak controller] in
         let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
         |> deliverOnMainQueue).startStandalone(next: { peer in
             guard let peer else {
@@ -590,6 +590,17 @@ public func PeerNameColorScreen(
             switch subject {
             case .account:
                 let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                
+                if let navigationController = controller?.navigationController as? NavigationController {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    Queue.mainQueue().after(0.25) {
+                        if let lastController = navigationController.viewControllers.last as? ViewController {
+                            let tipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.NameColor_YourColorUpdated, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                            lastController.present(tipController, in: .window(.root))
+                        }
+                    }
+                }
+                
                 dismissImpl?()
             case let .channel(peerId):
                 updateState { state in
