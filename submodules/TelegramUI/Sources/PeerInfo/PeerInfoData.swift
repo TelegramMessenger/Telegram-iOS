@@ -496,7 +496,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     let botsKey = ValueBoxKey(length: 8)
     botsKey.setInt64(0, value: 0)
     
-    var iconLoaded: [EnginePeer.Id: Bool] = [:]
+    let iconLoaded = Atomic<[EnginePeer.Id: Bool]>(value: [:])
     let bots = context.engine.data.subscribe(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.attachMenuBots, id: botsKey))
     |> mapToSignal { entry -> Signal<[AttachMenuBot], NoError> in
         let bots: [AttachMenuBots.Bot] = entry?.get(AttachMenuBots.self)?.bots ?? []
@@ -512,7 +512,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
                         if let peer = PeerReference(peer._asPeer()), let icon = bot.icons[.iOSSettingsStatic] {
                             let fileReference: FileMediaReference = .attachBot(peer: peer, media: icon)
                             let signal: Signal<AttachMenuBot?, NoError>
-                            if let _ = iconLoaded[peer.id] {
+                            if let _ = iconLoaded.with({ $0 })[peer.id] {
                                 signal = .single(resultBot)
                             } else {
                                 signal = .single(nil)
@@ -523,7 +523,11 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
                                         return resultBot
                                     }
                                     |> afterNext { _ in
-                                        iconLoaded[peer.id] = true
+                                        let _ = iconLoaded.modify { current in
+                                            var updated = current
+                                            updated[peer.id] = true
+                                            return updated
+                                        }
                                     }
                                 )
                             }

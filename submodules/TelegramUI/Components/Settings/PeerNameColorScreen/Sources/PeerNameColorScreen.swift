@@ -280,6 +280,8 @@ public func PeerNameColorScreen(
         statePromise.set(stateValue.modify { f($0) })
     }
     
+    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    
     var presentImpl: ((ViewController) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
@@ -416,7 +418,7 @@ public func PeerNameColorScreen(
                         elevatedLayout: false,
                         action: { action in
                             if case .info = action {
-                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .storiesSuggestedReactions, forceDark: false, dismissed: nil)
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .nameColor, forceDark: false, dismissed: nil)
                                 pushImpl?(controller)
                             }
                             return true
@@ -550,7 +552,7 @@ public func PeerNameColorScreen(
         return attemptNavigationImpl?(f) ?? true
     }
     attemptNavigationImpl = { f in
-        if !context.isPremium {
+        if case .account = subject, !context.isPremium {
             f()
             return true
         }
@@ -583,19 +585,21 @@ public func PeerNameColorScreen(
                 return
             }
             let state = stateValue.with { $0 }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 
             let nameColor = state.updatedNameColor ?? peer.nameColor
             let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer.backgroundEmojiId
+            let colors = context.peerNameColors.get(nameColor ?? .blue, dark: presentationData.theme.overallDarkAppearance)
             
             switch subject {
             case .account:
                 let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
                 
                 if let navigationController = controller?.navigationController as? NavigationController {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     Queue.mainQueue().after(0.25) {
                         if let lastController = navigationController.viewControllers.last as? ViewController {
-                            let tipController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: presentationData.strings.NameColor_YourColorUpdated, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                            let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_YourColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
                             lastController.present(tipController, in: .window(.root))
                         }
                     }
@@ -627,10 +631,10 @@ public func PeerNameColorScreen(
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 presentImpl?(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }))
                                 return true
-                            }, openStats: nil, openGift: {
+                            }, openStats: nil, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? {
                                 let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
                                 pushImpl?(controller)
-                            })
+                            } : nil)
                             pushImpl?(controller)
                             
                             HapticFeedback().impact(.light)
@@ -644,6 +648,15 @@ public func PeerNameColorScreen(
                         return updatedState
                     }
                 }, completed: {
+                    if let navigationController = controller?.navigationController as? NavigationController {
+                        Queue.mainQueue().after(0.25) {
+                            if let lastController = navigationController.viewControllers.last as? ViewController {
+                                let tipController = UndoOverlayController(presentationData: presentationData, content: .image(image: generatePeerNameColorImage(nameColor: colors, bounds: CGSize(width: 32.0, height: 32.0), size: CGSize(width: 22.0, height: 22.0))!, title: nil, text: presentationData.strings.NameColor_ChannelColorUpdated, round: false, undoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false })
+                                lastController.present(tipController, in: .window(.root))
+                            }
+                        }
+                    }
+                    
                     dismissImpl?()
                 })
             }

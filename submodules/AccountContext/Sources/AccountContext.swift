@@ -968,6 +968,7 @@ public enum PremiumIntroSource {
     case storiesExpirationDurations
     case storiesSuggestedReactions
     case channelBoost(EnginePeer.Id)
+    case nameColor
 }
 
 public enum PremiumDemoSubject {

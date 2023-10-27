@@ -1744,6 +1744,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             mappedSource = .storiesSuggestedReactions
         case let .channelBoost(peerId):
             mappedSource = .channelBoost(peerId)
+        case .nameColor:
+            mappedSource = .nameColor
         }
         let controller = PremiumIntroScreen(context: context, source: mappedSource, forceDark: forceDark)
         controller.wasDismissed = dismissed

@@ -10151,12 +10151,14 @@ Sorry for the inconvenience.";
 "NameColor.UnsavedChanges.Apply" = "Apply";
 
 "NameColor.YourColorUpdated" = "Your name color has been updated.";
+"NameColor.ChannelColorUpdated" = "Channel name color has been updated.";
 
 "Chat.ErrorQuoteOutdatedTitle" = "Quote Outdated";
 "Chat.ErrorQuoteOutdatedText" = "**%@** updated the message you are quoting. Edit your quote to make it up-to-date.";
 "Chat.ErrorQuoteOutdatedActionEdit" = "Edit";
 
 "Premium.BoostByGiftDescription" = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()";
+"Premium.BoostByGiftDescription2" = "Boost your channel by gifting your subscribers Telegram Premium. [Get boosts >]()";
 
 "ChatContextMenu.QuoteSelectionTip" = "Hold on a word, then move cursor to select more| text to quote.";
 
@@ -10415,3 +10417,5 @@ Sorry for the inconvenience.";
 "ChannelBoost.BoostAgain" = "Boost Again";
 
 "Settings.New" = "NEW";
+
+"ChannelBoost.Or" = "or";

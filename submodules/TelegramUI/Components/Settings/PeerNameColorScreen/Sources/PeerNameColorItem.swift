@@ -125,12 +125,12 @@ private func generateRingImage(nameColor: PeerNameColors.Colors) -> UIImage? {
     })
 }
 
-private func generateFillImage(nameColor: PeerNameColors.Colors) -> UIImage? {
-    return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
+func generatePeerNameColorImage(nameColor: PeerNameColors.Colors, bounds: CGSize = CGSize(width: 40.0, height: 40.0), size: CGSize = CGSize(width: 40.0, height: 40.0)) -> UIImage? {
+    return generateImage(bounds, rotatedContext: { contextSize, context in
+        let bounds = CGRect(origin: CGPoint(), size: contextSize)
         context.clear(bounds)
         
-        let circleBounds = bounds
+        let circleBounds = CGRect(origin: CGPoint(x: floorToScreenPixels((bounds.width - size.width) / 2.0), y: floorToScreenPixels((bounds.height - size.height) / 2.0)), size: size)
         context.addEllipse(in: circleBounds)
         context.clip()
         
@@ -139,24 +139,26 @@ private func generateFillImage(nameColor: PeerNameColors.Colors) -> UIImage? {
             context.fill(circleBounds)
             
             if let thirdColor = nameColor.tertiary {
-                context.move(to: CGPoint(x: size.width, y: 0.0))
-                context.addLine(to: CGPoint(x: size.width, y: size.height))
-                context.addLine(to: CGPoint(x: 0.0, y: size.height))
+                context.move(to: CGPoint(x: contextSize.width, y: 0.0))
+                context.addLine(to: CGPoint(x: contextSize.width, y: contextSize.height))
+                context.addLine(to: CGPoint(x: 0.0, y: contextSize.height))
                 context.closePath()
                 context.setFillColor(nameColor.main.cgColor)
                 context.fillPath()
                 
                 context.setFillColor(thirdColor.cgColor)
-                context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                context.translateBy(x: contextSize.width / 2.0, y: contextSize.height / 2.0)
                 context.rotate(by: .pi / 4.0)
                 
-                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: -9.0, y: -9.0), size: CGSize(width: 18.0, height: 18.0)), cornerRadius: 4.0)
+                let rectSide = size.width / 40.0 * 18.0
+                let rectCornerRadius = round(size.width / 40.0 * 4.0)
+                let path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: -rectSide / 2.0, y: -rectSide / 2.0), size: CGSize(width: rectSide, height: rectSide)), cornerRadius: rectCornerRadius)
                 context.addPath(path.cgPath)
                 context.fillPath()
             } else {
                 context.move(to: .zero)
-                context.addLine(to: CGPoint(x: size.width, y: 0.0))
-                context.addLine(to: CGPoint(x: 0.0, y: size.height))
+                context.addLine(to: CGPoint(x: contextSize.width, y: 0.0))
+                context.addLine(to: CGPoint(x: 0.0, y: contextSize.height))
                 context.closePath()
                 context.setFillColor(nameColor.main.cgColor)
                 context.fillPath()
@@ -230,7 +232,7 @@ private final class PeerNameColorIconItemNode : ListViewItemNode {
                     strongSelf.item = item
                     
                     if updatedAccentColor {
-                        strongSelf.fillNode.image = generateFillImage(nameColor: item.colors)
+                        strongSelf.fillNode.image = generatePeerNameColorImage(nameColor: item.colors)
                         strongSelf.ringNode.image = generateRingImage(nameColor: item.colors)
                     }
                     

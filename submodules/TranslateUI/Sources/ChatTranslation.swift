@@ -207,7 +207,15 @@ public func chatTranslationState(context: AccountContext, peerId: EnginePeer.Id)
                             for message in messages {
                                 if message.effectivelyIncoming(context.account.peerId), message.text.count >= 10 {
                                     var text = String(message.text.prefix(256))
-                                    if var entities = message.textEntitiesAttribute?.entities.filter({ [.Pre, .Code, .Url, .Email, .Mention, .Hashtag, .BotCommand].contains($0.type) }) {
+                                    if var entities = message.textEntitiesAttribute?.entities.filter({
+                                        if [.Code, .Url, .Email, .Mention, .Hashtag, .BotCommand].contains($0.type) {
+                                            return true
+                                        } else if case .Pre = $0.type {
+                                            return true
+                                        } else {
+                                            return false
+                                        }
+                                    }) {
                                         entities = entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound })
                                         var ranges: [Range<String.Index>] = []
                                         for entity in entities {
