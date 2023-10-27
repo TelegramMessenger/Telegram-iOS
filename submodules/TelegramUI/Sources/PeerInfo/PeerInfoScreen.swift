@@ -4059,6 +4059,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.expiringStoryListDisposable?.dispose()
         self.postingAvailabilityDisposable?.dispose()
         self.storyUploadProgressDisposable?.dispose()
+        self.updateAvatarDisposable.dispose()
     }
     
     override func didLoad() {
