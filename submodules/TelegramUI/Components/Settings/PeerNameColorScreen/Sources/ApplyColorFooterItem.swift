@@ -93,7 +93,7 @@ final class ApplyColorFooterItemNode: ItemListControllerFooterItemNode {
         }
         
         if self.inProgress != self.item.inProgress {
-            self.inProgress = true
+            self.inProgress = self.item.inProgress
             
             if self.item.inProgress {
                 self.buttonNode.transitionToProgress()

@@ -589,9 +589,13 @@ public func PeerNameColorScreen(
                 return
             }
             let state = stateValue.with { $0 }
+            if state.updatedNameColor == nil && state.updatedBackgroundEmojiId == nil {
+                dismissImpl?()
+                return
+            }
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                
+
             let nameColor = state.updatedNameColor ?? peer.nameColor
             let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer.backgroundEmojiId
             let colors = context.peerNameColors.get(nameColor ?? .blue, dark: presentationData.theme.overallDarkAppearance)
