@@ -190,7 +190,7 @@ public final class StorageBox {
                 valueBox = SqliteValueBox(basePath: databasePath, queue: queue, isTemporary: false, isReadOnly: false, useCaches: isMainProcess, removeDatabaseOnError: isMainProcess, encryptionParameters: nil, upgradeProgress: { _ in })
             }
             
-            guard let valueBox else {
+            guard let valueBox = valueBox else {
                 postboxLog("Giving up on opening value box at \(basePath + "/db")")
                 postboxLogSync()
                 preconditionFailure()

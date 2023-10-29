@@ -19179,7 +19179,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let self, let message else {
                 return
             }
-            if let controller = giveawayInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, message: message, giveawayInfo: giveawayInfo) {
+            if let controller = giveawayInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, message: message, giveawayInfo: giveawayInfo, openLink: { [weak self] slug in
+                guard let self else {
+                    return
+                }
+                self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: messageId)
+            }) {
                 self.present(controller, in: .window(.root))
             }
         })

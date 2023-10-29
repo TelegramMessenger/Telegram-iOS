@@ -10,7 +10,7 @@ import TelegramPresentationData
 import Markdown
 import AlertUI
 
-public func giveawayInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, message: EngineMessage, giveawayInfo: PremiumGiveawayInfo) -> ViewController? {
+public func giveawayInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, message: EngineMessage, giveawayInfo: PremiumGiveawayInfo, openLink: @escaping (String) -> Void) -> ViewController? {
     guard let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
         return nil
     }
@@ -138,9 +138,9 @@ public func giveawayInfoController(context: AccountContext, updatedPresentationD
             result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
         case let .won(slug):
             result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
-            let _ = slug
             actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
                 dismissImpl?()
+                openLink(slug)
             }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
                 dismissImpl?()
             })]

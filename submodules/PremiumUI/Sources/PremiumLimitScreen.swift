@@ -1176,18 +1176,18 @@ private final class LimitSheetContent: CombinedComponent {
                     if let remaining {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level + 1)
                         let valueString = strings.ChannelBoost_MoreBoosts(remaining)
-                        if level == 0 {
-                            switch boostSubject {
-                            case .stories:
+                        switch boostSubject {
+                        case .stories:
+                            if level == 0 {
                                 titleText = strings.ChannelBoost_EnableStories
                                 string = strings.ChannelBoost_EnableStoriesText(valueString).string
-                            case .nameColors:
-                                titleText = strings.ChannelBoost_EnableColors
-                                string = strings.ChannelBoost_EnableColorsText(valueString).string
+                            } else {
+                                titleText = strings.ChannelBoost_IncreaseLimit
+                                string = strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
                             }
-                        } else {
-                            titleText = strings.ChannelBoost_IncreaseLimit
-                            string = strings.ChannelBoost_IncreaseLimitText(valueString, storiesString).string
+                        case .nameColors:
+                            titleText = strings.ChannelBoost_EnableColors
+                            string = strings.ChannelBoost_EnableColorsText(valueString).string
                         }
                     } else {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level)
