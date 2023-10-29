@@ -947,7 +947,11 @@ public final class TextNodeLayout: NSObject {
                 rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
             }
         }
-        if !rects.isEmpty, let startEdge = startEdge, let endEdge = endEdge {
+        if !rects.isEmpty, var startEdge = startEdge, var endEdge = endEdge {
+            startEdge.x += self.insets.left
+            startEdge.y += self.insets.top
+            endEdge.x += self.insets.left
+            endEdge.y += self.insets.top
             return (rects.map { $1 }, startEdge, endEdge)
         }
         return nil

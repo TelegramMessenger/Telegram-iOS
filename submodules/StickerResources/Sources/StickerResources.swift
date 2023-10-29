@@ -387,6 +387,7 @@ public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaRes
 
 public func chatMessageSticker(postbox: Postbox, userLocation: MediaResourceUserLocation, file: TelegramMediaFile, small: Bool, fetched: Bool = false, onlyFullSize: Bool = false, thumbnail: Bool = false, synchronousLoad: Bool = false, colorSpace: CGColorSpace? = nil) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal: Signal<Tuple3<Data?, Data?, Bool>, NoError>
+    
     if thumbnail {
         signal = chatMessageStickerThumbnailData(postbox: postbox, userLocation: userLocation, file: file, synchronousLoad: synchronousLoad)
         |> map { data -> Tuple3<Data?, Data?, Bool>in

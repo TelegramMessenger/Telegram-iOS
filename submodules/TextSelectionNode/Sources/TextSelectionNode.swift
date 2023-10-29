@@ -589,7 +589,7 @@ public final class TextSelectionNode: ASDisplayNode {
                 highlightOverlay.innerRadius = 2.0
                 highlightOverlay.outerRadius = 2.0
                 highlightOverlay.inset = 1.0
-                highlightOverlay.useModernPathCalculation = true
+                highlightOverlay.useModernPathCalculation = false
                 
                 self.highlightOverlay = highlightOverlay
                 self.highlightAreaNode.addSubnode(highlightOverlay)
@@ -597,8 +597,8 @@ public final class TextSelectionNode: ASDisplayNode {
             highlightOverlay.frame = self.bounds
             highlightOverlay.updateRects(rects)
             if let image = self.leftKnob.image {
-                self.leftKnob.frame = CGRect(origin: CGPoint(x: floor(startEdge.x - image.size.width / 2.0), y: startEdge.y + 1.0 - 12.0), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + startEdge.height + 2.0))
-                self.rightKnob.frame = CGRect(origin: CGPoint(x: floor(endEdge.x + 1.0 - image.size.width / 2.0), y: endEdge.y + endEdge.height + 3.0 - (endEdge.height + 2.0)), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + endEdge.height + 2.0))
+                self.leftKnob.frame = CGRect(origin: CGPoint(x: floor(startEdge.x - image.size.width / 2.0), y: startEdge.y - self.theme.knobDiameter), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + startEdge.height))
+                self.rightKnob.frame = CGRect(origin: CGPoint(x: floor(endEdge.x - image.size.width / 2.0), y: endEdge.y), size: CGSize(width: image.size.width, height: self.theme.knobDiameter + endEdge.height))
             }
             if self.leftKnob.alpha.isZero {
                 highlightOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)

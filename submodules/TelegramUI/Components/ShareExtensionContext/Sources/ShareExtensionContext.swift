@@ -267,6 +267,31 @@ public class ShareRootControllerImpl {
             let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
             initializeAccountManagement()
             
+            do {
+                let semaphore = DispatchSemaphore(value: 0)
+                var loggingSettings = LoggingSettings.defaultSettings
+                if self.initializationData.appBuildType == .internal {
+                    loggingSettings = LoggingSettings(logToFile: true, logToConsole: false, redactSensitiveData: true)
+                }
+                let _ = (accountManager.transaction { transaction -> LoggingSettings? in
+                    if let value = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) {
+                        return value
+                    } else {
+                        return nil
+                    }
+                }).start(next: { value in
+                    if let value {
+                        loggingSettings = value
+                    }
+                    semaphore.signal()
+                })
+                semaphore.wait()
+                
+                Logger.shared.logToFile = loggingSettings.logToFile
+                Logger.shared.logToConsole = loggingSettings.logToConsole
+                Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
+            }
+            
             var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
             let semaphore = DispatchSemaphore(value: 0)
             let systemUserInterfaceStyle: WindowUserInterfaceStyle
@@ -306,7 +331,6 @@ public class ShareRootControllerImpl {
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                 Logger.shared.logToFile = loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
-                
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
                 return combineLatest(sharedContext.activeAccountsWithInfo, accountManager.transaction { transaction -> (Set<AccountRecordId>, PeerId?) in

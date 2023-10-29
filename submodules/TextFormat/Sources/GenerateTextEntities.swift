@@ -181,6 +181,35 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
         }
     }
     
+    while true {
+        var hadReductions = false
+        
+        scan: for i in 0 ..< entities.count {
+            if case .BlockQuote = entities[i].type {
+                inner: for j in 0 ..< entities.count {
+                    if j == i {
+                        continue inner
+                    }
+                    if case .BlockQuote = entities[j].type {
+                        if entities[i].range.upperBound == entities[j].range.lowerBound || entities[i].range.lowerBound == entities[j].range.upperBound {
+                            entities[i].range = min(entities[i].range.lowerBound, entities[j].range.lowerBound) ..< max(entities[i].range.upperBound, entities[j].range.upperBound)
+                            entities.remove(at: j)
+                            
+                            hadReductions = true
+                            break scan
+                        }
+                    }
+                }
+                
+                break scan
+            }
+        }
+        
+        if !hadReductions {
+            break
+        }
+    }
+    
     return entities
 }
 

@@ -68,6 +68,13 @@
 
 - (BOOL)canPerformAction:(SEL)action withSender:(id)sender
 {
+    if (_targetForAction) {
+        ChatInputTextViewImplTargetForAction *result = _targetForAction(action);
+        if (result) {
+            return result.target != nil;
+        }
+    }
+    
     if (_shouldRespondToAction) {
         if (!_shouldRespondToAction(action)) {
             return false;
@@ -102,6 +109,13 @@
 }
 
 - (id)targetForAction:(SEL)action withSender:(id)__unused sender {
+    if (_targetForAction) {
+        ChatInputTextViewImplTargetForAction *result = _targetForAction(action);
+        if (result) {
+            return result.target;
+        }
+    }
+    
     return [super targetForAction:action withSender:sender];
 }
 

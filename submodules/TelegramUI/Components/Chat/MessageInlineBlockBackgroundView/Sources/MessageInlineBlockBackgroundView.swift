@@ -735,7 +735,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 
                 let itemSize = CGSize(width: placement.size / 3.0, height: placement.size / 3.0)
                 patternContentLayer.frame = CGRect(origin: CGPoint(x: size.width - placement.position.x / 3.0 - itemSize.width * 0.5, y: placement.position.y / 3.0 - itemSize.height * 0.5), size: itemSize)
-                var alphaFraction = abs(placement.position.x) / min(500.0, size.width)
+                var alphaFraction = abs(placement.position.x / 3.0) / min(500.0, size.width)
                 alphaFraction = min(1.0, max(0.0, alphaFraction))
                 patternContentLayer.opacity = 0.3 * Float(1.0 - alphaFraction)
                 

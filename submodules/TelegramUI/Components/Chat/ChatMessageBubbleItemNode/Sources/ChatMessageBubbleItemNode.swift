@@ -4699,7 +4699,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             if let backgroundType = self.backgroundType {
                 let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
-                if self.highlightedState != nil {
+                if self.highlightedState != nil, !(self.backgroundNode.layer.mask is SimpleLayer) {
                     let backgroundHighlightNode: ChatMessageBackground
                     if let current = self.backgroundHighlightNode {
                         backgroundHighlightNode = current
