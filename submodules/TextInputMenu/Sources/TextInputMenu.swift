@@ -16,8 +16,10 @@ public final class TextInputMenu {
     private var stringStrikethrough: String = "Strikethrough"
     private var stringUnderline: String = "Underline"
     private var stringSpoiler: String = "Spoiler"
+    private var stringQuote: String = "Quote"
     
     private let hasSpoilers: Bool
+    private let hasQuotes: Bool
     
     public private(set) var state: State = .inactive {
         didSet {
@@ -39,6 +41,9 @@ public final class TextInputMenu {
                         if self.hasSpoilers {
                             menuItems.insert(UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))), at: 0)
                         }
+                    if self.hasQuotes {
+                        menuItems.insert(UIMenuItem(title: self.stringQuote, action: Selector(("formatAttributesQuote:"))), at: 0)
+                    }
                         UIMenuController.shared.menuItems = menuItems
                 }
                 
@@ -48,8 +53,9 @@ public final class TextInputMenu {
     
     private var observer: NSObjectProtocol?
     
-    public init(hasSpoilers: Bool = false) {
+    public init(hasSpoilers: Bool = false, hasQuotes: Bool = false) {
         self.hasSpoilers = hasSpoilers
+        self.hasQuotes = hasQuotes
         self.observer = NotificationCenter.default.addObserver(forName: UIMenuController.didHideMenuNotification, object: nil, queue: nil, using: { [weak self] _ in
             self?.back()
         })
@@ -69,6 +75,7 @@ public final class TextInputMenu {
         self.stringStrikethrough = strings.TextFormat_Strikethrough
         self.stringUnderline = strings.TextFormat_Underline
         self.stringSpoiler = strings.TextFormat_Spoiler
+        self.stringQuote = strings.TextFormat_Quote
     }
     
     public func activate() {

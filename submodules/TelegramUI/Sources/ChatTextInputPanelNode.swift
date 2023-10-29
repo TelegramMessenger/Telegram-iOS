@@ -772,10 +772,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.textInputViewInternalInsets = UIEdgeInsets(top: 1.0, left: 13.0, bottom: 1.0, right: 13.0)
 
         var hasSpoilers = true
+        var hasQuotes = true
         if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
             hasSpoilers = false
+            hasQuotes = false
         }
-        self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers)
+        self.inputMenu = TextInputMenu(hasSpoilers: hasSpoilers, hasQuotes: hasQuotes)
         
         self.clippingNode = ASDisplayNode()
         self.clippingNode.clipsToBounds = true
@@ -3954,16 +3956,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     }
     
     public func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool {
-        guard let textInputNode = self.textInputNode else {
-            return true
-        }
-        let _ = textInputNode
-        
-        /*if textInputNode.attributedText == nil || textInputNode.attributedText!.length == 0 || textInputNode.selectedRange.length == 0 {
-            print("action: \(action)")
-        }*/
-            
         return true
+    }
+    
+    public func chatInputTextNodeTargetForAction(action: Selector) -> ChatInputTextNode.TargetForAction? {
+        if let target = self.editableTextNodeTarget(forAction: action) {
+            return ChatInputTextNode.TargetForAction(target: target.target)
+        } else {
+            return nil
+        }
     }
     
     func chatInputTextNodeShouldPaste() -> Bool {

@@ -554,6 +554,13 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
         }
     }
     
+    @objc func formatAttributesQuote(_ sender: Any) {
+        self.inputMenu.back()
+        if let item = self.item {
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.quote)
+        }
+    }
+    
     public func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if let item = self.item {
             if text.count > 1, let processPaste = item.processPaste {

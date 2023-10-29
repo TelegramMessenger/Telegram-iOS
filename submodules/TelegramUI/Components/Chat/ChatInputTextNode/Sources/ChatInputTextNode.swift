@@ -22,9 +22,18 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeShouldPaste() -> Bool
     
     func chatInputTextNodeShouldRespondToAction(action: Selector) -> Bool
+    func chatInputTextNodeTargetForAction(action: Selector) -> ChatInputTextNode.TargetForAction?
 }
 
 open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
+    public final class TargetForAction {
+        public let target: Any?
+        
+        public init(target: Any?) {
+            self.target = target
+        }
+    }
+    
     public weak var delegate: ChatInputTextNodeDelegate? {
         didSet {
             self.textView.customDelegate = self.delegate
@@ -122,6 +131,18 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
                 return delegate.chatInputTextNodeShouldRespondToAction(action: action)
             } else {
                 return true
+            }
+        }
+        self.textView.targetForAction = { [weak self] action in
+            guard let self, let action else {
+                return nil
+            }
+            if let delegate = self.delegate {
+                return delegate.chatInputTextNodeTargetForAction(action: action).flatMap { value in
+                    return ChatInputTextViewImplTargetForAction(target: value.target)
+                }
+            } else {
+                return nil
             }
         }
     }
