@@ -1201,7 +1201,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 textSelectionNode.enableQuote = enableQuote
                 textSelectionNode.enableTranslate = enableOtherActions
-                textSelectionNode.enableShare = enableOtherActions
+                textSelectionNode.enableShare = enableOtherActions && enableCopy
                 textSelectionNode.menuSkipCoordnateConversion = !enableOtherActions
                 self.textSelectionNode = textSelectionNode
                 self.containerNode.addSubnode(textSelectionNode)
