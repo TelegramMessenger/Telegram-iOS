@@ -27,6 +27,7 @@ import ChatMessageReplyInfoNode
 import InstantVideoRadialStatusNode
 import ChatInstantVideoMessageDurationNode
 import ChatControllerInteraction
+import WallpaperBackgroundNode
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -109,8 +110,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     public var viaBotNode: TextNode?
     public var replyInfoNode: ChatMessageReplyInfoNode?
-    public var replyBackgroundNode: NavigationBackgroundNode?
+    public var replyBackgroundContent: WallpaperBubbleBackgroundNode?
     public var forwardInfoNode: ChatMessageForwardInfoNode?
+    public var forwardBackgroundContent: WallpaperBubbleBackgroundNode?
     
     private var status: FileMediaResourceStatus?
     private var playerStatus: MediaPlayerStatus? {
@@ -240,7 +242,6 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let viaBotLayout = TextNode.asyncLayout(self.viaBotNode)
         let makeReplyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let makeForwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
-        let currentReplyBackgroundNode = self.replyBackgroundNode
         
         return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusDisplayType, automaticDownload, avatarInset in
             var secretVideoPlaceholderBackgroundImage: UIImage?
@@ -598,15 +599,14 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     strongSelf.automaticDownload = automaticDownload
                     
-                    var updatedReplyBackgroundNode: NavigationBackgroundNode?
-                    if replyInfoApply != nil || viaBotApply != nil || forwardInfoSizeApply != nil {
-                        if let currentReplyBackgroundNode = currentReplyBackgroundNode {
-                            updatedReplyBackgroundNode = currentReplyBackgroundNode
-                        } else {
-                            updatedReplyBackgroundNode = NavigationBackgroundNode(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper))
-                        }
-                        
-                        updatedReplyBackgroundNode?.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: item.controllerInteraction.enableFullTranslucency && dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
+                    var needsReplyBackground = false
+                    if replyInfoApply != nil {
+                        needsReplyBackground = true
+                    }
+                    
+                    var needsForwardBackground = false
+                    if viaBotApply != nil || forwardInfoSizeApply != nil {
+                        needsForwardBackground = true
                     }
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
@@ -918,7 +918,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).startStrict())
                     }
-                    
+                            
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                         strongSelf.dateAndStatusNode.pressed = {
                             guard let strongSelf = self else {
@@ -930,42 +930,75 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.dateAndStatusNode.pressed = nil
                     }
                     
-                    if let updatedReplyBackgroundNode = updatedReplyBackgroundNode {
-                        if strongSelf.replyBackgroundNode == nil {
-                            strongSelf.replyBackgroundNode = updatedReplyBackgroundNode
-                            strongSelf.addSubnode(updatedReplyBackgroundNode)
-                        }
-                    } else if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        replyBackgroundNode.removeFromSupernode()
-                        strongSelf.replyBackgroundNode = nil
-                    }
-                    
-                    var messageInfoSize = CGSize()
-                    if let (viaBotLayout, _) = viaBotApply, forwardInfoSizeApply == nil {
-                        messageInfoSize = CGSize(width: viaBotLayout.size.width + 1.0, height: 0.0)
-                    }
-                    if let (forwardInfoSize, _) = forwardInfoSizeApply {
-                        messageInfoSize = CGSize(width: max(messageInfoSize.width, forwardInfoSize.width + 2.0), height: 0.0)
-                    }
-                    if let (replyInfoSize, _) = replyInfoApply {
-                        messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: 0.0)
-                    }
-                    
                     var width = width
                     if !scaleProgress.isZero {
                         width += avatarInset
                     }
+                    
+                    if needsReplyBackground {
+                        if strongSelf.replyBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                            backgroundContent.clipsToBounds = true
+                            strongSelf.replyBackgroundContent = backgroundContent
+                            strongSelf.insertSubnode(backgroundContent, at: 0)
+                        }
+                    } else {
+                        if let replyBackgroundContent = strongSelf.replyBackgroundContent {
+                            replyBackgroundContent.removeFromSupernode()
+                            strongSelf.replyBackgroundContent = nil
+                        }
+                    }
+                    
+                    if needsForwardBackground {
+                        if strongSelf.forwardBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+                            backgroundContent.clipsToBounds = true
+                            strongSelf.forwardBackgroundContent = backgroundContent
+                            strongSelf.insertSubnode(backgroundContent, at: 0)
+                        }
+                    } else {
+                        if let forwardBackgroundContent = strongSelf.forwardBackgroundContent {
+                            forwardBackgroundContent.removeFromSupernode()
+                            strongSelf.forwardBackgroundContent = nil
+                        }
+                    }
+                    
+                    var headersOffset: CGFloat = 0.0
+                    
+                    var forwardAreaSize = CGSize()
+                    if let (viaBotLayout, _) = viaBotApply, forwardInfoSizeApply == nil {
+                        forwardAreaSize = CGSize(width: viaBotLayout.size.width + 1.0, height: 0.0)
+                    }
+                    if let (forwardInfoSize, _) = forwardInfoSizeApply {
+                        forwardAreaSize = CGSize(width: max(forwardAreaSize.width, forwardInfoSize.width + 2.0), height: 0.0)
+                    }
+                    
+                    var replyAreaSize = CGSize()
+                    if let (replyInfoSize, _) = replyInfoApply {
+                        replyAreaSize = CGSize(width: max(replyAreaSize.width, replyInfoSize.width), height: 0.0)
+                    }
+                    
+                    let edgeInset: CGFloat = 4.0
+                    let leftInset: CGFloat = 0.0
+                    let rightInset: CGFloat = 0.0
+                    
+                    var forwardAreaFrame: CGRect?
+                    var messageInfoSize = CGSize()
                     if let (viaBotLayout, viaBotApply) = viaBotApply, forwardInfoSizeApply == nil {
                         let viaBotNode = viaBotApply()
                         if strongSelf.viaBotNode == nil {
                             strongSelf.viaBotNode = viaBotNode
                             strongSelf.addSubnode(viaBotNode)
                         }
+                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (leftInset + edgeInset) : (width - rightInset - forwardAreaSize.width - edgeInset)), y: headersOffset + 8.0), size: viaBotLayout.size)
                         
-                        let viaBotFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0), size: viaBotLayout.size)
-                        animation.animator.updateFrame(layer: viaBotNode.layer, frame: viaBotFrame, completion: nil)
+                        viaBotNode.frame = viaBotFrame
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: viaBotLayout.size.height)
+                        
+                        if let forwardAreaFrameValue = forwardAreaFrame {
+                            forwardAreaFrame = forwardAreaFrameValue.union(viaBotFrame)
+                        } else {
+                            forwardAreaFrame = viaBotFrame
+                        }
                     } else if let viaBotNode = strongSelf.viaBotNode {
                         viaBotNode.removeFromSupernode()
                         strongSelf.viaBotNode = nil
@@ -981,10 +1014,16 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
-                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 8.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: forwardInfoSize)
-                        animation.animator.updateFrame(layer: forwardInfoNode.layer, frame: forwardInfoFrame, completion: nil)
+                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.minX - forwardAreaSize.width - 4.0) : (displayVideoFrame.maxX + 6.0)), y: headersOffset + 8.0 + messageInfoSize.height), size: forwardInfoSize)
+                        forwardInfoNode.frame = forwardInfoFrame
                         
-                        messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height - 1.0)
+                        messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height + 8.0)
+                        
+                        if let forwardAreaFrameValue = forwardAreaFrame {
+                            forwardAreaFrame = forwardAreaFrameValue.union(forwardInfoFrame)
+                        } else {
+                            forwardAreaFrame = forwardInfoFrame
+                        }
                     } else if let forwardInfoNode = strongSelf.forwardInfoNode {
                         if animation.isAnimated {
                             if let forwardInfoNode = strongSelf.forwardInfoNode {
@@ -999,9 +1038,18 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }
                     }
                     
+                    var forwardBackgroundFrame: CGRect?
+                    if let forwardAreaFrame {
+                        forwardBackgroundFrame = forwardAreaFrame.insetBy(dx: -6.0, dy: -3.0)
+                    }
+                    
                     var replyBackgroundFrame: CGRect?
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        if headersOffset != 0.0 {
+                            headersOffset += 6.0
+                        }
+                        
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.minX - replyInfoSize.width) : (displayVideoFrame.maxX)), y: headersOffset + 8.0 + messageInfoSize.height), size: replyInfoSize)
                         replyBackgroundFrame = replyInfoFrame
                         
                         let replyInfoNode = replyInfoApply(replyInfoFrame.size, false, animation)
@@ -1009,7 +1057,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)
                         }
-                        animation.animator.updateFrame(layer: replyInfoNode.layer, frame: replyInfoFrame, completion: nil)
+                        replyInfoNode.frame = replyInfoFrame
                         
                         messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: messageInfoSize.height + replyInfoSize.height)
                     } else if let replyInfoNode = strongSelf.replyInfoNode {
@@ -1017,20 +1065,25 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if let replyBackgroundNode = strongSelf.replyBackgroundNode, let replyBackgroundFrame {
-                        let replyBackgroundFrame = replyBackgroundFrame
-                        animation.animator.updateFrame(layer: replyBackgroundNode.layer, frame: replyBackgroundFrame, completion: nil)
-                        
-                        let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
-                        replyBackgroundNode.update(size: replyBackgroundNode.bounds.size, cornerRadius: cornerRadius, transition: .immediate)
+                    if let backgroundContent = strongSelf.replyBackgroundContent, let replyBackgroundFrame {
+                        backgroundContent.cornerRadius = 4.0
+                        backgroundContent.frame = replyBackgroundFrame
+                    }
+                    
+                    if let backgroundContent = strongSelf.forwardBackgroundContent, let forwardBackgroundFrame {
+                        backgroundContent.cornerRadius = 4.0
+                        backgroundContent.frame = forwardBackgroundFrame
                     }
                     
                     let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
                     if let viaBotNode = strongSelf.viaBotNode {
                         transition.updateAlpha(node: viaBotNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
                     }
-                    if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        transition.updateAlpha(node: replyBackgroundNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
+                    if let replyBackgroundContent = strongSelf.replyBackgroundContent {
+                        transition.updateAlpha(node: replyBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
+                    }
+                    if let forwardBackgroundContent = strongSelf.forwardBackgroundContent {
+                        transition.updateAlpha(node: forwardBackgroundContent, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
                     }
                     if let forwardInfoNode = strongSelf.forwardInfoNode {
                         transition.updateAlpha(node: forwardInfoNode, alpha: strongSelf.isPlaying ? 0.0 : 1.0)
@@ -1761,8 +1814,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if let viaBotNode = self.viaBotNode {
             viaBotNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
         }
-        if let replyBackgroundNode = self.replyBackgroundNode {
-            replyBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        if let replyBackgroundContent = self.replyBackgroundContent {
+            replyBackgroundContent.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        }
+        if let forwardBackgroundContent = self.replyBackgroundContent {
+            forwardBackgroundContent.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
         }
         if let forwardInfoNode = self.forwardInfoNode {
             forwardInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
@@ -1866,8 +1922,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if let viaBotNode = self.viaBotNode {
             viaBotNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
-        if let replyBackgroundNode = self.replyBackgroundNode {
-            replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        if let replyBackgroundContent = self.replyBackgroundContent {
+            replyBackgroundContent.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        }
+        if let forwardBackgroundContent = self.forwardBackgroundContent {
+            forwardBackgroundContent.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
         if let forwardInfoNode = self.forwardInfoNode {
             forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
