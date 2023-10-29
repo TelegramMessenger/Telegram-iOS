@@ -387,12 +387,12 @@ public final class MediaEditorVideoExport {
         }
                 
         switch self.subject {
-        case let .video(asset, _):
+        case let .video(asset, isStory):
             var additionalAsset: AVAsset?
             if let additionalPath = self.configuration.values.additionalVideoPath {
                 additionalAsset = AVURLAsset(url: URL(fileURLWithPath: additionalPath))
             }
-            self.setupWithAsset(asset, additionalAsset: additionalAsset)
+            self.setupWithAsset(asset, additionalAsset: additionalAsset, isStory: isStory)
         case let .image(image):
             self.setupWithImage(image)
         }
@@ -405,7 +405,7 @@ public final class MediaEditorVideoExport {
         self.composer = MediaEditorComposer(postbox: self.postbox, values: self.configuration.values, dimensions: self.configuration.composerDimensions, outputDimensions: self.configuration.dimensions, textScale: self.textScale)
     }
     
-    private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?) {
+    private func setupWithAsset(_ asset: AVAsset, additionalAsset: AVAsset?, isStory: Bool) {
         var inputAsset = asset
         
         var inputAudioMix: AVMutableAudioMix?
@@ -476,7 +476,7 @@ public final class MediaEditorVideoExport {
         if let timeRange = self.configuration.timeRange {
             reader.timeRange = timeRange
             self.additionalReader?.timeRange = timeRange
-        } else if asset.duration.seconds > 60.0 {
+        } else if asset.duration.seconds > 60.0 && isStory {
             let trimmedRange = CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
             reader.timeRange = trimmedRange
             self.additionalReader?.timeRange = trimmedRange

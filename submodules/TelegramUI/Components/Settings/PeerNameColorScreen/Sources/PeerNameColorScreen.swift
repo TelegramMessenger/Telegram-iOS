@@ -534,7 +534,11 @@ public func PeerNameColorScreen(
         guard let controller else {
             return
         }
-        controller.present(c, in: .current)
+        if c is UndoOverlayController {
+            controller.present(c, in: .current)
+        } else {
+            controller.present(c, in: .window(.root))
+        }
     }
     pushImpl = { [weak controller] c in
         guard let controller else {

@@ -235,7 +235,6 @@ public struct WebAppParameters {
 public func generateWebAppThemeParams(_ presentationTheme: PresentationTheme) -> [String: Any] {
     let backgroundColor = presentationTheme.list.plainBackgroundColor.rgb
     let secondaryBackgroundColor = presentationTheme.list.blocksBackgroundColor.rgb
-
     return [
         "bg_color": Int32(bitPattern: backgroundColor),
         "secondary_bg_color": Int32(bitPattern: secondaryBackgroundColor),
@@ -327,6 +326,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 if let strongSelf = self, let delayedScriptMessage = strongSelf.delayedScriptMessage {
                     strongSelf.delayedScriptMessage = nil
                     strongSelf.handleScriptMessage(delayedScriptMessage)
+                }
+            }
+            if #available(iOS 13.0, *) {
+                if self.presentationData.theme.overallDarkAppearance {
+                    webView.overrideUserInterfaceStyle = .dark
+                } else {
+                    webView.overrideUserInterfaceStyle = .unspecified
                 }
             }
             self.webView = webView
@@ -1120,6 +1126,14 @@ public final class WebAppController: ViewController, AttachmentContainable {
             }
             self.updateHeaderBackgroundColor(transition: .immediate)
             self.sendThemeChangedEvent()
+            
+            if #available(iOS 13.0, *) {
+                if self.presentationData.theme.overallDarkAppearance {
+                    self.webView?.overrideUserInterfaceStyle = .dark
+                } else {
+                    self.webView?.overrideUserInterfaceStyle = .unspecified
+                }
+            }
         }
         
         private func sendThemeChangedEvent() {

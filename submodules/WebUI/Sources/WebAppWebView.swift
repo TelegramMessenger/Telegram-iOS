@@ -66,7 +66,7 @@ final class WebAppWebView: WKWebView {
         
         configuration.allowsInlineMediaPlayback = true
         configuration.allowsPictureInPictureMediaPlayback = false
-        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+        if #available(iOS 10.0, *) {
             configuration.mediaTypesRequiringUserActionForPlayback = .all
         } else {
             configuration.mediaPlaybackRequiresUserAction = true
@@ -78,10 +78,10 @@ final class WebAppWebView: WKWebView {
         
         self.isOpaque = false
         self.backgroundColor = .clear
-        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+        if #available(iOS 9.0, *) {
             self.allowsLinkPreview = false
         }
-        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+        if #available(iOS 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
         self.interactiveTransitionGestureRecognizerTest = { point -> Bool in
