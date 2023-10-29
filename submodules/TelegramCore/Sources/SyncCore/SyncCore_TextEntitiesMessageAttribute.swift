@@ -27,8 +27,8 @@ public enum MessageTextEntityType: Equatable {
 }
 
 public struct MessageTextEntity: PostboxCoding, Codable, Equatable {
-    public let range: Range<Int>
-    public let type: MessageTextEntityType
+    public var range: Range<Int>
+    public var type: MessageTextEntityType
     
     public init(range: Range<Int>, type: MessageTextEntityType) {
         self.range = range
