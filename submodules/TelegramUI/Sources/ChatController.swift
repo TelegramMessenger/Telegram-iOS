@@ -3338,6 +3338,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, setupReply: { [weak self] messageId in
             self?.interfaceInteraction?.setupReplyMessage(messageId, { _, f in f() })
         }, canSetupReply: { [weak self] message in
+            if message.adAttribute != nil {
+                return .none
+            }
             if !message.flags.contains(.Incoming) {
                 if !message.flags.intersection([.Failed, .Sending, .Unsent]).isEmpty {
                     return .none
