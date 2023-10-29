@@ -70,11 +70,12 @@ public func cacheStillSticker(path: String, width: Int, height: Int, writer: Ani
                     UIGraphicsPushContext(c)
                     
                     if let customColor = customColor {
+                        c.clip(to: CGRect(origin: CGPoint(), size: context.size), mask: image.cgImage!)
                         c.setFillColor(customColor.cgColor)
-                        c.setBlendMode(.sourceIn)
+                        c.fill(CGRect(origin: CGPoint(), size: context.size))
+                    } else {
+                        c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: context.size))
                     }
-                    
-                    c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: context.size))
                     UIGraphicsPopContext()
                 }
                 memcpy(surface.argb, context.bytes, surface.height * surface.bytesPerRow)
