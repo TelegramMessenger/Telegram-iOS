@@ -817,7 +817,7 @@ public class PremiumLimitsListScreen: ViewController {
                     additionalInset = 20.0
                 }
                 
-                return layout.size.height - layout.size.width - 178.0 - panelHeight + additionalInset
+                return layout.size.height - layout.size.width - 181.0 - panelHeight + additionalInset
             } else {
                 return 210.0
             }

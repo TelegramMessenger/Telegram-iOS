@@ -666,6 +666,7 @@ private final class DemoSheetContent: CombinedComponent {
         let background = Child(GradientBackgroundComponent.self)
         let pager = Child(DemoPagerComponent.self)
         let button = Child(SolidRoundedButtonComponent.self)
+        let measureText = Child(MultilineTextComponent.self)
         
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
@@ -703,7 +704,7 @@ private final class DemoSheetContent: CombinedComponent {
             if case .other = component.source {
                 isStandalone = true
             }
-            
+                        
             if let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
                 let textColor = theme.actionSheet.primaryTextColor
                 
@@ -971,7 +972,7 @@ private final class DemoSheetContent: CombinedComponent {
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: pager.size.height / 2.0))
                 )
             }
-            
+                        
             let closeButton = closeButton.update(
                 component: Button(
                     content: AnyComponent(ZStack([
@@ -1003,44 +1004,108 @@ private final class DemoSheetContent: CombinedComponent {
                 .cornerRadius(15.0)
             )
                          
+            var measuredTextHeight: CGFloat?
+            
             let buttonText: String
             var buttonAnimationName: String?
             if state.isPremium == true {
                 buttonText = strings.Common_OK
             } else {
                 switch component.source {
-                    case let .intro(price):
-                        buttonText = strings.Premium_SubscribeFor(price ?? "–").string
-                    case let .gift(price):
-                        buttonText = strings.Premium_Gift_GiftSubscription(price ?? "–").string
-                    case .other:
-                        switch component.subject {
-                            case .fasterDownload:
-                                buttonText = strings.Premium_FasterSpeed_Proceed
-                            case .advancedChatManagement:
-                                buttonText = strings.Premium_ChatManagement_Proceed
-                            case .uniqueReactions:
-                                buttonText = strings.Premium_Reactions_Proceed
-                                buttonAnimationName = "premium_unlock"
-                            case .premiumStickers:
-                                buttonText = strings.Premium_Stickers_Proceed
-                                buttonAnimationName = "premium_unlock"
-                            case .appIcons:
-                                buttonText = strings.Premium_AppIcons_Proceed
-                                buttonAnimationName = "premium_unlock"
-                            case .noAds:
-                                buttonText = strings.Premium_NoAds_Proceed
-                            case .animatedEmoji:
-                                buttonText = strings.Premium_AnimatedEmoji_Proceed
-                                buttonAnimationName = "premium_unlock"
-                            case .translation:
-                                buttonText = strings.Premium_Translation_Proceed
-                            case .stories:
-                                buttonText = strings.Common_OK
-                                buttonAnimationName = "premium_unlock"
-                            default:
-                                buttonText = strings.Common_OK
+                case let .intro(price):
+                    buttonText = strings.Premium_SubscribeFor(price ?? "–").string
+                case let .gift(price):
+                    buttonText = strings.Premium_Gift_GiftSubscription(price ?? "–").string
+                case .other:
+                    var text: String
+                    switch component.subject {
+                        case .fasterDownload:
+                            buttonText = strings.Premium_FasterSpeed_Proceed
+                        case .advancedChatManagement:
+                            buttonText = strings.Premium_ChatManagement_Proceed
+                        case .uniqueReactions:
+                            buttonText = strings.Premium_Reactions_Proceed
+                            buttonAnimationName = "premium_unlock"
+                        case .premiumStickers:
+                            buttonText = strings.Premium_Stickers_Proceed
+                            buttonAnimationName = "premium_unlock"
+                        case .appIcons:
+                            buttonText = strings.Premium_AppIcons_Proceed
+                            buttonAnimationName = "premium_unlock"
+                        case .noAds:
+                            buttonText = strings.Premium_NoAds_Proceed
+                        case .animatedEmoji:
+                            buttonText = strings.Premium_AnimatedEmoji_Proceed
+                            buttonAnimationName = "premium_unlock"
+                        case .translation:
+                            buttonText = strings.Premium_Translation_Proceed
+                        case .stories:
+                            buttonText = strings.Common_OK
+                            buttonAnimationName = "premium_unlock"
+                        default:
+                            buttonText = strings.Common_OK
+                    }
+                    
+                    switch component.subject {
+                    case .moreUpload:
+                        text = strings.Premium_UploadSizeInfo
+                    case .fasterDownload:
+                        text = strings.Premium_FasterSpeedStandaloneInfo
+                    case .voiceToText:
+                        text = strings.Premium_VoiceToTextStandaloneInfo
+                    case .noAds:
+                        text = strings.Premium_NoAdsStandaloneInfo
+                    case .uniqueReactions:
+                        text = strings.Premium_InfiniteReactionsInfo
+                    case .premiumStickers:
+                        text = strings.Premium_StickersInfo
+                    case .emojiStatus:
+                        text = strings.Premium_EmojiStatusInfo
+                    case .advancedChatManagement:
+                        text = strings.Premium_ChatManagementStandaloneInfo
+                    case .profileBadge:
+                        text = strings.Premium_BadgeInfo
+                    case .animatedUserpics:
+                        text = strings.Premium_AvatarInfo
+                    case .appIcons:
+                        text = strings.Premium_AppIconStandaloneInfo
+                    case .animatedEmoji:
+                        text = strings.Premium_AnimatedEmojiStandaloneInfo
+                    case .translation:
+                        text = strings.Premium_TranslationStandaloneInfo
+                    case .doubleLimits:
+                        text = ""
+                    case .stories:
+                        text = ""
+                    }
+                
+                    let textSideInset: CGFloat = 24.0
+                    
+                    let textColor = UIColor.black
+                    let textFont = Font.regular(17.0)
+                    let boldTextFont = Font.semibold(17.0)
+                    let markdownAttributes = MarkdownAttributes(
+                        body: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor),
+                        link: MarkdownAttributeSet(font: textFont, textColor: textColor),
+                        linkAttribute: { _ in
+                            return nil
                         }
+                    )
+                    let measureText = measureText.update(
+                        component: MultilineTextComponent(
+                            text: .markdown(text: text, attributes: markdownAttributes),
+                            horizontalAlignment: .center,
+                            maximumNumberOfLines: 0,
+                            lineSpacing: 0.0
+                        ),
+                        availableSize: CGSize(width: context.availableSize.width - textSideInset * 2.0, height: context.availableSize.height),
+                        transition: .immediate
+                    )
+                    context.add(measureText
+                        .position(CGPoint(x: 0.0, y: 1000.0))
+                    )
+                    measuredTextHeight = measureText.size.height
                 }
             }
             
@@ -1079,12 +1144,17 @@ private final class DemoSheetContent: CombinedComponent {
                 transition: context.transition
             )
         
-            var contentHeight: CGFloat = context.availableSize.width + 146.0
-            if case .other = component.source {
-                contentHeight -= 40.0
-                
-                if [.advancedChatManagement, .fasterDownload].contains(component.subject) {
-                    contentHeight += 20.0
+            var contentHeight: CGFloat = context.availableSize.width
+            if let measuredTextHeight {
+                contentHeight += measuredTextHeight + 66.0
+            } else {
+                contentHeight += 146.0
+                if case .other = component.source {
+                    contentHeight -= 40.0
+                    
+                    if [.advancedChatManagement, .fasterDownload].contains(component.subject) {
+                        contentHeight += 20.0
+                    }
                 }
             }
               
@@ -1166,6 +1236,7 @@ private final class DemoSheetComponent: CombinedComponent {
                         }
                     )),
                     backgroundColor: .color(environment.theme.actionSheet.opaqueItemBackgroundColor),
+                    followContentSizeChanges: context.component.source == .other,
                     animateOut: animateOut
                 ),
                 environment: {
