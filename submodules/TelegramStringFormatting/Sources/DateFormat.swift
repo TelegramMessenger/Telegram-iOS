@@ -50,7 +50,7 @@ public func getDateTimeComponents(timestamp: Int32) -> (day: Int32, month: Int32
     return (timeinfo.tm_mday, timeinfo.tm_mon + 1, timeinfo.tm_year, timeinfo.tm_hour, timeinfo.tm_min)
 }
 
-public func stringForMediumDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
+public func stringForMediumDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, withTime: Bool = true) -> String {
     var t: time_t = Int(timestamp)
     var timeinfo = tm()
     localtime_r(&t, &timeinfo);
@@ -70,9 +70,12 @@ public func stringForMediumDate(timestamp: Int32, strings: PresentationStrings, 
             dateString = String(format: "%02d%@%02d%@%02d%@", day, separator, month, separator, displayYear, suffix)
     }
     
-    let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
-    
-    return strings.Time_MediumDate(dateString, timeString).string
+    if withTime {
+        let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
+        return strings.Time_MediumDate(dateString, timeString).string
+    } else {
+        return dateString
+    }
 }
 
 public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {

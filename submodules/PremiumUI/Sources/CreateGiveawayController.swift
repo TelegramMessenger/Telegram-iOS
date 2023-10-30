@@ -719,7 +719,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     let expiryDate = calendar.date(byAdding: .day, value: 3, to: calendar.date(from: components)!)!
     let expiryTime = Int32(expiryDate.timeIntervalSince1970)
     
-    let minDate = currentTime + 60 * 10
+    let minDate = currentTime + 60 * 30
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
     let initialState: CreateGiveawayControllerState = CreateGiveawayControllerState(mode: .giveaway, subscriptions: initialSubscriptions, channels: [], peers: [], countries: [], onlyNewEligible: false, time: expiryTime)

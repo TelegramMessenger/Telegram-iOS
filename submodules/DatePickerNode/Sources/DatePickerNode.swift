@@ -818,7 +818,7 @@ public final class DatePickerNode: ASDisplayNode {
         timeSize.height = 36.0
         self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0, y: 4.0, width: timeSize.width, height: timeSize.height)
         
-        let dateString = stringForDate(date: date, timeZone: .current, strings: self.strings)
+        let dateString = stringForMediumDate(timestamp: Int32(date.timeIntervalSince1970), strings: self.strings, dateTimeFormat: self.dateTimeFormat, withTime: false)
         self.dateButtonNode.setTitle(dateString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingDateSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
         
         var dateSize = self.dateButtonNode.measure(size)
