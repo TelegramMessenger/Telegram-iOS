@@ -184,6 +184,7 @@ private struct PeerNameColorScreenState: Equatable {
     var updatedNameColor: PeerNameColor?
     var updatedBackgroundEmojiId: Int64?
     var inProgress: Bool = false
+    var needsBoosts: Bool = false
 }
 
 private func peerNameColorScreenEntries(
@@ -253,7 +254,11 @@ private func peerNameColorScreenEntries(
             colors: nameColors,
             currentColor: nameColor
         ))
-        entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
+        if case .channel = peer {
+            entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Channel))
+        } else {
+            entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
+        }
         
         if let emojiContent {
             entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title, backgroundEmojiId != nil ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
@@ -530,6 +535,7 @@ public func PeerNameColorScreen(
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     presentImpl = { [weak controller] c in
         guard let controller else {
             return
@@ -561,6 +567,10 @@ public func PeerNameColorScreen(
             return true
         }
         let state = stateValue.with({ $0 })
+        if case .channel = subject, state.needsBoosts {
+            f()
+            return true
+        }
         var hasChanges = false
         if state.updatedNameColor != nil || state.updatedBackgroundEmojiId != nil {
             hasChanges = true
@@ -624,6 +634,12 @@ public func PeerNameColorScreen(
                 |> deliverOnMainQueue).startStandalone(next: {
                 }, error: { error in
                     if case .channelBoostRequired = error {
+                        updateState { state in
+                            var updatedState = state
+                            updatedState.needsBoosts = true
+                            return updatedState
+                        }
+                        
                         let _ = combineLatest(
                             queue: Queue.mainQueue(),
                             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),

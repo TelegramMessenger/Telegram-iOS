@@ -791,9 +791,9 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let badgeCount: Int32
         switch state.mode {
         case .giveaway:
-            badgeCount = state.subscriptions
+            badgeCount = state.subscriptions * 4
         case .gift:
-            badgeCount = Int32(state.peers.count)
+            badgeCount = Int32(state.peers.count) * 4
         }
         let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? presentationData.strings.BoostGift_GiftPremium : presentationData.strings.BoostGift_StartGiveaway, badgeCount: badgeCount, isLoading: state.updating, action: {
             buyActionImpl?()
