@@ -19177,19 +19177,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func displayGiveawayStatusInfo(messageId: EngineMessage.Id, giveawayInfo: PremiumGiveawayInfo) {
-        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: messageId))
-        |> deliverOnMainQueue).startStandalone(next: { [weak self] message in
-            guard let self, let message else {
+        presentGiveawayInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, messageId: messageId, giveawayInfo: giveawayInfo, present: { [weak self] c in
+            guard let self else {
                 return
             }
-            if let controller = giveawayInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, message: message, giveawayInfo: giveawayInfo, openLink: { [weak self] slug in
-                guard let self else {
-                    return
-                }
-                self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: messageId)
-            }) {
-                self.present(controller, in: .window(.root))
+            self.present(c, in: .window(.root))
+        }, openLink: { [weak self] slug in
+            guard let self else {
+                return
             }
+            self.openResolved(result: .premiumGiftCode(slug: slug), sourceMessageId: messageId)
         })
     }
 }

@@ -913,6 +913,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         openPeer: { peer in
                             if peer.id != context.account.peerId {
                                 openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                if case let .chat(peerId, _) = urlContext, peerId == peer.id {
+                                    dismissImpl?()
+                                }
                             }
                         },
                         openMessage: { messageId in
@@ -922,6 +925,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                     return
                                 }
                                 openPeer(peer, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: ChatControllerSubject.MessageHighlight(quote: nil), timecode: nil), peekData: nil))
+                                if case let .chat(peerId, _) = urlContext, peerId == messageId.peerId {
+                                    dismissImpl?()
+                                }
                             })
                         },
                         shareLink: { link in

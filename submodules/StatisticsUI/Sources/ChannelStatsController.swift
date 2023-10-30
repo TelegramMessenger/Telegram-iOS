@@ -1077,7 +1077,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         let state = stateValue.with { $0 }
-        if case let .known(value) = offset, value < 100.0, case .boosts = state.section, state.boostersExpanded {
+        if case let .known(value) = offset, value < 510.0, case .boosts = state.section, state.boostersExpanded {
             boostsContext.loadMore()
         }
     }

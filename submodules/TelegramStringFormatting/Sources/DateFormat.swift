@@ -117,11 +117,11 @@ public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, da
     return monthFormat(dayString, yearString, timeString).string
 }
 
-public func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {
+public func stringForDate(timestamp: Int32, timeZone: TimeZone? = TimeZone(secondsFromGMT: 0), strings: PresentationStrings) -> String {
     let formatter = DateFormatter()
     formatter.timeStyle = .none
     formatter.dateStyle = .medium
-    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.timeZone = timeZone
     formatter.locale = localeWithStrings(strings)
     return formatter.string(from: Date(timeIntervalSince1970: Double(timestamp)))
 }

@@ -535,6 +535,7 @@ public func PeerNameColorScreen(
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     presentImpl = { [weak controller] c in
         guard let controller else {
             return

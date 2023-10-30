@@ -10,157 +10,182 @@ import TelegramPresentationData
 import Markdown
 import AlertUI
 
-public func giveawayInfoController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, message: EngineMessage, giveawayInfo: PremiumGiveawayInfo, openLink: @escaping (String) -> Void) -> ViewController? {
-    guard let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
-        return nil
+public func presentGiveawayInfoController(
+    context: AccountContext,
+    updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
+    messageId: EngineMessage.Id,
+    giveawayInfo: PremiumGiveawayInfo,
+    present: @escaping (ViewController) -> Void,
+    openLink: @escaping (String) -> Void
+) {
+    var peerIds: [EnginePeer.Id] = [context.account.peerId]
+    if case let .ongoing(_, status) = giveawayInfo, case let .notAllowed(reason) = status, case let .channelAdmin(adminId) = reason {
+        peerIds.append(adminId)
     }
-    
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    
-    var peerName = ""
-    if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
-        peerName = EnginePeer(peer).compactDisplayTitle
-    }
-    
-    let untilDate = stringForDate(timestamp: giveaway.untilDate, strings: presentationData.strings)
-    
-    let title: String
-    let text: String
-    var warning: String?
-    
-    var dismissImpl: (() -> Void)?
-    
-    var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-        dismissImpl?()
-    })]
-    
-    switch giveawayInfo {
-    case let .ongoing(start, status):
-        let startDate = stringForDate(timestamp: start, strings: presentationData.strings)
         
-        title = presentationData.strings.Chat_Giveaway_Info_Title
-        
-        let intro: String
-        if case .almostOver = status {
-            intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
-        } else {
-            intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
-        }
-        
-        let ending: String
-        if giveaway.flags.contains(.onlyNewSubscribers) {
-            let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
-            if giveaway.channelPeerIds.count > 1 {
-                ending = presentationData.strings.Chat_Giveaway_Info_OngoingNewMany(untilDate, randomUsers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), startDate).string
-            } else {
-                ending = presentationData.strings.Chat_Giveaway_Info_OngoingNew(untilDate, randomUsers, peerName, startDate).string
-            }
-        } else {
-            let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
-            if giveaway.channelPeerIds.count > 1 {
-                ending = presentationData.strings.Chat_Giveaway_Info_OngoingMany(untilDate, randomSubscribers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
-            } else {
-                ending = presentationData.strings.Chat_Giveaway_Info_Ongoing(untilDate, randomSubscribers, peerName).string
-            }
-        }
-        
-        var participation: String
-        switch status {
-        case .notQualified:
-            if giveaway.channelPeerIds.count > 1 {
-                participation = presentationData.strings.Chat_Giveaway_Info_NotQualifiedMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), untilDate).string
-            } else {
-                participation = presentationData.strings.Chat_Giveaway_Info_NotQualified(peerName, untilDate).string
-            }
-        case let .notAllowed(reason):
-            switch reason {
-            case let .joinedTooEarly(joinedOn):
-                let joinDate = stringForDate(timestamp: joinedOn, strings: presentationData.strings)
-                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedJoinedEarly(joinDate).string
-            case let .channelAdmin(adminId):
-                let _ = adminId
-                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedAdmin(peerName).string
-            case .disallowedCountry:
-                participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedCountry
-            }
-        case .participating:
-            if giveaway.channelPeerIds.count > 1 {
-                participation = presentationData.strings.Chat_Giveaway_Info_ParticipatingMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
-            } else {
-                participation = presentationData.strings.Chat_Giveaway_Info_Participating(peerName).string
-            }
-        case .almostOver:
-            participation = presentationData.strings.Chat_Giveaway_Info_AlmostOver
-        }
-        
-        if !participation.isEmpty {
-            participation = "\n\n\(participation)"
-        }
-        
-        text = "\(intro)\n\n\(ending)\(participation)"
-    case let .finished(status, start, finish, _, activatedCount):
-        let startDate = stringForDate(timestamp: start, strings: presentationData.strings)
-        let finishDate = stringForDate(timestamp: finish, strings: presentationData.strings)
-        title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
-        
-        let intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
-        
-        var ending: String
-        if giveaway.flags.contains(.onlyNewSubscribers) {
-            let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
-            if giveaway.channelPeerIds.count > 1 {
-                ending = presentationData.strings.Chat_Giveaway_Info_EndedNewMany(finishDate, randomUsers, peerName, startDate).string
-            } else {
-                ending = presentationData.strings.Chat_Giveaway_Info_EndedNew(finishDate, randomUsers, peerName, startDate).string
-            }
-        } else {
-            let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
-            if giveaway.channelPeerIds.count > 1 {
-                ending = presentationData.strings.Chat_Giveaway_Info_EndedMany(finishDate, randomSubscribers, peerName).string
-            } else {
-                ending = presentationData.strings.Chat_Giveaway_Info_Ended(finishDate, randomSubscribers, peerName).string
-            }
-        }
-        
-        if activatedCount > 0 {
-            ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
-        }
-        
-        var result: String
-        switch status {
-        case .refunded:
-            result = ""
-            warning = presentationData.strings.Chat_Giveaway_Info_Refunded
-            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Close, action: {
-                dismissImpl?()
-            })]
-        case .notWon:
-            result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
-        case let .won(slug):
-            result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
-            actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
-                dismissImpl?()
-                openLink(slug)
-            }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
-                dismissImpl?()
-            })]
-        }
-    
-        text = "\(intro)\n\n\(ending)\(result)"
-    }
-    
-    let alertController = giveawayInfoAlertController(
-        context: context,
-        updatedPresentationData: updatedPresentationData,
-        title: title,
-        text: text,
-        warning: warning,
-        actions: actions
+    let _ = (context.engine.data.get(
+        TelegramEngine.EngineData.Item.Messages.Message(id: messageId),
+        EngineDataMap(peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init))
     )
-    dismissImpl = { [weak alertController] in
-        alertController?.dismissAnimated()
-    }
-    return alertController
+    |> deliverOnMainQueue).startStandalone(next: { message, peerMap in
+        guard let message else {
+            return
+        }
+        guard let giveaway = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway else {
+            return
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        var peerName = ""
+        if let peerId = giveaway.channelPeerIds.first, let peer = message.peers[peerId] {
+            peerName = EnginePeer(peer).compactDisplayTitle
+        }
+        
+        let timeZone = TimeZone.current
+        let untilDate = stringForDate(timestamp: giveaway.untilDate, timeZone: timeZone, strings: presentationData.strings)
+        
+        let title: String
+        let text: String
+        var warning: String?
+        
+        var dismissImpl: (() -> Void)?
+        
+        var actions: [TextAlertAction] = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+            dismissImpl?()
+        })]
+        
+        switch giveawayInfo {
+        case let .ongoing(start, status):
+            let startDate = stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            
+            title = presentationData.strings.Chat_Giveaway_Info_Title
+            
+            let intro: String
+            if case .almostOver = status {
+                intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+            } else {
+                intro = presentationData.strings.Chat_Giveaway_Info_OngoingIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+            }
+            
+            let ending: String
+            if giveaway.flags.contains(.onlyNewSubscribers) {
+                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
+                if giveaway.channelPeerIds.count > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingNewMany(untilDate, randomUsers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), startDate).string
+                } else {
+                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingNew(untilDate, randomUsers, peerName, startDate).string
+                }
+            } else {
+                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
+                if giveaway.channelPeerIds.count > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_OngoingMany(untilDate, randomSubscribers, peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
+                } else {
+                    ending = presentationData.strings.Chat_Giveaway_Info_Ongoing(untilDate, randomSubscribers, peerName).string
+                }
+            }
+            
+            var participation: String
+            switch status {
+            case .notQualified:
+                if giveaway.channelPeerIds.count > 1 {
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotQualifiedMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1)), untilDate).string
+                } else {
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotQualified(peerName, untilDate).string
+                }
+            case let .notAllowed(reason):
+                switch reason {
+                case let .joinedTooEarly(joinedOn):
+                    let joinDate = stringForDate(timestamp: joinedOn, strings: presentationData.strings)
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedJoinedEarly(joinDate).string
+                case let .channelAdmin(adminId):
+                    var channelName = peerName
+                    if let maybePeer = peerMap[adminId], let peer = maybePeer {
+                        channelName = peer.compactDisplayTitle
+                    }
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedAdmin(channelName).string
+                case .disallowedCountry:
+                    participation = presentationData.strings.Chat_Giveaway_Info_NotAllowedCountry
+                }
+            case .participating:
+                if giveaway.channelPeerIds.count > 1 {
+                    participation = presentationData.strings.Chat_Giveaway_Info_ParticipatingMany(peerName, presentationData.strings.Chat_Giveaway_Info_OtherChannels(Int32(giveaway.channelPeerIds.count - 1))).string
+                } else {
+                    participation = presentationData.strings.Chat_Giveaway_Info_Participating(peerName).string
+                }
+            case .almostOver:
+                participation = presentationData.strings.Chat_Giveaway_Info_AlmostOver
+            }
+            
+            if !participation.isEmpty {
+                participation = "\n\n\(participation)"
+            }
+            
+            text = "\(intro)\n\n\(ending)\(participation)"
+        case let .finished(status, start, finish, _, activatedCount):
+            let startDate = stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            let finishDate = stringForDate(timestamp: finish, timeZone: timeZone, strings: presentationData.strings)
+            title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
+            
+            let intro = presentationData.strings.Chat_Giveaway_Info_EndedIntro(peerName, presentationData.strings.Chat_Giveaway_Info_Subscriptions(giveaway.quantity), presentationData.strings.Chat_Giveaway_Info_Months(giveaway.months)).string
+            
+            var ending: String
+            if giveaway.flags.contains(.onlyNewSubscribers) {
+                let randomUsers = presentationData.strings.Chat_Giveaway_Info_RandomUsers(giveaway.quantity)
+                if giveaway.channelPeerIds.count > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_EndedNewMany(finishDate, randomUsers, peerName, startDate).string
+                } else {
+                    ending = presentationData.strings.Chat_Giveaway_Info_EndedNew(finishDate, randomUsers, peerName, startDate).string
+                }
+            } else {
+                let randomSubscribers = presentationData.strings.Chat_Giveaway_Info_RandomSubscribers(giveaway.quantity)
+                if giveaway.channelPeerIds.count > 1 {
+                    ending = presentationData.strings.Chat_Giveaway_Info_EndedMany(finishDate, randomSubscribers, peerName).string
+                } else {
+                    ending = presentationData.strings.Chat_Giveaway_Info_Ended(finishDate, randomSubscribers, peerName).string
+                }
+            }
+            
+            if activatedCount > 0 {
+                ending += " " + presentationData.strings.Chat_Giveaway_Info_ActivatedLinks(activatedCount)
+            }
+            
+            var result: String
+            switch status {
+            case .refunded:
+                result = ""
+                warning = presentationData.strings.Chat_Giveaway_Info_Refunded
+                actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Close, action: {
+                    dismissImpl?()
+                })]
+            case .notWon:
+                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_DidntWin
+            case let .won(slug):
+                result = "\n\n" + presentationData.strings.Chat_Giveaway_Info_Won("🏆").string
+                actions = [TextAlertAction(type: .defaultAction, title: presentationData.strings.Chat_Giveaway_Info_ViewPrize, action: {
+                    dismissImpl?()
+                    openLink(slug)
+                }), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
+                    dismissImpl?()
+                })]
+            }
+            
+            text = "\(intro)\n\n\(ending)\(result)"
+        }
+        
+        let alertController = giveawayInfoAlertController(
+            context: context,
+            updatedPresentationData: updatedPresentationData,
+            title: title,
+            text: text,
+            warning: warning,
+            actions: actions
+        )
+        dismissImpl = { [weak alertController] in
+            alertController?.dismissAnimated()
+        }
+        present(alertController)
+    })
 }
 
 private final class GiveawayInfoAlertContentNode: AlertContentNode {
