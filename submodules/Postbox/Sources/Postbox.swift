@@ -1899,7 +1899,7 @@ final class PostboxImpl {
             }
             //#endif
             
-            if !isTemporary && self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
+            if !isTemporary && useCaches && self.messageHistoryMetadataTable.shouldReindexUnreadCounts() {
                 self.groupMessageStatsTable.removeAll()
                 let startTime = CFAbsoluteTimeGetCurrent()
                 let (totalStates, summaries) = self.chatListIndexTable.debugReindexUnreadCounts(postbox: self, currentTransaction: transaction)
