@@ -94,7 +94,7 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
     
     case timeHeader(PresentationTheme, String)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Int32?, Int32?)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Int32?, Int32?, Bool, Bool)
     case timeInfo(PresentationTheme, String)
     
     case durationHeader(PresentationTheme, String)
@@ -282,8 +282,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsMinDate, lhsMaxDate):
-            if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsMinDate, rhsMaxDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsMinDate == rhsMinDate, lhsMaxDate == rhsMaxDate {
+        case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsMinDate, lhsMaxDate, lhsDisplayingDateSelection, lhsDisplayingTimeSelection):
+            if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsMinDate, rhsMaxDate, rhsDisplayingDateSelection, rhsDisplayingTimeSelection) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsMinDate == rhsMinDate, lhsMaxDate == rhsMaxDate, lhsDisplayingDateSelection == rhsDisplayingDateSelection, lhsDisplayingTimeSelection == rhsDisplayingTimeSelection {
                 return true
             } else {
                 return false
@@ -437,8 +437,8 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                 var focus = false
                 arguments.updateState { state in
                     var updatedState = state
-                    updatedState.pickingTimeLimit = !state.pickingTimeLimit
-                    if updatedState.pickingTimeLimit {
+                    updatedState.pickingExpiryTime = !state.pickingExpiryTime
+                    if updatedState.pickingExpiryTime {
                         focus = true
                     }
                     return updatedState
@@ -449,8 +449,41 @@ private enum CreateGiveawayEntry: ItemListNodeEntry {
                     }
                 }
             })
-        case let .timeCustomPicker(_, dateTimeFormat, date, minDate, maxDate):
-            return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, minDate: minDate, maxDate: maxDate, sectionId: self.section, style: .blocks, updated: { date in
+        case let .timeCustomPicker(_, dateTimeFormat, date, minDate, maxDate, displayingDateSelection, displayingTimeSelection):
+            let title = presentationData.strings.BoostGift_DateEnds
+            return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, minDate: minDate, maxDate: maxDate, title: title, displayingDateSelection: displayingDateSelection, displayingTimeSelection: displayingTimeSelection, sectionId: self.section, style: .blocks, toggleDateSelection: {
+                var focus = false
+                arguments.updateState({ state in
+                    var updatedState = state
+                    updatedState.pickingExpiryDate = !updatedState.pickingExpiryDate
+                    if updatedState.pickingExpiryDate {
+                        updatedState.pickingExpiryTime = false
+                        focus = true
+                    }
+                    return updatedState
+                })
+                if focus {
+                    Queue.mainQueue().after(0.1) {
+                        arguments.scrollToDate()
+                    }
+                }
+            }, toggleTimeSelection: {
+                var focus = false
+                arguments.updateState({ state in
+                    var updatedState = state
+                    updatedState.pickingExpiryTime = !updatedState.pickingExpiryTime
+                    if updatedState.pickingExpiryTime {
+                        updatedState.pickingExpiryDate = false
+                        focus = true
+                    }
+                    return updatedState
+                })
+                if focus {
+                    Queue.mainQueue().after(0.1) {
+                        arguments.scrollToDate()
+                    }
+                }
+            }, updated: { date in
                 arguments.updateState({ state in
                     var updatedState = state
                     updatedState.time = date
@@ -585,10 +618,7 @@ private func createGiveawayControllerEntries(
         entries.append(.usersInfo(presentationData.theme, presentationData.strings.BoostGift_LimitSubscribersInfo))
         
         entries.append(.timeHeader(presentationData.theme, presentationData.strings.BoostGift_DateTitle.uppercased()))
-        entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, state.time, state.pickingTimeLimit))
-        if state.pickingTimeLimit {
-            entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate))
-        }
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, state.time, minDate, maxDate, state.pickingExpiryDate, state.pickingExpiryTime))
         entries.append(.timeInfo(presentationData.theme, presentationData.strings.BoostGift_DateInfo(presentationData.strings.BoostGift_DateInfoSubscribers(Int32(state.subscriptions))).string))
     }
     
@@ -656,7 +686,8 @@ private struct CreateGiveawayControllerState: Equatable {
     var countries: [String]
     var onlyNewEligible: Bool
     var time: Int32
-    var pickingTimeLimit = false
+    var pickingExpiryTime = false
+    var pickingExpiryDate = false
     var revealedItemId: EnginePeer.Id? = nil
     var updating = false
 }
@@ -675,9 +706,19 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     } else {
         initialSubscriptions = 5
     }
-    
     let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
-    let expiryTime = currentTime + 86400 * 3
+    
+    let timeZone = TimeZone(secondsFromGMT: 0)!
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let currentDate = Date()
+    var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
+    components.hour = (components.hour ?? 0) + 1
+    components.minute = 0
+    components.second = 0
+    let expiryDate = calendar.date(byAdding: .day, value: 3, to: calendar.date(from: components)!)!
+    let expiryTime = Int32(expiryDate.timeIntervalSince1970)
+    
     let minDate = currentTime + 60 * 10
     let maxDate = currentTime + context.userLimits.maxGiveawayPeriodSeconds
     
@@ -805,7 +846,10 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let previousState = previousState.swap(state)
         var animateChanges = false
         if let previousState = previousState {
-            if previousState.pickingTimeLimit != state.pickingTimeLimit {
+            if previousState.pickingExpiryTime != state.pickingExpiryTime {
+                animateChanges = true
+            }
+            if previousState.pickingExpiryDate != state.pickingExpiryDate {
                 animateChanges = true
             }
             if previousState.mode != state.mode {

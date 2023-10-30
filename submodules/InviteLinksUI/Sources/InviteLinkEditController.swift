@@ -294,7 +294,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     }
                 })
             case let .timeCustomPicker(_, dateTimeFormat, date):
-                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, sectionId: self.section, style: .blocks, updated: { date in
+                let title = presentationData.strings.InviteLink_Create_TimeLimitExpiryTime
+                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, title: title, displayingDateSelection: false, displayingTimeSelection: false, sectionId: self.section, style: .blocks, toggleDateSelection: {}, toggleTimeSelection: {}, updated: { date in
                     arguments.updateState({ state in
                         var updatedState = state
                         updatedState.time = .custom(date)

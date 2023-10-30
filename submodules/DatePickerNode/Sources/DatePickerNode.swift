@@ -176,7 +176,7 @@ public final class DatePickerNode: ASDisplayNode {
             self.numberOfDays = calendar.range(of: .day, in: .month, for: month)!.count
             
             super.init()
-                        
+            
             self.addSubnode(self.selectionNode)
             self.dateNodes.forEach { self.addSubnode($0) }
         }
@@ -195,7 +195,7 @@ public final class DatePickerNode: ASDisplayNode {
             }
             return nil
         }
-                
+        
         func updateLayout(size: CGSize) {
             var weekday = self.firstWeekday
             var started = false
@@ -242,7 +242,7 @@ public final class DatePickerNode: ASDisplayNode {
                     }
                     let isToday = calendar.isDateInToday(date)
                     let isSelected = self.date.flatMap { calendar.isDate(date, equalTo: $0, toGranularity: .day) } ?? false
-
+                    
                     let color: UIColor
                     if isSelected {
                         color = self.theme.selectionTextColor
@@ -255,7 +255,7 @@ public final class DatePickerNode: ASDisplayNode {
                     }
                     
                     textNode.attributedText = NSAttributedString(string: "\(count)", font: isSelected ? selectedDateFont : dateFont, textColor: color)
-
+                    
                     let textSize = textNode.updateLayout(size)
                     
                     let cellFrame = CGRect(x: sideInset + CGFloat(col) * cellSize, y: 0.0 + CGFloat(row) * cellSize, width: cellSize, height: cellSize)
@@ -284,6 +284,8 @@ public final class DatePickerNode: ASDisplayNode {
         let date: Date?
         
         let displayingMonthSelection: Bool
+        let displayingDateSelection: Bool
+        let displayingTimeSelection: Bool
         let selectedMonth: Date
     }
     
@@ -291,19 +293,27 @@ public final class DatePickerNode: ASDisplayNode {
     
     private var theme: DatePickerTheme
     private let strings: PresentationStrings
+    private let dateTimeFormat: PresentationDateTimeFormat
+    private let title: String
     
     private let timeTitleNode: ImmediateTextNode
-    private let timePickerNode: TimePickerNode
-    private let timeSeparatorNode: ASDisplayNode
-        
+    
     private let dayNodes: [ImmediateTextNode]
     private var currentIndex = 0
     private var months: [Date] = []
     private var monthNodes: [Date: MonthNode] = [:]
     private let contentNode: ASDisplayNode
     
-    private let pickerBackgroundNode: ASDisplayNode
-    private var pickerNode: MonthPickerNode
+    private let datePickerBackgroundNode: ASDisplayNode
+    
+    private let monthPickerBackgroundNode: ASDisplayNode
+    private var monthPickerNode: MonthPickerNode
+    
+    private let timePickerBackgroundNode: ASDisplayNode
+    private var timePickerNode: TimePickerNode
+    
+    private let dateButtonNode: HighlightableButtonNode
+    private let timeButtonNode: HighlightableButtonNode
     
     private let monthButtonNode: HighlightTrackingButtonNode
     private let monthTextNode: ImmediateTextNode
@@ -326,10 +336,10 @@ public final class DatePickerNode: ASDisplayNode {
                 return
             }
             
-            let updatedState = State(minDate: newValue, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
+            let updatedState = State(minDate: newValue, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: self.state.selectedMonth)
             self.updateState(updatedState, animated: false)
             
-            self.pickerNode.minimumDate = newValue
+            self.monthPickerNode.minimumDate = newValue
             self.timePickerNode.minimumDate = newValue
             
             if let size = self.validLayout {
@@ -347,10 +357,10 @@ public final class DatePickerNode: ASDisplayNode {
                 return
             }
             
-            let updatedState = State(minDate: self.state.minDate, maxDate: newValue, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
+            let updatedState = State(minDate: self.state.minDate, maxDate: newValue, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: self.state.selectedMonth)
             self.updateState(updatedState, animated: false)
             
-            self.pickerNode.maximumDate = newValue
+            self.monthPickerNode.maximumDate = newValue
             self.timePickerNode.maximumDate = newValue
             
             if let size = self.validLayout {
@@ -368,7 +378,7 @@ public final class DatePickerNode: ASDisplayNode {
                 return
             }
             
-            let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: newValue, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
+            let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: newValue, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: newValue.flatMap { monthForDate($0) } ?? self.state.selectedMonth)
             self.updateState(updatedState, animated: false)
             
             if let size = self.validLayout {
@@ -377,29 +387,13 @@ public final class DatePickerNode: ASDisplayNode {
         }
     }
     
-    public init(theme: DatePickerTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
+    public init(theme: DatePickerTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, title: String) {
         self.theme = theme
         self.strings = strings
-        self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: nil, displayingMonthSelection: false, selectedMonth: monthForDate(Date()))
-                
-        self.timeTitleNode = ImmediateTextNode()
-        self.timeTitleNode.attributedText = NSAttributedString(string: strings.InviteLink_Create_TimeLimitExpiryTime, font: Font.regular(17.0), textColor: theme.textColor)
+        self.dateTimeFormat = dateTimeFormat
         
-        self.timePickerNode = TimePickerNode(theme: theme, dateTimeFormat: dateTimeFormat, date: self.state.date)
-    
-        self.timeSeparatorNode = ASDisplayNode()
-        self.timeSeparatorNode.backgroundColor = theme.separatorColor
-        
-        self.dayNodes = (0..<7).map { _ in ImmediateTextNode() }
-        
-        self.contentNode = ASDisplayNode()
-        
-        self.pickerBackgroundNode = ASDisplayNode()
-        self.pickerBackgroundNode.alpha = 0.0
-        self.pickerBackgroundNode.backgroundColor = theme.backgroundColor
-        self.pickerBackgroundNode.isUserInteractionEnabled = false
-        
-        var monthChangedImpl: ((Date) -> Void)?
+        self.state = State(minDate: telegramReleaseDate, maxDate: upperLimitDate, date: nil, displayingMonthSelection: false, displayingDateSelection: false, displayingTimeSelection: false, selectedMonth: monthForDate(Date()))
+        self.title = title
         
         let initialDate: Date
         if let date = calendar.date(byAdding: .hour, value: 11, to: monthForDate(Date())) {
@@ -407,11 +401,40 @@ public final class DatePickerNode: ASDisplayNode {
         } else {
             initialDate = monthForDate(Date())
         }
-        self.pickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date ?? initialDate, yearRange: yearRange(for: self.state), valueChanged: { date in
+        
+        self.timeTitleNode = ImmediateTextNode()
+        self.timeTitleNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.textColor)
+        
+        var timeChangedImpl: ((Date) -> Void)?
+        self.timePickerNode = TimePickerNode(theme: theme, date: self.state.date ?? initialDate, valueChanged: { date in
+            timeChangedImpl?(date)
+        })
+        
+        self.dayNodes = (0..<7).map { _ in ImmediateTextNode() }
+        
+        self.datePickerBackgroundNode = ASDisplayNode()
+        self.datePickerBackgroundNode.alpha = 0.0
+        self.datePickerBackgroundNode.backgroundColor = theme.backgroundColor
+        self.datePickerBackgroundNode.isUserInteractionEnabled = false
+        
+        self.contentNode = ASDisplayNode()
+        
+        self.monthPickerBackgroundNode = ASDisplayNode()
+        self.monthPickerBackgroundNode.alpha = 0.0
+        self.monthPickerBackgroundNode.backgroundColor = theme.backgroundColor
+        self.monthPickerBackgroundNode.isUserInteractionEnabled = false
+        
+        self.timePickerBackgroundNode = ASDisplayNode()
+        self.timePickerBackgroundNode.alpha = 0.0
+        self.timePickerBackgroundNode.backgroundColor = theme.backgroundColor
+        self.timePickerBackgroundNode.isUserInteractionEnabled = false
+        
+        var monthChangedImpl: ((Date) -> Void)?
+        self.monthPickerNode = MonthPickerNode(theme: theme, strings: strings, date: self.state.date ?? initialDate, yearRange: yearRange(for: self.state), valueChanged: { date in
             monthChangedImpl?(date)
         })
-        self.pickerNode.minimumDate = self.state.minDate
-        self.pickerNode.maximumDate = self.state.maxDate
+        self.monthPickerNode.minimumDate = self.state.minDate
+        self.monthPickerNode.maximumDate = self.state.maxDate
         
         self.timePickerNode.minimumDate = self.state.minDate
         self.timePickerNode.maximumDate = self.state.maxDate
@@ -427,27 +450,43 @@ public final class DatePickerNode: ASDisplayNode {
         self.nextButtonNode = HighlightableButtonNode()
         self.nextButtonNode.hitTestSlop = UIEdgeInsets(top: -6.0, left: -10.0, bottom: -6.0, right: -10.0)
         
+        self.dateButtonNode = HighlightableButtonNode()
+        self.dateButtonNode.clipsToBounds = true
+        self.dateButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.dateButtonNode.cornerRadius = 9.0
+        
+        self.timeButtonNode = HighlightableButtonNode()
+        self.timeButtonNode.clipsToBounds = true
+        self.timeButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.timeButtonNode.cornerRadius = 9.0
+        
         super.init()
         
         self.clipsToBounds = true
         self.backgroundColor = theme.backgroundColor
         
+        self.addSubnode(self.datePickerBackgroundNode)
+        self.datePickerBackgroundNode.addSubnode(self.contentNode)
+        
+        self.dayNodes.forEach { self.datePickerBackgroundNode.addSubnode($0) }
+        
+        self.datePickerBackgroundNode.addSubnode(self.previousButtonNode)
+        self.datePickerBackgroundNode.addSubnode(self.nextButtonNode)
+        
+        self.addSubnode(self.monthPickerBackgroundNode)
+        self.monthPickerBackgroundNode.addSubnode(self.monthPickerNode)
+        
+        self.datePickerBackgroundNode.addSubnode(self.monthTextNode)
+        self.datePickerBackgroundNode.addSubnode(self.monthArrowNode)
+        self.datePickerBackgroundNode.addSubnode(self.monthButtonNode)
+        
+        self.addSubnode(self.timePickerBackgroundNode)
+        self.timePickerBackgroundNode.addSubnode(self.timePickerNode)
+        
         self.addSubnode(self.timeTitleNode)
-        self.addSubnode(self.timePickerNode)
         
-        self.addSubnode(self.contentNode)
-                
-        self.dayNodes.forEach { self.addSubnode($0) }
-        
-        self.addSubnode(self.previousButtonNode)
-        self.addSubnode(self.nextButtonNode)
-        
-        self.addSubnode(self.pickerBackgroundNode)
-        self.pickerBackgroundNode.addSubnode(self.pickerNode)
-        
-        self.addSubnode(self.monthTextNode)
-        self.addSubnode(self.monthArrowNode)
-        self.addSubnode(self.monthButtonNode)
+        self.addSubnode(self.dateButtonNode)
+        self.addSubnode(self.timeButtonNode)
         
         self.monthArrowNode.image = generateSmallArrowImage(color: theme.accentColor)
         self.previousButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: true), for: .normal)
@@ -477,9 +516,12 @@ public final class DatePickerNode: ASDisplayNode {
         self.previousButtonNode.addTarget(self, action: #selector(self.previousButtonPressed), forControlEvents: .touchUpInside)
         self.nextButtonNode.addTarget(self, action: #selector(self.nextButtonPressed), forControlEvents: .touchUpInside)
         
-        self.timePickerNode.valueChanged = { [weak self] date in
+        self.dateButtonNode.addTarget(self, action: #selector(self.dateButtonPressed), forControlEvents: .touchUpInside)
+        self.timeButtonNode.addTarget(self, action: #selector(self.timeButtonPressed), forControlEvents: .touchUpInside)
+        
+        timeChangedImpl = { [weak self] date in
             if let strongSelf = self {
-                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, selectedMonth: strongSelf.state.selectedMonth)
+                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, displayingDateSelection: strongSelf.state.displayingDateSelection, displayingTimeSelection: strongSelf.state.displayingTimeSelection, selectedMonth: strongSelf.state.selectedMonth)
                 strongSelf.updateState(updatedState, animated: false)
                 
                 strongSelf.valueUpdated?(date)
@@ -488,7 +530,7 @@ public final class DatePickerNode: ASDisplayNode {
         
         monthChangedImpl = { [weak self] date in
             if let strongSelf = self {
-                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, selectedMonth: monthForDate(date))
+                let updatedState = State(minDate: strongSelf.state.minDate, maxDate: strongSelf.state.maxDate, date: date, displayingMonthSelection: strongSelf.state.displayingMonthSelection, displayingDateSelection: strongSelf.state.displayingDateSelection, displayingTimeSelection: strongSelf.state.displayingTimeSelection, selectedMonth: monthForDate(date))
                 strongSelf.updateState(updatedState, animated: false)
                 
                 strongSelf.valueUpdated?(date)
@@ -512,13 +554,13 @@ public final class DatePickerNode: ASDisplayNode {
         let previousState = self.state
         self.state = state
         
-        if previousState.minDate != state.minDate || previousState.maxDate != state.maxDate {
-            self.pickerNode.yearRange = yearRange(for: state)
+        if previousState.minDate != state.minDate || previousState.maxDate != state.maxDate || previousState.date == nil && state.date != nil {
+            self.monthPickerNode.yearRange = yearRange(for: state)
             self.setupItems()
         } else if previousState.selectedMonth != state.selectedMonth {
             for i in 0 ..< self.months.count {
-                if self.months[i].timeIntervalSince1970 > state.selectedMonth.timeIntervalSince1970 {
-                    self.currentIndex = max(0, min(self.months.count - 1, i - 1))
+                if self.months[i].timeIntervalSince1970 >= state.selectedMonth.timeIntervalSince1970 {
+                    self.currentIndex = max(0, min(self.months.count - 1, i))
                     break
                 }
             }
@@ -530,8 +572,8 @@ public final class DatePickerNode: ASDisplayNode {
         } else {
             initialDate = self.state.selectedMonth
         }
-        self.pickerNode.date = self.state.date ?? initialDate
-        self.timePickerNode.date = self.state.date
+        self.monthPickerNode.date = self.state.date ?? initialDate
+        self.timePickerNode.date = self.state.date ?? initialDate
         
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: animated ? .animated(duration: 0.3, curve: .spring) : .immediate)
@@ -541,8 +583,8 @@ public final class DatePickerNode: ASDisplayNode {
     private func setupItems() {
         let startMonth = monthForDate(self.state.minDate)
         let endMonth = monthForDate(self.state.maxDate)
-        let selectedMonth = monthForDate(self.state.selectedMonth)
-                
+        let selectedMonth = monthForDate(self.state.date ?? self.state.selectedMonth)
+        
         var currentIndex = 0
         
         var months: [Date] = [startMonth]
@@ -555,7 +597,7 @@ public final class DatePickerNode: ASDisplayNode {
                 if nextMonth == selectedMonth {
                     currentIndex = index
                 }
-                if nextMonth >= endMonth {
+                if nextMonth > endMonth {
                     break
                 } else {
                     months.append(nextMonth)
@@ -575,11 +617,14 @@ public final class DatePickerNode: ASDisplayNode {
             return
         }
         self.theme = theme
-                
+        
         self.backgroundColor = self.theme.backgroundColor
         self.monthArrowNode.image = generateSmallArrowImage(color: theme.accentColor)
         self.previousButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: true), for: .normal)
         self.nextButtonNode.setImage(generateNavigationArrowImage(color: theme.accentColor, mirror: false), for: .normal)
+        
+        self.dateButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
+        self.timeButtonNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
         
         for (_, monthNode) in self.monthNodes {
             monthNode.theme = theme
@@ -622,7 +667,7 @@ public final class DatePickerNode: ASDisplayNode {
             }
             
             if let date = calendar.date(from: dateComponents), date >= self.minimumDate && date < self.maximumDate {
-                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: monthNode.month)
+                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: monthNode.month)
                 self.updateState(updatedState, animated: false)
                 
                 self.valueUpdated?(date)
@@ -668,7 +713,7 @@ public final class DatePickerNode: ASDisplayNode {
             self.currentIndex = updatedIndex
             self.transitionFraction = 0.0
             
-            let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: self.months[updatedIndex])
+            let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: self.months[updatedIndex])
             self.updateState(updatedState, animated: true)
         default:
             break
@@ -711,7 +756,7 @@ public final class DatePickerNode: ASDisplayNode {
                 }
             }
         }
-      
+        
         var removeIds: [Date] = []
         for (id, _) in self.monthNodes {
             if !validIds.contains(id) {
@@ -727,8 +772,8 @@ public final class DatePickerNode: ASDisplayNode {
     
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
-    
-        let timeHeight: CGFloat = 44.0
+        
+        let timeHeight: CGFloat = 50.0
         let topInset: CGFloat = 78.0 + timeHeight
         let sideInset: CGFloat = 16.0
         
@@ -736,11 +781,10 @@ public final class DatePickerNode: ASDisplayNode {
         let components = calendar.dateComponents([.month, .year], from: month)
         
         let timeTitleSize = self.timeTitleNode.updateLayout(size)
-        self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 14.0), size: timeTitleSize)
+        self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 12.0), size: timeTitleSize)
         
-        let timePickerSize = self.timePickerNode.updateLayout(size: size)
-        self.timePickerNode.frame = CGRect(origin: CGPoint(x: size.width - timePickerSize.width - 16.0, y: 6.0), size: timePickerSize)
-        self.timeSeparatorNode.frame = CGRect(x: 16.0, y: timeHeight, width: size.width - 16.0, height: UIScreenPixel)
+        let timePickerSize = CGSize(width: size.width, height: 180.0)
+        self.timePickerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: timeHeight + 11.0), size: timePickerSize)
         
         self.monthTextNode.attributedText = NSAttributedString(string: stringForMonth(strings: self.strings, month: components.month.flatMap { Int32($0) - 1 } ?? 0, ofYear: components.year.flatMap { Int32($0) - 1900 } ?? 100), font: controlFont, textColor: self.state.displayingMonthSelection ? self.theme.accentColor : self.theme.textColor)
         let monthSize = self.monthTextNode.updateLayout(size)
@@ -760,7 +804,28 @@ public final class DatePickerNode: ASDisplayNode {
         self.previousButtonNode.frame = CGRect(x: size.width - sideInset - 54.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
         self.nextButtonNode.isEnabled = self.currentIndex < self.months.count - 1
         self.nextButtonNode.frame = CGRect(x: size.width - sideInset - 13.0, y: monthTextFrame.minY + 1.0, width: 10.0, height: 17.0)
-
+        
+        let date = self.date ?? Date()
+        var t: time_t = Int(date.timeIntervalSince1970)
+        var timeinfo = tm()
+        localtime_r(&t, &timeinfo);
+        
+        let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: self.dateTimeFormat)
+        self.timeButtonNode.setTitle(timeString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingTimeSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
+        
+        var timeSize = self.timeButtonNode.measure(size)
+        timeSize.width += 24.0
+        timeSize.height = 36.0
+        self.timeButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0, y: 4.0, width: timeSize.width, height: timeSize.height)
+        
+        let dateString = stringForDate(date: date, timeZone: .current, strings: self.strings)
+        self.dateButtonNode.setTitle(dateString, with: Font.with(size: 17.0, traits: .monospacedNumbers), with: self.state.displayingDateSelection ? self.theme.accentColor : self.theme.textColor, for: .normal)
+        
+        var dateSize = self.dateButtonNode.measure(size)
+        dateSize.width += 24.0
+        dateSize.height = 36.0
+        self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
+        
         let daysSideInset: CGFloat = 12.0
         let cellSize: CGFloat = floor((size.width - daysSideInset * 2.0) / 7.0)
         
@@ -782,24 +847,61 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.updateItems(size: containerSize, transition: transition)
         
-        self.pickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.pickerBackgroundNode.isUserInteractionEnabled = self.state.displayingMonthSelection
-        transition.updateAlpha(node: self.pickerBackgroundNode, alpha: self.state.displayingMonthSelection ? 1.0 : 0.0)
+        self.monthPickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.monthPickerBackgroundNode.isUserInteractionEnabled = self.state.displayingMonthSelection
+        transition.updateAlpha(node: self.monthPickerBackgroundNode, alpha: self.state.displayingMonthSelection ? 1.0 : 0.0)
         
-        self.pickerNode.frame = CGRect(x: sideInset, y: topInset, width: size.width - sideInset * 2.0, height: 180.0)
+        self.timePickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.timePickerBackgroundNode.isUserInteractionEnabled = self.state.displayingTimeSelection
+        transition.updateAlpha(node: self.timePickerBackgroundNode, alpha: self.state.displayingTimeSelection ? 1.0 : 0.0)
+        
+        self.datePickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.datePickerBackgroundNode.isUserInteractionEnabled = self.state.displayingDateSelection
+        transition.updateAlpha(node: self.datePickerBackgroundNode, alpha: self.state.displayingDateSelection ? 1.0 : 0.0)
+        
+        self.monthPickerNode.frame = CGRect(x: sideInset, y: topInset, width: size.width - sideInset * 2.0, height: 180.0)
+    }
+    
+    public var toggleDateSelection: () -> Void = {}
+    public var toggleTimeSelection: () -> Void = {}
+
+    @objc private func dateButtonPressed() {
+        self.toggleDateSelection()
+    }
+    
+    public var displayDateSelection = false {
+        didSet {
+            if self.displayDateSelection != oldValue {
+                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.displayDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: self.state.selectedMonth)
+                self.updateState(updatedState, animated: true)
+            }
+        }
+    }
+    
+    @objc private func timeButtonPressed() {
+        self.toggleTimeSelection()
+    }
+    
+    public var displayTimeSelection = false {
+        didSet {
+            if self.displayTimeSelection != oldValue {
+                let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.displayTimeSelection, selectedMonth: self.state.selectedMonth)
+                self.updateState(updatedState, animated: true)
+            }
+        }
     }
     
     @objc private func monthButtonPressed() {
-        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: !self.state.displayingMonthSelection, selectedMonth: self.state.selectedMonth)
+        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: !self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: self.state.selectedMonth)
         self.updateState(updatedState, animated: true)
     }
-    
+
     @objc private func previousButtonPressed() {
         guard let month = calendar.date(byAdding: .month, value: -1, to: self.state.selectedMonth), let size = self.validLayout else {
             return
         }
             
-        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: month)
+        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: month)
         self.updateState(updatedState, animated: false)
         
         self.contentNode.layer.animatePosition(from: CGPoint(x: -size.width, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
@@ -810,7 +912,7 @@ public final class DatePickerNode: ASDisplayNode {
             return
         }
             
-        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, selectedMonth: month)
+        let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: self.state.date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: month)
         self.updateState(updatedState, animated: false)
         
         self.contentNode.layer.animatePosition(from: CGPoint(x: size.width, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
@@ -821,7 +923,11 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     private let theme: DatePickerTheme
     private let strings: PresentationStrings
     
-    var date: Date
+    var date: Date {
+        didSet {
+            self.updateSelection()
+        }
+    }
     var yearRange: Range<Int> {
         didSet {
             self.reload()
@@ -857,8 +963,12 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     private func reload() {
         self.pickerView.reloadAllComponents()
         
-        let month = calendar.component(.month, from: date)
-        let year = calendar.component(.year, from: date)
+        self.updateSelection()
+    }
+    
+    private func updateSelection() {
+        let month = calendar.component(.month, from: self.date)
+        let year = calendar.component(.year, from: self.date)
         
         let monthIndex = month - 1
         if self.pickerView.selectedRow(inComponent: 0) != monthIndex {
@@ -916,28 +1026,30 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
         
         var date = calendar.date(from: components)!
         
-        var invalid = false
+//        var invalid = false
         if let minimumDate = self.minimumDate, let maximumDate = self.maximumDate {
+            let minimumMonthDate = monthForDate(minimumDate)
+            var fixDate: Date?
             if date < minimumDate {
+                fixDate = minimumMonthDate
                 date = minimumDate
-                invalid = true
             }
             if date > maximumDate {
+                fixDate = maximumDate
                 date = maximumDate
-                invalid = true
             }
-            if invalid {
-                let month = calendar.component(.month, from: date)
-                let year = calendar.component(.year, from: date)
+            if let fixDate {
+                let month = calendar.component(.month, from: fixDate)
+                let year = calendar.component(.year, from: fixDate)
                 self.pickerView.selectRow(month - 1, inComponent: 0, animated: true)
                 self.pickerView.selectRow(year - yearRange.startIndex, inComponent: 1, animated: true)
             }
         }
         
-        if !invalid {
-            self.date = date
-            self.valueChanged(date)
-        }
+//        if !invalid {
+        self.date = date
+        self.valueChanged(date)
+//        }
     }
     
     override func layout() {
@@ -947,744 +1059,66 @@ private final class MonthPickerNode: ASDisplayNode, UIPickerViewDelegate, UIPick
     }
 }
 
-private class TimeInputView: UIView, UIKeyInput {
-    override var canBecomeFirstResponder: Bool {
-        return true
-    }
-    
-    var keyboardType: UIKeyboardType = .numberPad
-    var keyboardAppearance: UIKeyboardAppearance = .default
-    
-    var text: String = ""
-    var hasText: Bool {
-        return !self.text.isEmpty
-    }
-    
-    var focusUpdated: ((Bool) -> Void)?
-    var textUpdated: ((String) -> Void)?
-    
-    override func becomeFirstResponder() -> Bool {
-        self.didReset = false
-        let result = super.becomeFirstResponder()
-        self.focusUpdated?(true)
-        return result
-    }
-    
-    override func resignFirstResponder() -> Bool {
-        let result = super.resignFirstResponder()
-        self.focusUpdated?(false)
-        return result
-    }
-    
-    var length: Int = 4
-    
-    var didReset = false
-    private let nonDigits = CharacterSet.decimalDigits.inverted
-    func insertText(_ text: String) {
-        if text.rangeOfCharacter(from: nonDigits) != nil {
-            return
-        }
-        if !self.didReset {
-            self.text = ""
-            self.didReset = true
-        }
-        var updatedText = self.text
-        updatedText.append(text)
-        self.text = String(updatedText.suffix(length))
-        self.textUpdated?(self.text)
-    }
-    
-    func deleteBackward() {
-        self.didReset = true
-        var updatedText = self.text
-        if !updatedText.isEmpty {
-            updatedText.removeLast()
-        }
-        self.text = updatedText
-        self.textUpdated?(self.text)
-    }
-}
-
-private class TimeInputNode: ASDisplayNode {
-    var length: Int {
-        get {
-            if let view = self.view as? TimeInputView {
-                return view.length
-            } else {
-                return 4
-            }
-        }
-        set {
-            if let view = self.view as? TimeInputView {
-                view.length = newValue
-            }
-        }
-    }
-    var text: String {
-        get {
-            if let view = self.view as? TimeInputView {
-                return view.text
-            } else {
-                return ""
-            }
-        }
-        set {
-            if let view = self.view as? TimeInputView {
-                view.text = newValue
-            }
-        }
-    }
-    var textUpdated: ((String) -> Void)? {
-        didSet {
-            if let view = self.view as? TimeInputView {
-                view.textUpdated = self.textUpdated
-            }
-        }
-    }
-    
-    var focusUpdated: ((Bool) -> Void)? {
-        didSet {
-            if let view = self.view as? TimeInputView {
-                view.focusUpdated = self.focusUpdated
-            }
-        }
-    }
-    
-    override init() {
-        super.init()
-        
-        self.setViewBlock { () -> UIView in
-            return TimeInputView()
-        }
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-               
-        if let view = self.view as? TimeInputView {
-            view.textUpdated = self.textUpdated
-        }
-    }
-    
-    func reset() {
-        if let view = self.view as? TimeInputView {
-            view.didReset = false
-        }
-    }
-}
-
 private final class TimePickerNode: ASDisplayNode {
-    enum Selection {
-        case none
-        case hours
-        case minutes
-        case all
-    }
+    private let theme: DatePickerTheme
     
-    private var theme: DatePickerTheme
-    private let dateTimeFormat: PresentationDateTimeFormat
-    
-    private let backgroundNode: ASDisplayNode
-    private let hoursNode: TapeNode
-    private let minutesNode: TapeNode
-    private let hoursTopMaskNode: ASDisplayNode
-    private let hoursBottomMaskNode: ASDisplayNode
-    private let minutesTopMaskNode: ASDisplayNode
-    private let minutesBottomMaskNode: ASDisplayNode
-    private let colonNode: ImmediateTextNode
-    private let borderNode: ASDisplayNode
-    private let inputNode: TimeInputNode
-    private let amPMSelectorNode: SegmentedControlNode
-    
-    private var typing = false
-    private var typingString = ""
-    
-    private var typingHours: Int?
-    private var typingMinutes: Int?
-    private let hoursTypingNode: ImmediateTextNode
-    private let minutesTypingNode: ImmediateTextNode
-    
-    var date: Date? {
-        didSet {
-            if let size = self.validLayout {
-                let _ = self.updateLayout(size: size)
-            }
+    var date: Date {
+        get {
+            return self.pickerView.date
+        }
+        set {
+            self.pickerView.date = newValue
         }
     }
-        
+    
     var minimumDate: Date?
     var maximumDate: Date?
     
-    var valueChanged: ((Date) -> Void)?
+    private let valueChanged: (Date) -> Void
+    private let pickerView: UIDatePicker
     
-    private var validLayout: CGSize?
-    
-    init(theme: DatePickerTheme, dateTimeFormat: PresentationDateTimeFormat, date: Date?) {
+    init(theme: DatePickerTheme, date: Date, valueChanged: @escaping (Date) -> Void) {
         self.theme = theme
-        self.dateTimeFormat = dateTimeFormat
-        self.date = date
-        self.selection = .none
+            
+        self.valueChanged = valueChanged
         
-        let backgroundColor = theme.backgroundColor.mixedWith(theme.segmentedControlTheme.backgroundColor.withAlphaComponent(1.0), alpha: theme.segmentedControlTheme.backgroundColor.alpha)
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = backgroundColor
-        self.backgroundNode.cornerRadius = 9.0
-        
-        self.borderNode = ASDisplayNode()
-        self.borderNode.cornerRadius = 9.0
-        self.borderNode.isUserInteractionEnabled = false
-        self.borderNode.isHidden = true
-        self.borderNode.borderWidth = 2.0
-        self.borderNode.borderColor = theme.accentColor.cgColor
-        
-        self.colonNode = ImmediateTextNode()
-        self.hoursNode = TapeNode()
-        self.minutesNode = TapeNode()
-        
-        self.hoursTypingNode = ImmediateTextNode()
-        self.hoursTypingNode.isHidden = true
-        self.hoursTypingNode.textAlignment = .right
-        self.minutesTypingNode = ImmediateTextNode()
-        self.minutesTypingNode.isHidden = true
-        self.minutesTypingNode.textAlignment = .right
-        
-        self.inputNode = TimeInputNode()
-        
-        self.hoursTopMaskNode = ASDisplayNode()
-        self.hoursTopMaskNode.backgroundColor = backgroundColor
-        self.hoursBottomMaskNode = ASDisplayNode()
-        self.hoursBottomMaskNode.backgroundColor = backgroundColor
-        
-        self.minutesTopMaskNode = ASDisplayNode()
-        self.minutesTopMaskNode.backgroundColor = backgroundColor
-        self.minutesBottomMaskNode = ASDisplayNode()
-        self.minutesBottomMaskNode.backgroundColor = backgroundColor
-        
-        let isPM: Bool
-        if let date = date {
-            let hours = calendar.component(.hour, from: date)
-            isPM = hours > 12
-        } else {
-            isPM = true
+        self.pickerView = UIDatePicker()
+        if #available(iOS 13.4, *) {
+            self.pickerView.preferredDatePickerStyle = .wheels
         }
-        
-        self.amPMSelectorNode = SegmentedControlNode(theme: theme.segmentedControlTheme, items: [SegmentedControlItem(title: "AM"), SegmentedControlItem(title: "PM")], selectedIndex: isPM ? 1 : 0)
         
         super.init()
         
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.colonNode)
-        self.addSubnode(self.hoursNode)
-        self.addSubnode(self.minutesNode)
-        self.addSubnode(self.hoursTopMaskNode)
-        self.addSubnode(self.hoursBottomMaskNode)
-        self.addSubnode(self.minutesTopMaskNode)
-        self.addSubnode(self.minutesBottomMaskNode)
-        self.addSubnode(self.hoursTypingNode)
-        self.addSubnode(self.minutesTypingNode)
-        self.addSubnode(self.borderNode)
-        self.addSubnode(self.inputNode)
-        self.addSubnode(self.amPMSelectorNode)
+        self.pickerView.datePickerMode = .time
+        self.view.addSubview(self.pickerView)
         
-        self.amPMSelectorNode.selectedIndexChanged = { [weak self] index in
-            guard let strongSelf = self, let date = strongSelf.date else {
-                return
-            }
-            let hours = calendar.component(.hour, from: date)
-            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-            if index == 0 && hours >= 12 {
-                components.hour = hours - 12
-            } else if index == 1 && hours < 12 {
-                components.hour = hours + 12
-            }
-            if let newDate = calendar.date(from: components) {
-                strongSelf.date = newDate
-                strongSelf.valueChanged?(newDate)
-            }
-        }
+        self.pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
         
-        self.inputNode.textUpdated = { [weak self] text in
-            self?.handleTextInput(text)
-        }
-        
-        self.inputNode.focusUpdated = { [weak self] focus in
-            if focus {
-                self?.selection = .all
-            } else {
-                self?.selection = .none
-            }
-        }
-        
-        self.hoursNode.count = {
-            switch dateTimeFormat.timeFormat {
-                case .military:
-                    return 24
-                case .regular:
-                    return 12
-            }
-        }
-        self.hoursNode.titleAt = { i in
-            switch dateTimeFormat.timeFormat {
-                case .military:
-                    if i < 10 {
-                        return "0\(i)"
-                    } else {
-                        return "\(i)"
-                    }
-                case .regular:
-                    if i == 0 {
-                        return "12"
-                    } else if i < 10 {
-                        return "0\(i)"
-                    } else {
-                        return "\(i)"
-                    }
-            }
-        }
-        self.hoursNode.isScrollingUpdated = { [weak self] scrolling in
-            if let strongSelf = self {
-                if scrolling {
-                    strongSelf.typing = false
-                    strongSelf.selection = .hours
-                } else {
-                    if strongSelf.inputNode.view.isFirstResponder {
-                        strongSelf.selection = .all
-                    } else {
-                        strongSelf.selection = .none
-                    }
-                }
-            }
-        }
-        self.hoursNode.selected = { [weak self] index in
-            self?.updateTime()
-        }
-        
-        self.minutesNode.count = {
-            return 60
-        }
-        self.minutesNode.titleAt = { i in
-            if i < 10 {
-                return "0\(i)"
-            } else {
-                return "\(i)"
-            }
-        }
-        self.minutesNode.isScrollingUpdated = { [weak self] scrolling in
-            if let strongSelf = self {
-                if scrolling {
-                    strongSelf.typing = false
-                    strongSelf.selection = .minutes
-                } else {
-                    if strongSelf.inputNode.view.isFirstResponder {
-                        strongSelf.selection = .all
-                    } else {
-                        strongSelf.selection = .none
-                    }
-                }
-            }
-        }
-        self.minutesNode.selected = { [weak self] _ in
-            self?.updateTime()
-        }
-        
-        self.update()
-    }
-        
-    private func updateTime() {
-        switch self.dateTimeFormat.timeFormat {
-            case .military:
-                let hour = self.hoursNode.currentSelectedIndex
-                let minute = self.minutesNode.currentSelectedIndex
-                
-                let date = self.date ?? Date()
-                
-                var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                components.hour =  hour
-                components.minute = minute
-                if var newDate = calendar.date(from: components) {
-                    if let minDate = self.minimumDate, newDate <= minDate {
-                        if let nextDate = calendar.date(byAdding: .day, value: 1, to: newDate) {
-                            newDate = nextDate
-                        }
-                    }
-                    self.date = newDate
-                    self.valueChanged?(newDate)
-                }
-                
-            case .regular:
-                let hour = self.hoursNode.currentSelectedIndex
-                let minute = self.minutesNode.currentSelectedIndex
-                
-                let date = self.date ?? Date()
-                
-                var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-                if self.amPMSelectorNode.selectedIndex == 0 {
-                    components.hour = hour >= 12 ? hour - 12 : hour
-                } else if self.amPMSelectorNode.selectedIndex == 1 {
-                    components.hour = hour < 12 ? hour + 12 : hour
-                }
-                components.minute = minute
-                if var newDate = calendar.date(from: components) {
-                    if let minDate = self.minimumDate, newDate <= minDate {
-                        if let nextDate = calendar.date(byAdding: .day, value: 1, to: newDate) {
-                            newDate = nextDate
-                        }
-                    }
-                    self.date = newDate
-                    self.valueChanged?(newDate)
-                }
-        }
+        self.date = date
     }
     
-    override func didLoad() {
-        super.didLoad()
-                
-        self.view.disablesInteractiveTransitionGestureRecognizer = true
-        self.view.disablesInteractiveModalDismiss = true
-        
-        self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:))))
-        
-        (self.inputNode.view as? TimeInputView)?.keyboardAppearance = self.theme.overallDarkAppearance ? .dark : .default
+    @objc private func datePickerUpdated() {
+        var newDate = self.date
+        if let minDate = self.minimumDate, newDate <= minDate {
+            if let nextDate = calendar.date(byAdding: .day, value: 1, to: newDate) {
+                newDate = nextDate
+            }
+        }
+        self.date = newDate
+        self.valueChanged(newDate)
     }
-    
-    private func handleTextInput(_ input: String) {
-        self.typing = true
-        
-        let maxHoursValue: Int
-        switch self.dateTimeFormat.timeFormat {
-            case .military:
-                maxHoursValue = 23
-            case .regular:
-                maxHoursValue = 12
-        }
-        
-        var text = input
-        var typingHours: Int?
-        var typingMinutes: Int?
-        if self.selection == .all {
-            if text.count < 2 {
-                typingHours = nil
-            } else {
-                if var value = Int(String(text.prefix(2))) {
-                    if value > maxHoursValue {
-                        value = value % 10
-                    }
-                    typingHours = value
-                }
-            }
-            if var value = Int(String(text.suffix(2))) {
-                if value >= 60 {
-                    value = value % 10
-                }
-                typingMinutes = value
-            }
-        } else if self.selection == .hours {
-            text = String(text.suffix(2))
-            if var value = Int(text) {
-                if value > maxHoursValue {
-                    value = value % 10
-                }
-                typingHours = value
-            } else {
-                typingHours = nil
-            }
-        } else if self.selection == .minutes {
-            text = String(text.suffix(2))
-            if var value = Int(text) {
-                if value >= 60 {
-                    value = value % 10
-                }
-                typingMinutes = value
-            } else {
-                typingMinutes = nil
-            }
-        }
-        self.typingHours = typingHours
-        self.typingMinutes = typingMinutes
-        
-        if let date = self.date {
-            var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
-            if let typingHours = typingHours {
-                components.hour = typingHours
-            }
-            if let typingMinutes = typingMinutes {
-                components.minute = typingMinutes
-            }
-            if let newDate = calendar.date(from: components) {
-                self.date = newDate
-                self.valueChanged?(newDate)
-                self.updateTapes()
-            }
-        }
-        
-        self.update()
-    }
-    
-    private var selection: Selection {
-        didSet {
-            self.typing = false
-            self.inputNode.reset()
-            switch self.selection {
-                case .none:
-                    break
-                case .hours:
-                    self.inputNode.text = self.hoursNode.titleAt?(self.hoursNode.currentSelectedIndex) ?? ""
-                    self.inputNode.length = 2
-                case .minutes:
-                    self.inputNode.text = self.minutesNode.titleAt?(self.minutesNode.currentSelectedIndex) ?? ""
-                    self.inputNode.length = 2
-                case .all:
-                    let hours = self.minutesNode.titleAt?(self.hoursNode.currentSelectedIndex) ?? ""
-                    let minutes = self.minutesNode.titleAt?(self.minutesNode.currentSelectedIndex) ?? ""
-                    self.inputNode.text = "\(hours)\(minutes)"
-                    self.inputNode.length = 4
-            }
-            self.update()
-        }
-    }
-    
-    private func update() {
-        if case .none = self.selection {
-            self.borderNode.isHidden = true
-        } else {
-            self.borderNode.isHidden = false
-        }
-        
-        let colonColor: UIColor
-        switch self.selection {
-            case .none:
-                colonColor = self.theme.textColor
-                self.colonNode.alpha = 1.0
-                
-                self.hoursNode.textColor = self.theme.textColor
-                self.minutesNode.textColor = self.theme.textColor
-                self.hoursNode.alpha = 1.0
-                self.minutesNode.alpha = 1.0
-                
-                self.hoursTopMaskNode.alpha = 1.0
-                self.hoursBottomMaskNode.alpha = 1.0
-                self.minutesTopMaskNode.alpha = 1.0
-                self.minutesBottomMaskNode.alpha = 1.0
-                
-                self.typing = false
-                self.typingHours = nil
-                self.typingMinutes = nil
-                self.hoursTypingNode.isHidden = true
-                self.minutesTypingNode.isHidden = true
-                
-                self.hoursNode.isHidden = false
-                self.minutesNode.isHidden = false
-            case .hours:
-                colonColor = self.theme.textColor
-                self.colonNode.alpha = 0.35
-                
-                self.hoursNode.textColor = self.theme.accentColor
-                self.minutesNode.textColor = self.theme.textColor
-                self.hoursNode.alpha = 1.0
-                self.minutesNode.alpha = 0.35
-                
-                self.hoursTopMaskNode.alpha = 0.5
-                self.hoursBottomMaskNode.alpha = 0.5
-                self.minutesTopMaskNode.alpha = 1.0
-                self.minutesBottomMaskNode.alpha = 1.0
-                
-                if self.typing {
-                    self.hoursTypingNode.isHidden = false
-                    self.minutesTypingNode.isHidden = true
-                    
-                    self.hoursNode.isHidden = true
-                    self.minutesNode.isHidden = false
-                } else {
-                    self.hoursTypingNode.isHidden = true
-                    self.minutesTypingNode.isHidden = true
-                    
-                    self.hoursNode.isHidden = false
-                    self.minutesNode.isHidden = false
-                }
-            case .minutes:
-                colonColor = self.theme.textColor
-                self.colonNode.alpha = 0.35
-                
-                self.hoursNode.textColor = self.theme.textColor
-                self.minutesNode.textColor = self.theme.accentColor
-                self.hoursNode.alpha = 0.35
-                self.minutesNode.alpha = 1.0
-                
-                self.hoursTopMaskNode.alpha = 1.0
-                self.hoursBottomMaskNode.alpha = 1.0
-                self.minutesTopMaskNode.alpha = 0.5
-                self.minutesBottomMaskNode.alpha = 0.5
-                
-                if self.typing {
-                    self.hoursTypingNode.isHidden = true
-                    self.minutesTypingNode.isHidden = false
-                    
-                    self.hoursNode.isHidden = false
-                    self.minutesNode.isHidden = true
-                } else {
-                    self.hoursTypingNode.isHidden = true
-                    self.minutesTypingNode.isHidden = true
-                    
-                    self.hoursNode.isHidden = false
-                    self.minutesNode.isHidden = false
-                }
-            case .all:
-                colonColor = self.theme.accentColor
-                self.colonNode.alpha = 1.0
-                
-                self.hoursNode.textColor = self.theme.accentColor
-                self.minutesNode.textColor = self.theme.accentColor
-                self.hoursNode.alpha = 1.0
-                self.minutesNode.alpha = 1.0
-                
-                self.hoursTopMaskNode.alpha = 0.5
-                self.hoursBottomMaskNode.alpha = 0.5
-                self.minutesTopMaskNode.alpha = 0.5
-                self.minutesBottomMaskNode.alpha = 0.5
-                
-                if self.typing {
-                    self.hoursTypingNode.isHidden = false
-                    self.minutesTypingNode.isHidden = false
-                    
-                    self.hoursNode.isHidden = true
-                    self.minutesNode.isHidden = true
-                } else {
-                    self.hoursTypingNode.isHidden = true
-                    self.minutesTypingNode.isHidden = true
-                    
-                    self.hoursNode.isHidden = false
-                    self.minutesNode.isHidden = false
-                }
-        }
-        
-        if let size = self.validLayout {
-            let hoursString: String
-            if let typingHours = self.typingHours {
-                if typingHours < 10 {
-                    hoursString = "0\(typingHours)"
-                } else {
-                    hoursString = "\(typingHours)"
-                }
-            } else {
-                hoursString = ""
-            }
-            let minutesString: String
-            if let typingMinutes = self.typingMinutes {
-                if typingMinutes < 10 {
-                    minutesString = "0\(typingMinutes)"
-                } else {
-                    minutesString = "\(typingMinutes)"
-                }
-            } else {
-                minutesString = ""
-            }
-            self.hoursTypingNode.attributedText = NSAttributedString(string: hoursString, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: theme.textColor)
-            
-            let hoursSize = self.hoursTypingNode.updateLayout(size)
-            self.hoursTypingNode.frame = CGRect(origin: CGPoint(x: 37.0 - hoursSize.width - 3.0 + UIScreenPixel, y: 6.0), size: hoursSize)
-            
-            self.minutesTypingNode.attributedText = NSAttributedString(string: minutesString, font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: theme.textColor)
-            
-            let minutesSize = self.minutesTypingNode.updateLayout(size)
-            self.minutesTypingNode.frame = CGRect(origin: CGPoint(x: 75.0 - minutesSize.width - 9.0 + UIScreenPixel, y: 6.0), size: minutesSize)
-            
-            self.colonNode.attributedText = NSAttributedString(string: ":", font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: colonColor)
-            let _ = self.colonNode.updateLayout(size)
-        }
-    }
-    
-    @objc func handleTap(_ gestureRecognizer: UITapGestureRecognizer) {
-        if !self.inputNode.view.isFirstResponder {
-            self.inputNode.view.becomeFirstResponder()
-            self.selection = .all
-        } else {
-            let location = gestureRecognizer.location(in: self.view)
-            if location.x < 37.0 {
-                if self.selection == .hours {
-                    self.selection = .all
-                } else {
-                    self.selection = .hours
-                }
-            } else if location.x > 37.0 && location.x < 75.0 {
-                if self.selection == .minutes {
-                    self.selection = .all
-                } else {
-                    self.selection = .minutes
-                }
-            }
-        }
-    }
-    
-    func updateTheme(_ theme: DatePickerTheme) {
-        self.theme = theme
-        
-        self.backgroundNode.backgroundColor = theme.segmentedControlTheme.backgroundColor
-        self.borderNode.borderColor = theme.accentColor.cgColor
-    }
-    
-    func updateTapes() {
-        let hours: Int32
-        let minutes: Int32
-        if let date = self.date {
-            hours = Int32(calendar.component(.hour, from: date))
-            minutes = Int32(calendar.component(.minute, from: date))
-        } else {
-            hours = 11
-            minutes = 0
-        }
-        
-        switch self.dateTimeFormat.timeFormat {
-            case .military:
-                self.hoursNode.selectRow(Int(hours), animated: false)
-                self.minutesNode.selectRow(Int(minutes), animated: false)
-            case .regular:
-                var h12Hours = hours
-                if hours == 0 {
-                    h12Hours = 12
-                } else if hours > 12 {
-                    h12Hours = hours - 12
-                }
-                self.hoursNode.selectRow(Int(h12Hours), animated: false)
-                self.minutesNode.selectRow(Int(minutes), animated: false)
-        }
-    }
-    
-    func updateLayout(size: CGSize) -> CGSize {
-        self.validLayout = size
-        
-        self.backgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: 75.0, height: 36.0)
-        self.borderNode.frame = self.backgroundNode.frame
-        
-        var contentSize = CGSize()
-        
-        self.updateTapes()
-    
-        self.hoursNode.frame = CGRect(x: 3.0, y: 0.0, width: 36.0, height: 36.0)
-        self.minutesNode.frame = CGRect(x: 35.0, y: 0.0, width: 36.0, height: 36.0)
 
-        self.hoursTopMaskNode.frame = CGRect(x: 9.0, y: 0.0, width: 28.0, height: 5.0)
-        self.hoursBottomMaskNode.frame = CGRect(x: 9.0, y: 36.0 - 5.0, width: 28.0, height: 5.0)
-        self.minutesTopMaskNode.frame = CGRect(x: 37.0, y: 0.0, width: 28.0, height: 5.0)
-        self.minutesBottomMaskNode.frame = CGRect(x: 37.0, y: 36.0 - 5.0, width: 28.0, height: 5.0)
+    private func reload() {
+        self.pickerView.date = self.date
+    }
+    
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return CGSize(width: constrainedSize.width, height: 180.0)
+    }
+    
+    override func layout() {
+        super.layout()
         
-        self.colonNode.attributedText = NSAttributedString(string: ":", font: Font.with(size: 21.0, design: .regular, weight: .regular, traits: [.monospacedNumbers]), textColor: self.theme.textColor)
-        
-        let colonSize = self.colonNode.updateLayout(size)
-        self.colonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.backgroundNode.frame.width - colonSize.width) / 2.0), y: floorToScreenPixels((self.backgroundNode.frame.height - colonSize.height) / 2.0) - 2.0), size: colonSize)
-        
-        self.inputNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0))
-        
-        if self.dateTimeFormat.timeFormat == .military {
-            contentSize = self.backgroundNode.frame.size
-            self.amPMSelectorNode.isHidden = true
-        } else {
-            self.amPMSelectorNode.isHidden = false
-            let segmentedSize = self.amPMSelectorNode.updateLayout(.sizeToFit(maximumWidth: 120.0, minimumWidth: 80.0, height: 36.0), transition: .immediate)
-            self.amPMSelectorNode.frame = CGRect(x: 85.0, y: 0.0, width: segmentedSize.width, height: 36.0)
-            contentSize = CGSize(width: 85.0 + segmentedSize.width, height: 36.0)
-        }
-        
-        return contentSize
+        self.pickerView.frame = CGRect(origin: CGPoint(), size: CGSize(width: self.bounds.size.width, height: 180.0))
     }
 }

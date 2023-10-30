@@ -582,7 +582,7 @@ private enum StatsEntry: ItemListNodeEntry {
                     title = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     icon = .peer(peer)
                     if let _ = label {
-                        expiresString = expiresValue
+                        expiresString = "\(durationString) • \(expiresValue)"
                     } else {
                         expiresString = presentationData.strings.Stats_Boosts_ExpiresOn(expiresValue).string
                     }
