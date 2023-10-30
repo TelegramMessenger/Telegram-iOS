@@ -4728,7 +4728,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         }
                         
                         backgroundHighlightNode.customHighlightColor = highlightColor
-                        backgroundHighlightNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: true, hasWallpaper: false, transition: .immediate, backgroundNode: nil)
+                        backgroundHighlightNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: true, hasWallpaper: true, transition: .immediate, backgroundNode: nil)
                         
                         backgroundHighlightNode.frame = self.backgroundNode.frame
                         backgroundHighlightNode.updateLayout(size: backgroundHighlightNode.frame.size, transition: .immediate)
