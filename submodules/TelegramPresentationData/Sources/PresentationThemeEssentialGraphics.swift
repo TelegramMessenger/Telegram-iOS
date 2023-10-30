@@ -250,11 +250,7 @@ public final class PrincipalThemeEssentialGraphics {
         let outgoingKnockout = self.outgoingBubbleGradientImage != nil
         
         let highlightKnockout: Bool
-        if case .color = wallpaper {
-            highlightKnockout = true
-        } else {
-            highlightKnockout = false
-        }
+        highlightKnockout = false
         
         let serviceColor = serviceMessageColorComponents(chatTheme: theme, wallpaper: wallpaper)
         

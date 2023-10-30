@@ -606,9 +606,15 @@ extension StoreMessage {
                                         threadId = makeMessageThreadId(threadIdValue)
                                     }
                                 } else {
-                                    let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                                    threadMessageId = threadIdValue
-                                    threadId = makeMessageThreadId(threadIdValue)
+                                    if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                        let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                        threadMessageId = threadIdValue
+                                        threadId = makeMessageThreadId(threadIdValue)
+                                    } else {
+                                        let threadIdValue = MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                        threadMessageId = threadIdValue
+                                        threadId = makeMessageThreadId(threadIdValue)
+                                    }
                                 }
                             } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 let threadIdValue = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
