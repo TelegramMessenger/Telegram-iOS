@@ -847,9 +847,13 @@ public final class DatePickerNode: ASDisplayNode {
         
         self.updateItems(size: containerSize, transition: transition)
         
-        self.monthPickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        let monthInset: CGFloat = timeHeight + 30.0
+        self.monthPickerBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: monthInset), size: size)
         self.monthPickerBackgroundNode.isUserInteractionEnabled = self.state.displayingMonthSelection
         transition.updateAlpha(node: self.monthPickerBackgroundNode, alpha: self.state.displayingMonthSelection ? 1.0 : 0.0)
+        
+        transition.updateAlpha(node: self.previousButtonNode, alpha: self.state.displayingMonthSelection ? 0.0 : 1.0)
+        transition.updateAlpha(node: self.nextButtonNode, alpha: self.state.displayingMonthSelection ? 0.0 : 1.0)
         
         self.timePickerBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.timePickerBackgroundNode.isUserInteractionEnabled = self.state.displayingTimeSelection
@@ -859,7 +863,7 @@ public final class DatePickerNode: ASDisplayNode {
         self.datePickerBackgroundNode.isUserInteractionEnabled = self.state.displayingDateSelection
         transition.updateAlpha(node: self.datePickerBackgroundNode, alpha: self.state.displayingDateSelection ? 1.0 : 0.0)
         
-        self.monthPickerNode.frame = CGRect(x: sideInset, y: topInset, width: size.width - sideInset * 2.0, height: 180.0)
+        self.monthPickerNode.frame = CGRect(x: sideInset, y: topInset - monthInset, width: size.width - sideInset * 2.0, height: 180.0)
     }
     
     public var toggleDateSelection: () -> Void = {}
