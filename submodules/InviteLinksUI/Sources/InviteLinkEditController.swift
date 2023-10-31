@@ -81,7 +81,7 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
     case timeHeader(PresentationTheme, String)
     case timePicker(PresentationTheme, InviteLinkTimeLimit)
     case timeExpiryDate(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool)
-    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?)
+    case timeCustomPicker(PresentationTheme, PresentationDateTimeFormat, Int32?, Bool, Bool)
     case timeInfo(PresentationTheme, String)
     
     case usageHeader(PresentationTheme, String)
@@ -191,8 +191,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate):
-                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate {
+            case let .timeCustomPicker(lhsTheme, lhsDateTimeFormat, lhsDate, lhsDisplayingDateSelection, lhsDisplayingTimeSelection):
+                if case let .timeCustomPicker(rhsTheme, rhsDateTimeFormat, rhsDate, rhsDisplayingDateSelection, rhsDisplayingTimeSelection) = rhs, lhsTheme === rhsTheme, lhsDateTimeFormat == rhsDateTimeFormat, lhsDate == rhsDate, lhsDisplayingDateSelection == rhsDisplayingDateSelection, lhsDisplayingTimeSelection == rhsDisplayingTimeSelection {
                     return true
                 } else {
                     return false
@@ -272,7 +272,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     arguments.updateState({ state in
                         var updatedState = state
                         if value != updatedState.time {
-                            updatedState.pickingTimeLimit = false
+                            updatedState.pickingExpiryDate = false
+                            updatedState.pickingExpiryTime = false
                         }
                         updatedState.time = value
                         return updatedState
@@ -289,13 +290,35 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     arguments.dismissInput()
                     arguments.updateState { state in
                         var updatedState = state
-                        updatedState.pickingTimeLimit = !state.pickingTimeLimit
+                        if updatedState.pickingExpiryTime {
+                            updatedState.pickingExpiryTime = false
+                        } else {
+                            updatedState.pickingExpiryDate = !state.pickingExpiryDate
+                        }
                         return updatedState
                     }
                 })
-            case let .timeCustomPicker(_, dateTimeFormat, date):
+            case let .timeCustomPicker(_, dateTimeFormat, date, displayingDateSelection, displayingTimeSelection):
                 let title = presentationData.strings.InviteLink_Create_TimeLimitExpiryTime
-                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, title: title, displayingDateSelection: false, displayingTimeSelection: false, sectionId: self.section, style: .blocks, toggleDateSelection: {}, toggleTimeSelection: {}, updated: { date in
+                return ItemListDatePickerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, date: date, title: title, displayingDateSelection: displayingDateSelection, displayingTimeSelection: displayingTimeSelection, sectionId: self.section, style: .blocks, toggleDateSelection: {
+                    arguments.updateState({ state in
+                        var updatedState = state
+                        updatedState.pickingExpiryDate = !updatedState.pickingExpiryDate
+                        if updatedState.pickingExpiryDate {
+                            updatedState.pickingExpiryTime = false
+                        }
+                        return updatedState
+                    })
+                }, toggleTimeSelection: {
+                    arguments.updateState({ state in
+                        var updatedState = state
+                        updatedState.pickingExpiryTime = !updatedState.pickingExpiryTime
+                        if updatedState.pickingExpiryTime {
+                            updatedState.pickingExpiryDate = false
+                        }
+                        return updatedState
+                    })
+                }, updated: { date in
                     arguments.updateState({ state in
                         var updatedState = state
                         updatedState.time = .custom(date)
@@ -312,7 +335,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     arguments.updateState({ state in
                         var updatedState = state
                         if value != updatedState.usage {
-                            updatedState.pickingTimeLimit = false
+                            updatedState.pickingExpiryDate = false
+                            updatedState.pickingExpiryTime = false
                         }
                         updatedState.usage = value
                         return updatedState
@@ -341,7 +365,8 @@ private enum InviteLinksEditEntry: ItemListNodeEntry {
                     if focus {
                         arguments.updateState { state in
                             var updatedState = state
-                            updatedState.pickingTimeLimit = false
+                            updatedState.pickingExpiryDate = false
+                            updatedState.pickingExpiryTime = false
                             updatedState.pickingUsageLimit = true
                             return updatedState
                         }
@@ -394,9 +419,9 @@ private func inviteLinkEditControllerEntries(invite: ExportedInvitation?, state:
     } else if let value = state.time.value {
         time = currentTime + value
     }
-    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingTimeLimit))
-    if state.pickingTimeLimit {
-        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time))
+    entries.append(.timeExpiryDate(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate || state.pickingExpiryTime))
+    if state.pickingExpiryDate || state.pickingExpiryTime {
+        entries.append(.timeCustomPicker(presentationData.theme, presentationData.dateTimeFormat, time, state.pickingExpiryDate, state.pickingExpiryTime))
     }
     entries.append(.timeInfo(presentationData.theme, presentationData.strings.InviteLink_Create_TimeLimitInfo))
     
@@ -424,7 +449,8 @@ private struct InviteLinkEditControllerState: Equatable {
     var usage: InviteLinkUsageLimit
     var time: InviteLinkTimeLimit
     var requestApproval = false
-    var pickingTimeLimit = false
+    var pickingExpiryDate = false
+    var pickingExpiryTime = false
     var pickingUsageLimit = false
     var updating = false
 }
@@ -452,9 +478,9 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
             timeLimit = .unlimited
         }
         
-        initialState = InviteLinkEditControllerState(title: title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: requestApproval, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: title ?? "", usage: InviteLinkUsageLimit(value: usageLimit), time: timeLimit, requestApproval: requestApproval, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
     } else {
-        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingTimeLimit: false, pickingUsageLimit: false)
+        initialState = InviteLinkEditControllerState(title: "", usage: .unlimited, time: .unlimited, requestApproval: false, pickingExpiryDate: false, pickingExpiryTime: false, pickingUsageLimit: false)
     }
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
@@ -604,7 +630,7 @@ public func inviteLinkEditController(context: AccountContext, updatedPresentatio
         
         let previousState = previousState.swap(state)
         var animateChanges = false
-        if let previousState = previousState, previousState.pickingTimeLimit != state.pickingTimeLimit || previousState.requestApproval != state.requestApproval {
+        if let previousState = previousState, previousState.pickingExpiryDate != state.pickingExpiryDate || previousState.pickingExpiryTime != state.pickingExpiryTime || previousState.requestApproval != state.requestApproval {
             animateChanges = true
         }
         
