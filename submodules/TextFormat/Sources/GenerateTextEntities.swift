@@ -167,10 +167,13 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .CustomEmoji(stickerPack: nil, fileId: value.fileId)))
-            } else if key == ChatTextInputAttributes.code {
-                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Code))
-            } else if key == ChatTextInputAttributes.quote {
-                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .BlockQuote))
+            } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
+                switch value.kind {
+                case .quote:
+                    entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .BlockQuote))
+                case let .code(language):
+                    entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Pre(language: language)))
+                }
             }
         }
     })
@@ -191,6 +194,35 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
                         continue inner
                     }
                     if case .BlockQuote = entities[j].type {
+                        if entities[i].range.upperBound == entities[j].range.lowerBound || entities[i].range.lowerBound == entities[j].range.upperBound {
+                            entities[i].range = min(entities[i].range.lowerBound, entities[j].range.lowerBound) ..< max(entities[i].range.upperBound, entities[j].range.upperBound)
+                            entities.remove(at: j)
+                            
+                            hadReductions = true
+                            break scan
+                        }
+                    }
+                }
+                
+                break scan
+            }
+        }
+        
+        if !hadReductions {
+            break
+        }
+    }
+    
+    while true {
+        var hadReductions = false
+        
+        scan: for i in 0 ..< entities.count {
+            if case let .Pre(language) = entities[i].type {
+                inner: for j in 0 ..< entities.count {
+                    if j == i {
+                        continue inner
+                    }
+                    if case .Pre(language) = entities[j].type {
                         if entities[i].range.upperBound == entities[j].range.lowerBound || entities[i].range.lowerBound == entities[j].range.upperBound {
                             entities[i].range = min(entities[i].range.lowerBound, entities[j].range.lowerBound) ..< max(entities[i].range.upperBound, entities[j].range.upperBound)
                             entities.remove(at: j)

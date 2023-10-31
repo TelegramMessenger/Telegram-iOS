@@ -203,6 +203,7 @@ private var declaredEncodables: Void = {
     declareEncodable(MapVenue.self, f: { MapVenue(decoder: $0) })
     declareEncodable(TelegramMediaGiveaway.self, f: { TelegramMediaGiveaway(decoder: $0) })
     declareEncodable(WebpagePreviewMessageAttribute.self, f: { WebpagePreviewMessageAttribute(decoder: $0) })
+    declareEncodable(DerivedDataMessageAttribute.self, f: { DerivedDataMessageAttribute(decoder: $0) })
     return
 }()
 

@@ -3663,7 +3663,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                     return ASEditableTextNodeTargetForAction(target: nil)
                 }
             }
-        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) || action == #selector(self.formatAttributesQuote(_:)) {
+        } else if action == #selector(self.formatAttributesBold(_:)) || action == #selector(self.formatAttributesItalic(_:)) || action == #selector(self.formatAttributesMonospace(_:)) || action == #selector(self.formatAttributesLink(_:)) || action == #selector(self.formatAttributesStrikethrough(_:)) || action == #selector(self.formatAttributesUnderline(_:)) || action == #selector(self.formatAttributesSpoiler(_:)) || action == #selector(self.formatAttributesQuote(_:)) || action == #selector(self.formatAttributesCodeBlock(_:)) {
             if case .format = self.inputMenu.state {
                 if action == #selector(self.formatAttributesSpoiler(_:)), let selectedRange = self.textInputNode?.selectedRange {
                     var intersectsMonospace = false
@@ -3678,6 +3678,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                         return ASEditableTextNodeTargetForAction(target: nil)
                     }
                 } else if action == #selector(self.formatAttributesQuote(_:)), let selectedRange = self.textInputNode?.selectedRange {
+                    let _ = selectedRange
+                    return ASEditableTextNodeTargetForAction(target: self)
+                } else if action == #selector(self.formatAttributesCodeBlock(_:)), let selectedRange = self.textInputNode?.selectedRange {
                     let _ = selectedRange
                     return ASEditableTextNodeTargetForAction(target: self)
                 } else if action == #selector(self.formatAttributesMonospace(_:)), let selectedRange = self.textInputNode?.selectedRange {
@@ -3727,17 +3730,6 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         
         if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
         } else {
-            var hasQuoteSelected = false
-            let selectedRange = editableTextNode.selectedRange
-            if let attributedText = editableTextNode.attributedText, selectedRange.lowerBound >= 0, selectedRange.lowerBound < attributedText.length, selectedRange.upperBound >= 0, selectedRange.upperBound < attributedText.length {
-                attributedText.enumerateAttribute(ChatTextInputAttributes.quote, in: selectedRange, using: { value, _, _ in
-                    if value is ChatTextInputTextQuoteAttribute {
-                        hasQuoteSelected = true
-                    }
-                })
-            }
-            let _ = hasQuoteSelected
-            
             var children: [UIAction] = []
             
             children.append(UIAction(title: self.strings?.TextFormat_Quote ?? "Quote", image: nil) { [weak self] (action) in
@@ -3792,6 +3784,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
                 }
             ] as [UIAction])
             
+            //TODO:localize
+            children.append(UIAction(title: "Code", image: nil) { [weak self] (action) in
+                if let strongSelf = self {
+                    strongSelf.formatAttributesCodeBlock(strongSelf)
+                }
+            })
+            
             let formatMenu = UIMenu(title: self.strings?.TextFormat_Format ?? "Format", image: nil, children: children)
             actions.insert(formatMenu, at: 1)
         }
@@ -3837,21 +3836,21 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     @objc func formatAttributesBold(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.bold, value: nil), inputMode)
         }
     }
     
     @objc func formatAttributesItalic(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.italic, value: nil), inputMode)
         }
     }
     
     @objc func formatAttributesMonospace(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.monospace, value: nil), inputMode)
         }
     }
     
@@ -3863,14 +3862,14 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
     @objc func formatAttributesStrikethrough(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.strikethrough, value: nil), inputMode)
         }
     }
     
     @objc func formatAttributesUnderline(_ sender: Any) {
         self.inputMenu.back()
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.underline, value: nil), inputMode)
         }
     }
     
@@ -3878,7 +3877,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         self.inputMenu.back()
         
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.quote), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote)), inputMode)
+        }
+    }
+    
+    @objc func formatAttributesCodeBlock(_ sender: Any) {
+        self.inputMenu.back()
+        
+        self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil))), inputMode)
         }
     }
     
@@ -3895,7 +3902,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         }
         
         self.interfaceInteraction?.updateTextInputStateAndMode { current, inputMode in
-            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler), inputMode)
+            return (chatTextInputAddFormattingAttribute(current, attribute: ChatTextInputAttributes.spoiler, value: nil), inputMode)
         }
         
         self.updateSpoilersRevealed(animated: animated)

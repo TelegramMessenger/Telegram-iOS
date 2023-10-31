@@ -3,6 +3,8 @@ import UIKit
 import Postbox
 import TelegramCore
 import Display
+import libprisma
+import SwiftSignalKit
 
 public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [MessageTextEntity]) -> NSAttributedString {
     var nsString: NSString?
@@ -26,28 +28,30 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
             range.length = stringLength - range.location
         }
         switch entity.type {
-            case .Url, .Email, .PhoneNumber, .Mention, .Hashtag, .BotCommand:
-                break
-            case .Bold:
-                string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
-            case .Italic:
-                string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
-            case let .TextMention(peerId):
-                string.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
-            case let .TextUrl(url):
-                string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
-            case .Code, .Pre:
-                string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
-            case .Strikethrough:
-                string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
-            case .Underline:
-                string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
-            case .Spoiler:
-                string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
-            case let .CustomEmoji(_, fileId):
-                string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: range)
-            case .BlockQuote:
-                string.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: range)
+        case .Url, .Email, .PhoneNumber, .Mention, .Hashtag, .BotCommand:
+            break
+        case .Bold:
+            string.addAttribute(ChatTextInputAttributes.bold, value: true as NSNumber, range: range)
+        case .Italic:
+            string.addAttribute(ChatTextInputAttributes.italic, value: true as NSNumber, range: range)
+        case let .TextMention(peerId):
+            string.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: peerId), range: range)
+        case let .TextUrl(url):
+            string.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: range)
+        case .Code:
+            string.addAttribute(ChatTextInputAttributes.monospace, value: true as NSNumber, range: range)
+        case .Strikethrough:
+            string.addAttribute(ChatTextInputAttributes.strikethrough, value: true as NSNumber, range: range)
+        case .Underline:
+            string.addAttribute(ChatTextInputAttributes.underline, value: true as NSNumber, range: range)
+        case .Spoiler:
+            string.addAttribute(ChatTextInputAttributes.spoiler, value: true as NSNumber, range: range)
+        case let .CustomEmoji(_, fileId):
+            string.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: range)
+        case let .Pre(language):
+            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: language)), range: range)
+        case .BlockQuote:
+            string.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote), range: range)
             default:
                 break
         }
@@ -55,7 +59,9 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
     return string
 }
 
-public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false) -> NSAttributedString {
+private let syntaxHighlighter = Syntaxer()
+
+public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEntity], baseColor: UIColor, linkColor: UIColor, baseQuoteTintColor: UIColor? = nil, baseQuoteSecondaryTintColor: UIColor? = nil, baseQuoteTertiaryTintColor: UIColor? = nil, baseCodeBlockColor: UIColor? = nil, baseFont: UIFont, linkFont: UIFont, boldFont: UIFont, italicFont: UIFont, boldItalicFont: UIFont, fixedFont: UIFont, blockQuoteFont: UIFont, underlineLinks: Bool = true, external: Bool = false, message: Message?, entityFiles: [MediaId: TelegramMediaFile] = [:], adjustQuoteFontSize: Bool = false, cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight? = nil) -> NSAttributedString {
     let baseQuoteTintColor = baseQuoteTintColor ?? baseColor
     
     var nsString: NSString?
@@ -199,22 +205,21 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
                     nsString = text as NSString
                 }
                 string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand), value: nsString!.substring(with: range), range: range)
-            case .Pre:
-                addFontAttributes(range, .monospace)
-                if nsString == nil {
-                    nsString = text as NSString
-                }
-                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre), value: nsString!.substring(with: range), range: range)
             case .Code:
                 addFontAttributes(range, .monospace)
+                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Code), value: nsString!.substring(with: range), range: range)
+            case let .Pre(language):
+                addFontAttributes(range, .monospace)
                 if nsString == nil {
                     nsString = text as NSString
                 }
-                string.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Code), value: nsString!.substring(with: range), range: range)
+                if let baseCodeBlockColor {
+                    string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .code(language: language), title: nil, color: baseCodeBlockColor, secondaryColor: nil, tertiaryColor: nil), range: range)
+                }
             case .BlockQuote:
                 addFontAttributes(range, .blockQuote)
                 
-                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor, tertiaryColor: baseQuoteTertiaryTintColor), range: range)
+                string.addAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), value: TextNodeBlockQuoteData(kind: .quote, title: nil, color: baseQuoteTintColor, secondaryColor: baseQuoteSecondaryTintColor, tertiaryColor: baseQuoteTertiaryTintColor), range: range)
             case .BankCard:
                 string.addAttribute(NSAttributedString.Key.foregroundColor, value: linkColor, range: range)
                 if underlineLinks && underlineAllLinks {
@@ -298,5 +303,233 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
             setFont(range: NSRange(location: currentAttributeSpan.startIndex, length: fontAttributeMask.count - currentAttributeSpan.startIndex), fontAttributes: currentAttributeSpan.attributes)
         }
     }
+    
+    string.enumerateAttribute(NSAttributedString.Key("Attribute__Blockquote"), in: NSRange(location: 0, length: string.length), using: { value, range, _ in
+        guard let value = value as? TextNodeBlockQuoteData, case let .code(language) = value.kind, let language, !language.isEmpty else {
+            return
+        }
+        
+        let codeText = (string.string as NSString).substring(with: range)
+        if let cachedMessageSyntaxHighlight, let entry = cachedMessageSyntaxHighlight.values[CachedMessageSyntaxHighlight.Spec(language: language, text: codeText)] {
+            for entity in entry.entities {
+                string.addAttribute(.foregroundColor, value: UIColor(rgb: UInt32(bitPattern: entity.color)), range: NSRange(location: range.location + entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound))
+            }
+        }
+    })
+    
     return string
+}
+
+public final class MessageSyntaxHighlight: Codable, Equatable {
+    public struct Entity: Codable, Equatable {
+        private enum CodingKeys: String, CodingKey {
+            case color = "c"
+            case rangeLow = "r"
+            case rangeLength = "rl"
+        }
+        
+        public var color: Int32
+        public var range: Range<Int>
+        
+        public init(color: Int32, range: Range<Int>) {
+            self.color = color
+            self.range = range
+        }
+        
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.color = try container.decode(Int32.self, forKey: .color)
+            let rangeLow = Int(try container.decode(Int32.self, forKey: .rangeLow))
+            let rangeLength = Int(try container.decode(Int32.self, forKey: .rangeLength))
+            self.range = rangeLow ..< (rangeLow + rangeLength)
+        }
+        
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.color, forKey: .color)
+            try container.encode(Int32(self.range.lowerBound), forKey: .rangeLow)
+            try container.encode(Int32(self.range.upperBound - self.range.lowerBound), forKey: .rangeLength)
+        }
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case entities = "e"
+    }
+    
+    public let entities: [Entity]
+    
+    public init(entities: [Entity]) {
+        self.entities = entities
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.entities = try container.decode([Entity].self, forKey: .entities)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.entities, forKey: .entities)
+    }
+    
+    public static func ==(lhs: MessageSyntaxHighlight, rhs: MessageSyntaxHighlight) -> Bool {
+        if lhs.entities != rhs.entities {
+            return false
+        }
+        return true
+    }
+}
+
+public final class CachedMessageSyntaxHighlight: Codable, Equatable {
+    public struct Spec: Hashable, Codable {
+        private enum CodingKeys: String, CodingKey {
+            case language = "l"
+            case text = "t"
+        }
+        
+        public var language: String
+        public var text: String
+        
+        public init(language: String, text: String) {
+            self.language = language
+            self.text = text
+        }
+    }
+    
+    private enum CodingKeys: String, CodingKey {
+        case values = "v"
+    }
+    
+    private struct CodingValueEntry: Codable {
+        private enum CodingKeys: String, CodingKey {
+            case key = "k"
+            case value = "v"
+        }
+        
+        let key: Spec
+        let value: MessageSyntaxHighlight
+        
+        init(key: Spec, value: MessageSyntaxHighlight) {
+            self.key = key
+            self.value = value
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.key = try container.decode(Spec.self, forKey: .key)
+            self.value = try container.decode(MessageSyntaxHighlight.self, forKey: .value)
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(self.key, forKey: .key)
+            try container.encode(self.value, forKey: .value)
+        }
+    }
+    
+    public let values: [Spec: MessageSyntaxHighlight]
+    
+    public init(values: [Spec: MessageSyntaxHighlight]) {
+        self.values = values
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let valueEntries = try container.decode([CodingValueEntry].self, forKey: .values)
+        var values: [Spec: MessageSyntaxHighlight] = [:]
+        for entry in valueEntries {
+            values[entry.key] = entry.value
+        }
+        self.values = values
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        let valueEntries = self.values.map { CodingValueEntry(key: $0.key, value: $0.value) }
+        try container.encode(valueEntries, forKey: .values)
+    }
+    
+    public static func ==(lhs: CachedMessageSyntaxHighlight, rhs: CachedMessageSyntaxHighlight) -> Bool {
+        if lhs.values != rhs.values {
+            return false
+        }
+        return true
+    }
+}
+
+private let messageSyntaxHighlightQueue = Queue(name: "MessageSyntaxHighlight")
+
+public func extractMessageSyntaxHighlightSpecs(text: String, entities: [MessageTextEntity]) -> [CachedMessageSyntaxHighlight.Spec] {
+    if entities.isEmpty {
+        return []
+    }
+    var result: [CachedMessageSyntaxHighlight.Spec] = []
+    let nsString = text as NSString
+    for entity in entities {
+        if case let .Pre(language) = entity.type, let language, !language.isEmpty {
+            var range = entity.range
+            if range.lowerBound < 0 {
+                range = 0 ..< range.upperBound
+            }
+            if range.upperBound > nsString.length {
+                range = range.lowerBound ..< nsString.length
+            }
+            if range.upperBound != range.lowerBound {
+                result.append(CachedMessageSyntaxHighlight.Spec(language: language, text: nsString.substring(with: NSRange(location: range.lowerBound, length: range.upperBound - range.lowerBound))))
+            }
+        }
+    }
+    
+    return result
+}
+
+private let internalFixedCodeFont = Font.regular(17.0)
+
+public func asyncUpdateMessageSyntaxHighlight(engine: TelegramEngine, messageId: EngineMessage.Id, current: CachedMessageSyntaxHighlight?, specs: [CachedMessageSyntaxHighlight.Spec]) -> Signal<Never, NoError> {
+    if let current, !specs.contains(where: { current.values[$0] == nil }) {
+        return .complete()
+    }
+    
+    return Signal { subscriber in
+        var updated: [CachedMessageSyntaxHighlight.Spec: MessageSyntaxHighlight] = [:]
+        
+        let theme = SyntaxterTheme(dark: false, textColor: .black, textFont: internalFixedCodeFont, italicFont: internalFixedCodeFont, mediumFont: internalFixedCodeFont)
+        
+        for spec in specs {
+            if let value = current?.values[spec] {
+                updated[spec] = value
+            } else {
+                var entities: [MessageSyntaxHighlight.Entity] = []
+                
+                if let syntaxHighlighter {
+                    if let highlightedString = syntaxHighlighter.syntax(spec.text, language: spec.language, theme: theme) {
+                        highlightedString.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: highlightedString.length), using: { value, subRange, _ in
+                            if let value = value as? UIColor, value != .black {
+                                entities.append(MessageSyntaxHighlight.Entity(color: Int32(bitPattern: value.rgb), range: subRange.lowerBound ..< subRange.upperBound))
+                            }
+                        })
+                    }
+                }
+                
+                updated[spec] = MessageSyntaxHighlight(entities: entities)
+            }
+        }
+        
+        if let entry = CodableEntry(CachedMessageSyntaxHighlight(values: updated)) {
+            return engine.messages.storeLocallyDerivedData(messageId: messageId, data: ["code": entry]).start(completed: {
+                subscriber.putCompletion()
+            })
+        } else {
+            return EmptyDisposable
+        }
+    }
+    |> runOn(messageSyntaxHighlightQueue)
 }

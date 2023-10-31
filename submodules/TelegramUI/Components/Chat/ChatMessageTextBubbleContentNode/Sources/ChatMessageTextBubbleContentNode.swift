@@ -81,6 +81,8 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private var linkProgressView: TextLoadingEffectView?
     private var linkProgressDisposable: Disposable?
     
+    private var codeHighlightState: (id: EngineMessage.Id, specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
+    
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
             if oldValue != self.visibility {
@@ -129,6 +131,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     deinit {
         self.linkPreviewOptionsDisposable?.dispose()
         self.linkProgressDisposable?.dispose()
+        self.codeHighlightState?.disposable.dispose()
     }
     
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
@@ -374,6 +377,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 let textFont = item.presentationData.messageFont
                 
+                var codeHighlightSpecs: [CachedMessageSyntaxHighlight.Spec] = []
+                var cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight?
+                
                 if let entities = entities {
                     var underlineLinks = true
                     if !messageTheme.primaryTextColor.isEqual(messageTheme.linkTextColor) {
@@ -406,7 +412,21 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true)
+                    let codeBlockColor = messageTheme.secondaryTextColor
+                    
+                    codeHighlightSpecs = extractMessageSyntaxHighlightSpecs(text: rawText, entities: entities)
+                    
+                    if !codeHighlightSpecs.isEmpty {
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? DerivedDataMessageAttribute {
+                                if let value = attribute.data["code"]?.get(CachedMessageSyntaxHighlight.self) {
+                                    cachedMessageSyntaxHighlight = value
+                                }
+                            }
+                        }
+                    }
+                    
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, baseCodeBlockColor: codeBlockColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {
@@ -694,6 +714,24 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.updateLinkProgressState()
                             if let linkPreviewHighlightText = strongSelf.linkPreviewHighlightText {
                                 strongSelf.updateLinkPreviewTextHighlightState(text: linkPreviewHighlightText)
+                            }
+                            
+                            if !codeHighlightSpecs.isEmpty {
+                                if let current = strongSelf.codeHighlightState, current.id == message.id, current.specs == codeHighlightSpecs {
+                                } else {
+                                    if let codeHighlightState = strongSelf.codeHighlightState {
+                                        strongSelf.codeHighlightState = nil
+                                        codeHighlightState.disposable.dispose()
+                                    }
+                                    
+                                    let disposable = MetaDisposable()
+                                    strongSelf.codeHighlightState = (message.id, codeHighlightSpecs, disposable)
+                                    disposable.set(asyncUpdateMessageSyntaxHighlight(engine: item.context.engine, messageId: message.id, current: cachedMessageSyntaxHighlight, specs: codeHighlightSpecs).startStrict(completed: {
+                                    }))
+                                }
+                            } else if let codeHighlightState = strongSelf.codeHighlightState {
+                                strongSelf.codeHighlightState = nil
+                                codeHighlightState.disposable.dispose()
                             }
                         }
                     })
