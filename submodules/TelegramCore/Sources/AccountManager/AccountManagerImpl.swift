@@ -124,8 +124,11 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
                 self.currentAtomicState = atomicState
             } catch let e {
                 postboxLog("decode atomic state error: \(e)")
-                let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
                 postboxLogSync()
+                
+                if removeDatabaseOnError {
+                    let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
+                }
                 preconditionFailure()
             }
         } catch let e {
