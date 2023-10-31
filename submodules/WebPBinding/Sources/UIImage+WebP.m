@@ -10,11 +10,6 @@
         return nil;
     }
     
-    UIImage *osImage = [[UIImage alloc] initWithData:imgData scale:1.0];
-    if (osImage != nil) {
-        return osImage;
-    }
-    
     int width = 0, height = 0;
     if (!WebPGetInfo([imgData bytes], [imgData length], &width, &height)) {
         NSMutableDictionary *errorDetail = [NSMutableDictionary dictionary];
