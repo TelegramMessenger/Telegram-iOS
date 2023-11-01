@@ -133,12 +133,16 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             }
         } catch let e {
             postboxLog("load atomic state error: \(e)")
-            var legacyRecordDict: [AccountRecordId: AccountRecord<Types.Attribute>] = [:]
-            for record in self.legacyRecordTable.getRecords() {
-                legacyRecordDict[record.id] = record
+            if removeDatabaseOnError {
+                var legacyRecordDict: [AccountRecordId: AccountRecord<Types.Attribute>] = [:]
+                for record in self.legacyRecordTable.getRecords() {
+                    legacyRecordDict[record.id] = record
+                }
+                self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount(), accessChallengeData: self.legacyMetadataTable.getAccessChallengeData())
+                self.syncAtomicStateToFile()
+            } else {
+                preconditionFailure()
             }
-            self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount(), accessChallengeData: self.legacyMetadataTable.getAccessChallengeData())
-            self.syncAtomicStateToFile()
         }
         
         let tableAccessChallengeData = self.legacyMetadataTable.getAccessChallengeData()
