@@ -34,7 +34,7 @@ public func printOpenFiles() {
         buf.withUnsafeMutableBytes { buffer -> Void in
             let _ = fcntl(fd, F_GETPATH, buffer.baseAddress!)
             let string = String(cString: buffer.baseAddress!.assumingMemoryBound(to: CChar.self))
-            print(string)
+            postboxLog("f: \(string)")
         }
         
         fd += 1

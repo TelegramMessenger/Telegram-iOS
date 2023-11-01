@@ -3,7 +3,7 @@ import TextFormat
 import TelegramCore
 import AccountContext
 
-public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key) -> ChatTextInputState {
+public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, attribute: NSAttributedString.Key, value: Any?) -> ChatTextInputState {
     if !state.selectionRange.isEmpty {
         let nsRange = NSRange(location: state.selectionRange.lowerBound, length: state.selectionRange.count)
         var addAttribute = true
@@ -21,7 +21,7 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
         
         let result = NSMutableAttributedString(attributedString: state.inputText)
         for attribute in attributesToRemove {
-            if attribute == ChatTextInputAttributes.quote {
+            if attribute == ChatTextInputAttributes.block {
                 var removeRange = nsRange
                 
                 var selectionIndex = nsRange.upperBound
@@ -55,9 +55,9 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
                 // Prevent merge back
                 result.enumerateAttributes(in: NSRange(location: selectionIndex, length: result.length - selectionIndex), options: .longestEffectiveRangeNotRequired) { attributes, range, _ in
                     for (key, value) in attributes {
-                        if let _ = value as? ChatTextInputTextQuoteAttribute {
+                        if let value = value as? ChatTextInputTextQuoteAttribute {
                             result.removeAttribute(key, range: range)
-                            result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(), range: range)
+                            result.addAttribute(key, value: ChatTextInputTextQuoteAttribute(kind: value.kind), range: range)
                         }
                     }
                 }
@@ -69,8 +69,8 @@ public func chatTextInputAddFormattingAttribute(_ state: ChatTextInputState, att
         }
         
         if addAttribute {
-            if attribute == ChatTextInputAttributes.quote {
-                result.addAttribute(attribute, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+            if attribute == ChatTextInputAttributes.block {
+                result.addAttribute(attribute, value: value ?? ChatTextInputTextQuoteAttribute(kind: .quote), range: nsRange)
                 var selectionIndex = nsRange.upperBound
                 if nsRange.upperBound != result.length && (result.string as NSString).character(at: nsRange.upperBound) != 0x0a {
                     result.insert(NSAttributedString(string: "\n"), at: nsRange.upperBound)
@@ -173,7 +173,7 @@ public func chatTextInputAddMentionAttribute(_ state: ChatTextInputState, peer: 
     }
 }
 
-public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>) -> ChatTextInputState {
+public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectionRange: Range<Int>, kind: ChatTextInputTextQuoteAttribute.Kind) -> ChatTextInputState {
     if selectionRange.isEmpty {
         return state
     }
@@ -182,7 +182,7 @@ public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectio
     var attributesToRemove: [(NSAttributedString.Key, NSRange)] = []
     state.inputText.enumerateAttributes(in: nsRange, options: .longestEffectiveRangeNotRequired) { attributes, range, stop in
         for (key, _) in attributes {
-            if key == ChatTextInputAttributes.quote {
+            if key == ChatTextInputAttributes.block {
                 attributesToRemove.append((key, range))
                 quoteRange = quoteRange.union(range)
             } else {
@@ -195,6 +195,6 @@ public func chatTextInputAddQuoteAttribute(_ state: ChatTextInputState, selectio
     for (attribute, range) in attributesToRemove {
         result.removeAttribute(attribute, range: range)
     }
-    result.addAttribute(ChatTextInputAttributes.quote, value: ChatTextInputTextQuoteAttribute(), range: nsRange)
+    result.addAttribute(ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: kind), range: nsRange)
     return ChatTextInputState(inputText: result, selectionRange: selectionRange)
 }

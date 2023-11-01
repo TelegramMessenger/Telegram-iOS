@@ -124,18 +124,27 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
                 self.currentAtomicState = atomicState
             } catch let e {
                 postboxLog("decode atomic state error: \(e)")
-                let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
                 postboxLogSync()
+                
+                if removeDatabaseOnError {
+                    let _ = try? FileManager.default.removeItem(atPath: self.atomicStatePath)
+                }
                 preconditionFailure()
             }
         } catch let e {
             postboxLog("load atomic state error: \(e)")
-            var legacyRecordDict: [AccountRecordId: AccountRecord<Types.Attribute>] = [:]
-            for record in self.legacyRecordTable.getRecords() {
-                legacyRecordDict[record.id] = record
+            postboxLogSync()
+            
+            if removeDatabaseOnError {
+                var legacyRecordDict: [AccountRecordId: AccountRecord<Types.Attribute>] = [:]
+                for record in self.legacyRecordTable.getRecords() {
+                    legacyRecordDict[record.id] = record
+                }
+                self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount(), accessChallengeData: self.legacyMetadataTable.getAccessChallengeData())
+                self.syncAtomicStateToFile()
+            } else {
+                preconditionFailure()
             }
-            self.currentAtomicState = AccountManagerAtomicState(records: legacyRecordDict, currentRecordId: self.legacyMetadataTable.getCurrentAccountId(), currentAuthRecord: self.legacyMetadataTable.getCurrentAuthAccount(), accessChallengeData: self.legacyMetadataTable.getAccessChallengeData())
-            self.syncAtomicStateToFile()
         }
         
         let tableAccessChallengeData = self.legacyMetadataTable.getAccessChallengeData()

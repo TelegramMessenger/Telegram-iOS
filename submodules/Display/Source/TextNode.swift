@@ -68,12 +68,19 @@ public struct TextRangeRectEdge: Equatable {
 }
 
 public final class TextNodeBlockQuoteData: NSObject {
+    public enum Kind: Equatable {
+        case quote
+        case code(language: String?)
+    }
+    
+    public let kind: Kind
     public let title: NSAttributedString?
     public let color: UIColor
     public let secondaryColor: UIColor?
     public let tertiaryColor: UIColor?
     
-    public init(title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?) {
+    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?) {
+        self.kind = kind
         self.title = title
         self.color = color
         self.secondaryColor = secondaryColor
@@ -87,6 +94,9 @@ public final class TextNodeBlockQuoteData: NSObject {
             return false
         }
         
+        if self.kind != other.kind {
+            return false
+        }
         if let lhsTitle = self.title, let rhsTitle = other.title {
             if !lhsTitle.isEqual(to: rhsTitle) {
                 return false
@@ -148,12 +158,14 @@ private final class TextNodeLine {
 
 private final class TextNodeBlockQuote {
     let frame: CGRect
+    let data: TextNodeBlockQuoteData
     let tintColor: UIColor
     let secondaryTintColor: UIColor?
     let tertiaryTintColor: UIColor?
     
-    init(frame: CGRect, tintColor: UIColor, secondaryTintColor: UIColor?, tertiaryTintColor: UIColor?) {
+    init(frame: CGRect, data: TextNodeBlockQuoteData, tintColor: UIColor, secondaryTintColor: UIColor?, tertiaryTintColor: UIColor?) {
         self.frame = frame
+        self.data = data
         self.tintColor = tintColor
         self.secondaryTintColor = secondaryTintColor
         self.tertiaryTintColor = tertiaryTintColor
@@ -1224,7 +1236,7 @@ open class TextNode: ASDisplayNode {
             let title: NSAttributedString?
             let substring: NSAttributedString
             let firstCharacterOffset: Int
-            let isBlockQuote: Bool
+            let blockQuote: TextNodeBlockQuoteData?
             let tintColor: UIColor?
             let secondaryTintColor: UIColor?
             let tertiaryTintColor: UIColor?
@@ -1249,7 +1261,7 @@ open class TextNode: ASDisplayNode {
                             length: effectiveRange.location - segmentCharacterOffset
                         )),
                         firstCharacterOffset: segmentCharacterOffset,
-                        isBlockQuote: false,
+                        blockQuote: nil,
                         tintColor: nil,
                         secondaryTintColor: nil,
                         tertiaryTintColor: nil
@@ -1262,7 +1274,7 @@ open class TextNode: ASDisplayNode {
                             title: value.title,
                             substring: attributedString.attributedSubstring(from: effectiveRange),
                             firstCharacterOffset: effectiveRange.location,
-                            isBlockQuote: true,
+                            blockQuote: value,
                             tintColor: value.color,
                             secondaryTintColor: value.secondaryColor,
                             tertiaryTintColor: value.tertiaryColor
@@ -1277,7 +1289,7 @@ open class TextNode: ASDisplayNode {
                         title: nil,
                         substring: attributedString.attributedSubstring(from: effectiveRange),
                         firstCharacterOffset: effectiveRange.location,
-                        isBlockQuote: false,
+                        blockQuote: nil,
                         tintColor: nil,
                         secondaryTintColor: nil,
                         tertiaryTintColor: nil
@@ -1294,7 +1306,7 @@ open class TextNode: ASDisplayNode {
                             length: wholeStringLength - segmentCharacterOffset
                         )),
                         firstCharacterOffset: segmentCharacterOffset,
-                        isBlockQuote: false,
+                        blockQuote: nil,
                         tintColor: nil,
                         secondaryTintColor: nil,
                         tertiaryTintColor: nil
@@ -1311,7 +1323,7 @@ open class TextNode: ASDisplayNode {
             var tintColor: UIColor?
             var secondaryTintColor: UIColor?
             var tertiaryTintColor: UIColor?
-            var isBlockQuote: Bool = false
+            var blockQuote: TextNodeBlockQuoteData?
             var additionalWidth: CGFloat = 0.0
         }
         
@@ -1319,7 +1331,7 @@ open class TextNode: ASDisplayNode {
         
         for segment in stringSegments {
             var calculatedSegment = CalculatedSegment()
-            calculatedSegment.isBlockQuote = segment.isBlockQuote
+            calculatedSegment.blockQuote = segment.blockQuote
             calculatedSegment.tintColor = segment.tintColor
             calculatedSegment.secondaryTintColor = segment.secondaryTintColor
             calculatedSegment.tertiaryTintColor = segment.tertiaryTintColor
@@ -1335,13 +1347,21 @@ open class TextNode: ASDisplayNode {
             
             var constrainedSegmentWidth = constrainedSize.width
             var additionalOffsetX: CGFloat = 0.0
-            if segment.isBlockQuote {
+            if segment.blockQuote != nil {
                 additionalOffsetX += blockQuoteLeftInset
                 constrainedSegmentWidth -= additionalOffsetX + blockQuoteLeftInset + blockQuoteRightInset
                 calculatedSegment.additionalWidth += blockQuoteLeftInset + blockQuoteRightInset
             }
             
-            var additionalSegmentRightInset = blockQuoteIconInset
+            var additionalSegmentRightInset: CGFloat = 0.0
+            if let blockQuote = segment.blockQuote {
+                switch blockQuote.kind {
+                case .quote:
+                    additionalSegmentRightInset = blockQuoteIconInset
+                case .code:
+                    break
+                }
+            }
             
             if let title = segment.title {
                 let rawTitleLine = CTLineCreateWithAttributedString(title)
@@ -1391,7 +1411,7 @@ open class TextNode: ASDisplayNode {
                         ascent: lineAscent,
                         descent: lineDescent,
                         range: NSRange(location: currentLineStartIndex, length: lineCharacterCount),
-                        isRTL: isRTL && !segment.isBlockQuote,
+                        isRTL: isRTL && segment.blockQuote == nil,
                         strikethroughs: [],
                         spoilers: [],
                         spoilerWords: [],
@@ -1432,11 +1452,11 @@ open class TextNode: ASDisplayNode {
         for i in 0 ..< calculatedSegments.count {
             let segment = calculatedSegments[i]
             if i != 0 {
-                if segment.isBlockQuote {
+                if segment.blockQuote != nil {
                     size.height += 6.0
                 }
             } else {
-                if segment.isBlockQuote {
+                if segment.blockQuote != nil {
                     size.height += 7.0
                 }
             }
@@ -1524,17 +1544,17 @@ open class TextNode: ASDisplayNode {
             let blockMaxY = size.height - insets.bottom
             
             if i != calculatedSegments.count - 1 {
-                if segment.isBlockQuote {
+                if segment.blockQuote != nil {
                     size.height += 8.0
                 }
             } else {
-                if segment.isBlockQuote {
+                if segment.blockQuote != nil {
                     size.height += 6.0
                 }
             }
             
-            if segment.isBlockQuote, let tintColor = segment.tintColor {
-                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor))
+            if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor {
+                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor))
             }
         }
         
@@ -1973,10 +1993,6 @@ open class TextNode: ASDisplayNode {
                 
                 layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                 
-                if headIndent > 0.0 {
-                    //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
-                }
-                
                 var isRTL = false
                 let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
                 if glyphRuns.count != 0 {
@@ -2085,10 +2101,6 @@ open class TextNode: ASDisplayNode {
                     let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                     layoutSize.height += fontLineHeight
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth + headIndent)
-                    
-                    if headIndent > 0.0 {
-                        //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
-                    }
                     
                     var isRTL = false
                     let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
@@ -2217,15 +2229,20 @@ open class TextNode: ASDisplayNode {
                 
                 context.setFillColor(blockQuote.tintColor.cgColor)
                 
-                let quoteRect = CGRect(origin: CGPoint(x: blockFrame.maxX - 4.0 - quoteIcon.size.width, y: blockFrame.minY + 4.0), size: quoteIcon.size)
-                context.saveGState()
-                context.translateBy(x: quoteRect.midX, y: quoteRect.midY)
-                context.scaleBy(x: 1.0, y: -1.0)
-                context.translateBy(x: -quoteRect.midX, y: -quoteRect.midY)
-                context.clip(to: quoteRect, mask: quoteIcon.cgImage!)
-                context.fill(quoteRect)
-                context.restoreGState()
-                context.resetClip()
+                switch blockQuote.data.kind {
+                case .quote:
+                    let quoteRect = CGRect(origin: CGPoint(x: blockFrame.maxX - 4.0 - quoteIcon.size.width, y: blockFrame.minY + 4.0), size: quoteIcon.size)
+                    context.saveGState()
+                    context.translateBy(x: quoteRect.midX, y: quoteRect.midY)
+                    context.scaleBy(x: 1.0, y: -1.0)
+                    context.translateBy(x: -quoteRect.midX, y: -quoteRect.midY)
+                    context.clip(to: quoteRect, mask: quoteIcon.cgImage!)
+                    context.fill(quoteRect)
+                    context.restoreGState()
+                    context.resetClip()
+                case .code:
+                    break
+                }
                 
                 let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: lineWidth, height: blockFrame.height))
                 context.move(to: CGPoint(x: lineFrame.minX, y: lineFrame.minY + radius))
@@ -2906,10 +2923,6 @@ open class TextView: UIView {
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
                     
-                    if headIndent > 0.0 {
-                        //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
-                    }
-                    
                     var isRTL = false
                     let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
                     if glyphRuns.count != 0 {
@@ -3008,10 +3021,6 @@ open class TextView: UIView {
                         let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                         layoutSize.height += fontLineHeight
                         layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
-                        
-                        if headIndent > 0.0 {
-                            //blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
-                        }
                         
                         var isRTL = false
                         let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
