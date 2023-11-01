@@ -133,6 +133,8 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             }
         } catch let e {
             postboxLog("load atomic state error: \(e)")
+            postboxLogSync()
+            
             if removeDatabaseOnError {
                 var legacyRecordDict: [AccountRecordId: AccountRecord<Types.Attribute>] = [:]
                 for record in self.legacyRecordTable.getRecords() {
