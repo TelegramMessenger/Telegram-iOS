@@ -167,10 +167,10 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
             }
             switch self.mode {
                 case .normal:
-                    let timestamp = Int32(timestampSeconds)
+                    let timestamp = Int32(truncatingIfNeeded: Int64(floor(timestampSeconds)))
                     self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
                 case .reversed:
-                    let timestamp = abs(Int32(timestampSeconds - statusValue.duration))
+                    let timestamp = abs(Int32(Int32(truncatingIfNeeded: Int64(floor(timestampSeconds - statusValue.duration)))))
                     self.state = MediaPlayerTimeTextNodeState(hours: timestamp / (60 * 60), minutes: timestamp % (60 * 60) / 60, seconds: timestamp % 60)
             }
         } else if let defaultDuration = self.defaultDuration {
