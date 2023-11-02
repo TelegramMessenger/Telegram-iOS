@@ -443,7 +443,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                     
                     let statusSizeAndApply = statusSuggestedWidthAndContinue?.1(boundingWidth - sideInsets)
                     
-                    var layoutSize = CGSize(width: contentWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
+                    var layoutSize = CGSize(width: boundingWidth, height: 49.0 + prizeTitleLayout.size.height + prizeTextLayout.size.height + participantsTitleLayout.size.height + participantsTextLayout.size.height + dateTitleLayout.size.height + dateTextLayout.size.height + buttonSize.height + buttonSpacing + 120.0)
                     
                     if countriesTextLayout.size.height > 0.0 {
                         layoutSize.height += countriesTextLayout.size.height + 7.0
