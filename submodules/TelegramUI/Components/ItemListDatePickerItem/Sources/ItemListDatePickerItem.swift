@@ -155,8 +155,9 @@ public class ItemListDatePickerItemNode: ListViewItemNode, ItemListItemNode {
             
             let leftInset = 16.0 + params.leftInset
             
-            let width = min(390.0, params.width - params.leftInset - params.rightInset)
-            let cellSize = floor((width - 12.0 * 2.0) / 7.0)
+            let width = params.width - params.leftInset - params.rightInset
+            let constrainedWidth = min(390.0, width)
+            let cellSize = floor((constrainedWidth - 12.0 * 2.0) / 7.0)
             let pickerHeight = 122.0 + cellSize * 6.0
             let height: CGFloat
             if item.displayingDateSelection {
