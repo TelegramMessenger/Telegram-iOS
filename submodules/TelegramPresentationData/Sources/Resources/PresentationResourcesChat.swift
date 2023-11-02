@@ -777,61 +777,7 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Search/Members"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
-    
-    public static func chatTitlePanelInfoImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelInfoImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/InfoIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelSearchImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelSearchImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/SearchIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelUnarchiveImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelUnarchiveImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/UnarchiveIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelMuteImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelMuteImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelUnmuteImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelUnmuteImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/UnmuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelCallImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelCallImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/CallButton"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelReportImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelReportImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/ReportIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
-        })
-    }
-    
-    public static func chatTitlePanelGroupingImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatTitlePanelGroupingImage.rawValue, { theme in
-            return generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                
-                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionGroupIcon"), color: theme.chat.inputPanel.panelControlAccentColor) {
-                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0) - 3.0), size: image.size))
-                }
-            })
-        })
-    }
-    
+        
     public static func chatMessageAttachedContentButtonIncoming(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatMessageAttachedContentButtonIncoming.rawValue, { theme in
             return generateStretchableFilledCircleImage(diameter: 16.0, color: nil, strokeColor: theme.chat.message.incoming.accentControlColor, strokeWidth: 1.0, backgroundColor: nil)

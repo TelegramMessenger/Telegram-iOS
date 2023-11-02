@@ -1083,7 +1083,8 @@ private final class TimePickerNode: ASDisplayNode {
     
     init(theme: DatePickerTheme, date: Date, valueChanged: @escaping (Date) -> Void) {
         self.theme = theme
-            
+        UILabel.setDateLabel(theme.textColor)
+        
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()
