@@ -2013,6 +2013,15 @@ private final class NotificationServiceHandler {
                             }
                             |> deliverOn(strongSelf.queue)).start(completed: {
                                 UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in
+                                    let notificationDebugList = notifications.map { notification -> String in
+                                        if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["msg_id"] as? String, let messageIdValue = Int32(messageIdString) {
+                                            return "peerId: \(peerIdValue), messageId: \(messageIdValue)"
+                                        } else {
+                                            return "unknown: \(String(describing: notification.request.content.userInfo))"
+                                        }
+                                    }.joined(separator: "\n")
+                                    Logger.shared.log("NotificationService \(episode)", "Filtering delivered notifications: \(notificationDebugList)")
+                                    
                                     var removeIdentifiers: [String] = []
                                     for notification in notifications {
                                         if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerIdValue = Int64(peerIdString), let messageIdString = notification.request.content.userInfo["msg_id"] as? String, let messageIdValue = Int32(messageIdString) {

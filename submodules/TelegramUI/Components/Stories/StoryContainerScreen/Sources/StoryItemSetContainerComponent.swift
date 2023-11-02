@@ -430,6 +430,8 @@ public final class StoryItemSetContainerComponent: Component {
         let inputPanelContainer = SparseContainerView()
         private let inputPanelBackground = ComponentView<Empty>()
         
+        var isUpdatingComponent: Bool = false
+        
         var preparingToDisplayViewList: Bool = false
         
         var viewListDisplayState: ViewListDisplayState = .hidden
@@ -1510,7 +1512,7 @@ public final class StoryItemSetContainerComponent: Component {
                         sharedState: component.storyItemSharedState,
                         theme: component.theme,
                         presentationProgressUpdated: { [weak self, weak visibleItem] progress, isBuffering, canSwitch in
-                            guard let self = self, let component = self.component else {
+                            guard let self, let component = self.component else {
                                 return
                             }
                             guard let visibleItem else {
@@ -1526,7 +1528,7 @@ public final class StoryItemSetContainerComponent: Component {
                                     navigationStripView.updateCurrentItemProgress(value: progress, isBuffering: isBuffering, transition: .immediate)
                                 }
                                 
-                                if isBufferingUpdated {
+                                if isBufferingUpdated && !self.isUpdatingComponent {
                                     self.state?.updated(transition: .immediate)
                                 }
                                 
@@ -2514,6 +2516,11 @@ public final class StoryItemSetContainerComponent: Component {
         }
         
         func update(component: StoryItemSetContainerComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.isUpdatingComponent = true
+            defer {
+                self.isUpdatingComponent = false
+            }
+            
             let isFirstTime = self.component == nil
             
             let startTime1 = CFAbsoluteTimeGetCurrent()
