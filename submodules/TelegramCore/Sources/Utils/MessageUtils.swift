@@ -287,6 +287,8 @@ public extension Message {
             } else {
                 return false
             }
+        } else if self.author?.id == accountPeerId {
+            return false
         } else if self.flags.contains(.Incoming) {
             return true
         } else if let channel = self.peers[self.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
