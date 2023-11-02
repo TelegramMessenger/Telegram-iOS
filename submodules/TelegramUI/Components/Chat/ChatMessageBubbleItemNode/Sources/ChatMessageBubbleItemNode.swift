@@ -4221,11 +4221,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                         if let item = self.item {
                             if let type = self.backgroundNode.type, case .none = type {
                                 return .optionalAction({
-                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                                 })
                             } else {
                                 return .action(InternalBubbleTapAction.Action {
-                                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                                 })
                             }
                         }

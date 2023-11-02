@@ -2405,7 +2405,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             }
         )
         
-        self._chatInterfaceInteraction = ChatControllerInteraction(openMessage: { [weak self] message, mode in
+        self._chatInterfaceInteraction = ChatControllerInteraction(openMessage: { [weak self] message, _ in
             guard let strongSelf = self else {
                 return false
             }
@@ -4518,7 +4518,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self?.controller?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
             self?.view.endEditing(true)
-        }, contentContext: nil)
+        }, contentContext: nil, progress: nil)
     }
     
     private func openUrl(url: String, concealed: Bool, external: Bool, forceExternal: Bool = false, commit: @escaping () -> Void = {}) {
@@ -4544,7 +4544,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 self?.controller?.present(c, in: .window(.root), with: a)
             }, dismissInput: {
                 self?.view.endEditing(true)
-            }, contentContext: nil)
+            }, contentContext: nil, progress: nil)
         })
     }
     
@@ -5466,7 +5466,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         return
                                     }
                                     self.controller?.view.endEditing(true)
-                                }, contentContext: nil)
+                                }, contentContext: nil, progress: nil)
                             }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
@@ -5655,7 +5655,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         return
                                     }
                                     self.controller?.view.endEditing(true)
-                                }, contentContext: nil)
+                                }, contentContext: nil, progress: nil)
                             }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
@@ -5783,7 +5783,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                                         return
                                     }
                                     self.controller?.view.endEditing(true)
-                                }, contentContext: nil)
+                                }, contentContext: nil, progress: nil)
                             }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
@@ -7056,7 +7056,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             controller?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak controller] in
             controller?.view.endEditing(true)
-        }, contentContext: nil)
+        }, contentContext: nil, progress: nil)
     }
     
     private func performBotCommand(command: PeerInfoBotCommand) {
@@ -8689,7 +8689,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 strongSelf.context.sharedContext.openResolvedUrl(resolvedUrl, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { [weak self] controller, arguments in
                     self?.controller?.push(controller)
-                }, dismissInput: {}, contentContext: nil)
+                }, dismissInput: {}, contentContext: nil, progress: nil)
             }
         })
     }

@@ -23,6 +23,7 @@ swift_library(
         "//submodules/TelegramPresentationData",
         "//submodules/TelegramUIPreferences",
         "//submodules/TelegramStringFormatting",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
         "//submodules/TelegramUI/Components/Chat/ChatMessageDateAndStatusNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",

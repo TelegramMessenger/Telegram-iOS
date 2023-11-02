@@ -13,6 +13,7 @@ import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageInteractiveInstantVideoNode
 import ChatMessageInteractiveFileNode
+import ChatControllerInteraction
 
 extension ChatMessageInteractiveInstantVideoNode.AnimateFileNodeDescription {
     convenience init(_ node: ChatMessageInteractiveFileNode) {
@@ -127,7 +128,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
         
         self.interactiveFileNode.activateLocalContent = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
             }
         }
         
@@ -166,7 +167,7 @@ public class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentN
     
     override public func accessibilityActivate() -> Bool {
         if let item = self.item {
-            let _ = item.controllerInteraction.openMessage(item.message, .default)
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
         return true
     }

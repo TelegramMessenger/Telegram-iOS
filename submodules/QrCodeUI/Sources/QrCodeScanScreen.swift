@@ -916,7 +916,7 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
             self?.controller?.present(c, in: .window(.root), with: a)
         }, dismissInput: { [weak self] in
             self?.view.endEditing(true)
-        }, contentContext: nil)
+        }, contentContext: nil, progress: nil)
         
         return true
     }

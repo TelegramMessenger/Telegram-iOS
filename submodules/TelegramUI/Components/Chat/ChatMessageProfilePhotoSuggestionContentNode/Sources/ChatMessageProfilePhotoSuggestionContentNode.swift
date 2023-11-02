@@ -20,6 +20,7 @@ import GalleryUI
 import Markdown
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatControllerInteraction
 
 public class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
@@ -142,7 +143,7 @@ public class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleCont
         guard let item = self.item else {
             return
         }
-        let _ = item.controllerInteraction.openMessage(item.message, .default)
+        let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
     }
                 
     override public func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
