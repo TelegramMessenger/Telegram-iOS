@@ -148,8 +148,13 @@ public func textAttributedStringForStateText(_ stateText: NSAttributedString, fo
             } else if key == ChatTextInputAttributes.customEmoji {
                 result.addAttribute(key, value: value, range: range)
                 result.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
-            } else if key == ChatTextInputAttributes.block {
-                fontAttributes.insert(.blockQuote)
+            } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
+                switch value.kind {
+                case .quote:
+                    fontAttributes.insert(.blockQuote)
+                case .code:
+                    fontAttributes.insert(.monospace)
+                }
                 result.addAttribute(key, value: value, range: range)
             }
         }
@@ -742,8 +747,13 @@ public func refreshChatTextInputAttributes(textView: UITextView, primaryTextColo
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
                     textView.textStorage.addAttribute(key, value: value, range: range)
                     textView.textStorage.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor.clear, range: range)
-                } else if key == ChatTextInputAttributes.block {
-                    fontAttributes.insert(.blockQuote)
+                } else if key == ChatTextInputAttributes.block, let value = value as? ChatTextInputTextQuoteAttribute {
+                    switch value.kind {
+                    case .quote:
+                        fontAttributes.insert(.blockQuote)
+                    case .code:
+                        fontAttributes.insert(.monospace)
+                    }
                     textView.textStorage.addAttribute(key, value: value, range: range)
                 }
             }

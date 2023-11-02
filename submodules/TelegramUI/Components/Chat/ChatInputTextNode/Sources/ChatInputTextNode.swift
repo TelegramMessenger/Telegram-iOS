@@ -278,15 +278,21 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
             public let background: UIColor
             public let foreground: UIColor
             public let lineStyle: LineStyle
+            public let codeBackground: UIColor
+            public let codeForeground: UIColor
             
             public init(
                 background: UIColor,
                 foreground: UIColor,
-                lineStyle: LineStyle
+                lineStyle: LineStyle,
+                codeBackground: UIColor,
+                codeForeground: UIColor
             ) {
                 self.background = background
                 self.foreground = foreground
                 self.lineStyle = lineStyle
+                self.codeBackground = codeBackground
+                self.codeForeground = codeForeground
             }
             
             public static func ==(lhs: Quote, rhs: Quote) -> Bool {
@@ -297,6 +303,12 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
                     return false
                 }
                 if lhs.lineStyle != rhs.lineStyle {
+                    return false
+                }
+                if !lhs.codeBackground.isEqual(rhs.codeBackground) {
+                    return false
+                }
+                if !lhs.codeForeground.isEqual(rhs.codeForeground) {
                     return false
                 }
                 return true
@@ -830,6 +842,7 @@ private final class QuoteBackgroundView: UIView {
         var primaryColor: UIColor
         var secondaryColor: UIColor?
         var tertiaryColor: UIColor?
+        let backgroundColor: UIColor?
         
         switch value.kind {
         case .quote:
@@ -846,10 +859,13 @@ private final class QuoteBackgroundView: UIView {
                 secondaryColor = secondaryColorValue
                 tertiaryColor = tertiaryColorValue
             }
+            
+            backgroundColor = nil
         case .code:
             self.iconView.isHidden = true
             
-            primaryColor = .gray
+            primaryColor = theme.codeForeground
+            backgroundColor = theme.codeBackground
         }
         
         self.backgroundView.update(
@@ -858,6 +874,7 @@ private final class QuoteBackgroundView: UIView {
             primaryColor: primaryColor,
             secondaryColor: secondaryColor,
             thirdColor: tertiaryColor,
+            backgroundColor: backgroundColor,
             pattern: nil,
             animation: .None
         )

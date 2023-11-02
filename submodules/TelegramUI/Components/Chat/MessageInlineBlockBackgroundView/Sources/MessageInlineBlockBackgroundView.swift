@@ -28,15 +28,15 @@ private func addRoundedRectPath(context: CGContext, rect: CGRect, radius: CGFloa
     context.restoreGState()
 }
 
-private func generateBackgroundTemplateImage(addStripe: Bool, isTransparent: Bool) -> UIImage {
+private func generateBackgroundTemplateImage(addStripe: Bool, backgroundAlpha: CGFloat) -> UIImage {
     return generateImage(CGSize(width: radius * 2.0 + 4.0, height: radius * 2.0 + 8.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         
         addRoundedRectPath(context: context, rect: CGRect(origin: CGPoint(), size: size), radius: radius)
         context.clip()
         
-        context.setFillColor(UIColor.white.withMultipliedAlpha(0.1).cgColor)
-        if !isTransparent {
+        if backgroundAlpha != 0.0 {
+            context.setFillColor(UIColor.white.withMultipliedAlpha(backgroundAlpha).cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
         }
         
@@ -71,19 +71,23 @@ private func generateProgressTemplateImage() -> UIImage {
 }
 
 private let backgroundSolidTemplateImage: UIImage = {
-    return generateBackgroundTemplateImage(addStripe: true, isTransparent: false)
+    return generateBackgroundTemplateImage(addStripe: true, backgroundAlpha: 0.1)
 }()
 
 private let backgroundDashTemplateImage: UIImage = {
-    return generateBackgroundTemplateImage(addStripe: false, isTransparent: false)
+    return generateBackgroundTemplateImage(addStripe: false, backgroundAlpha: 0.1)
 }()
 
 private let transparentBackgroundSolidTemplateImage: UIImage = {
-    return generateBackgroundTemplateImage(addStripe: true, isTransparent: true)
+    return generateBackgroundTemplateImage(addStripe: true, backgroundAlpha: 0.0)
 }()
 
 private let transparentBackgroundDashTemplateImage: UIImage = {
-    return generateBackgroundTemplateImage(addStripe: false, isTransparent: true)
+    return generateBackgroundTemplateImage(addStripe: false, backgroundAlpha: 0.0)
+}()
+
+private let solidBackgroundTemplateImage: UIImage = {
+    return generateBackgroundTemplateImage(addStripe: false, backgroundAlpha: 1.0)
 }()
 
 private func generateDashBackgroundTemplateImage() -> UIImage {
@@ -450,6 +454,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         var primaryColor: UIColor
         var secondaryColor: UIColor?
         var thirdColor: UIColor?
+        var backgroundColor: UIColor?
         var pattern: Pattern?
         var displayProgress: Bool
         
@@ -459,6 +464,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             primaryColor: UIColor,
             secondaryColor: UIColor?,
             thirdColor: UIColor?,
+            backgroundColor: UIColor?,
             pattern: Pattern?,
             displayProgress: Bool
         ) {
@@ -467,6 +473,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             self.primaryColor = primaryColor
             self.secondaryColor = secondaryColor
             self.thirdColor = thirdColor
+            self.backgroundColor = backgroundColor
             self.pattern = pattern
             self.displayProgress = displayProgress
         }
@@ -484,6 +491,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
                         primaryColor: params.primaryColor,
                         secondaryColor: params.secondaryColor,
                         thirdColor: params.thirdColor,
+                        backgroundColor: params.backgroundColor,
                         pattern: params.pattern,
                         animation: .None
                     )
@@ -595,6 +603,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         primaryColor: UIColor,
         secondaryColor: UIColor?,
         thirdColor: UIColor?,
+        backgroundColor: UIColor?,
         pattern: Pattern?,
         animation: ListViewItemUpdateAnimation
     ) {
@@ -604,6 +613,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
             primaryColor: primaryColor,
             secondaryColor: secondaryColor,
             thirdColor: thirdColor,
+            backgroundColor: backgroundColor,
             pattern: pattern,
             displayProgress: self.displayProgress
         )
@@ -618,20 +628,25 @@ public final class MessageInlineBlockBackgroundView: UIView {
                 patternContentLayer.layerTintColor = primaryColor.cgColor
             }
             
-            if params.isTransparent {
-                if params.secondaryColor != nil {
-                    self.backgroundView.image = transparentBackgroundDashTemplateImage
-                } else {
-                    self.backgroundView.image = transparentBackgroundSolidTemplateImage
-                }
+            if let backgroundColor = params.backgroundColor {
+                self.backgroundView.image = solidBackgroundTemplateImage
+                self.backgroundView.tintColor = backgroundColor
             } else {
-                if params.secondaryColor != nil {
-                    self.backgroundView.image = backgroundDashTemplateImage
+                if params.isTransparent {
+                    if params.secondaryColor != nil {
+                        self.backgroundView.image = transparentBackgroundDashTemplateImage
+                    } else {
+                        self.backgroundView.image = transparentBackgroundSolidTemplateImage
+                    }
                 } else {
-                    self.backgroundView.image = backgroundSolidTemplateImage
+                    if params.secondaryColor != nil {
+                        self.backgroundView.image = backgroundDashTemplateImage
+                    } else {
+                        self.backgroundView.image = backgroundSolidTemplateImage
+                    }
                 }
+                self.backgroundView.tintColor = params.primaryColor
             }
-            self.backgroundView.tintColor = params.primaryColor
         }
         
         if previousParams?.pattern != params.pattern {

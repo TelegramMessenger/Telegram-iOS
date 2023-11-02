@@ -49,25 +49,28 @@ public:
 
     std::string_view match(bool& success, size_t& pos, std::string_view text) const
     {
-        boost::cmatch m;
-
-        auto flags = boost::regex_constants::match_not_dot_newline;
-        auto match = boost::regex_search(text.data() + pos, text.data() + text.size(), m, m_regex, flags);
-        if (match)
-        {
-            success = true;
-            pos += m.position();
-
-            if (m_lookbehind && m[1].matched)
+        try {
+            boost::cmatch m;
+            
+            auto flags = boost::regex_constants::match_not_dot_newline;
+            auto match = boost::regex_search(text.data() + pos, text.data() + text.size(), m, m_regex, flags);
+            if (match)
             {
-                // change the match to remove the text matched by the Prism lookbehind group
-                auto lookbehindLength = m[1].length();
-                pos += lookbehindLength;
-
-                return text.substr(pos, m[0].length() - lookbehindLength);
+                success = true;
+                pos += m.position();
+                
+                if (m_lookbehind && m[1].matched)
+                {
+                    // change the match to remove the text matched by the Prism lookbehind group
+                    auto lookbehindLength = m[1].length();
+                    pos += lookbehindLength;
+                    
+                    return text.substr(pos, m[0].length() - lookbehindLength);
+                }
+                
+                return text.substr(pos, m[0].length());
             }
-
-            return text.substr(pos, m[0].length());
+        } catch(...) {
         }
 
         return {};
