@@ -837,7 +837,7 @@ public final class DatePickerNode: ASDisplayNode {
             dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: dayIndex % 7).uppercased(), font: dayFont, textColor: theme.secondaryTextColor)
             
             let textSize = dayNode.updateLayout(constrainedSize)
-            let cellFrame = CGRect(x: daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
+            let cellFrame = CGRect(x: floorToScreenPixels((size.width - constrainedSize.width) / 2.0) + daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
             let textFrame = CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - textSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - textSize.height) / 2.0)), size: textSize)
             
             dayNode.frame = textFrame
