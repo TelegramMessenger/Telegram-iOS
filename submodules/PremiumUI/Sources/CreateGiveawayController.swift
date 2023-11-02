@@ -904,8 +904,15 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
     
         var selectedProduct: PremiumGiftProduct?
         let selectedMonths = state.selectedMonths ?? 12
-        if let product = products.first(where: { $0.months == selectedMonths && $0.giftOption.users == state.subscriptions }) {
-            selectedProduct = product
+        switch state.mode {
+        case .giveaway:
+            if let product = products.first(where: { $0.months == selectedMonths && $0.giftOption.users == state.subscriptions }) {
+                selectedProduct = product
+            }
+        case .gift:
+            if let product = products.first(where: { $0.months == selectedMonths && $0.giftOption.users == 1 }) {
+                selectedProduct = product
+            }
         }
         
         guard let selectedProduct else {
