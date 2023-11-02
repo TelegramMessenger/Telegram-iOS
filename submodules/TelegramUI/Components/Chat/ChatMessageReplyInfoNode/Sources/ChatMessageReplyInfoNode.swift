@@ -809,6 +809,7 @@ public class ChatMessageReplyInfoNode: ASDisplayNode {
                     primaryColor: mainColor,
                     secondaryColor: secondaryColor,
                     thirdColor: tertiaryColor,
+                    backgroundColor: nil,
                     pattern: pattern,
                     animation: animation
                 )

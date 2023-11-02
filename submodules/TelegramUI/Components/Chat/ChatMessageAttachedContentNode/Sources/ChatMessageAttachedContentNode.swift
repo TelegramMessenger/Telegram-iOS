@@ -869,13 +869,13 @@ public final class ChatMessageAttachedContentNode: ASDisplayNode {
                             if let current = self.backgroundView {
                                 backgroundView = current
                                 animation.animator.updateFrame(layer: backgroundView.layer, frame: backgroundFrame, completion: nil)
-                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, pattern: nil, animation: animation)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: nil, animation: animation)
                             } else {
                                 backgroundView = MessageInlineBlockBackgroundView()
                                 self.backgroundView = backgroundView
                                 backgroundView.frame = backgroundFrame
                                 self.transformContainer.view.insertSubview(backgroundView, at: 0)
-                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, pattern: nil, animation: .None)
+                                backgroundView.update(size: backgroundFrame.size, isTransparent: false, primaryColor: mainColor, secondaryColor: secondaryColor, thirdColor: tertiaryColor, backgroundColor: nil, pattern: nil, animation: .None)
                             }
                         } else {
                             if let backgroundView = self.backgroundView {

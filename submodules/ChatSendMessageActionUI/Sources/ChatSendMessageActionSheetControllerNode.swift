@@ -289,7 +289,9 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                         quote: ChatInputTextView.Theme.Quote(
                             background: mainColor.withMultipliedAlpha(0.1),
                             foreground: mainColor,
-                            lineStyle: mappedLineStyle
+                            lineStyle: mappedLineStyle,
+                            codeBackground: mainColor.withMultipliedAlpha(0.1),
+                            codeForeground: mainColor
                         )
                     )
                 }

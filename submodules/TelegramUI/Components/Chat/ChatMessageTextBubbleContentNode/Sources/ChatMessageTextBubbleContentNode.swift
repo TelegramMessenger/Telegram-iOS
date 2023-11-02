@@ -392,6 +392,9 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     var tertiaryColor: UIColor? = nil
                     
                     let nameColors = author?.nameColor.flatMap { item.context.peerNameColors.get($0, dark: item.presentationData.theme.theme.overallDarkAppearance) }
+                    let codeBlockTitleColor: UIColor
+                    let codeBlockAccentColor: UIColor
+                    let codeBlockBackgroundColor: UIColor
                     if !incoming {
                         mainColor = messageTheme.accentTextColor
                         if let _ = nameColors?.secondary {
@@ -399,6 +402,16 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         if let _ = nameColors?.tertiary {
                             tertiaryColor = .clear
+                        }
+                        
+                        if item.presentationData.theme.theme.overallDarkAppearance {
+                            codeBlockTitleColor = .white
+                            codeBlockAccentColor = UIColor(white: 1.0, alpha: 0.5)
+                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.65)
+                        } else {
+                            codeBlockTitleColor = mainColor
+                            codeBlockAccentColor = mainColor
+                            codeBlockBackgroundColor = mainColor.withMultipliedAlpha(0.1)
                         }
                     } else {
                         let authorNameColor = nameColors?.main
@@ -410,9 +423,16 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         } else {
                             mainColor = messageTheme.accentTextColor
                         }
+                        
+                        codeBlockTitleColor = mainColor
+                        codeBlockAccentColor = mainColor
+                        
+                        if item.presentationData.theme.theme.overallDarkAppearance {
+                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.65)
+                        } else {
+                            codeBlockBackgroundColor = UIColor(white: 0.0, alpha: 0.05)
+                        }
                     }
-                    
-                    let codeBlockColor = messageTheme.secondaryTextColor
                     
                     codeHighlightSpecs = extractMessageSyntaxHighlightSpecs(text: rawText, entities: entities)
                     
@@ -426,7 +446,7 @@ public class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, baseCodeBlockColor: codeBlockColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
+                    attributedText = stringWithAppliedEntities(rawText, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseQuoteTintColor: mainColor, baseQuoteSecondaryTintColor: secondaryColor, baseQuoteTertiaryTintColor: tertiaryColor, codeBlockTitleColor: codeBlockTitleColor, codeBlockAccentColor: codeBlockAccentColor, codeBlockBackgroundColor: codeBlockBackgroundColor, baseFont: textFont, linkFont: textFont, boldFont: item.presentationData.messageBoldFont, italicFont: item.presentationData.messageItalicFont, boldItalicFont: item.presentationData.messageBoldItalicFont, fixedFont: item.presentationData.messageFixedFont, blockQuoteFont: item.presentationData.messageBlockQuoteFont, underlineLinks: underlineLinks, message: item.message, adjustQuoteFontSize: true, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
                 } else if !rawText.isEmpty {
                     attributedText = NSAttributedString(string: rawText, font: textFont, textColor: messageTheme.primaryTextColor)
                 } else {

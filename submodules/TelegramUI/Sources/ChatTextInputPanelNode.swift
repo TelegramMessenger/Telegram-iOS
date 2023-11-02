@@ -500,12 +500,21 @@ private func makeTextInputTheme(context: AccountContext, interfaceState: ChatPre
         lineStyle = .solid(color: interfaceState.theme.list.itemAccentColor)
         authorNameColor = interfaceState.theme.list.itemAccentColor
     }
+    
+    let codeBackgroundColor: UIColor
+    if interfaceState.theme.overallDarkAppearance {
+        codeBackgroundColor = UIColor(white: 1.0, alpha: 0.05)
+    } else {
+        codeBackgroundColor = UIColor(white: 0.0, alpha: 0.05)
+    }
         
     return ChatInputTextView.Theme(
         quote: ChatInputTextView.Theme.Quote(
             background: authorNameColor.withMultipliedAlpha(interfaceState.theme.overallDarkAppearance ? 0.2 : 0.1),
             foreground: authorNameColor,
-            lineStyle: lineStyle
+            lineStyle: lineStyle,
+            codeBackground: codeBackgroundColor,
+            codeForeground: authorNameColor
         )
     )
 }

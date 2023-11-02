@@ -78,13 +78,15 @@ public final class TextNodeBlockQuoteData: NSObject {
     public let color: UIColor
     public let secondaryColor: UIColor?
     public let tertiaryColor: UIColor?
+    public let backgroundColor: UIColor
     
-    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?) {
+    public init(kind: Kind, title: NSAttributedString?, color: UIColor, secondaryColor: UIColor?, tertiaryColor: UIColor?, backgroundColor: UIColor) {
         self.kind = kind
         self.title = title
         self.color = color
         self.secondaryColor = secondaryColor
         self.tertiaryColor = tertiaryColor
+        self.backgroundColor = backgroundColor
         
         super.init()
     }
@@ -162,13 +164,15 @@ private final class TextNodeBlockQuote {
     let tintColor: UIColor
     let secondaryTintColor: UIColor?
     let tertiaryTintColor: UIColor?
+    let backgroundColor: UIColor
     
-    init(frame: CGRect, data: TextNodeBlockQuoteData, tintColor: UIColor, secondaryTintColor: UIColor?, tertiaryTintColor: UIColor?) {
+    init(frame: CGRect, data: TextNodeBlockQuoteData, tintColor: UIColor, secondaryTintColor: UIColor?, tertiaryTintColor: UIColor?, backgroundColor: UIColor) {
         self.frame = frame
         self.data = data
         self.tintColor = tintColor
         self.secondaryTintColor = secondaryTintColor
         self.tertiaryTintColor = tertiaryTintColor
+        self.backgroundColor = backgroundColor
     }
 }
 
@@ -1554,7 +1558,7 @@ open class TextNode: ASDisplayNode {
             }
             
             if let blockQuote = segment.blockQuote, let tintColor = segment.tintColor {
-                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor))
+                blockQuotes.append(TextNodeBlockQuote(frame: CGRect(origin: CGPoint(x: 0.0, y: blockMinY - 2.0), size: CGSize(width: blockWidth, height: blockMaxY - (blockMinY - 2.0) + 4.0)), data: blockQuote, tintColor: tintColor, secondaryTintColor: segment.secondaryTintColor, tertiaryTintColor: segment.tertiaryTintColor, backgroundColor: blockQuote.backgroundColor))
             }
         }
         
@@ -2223,7 +2227,7 @@ open class TextNode: ASDisplayNode {
                 blockFrame.size.width += 4.0
                 blockFrame.origin.x -= 2.0
                 
-                context.setFillColor(blockQuote.tintColor.withMultipliedAlpha(0.1).cgColor)
+                context.setFillColor(blockQuote.backgroundColor.cgColor)
                 context.addPath(UIBezierPath(roundedRect: blockFrame, cornerRadius: radius).cgPath)
                 context.fillPath()
                 
@@ -2315,7 +2319,9 @@ open class TextNode: ASDisplayNode {
                     }
                 } else {
                     context.setFillColor(blockQuote.tintColor.cgColor)
+                    context.setBlendMode(.copy)
                     context.fill(lineFrame)
+                    context.setBlendMode(.normal)
                 }
                 
                 context.resetClip()
