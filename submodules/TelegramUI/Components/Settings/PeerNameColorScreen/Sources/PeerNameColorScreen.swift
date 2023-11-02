@@ -563,12 +563,10 @@ public func PeerNameColorScreen(
     }
     attemptNavigationImpl = { f in
         if case .account = subject, !context.isPremium {
-            f()
             return true
         }
         let state = stateValue.with({ $0 })
         if case .channel = subject, state.needsBoosts {
-            f()
             return true
         }
         var hasChanges = false
@@ -588,7 +586,6 @@ public func PeerNameColorScreen(
             ]))
             return false
         } else {
-            f()
             return true
         }
     }
@@ -649,6 +646,12 @@ public func PeerNameColorScreen(
                                 return
                             }
                             
+                            updateState { state in
+                                var updatedState = state
+                                updatedState.inProgress = false
+                                return updatedState
+                            }
+                            
                             let link = status.url
                             let controller = PremiumLimitScreen(context: context, subject: .storiesChannelBoost(peer: peer, boostSubject: .nameColors, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: {
                                 UIPasteboard.general.string = link
@@ -664,12 +667,11 @@ public func PeerNameColorScreen(
                             HapticFeedback().impact(.light)
                         })
                     } else {
-                        
-                    }
-                    updateState { state in
-                        var updatedState = state
-                        updatedState.inProgress = false
-                        return updatedState
+                        updateState { state in
+                            var updatedState = state
+                            updatedState.inProgress = false
+                            return updatedState
+                        }
                     }
                 }, completed: {
                     if let navigationController = controller?.navigationController as? NavigationController {
