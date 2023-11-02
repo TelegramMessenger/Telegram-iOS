@@ -25,28 +25,29 @@ public final class TextInputMenu {
         didSet {
             if self.state != oldValue {
                 switch self.state {
-                    case .inactive:
-                        UIMenuController.shared.menuItems = []
-                    case .general:
-                        UIMenuController.shared.menuItems = []
-                    case .format:
-                        var menuItems: [UIMenuItem] = [
-                            UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
-                            UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
-                            UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
-                            UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:"))),
-                            UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
-                            UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
-                        ]
-                        if self.hasSpoilers {
-                            menuItems.insert(UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))), at: 0)
-                        }
+                case .inactive:
+                    UIMenuController.shared.menuItems = []
+                case .general:
+                    UIMenuController.shared.menuItems = []
+                case .format:
+                    var menuItems: [UIMenuItem] = [
+                        UIMenuItem(title: self.stringBold, action: Selector(("formatAttributesBold:"))),
+                        UIMenuItem(title: self.stringItalic, action: Selector(("formatAttributesItalic:"))),
+                        UIMenuItem(title: self.stringMonospace, action: Selector(("formatAttributesMonospace:"))),
+                        UIMenuItem(title: self.stringLink, action: Selector(("formatAttributesLink:"))),
+                        UIMenuItem(title: self.stringStrikethrough, action: Selector(("formatAttributesStrikethrough:"))),
+                        UIMenuItem(title: self.stringUnderline, action: Selector(("formatAttributesUnderline:")))
+                    ]
+                    if self.hasSpoilers {
+                        menuItems.insert(UIMenuItem(title: self.stringSpoiler, action: Selector(("formatAttributesSpoiler:"))), at: 0)
+                    }
                     if self.hasQuotes {
                         menuItems.insert(UIMenuItem(title: self.stringQuote, action: Selector(("formatAttributesQuote:"))), at: 0)
+                        //TODO:localize
+                        menuItems.append(UIMenuItem(title: "Code", action: Selector(("formatAttributesCodeBlock:"))))
                     }
-                        UIMenuController.shared.menuItems = menuItems
+                    UIMenuController.shared.menuItems = menuItems
                 }
-                
             }
         }
     }

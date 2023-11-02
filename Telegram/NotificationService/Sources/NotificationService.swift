@@ -675,11 +675,9 @@ private final class NotificationServiceHandler {
     private let notificationKeyDisposable = MetaDisposable()
     private let pollDisposable = MetaDisposable()
 
-    init?(queue: Queue, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
+    init?(queue: Queue, episode: String, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
         //debug_linker_fail_test()
         self.queue = queue
-
-        let episode = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)
 
         guard let appBundleIdentifier = Bundle.main.bundleIdentifier, let lastDotRange = appBundleIdentifier.range(of: ".", options: [.backwards]) else {
             return nil
@@ -1558,7 +1556,8 @@ private final class NotificationServiceHandler {
                                 if !shouldSynchronizeState {
                                     pollSignal = .complete()
                                 } else {
-                                    stateManager.network.shouldKeepConnection.set(.single(true))
+                                    let shouldKeepConnection = stateManager.network.shouldKeepConnection
+                                    shouldKeepConnection.set(.single(true))
                                     if peerId.namespace == Namespaces.Peer.CloudChannel {
                                         Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
                                         
@@ -1569,6 +1568,9 @@ private final class NotificationServiceHandler {
                                             peerId: peerId,
                                             stateManager: stateManager
                                         )
+                                        |> afterDisposed { [weak shouldKeepConnection] in
+                                            shouldKeepConnection?.set(.single(false))
+                                        }
                                     } else {
                                         Logger.shared.log("NotificationService \(episode)", "Will perform non-specific getDifference")
                                         enum ControlError {
@@ -1584,6 +1586,9 @@ private final class NotificationServiceHandler {
                                             }
                                         }
                                         |> restartIfError
+                                        |> afterDisposed { [weak shouldKeepConnection] in
+                                            shouldKeepConnection?.set(.single(false))
+                                        }
                                         
                                         pollSignal = signal
                                     }
@@ -1669,6 +1674,9 @@ private final class NotificationServiceHandler {
                                             completed()
                                             return
                                         }
+                                        
+                                        let shouldKeepConnection = stateManager.network.shouldKeepConnection
+                                        shouldKeepConnection.set(.single(true))
                                         
                                         var fetchStoriesSignal: Signal<Void, NoError> = .single(Void())
                                         fetchStoriesSignal = _internal_pollPeerStories(postbox: stateManager.postbox, network: stateManager.network, accountPeerId: stateManager.accountPeerId, peerId: peerId)
@@ -1760,6 +1768,9 @@ private final class NotificationServiceHandler {
                                                 }
                                             }
                                         )
+                                        |> afterDisposed { [weak shouldKeepConnection] in
+                                            shouldKeepConnection?.set(.single(false))
+                                        }
 
                                         let fetchMediaSignal: Signal<Data?, NoError> = .single(nil)
                                         
@@ -1865,11 +1876,6 @@ private final class NotificationServiceHandler {
                                     }
                                 }
 
-                                let pollSignal: Signal<Never, NoError>
-                                pollSignal = .complete()
-                                
-                                stateManager.network.shouldKeepConnection.set(.single(true))
-
                                 let pollWithUpdatedContent: Signal<NotificationContent, NoError>
                                 if interactionAuthorId != nil || messageId != nil {
                                     pollWithUpdatedContent = stateManager.postbox.transaction { transaction -> NotificationContent in
@@ -1899,13 +1905,8 @@ private final class NotificationServiceHandler {
 
                                         return content
                                     }
-                                    |> then(
-                                        pollSignal
-                                        |> map { _ -> NotificationContent in }
-                                    )
                                 } else {
-                                    pollWithUpdatedContent = pollSignal
-                                    |> map { _ -> NotificationContent in }
+                                    pollWithUpdatedContent = .complete()
                                 }
 
                                 var updatedContent = initialContent
@@ -1987,10 +1988,7 @@ private final class NotificationServiceHandler {
                                 }
                                 
                                 let completeRemoval: () -> Void = {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    var content = NotificationContent(isLockedMessage: nil)
+                                    let content = NotificationContent(isLockedMessage: nil)
                                     Logger.shared.log("NotificationService \(episode)", "Updating content to \(content)")
                                     
                                     updateCurrentContent(content)
@@ -2126,12 +2124,16 @@ final class NotificationService: UNNotificationServiceExtension {
     private var initialContent: UNNotificationContent?
     private let content = Atomic<NotificationContent?>(value: nil)
     private var contentHandler: ((UNNotificationContent) -> Void)?
+    private var episode: String?
     
     override init() {
         super.init()
     }
     
     override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
+        let episode = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)
+        self.episode = episode
+        
         self.initialContent = request.content
         self.contentHandler = contentHandler
 
@@ -2142,6 +2144,7 @@ final class NotificationService: UNNotificationServiceExtension {
         self.impl = QueueLocalObject(queue: queue, generate: { [weak self] in
             return BoxedNotificationServiceHandler(value: NotificationServiceHandler(
                 queue: queue,
+                episode: episode,
                 updateCurrentContent: { value in
                     let _ = content.swap(value)
                 },
@@ -2152,15 +2155,17 @@ final class NotificationService: UNNotificationServiceExtension {
                     strongSelf.impl = nil
 
                     if let contentHandler = strongSelf.contentHandler {
+                        Logger.shared.log("NotificationService \(episode)", "Complete handling notification")
+                        
+                        strongSelf.contentHandler = nil
+                        
                         if let content = content.with({ $0 }) {
-                            /*let request = UNNotificationRequest(identifier: UUID().uuidString, content: content.generate(), trigger: .none)
-                            UNUserNotificationCenter.current().add(request)
-                            contentHandler(UNMutableNotificationContent())*/
-
                             contentHandler(content.generate())
                         } else if let initialContent = strongSelf.initialContent {
                             contentHandler(initialContent)
                         }
+                    } else {
+                        Logger.shared.log("NotificationService \(episode)", "Attempted to repeatedly complete handling notification")
                     }
                 },
                 payload: request.content.userInfo
@@ -2170,6 +2175,10 @@ final class NotificationService: UNNotificationServiceExtension {
     
     override func serviceExtensionTimeWillExpire() {
         if let contentHandler = self.contentHandler {
+            self.contentHandler = nil
+            
+            Logger.shared.log("NotificationService \(self.episode ?? "???")", "Completing due to serviceExtensionTimeWillExpire")
+            
             if let content = self.content.with({ $0 }) {
                 contentHandler(content.generate())
             } else if let initialContent = self.initialContent {

@@ -198,6 +198,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.playbackStatusDisposable.dispose()
         self.playerStatusDisposable.dispose()
         self.fetchedThumbnailDisposable.dispose()
+        self.transcribeDisposable?.dispose()
     }
     
     override public func didLoad() {
@@ -1670,6 +1671,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     guard let strongSelf = self else {
                         return
                     }
+                    strongSelf.transcribeDisposable?.dispose()
                     strongSelf.transcribeDisposable = nil
                 })
             }

@@ -510,21 +510,21 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     @objc func formatAttributesBold(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.bold)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.bold, value: nil)
         }
     }
     
     @objc func formatAttributesItalic(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.italic)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.italic, value: nil)
         }
     }
     
     @objc func formatAttributesMonospace(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.monospace)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.monospace, value: nil)
         }
     }
     
@@ -536,28 +536,35 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     @objc func formatAttributesStrikethrough(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.strikethrough)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.strikethrough, value: nil)
         }
     }
     
     @objc func formatAttributesUnderline(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.underline)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.underline, value: nil)
         }
     }
     
     @objc func formatAttributesSpoiler(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.spoiler)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.spoiler, value: nil)
         }
     }
     
     @objc func formatAttributesQuote(_ sender: Any) {
         self.inputMenu.back()
         if let item = self.item {
-            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.quote)
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .quote))
+        }
+    }
+    
+    @objc func formatAttributesCodeBlock(_ sender: Any) {
+        self.inputMenu.back()
+        if let item = self.item {
+            chatTextInputAddFormattingAttribute(item: item, textNode: self.textNode, theme: item.presentationData.theme, attribute: ChatTextInputAttributes.block, value: ChatTextInputTextQuoteAttribute(kind: .code(language: nil)))
         }
     }
     
@@ -639,7 +646,7 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     }
 }
 
-private func chatTextInputAddFormattingAttribute(item: CreatePollTextInputItem, textNode: EditableTextNode, theme: PresentationTheme, attribute: NSAttributedString.Key) {
+private func chatTextInputAddFormattingAttribute(item: CreatePollTextInputItem, textNode: EditableTextNode, theme: PresentationTheme, attribute: NSAttributedString.Key, value: Any?) {
     if let currentText = textNode.attributedText, textNode.selectedRange.length > 0 {
         let nsRange = NSRange(location: textNode.selectedRange.location, length: textNode.selectedRange.length)
         var addAttribute = true

@@ -5,6 +5,7 @@ import Display
 import AppBundle
 import ChatInputTextViewImpl
 import MessageInlineBlockBackgroundView
+import TextFormat
 
 public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeDidUpdateText()
@@ -232,7 +233,7 @@ private final class ChatInputTextContainer: NSTextContainer {
             let index = Int(characterIndex)
             if index >= 0 && index < string.length {
                 let attributes = textStorage.attributes(at: index, effectiveRange: nil)
-                let blockQuote = attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] as? NSObject
+                let blockQuote = attributes[NSAttributedString.Key(rawValue: "Attribute__Blockquote")] as? ChatTextInputTextQuoteAttribute
                 if let blockQuote {
                     result.origin.x += 9.0
                     result.size.width -= 9.0
@@ -253,7 +254,7 @@ private final class ChatInputTextContainer: NSTextContainer {
                         }
                     }
                     
-                    if (isFirstLine) {
+                    if isFirstLine, case .quote = blockQuote.kind {
                         result.size.width -= 18.0
                     }
                 }
@@ -638,9 +639,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         var validBlockQuotes: [Int] = []
         
         self.textStorage.enumerateAttribute(NSAttributedString.Key(rawValue: "Attribute__Blockquote"), in: NSRange(location: 0, length: self.textStorage.length), using: { value, range, _ in
-            if let value {
-                let _ = value
-                
+            if let value = value as? ChatTextInputTextQuoteAttribute {
                 let glyphRange = self.customLayoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
                 if self.customLayoutManager.isValidGlyphIndex(glyphRange.location) && self.customLayoutManager.isValidGlyphIndex(glyphRange.location + glyphRange.length - 1) {
                 } else {
@@ -681,15 +680,18 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
                 
                 boundingRect.origin.x -= 4.0
                 boundingRect.size.width += 4.0
-                boundingRect.size.width += 18.0
-                boundingRect.size.width = min(boundingRect.size.width, self.bounds.width - 18.0)
+                if case .quote = value.kind {
+                    boundingRect.size.width += 18.0
+                    boundingRect.size.width = min(boundingRect.size.width, self.bounds.width - 18.0)
+                }
+                boundingRect.size.width = min(boundingRect.size.width, self.bounds.width)
                 
                 boundingRect.origin.y -= 4.0
                 boundingRect.size.height += 8.0
                 
                 blockQuote.frame = boundingRect
                 if let theme = self.theme {
-                    blockQuote.update(size: boundingRect.size, theme: theme.quote)
+                    blockQuote.update(value: value, size: boundingRect.size, theme: theme.quote)
                 }
                 
                 validBlockQuotes.append(blockQuoteIndex)
@@ -816,7 +818,7 @@ private final class QuoteBackgroundView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, theme: ChatInputTextView.Theme.Quote) {
+    func update(value: ChatTextInputTextQuoteAttribute, size: CGSize, theme: ChatInputTextView.Theme.Quote) {
         if self.theme != theme {
             self.theme = theme
             
@@ -828,16 +830,26 @@ private final class QuoteBackgroundView: UIView {
         var primaryColor: UIColor
         var secondaryColor: UIColor?
         var tertiaryColor: UIColor?
-        switch theme.lineStyle {
-        case let .solid(color):
-            primaryColor = color
-        case let .doubleDashed(mainColor, secondaryColorValue):
-            primaryColor = mainColor
-            secondaryColor = secondaryColorValue
-        case let .tripleDashed(mainColor, secondaryColorValue, tertiaryColorValue):
-            primaryColor = mainColor
-            secondaryColor = secondaryColorValue
-            tertiaryColor = tertiaryColorValue
+        
+        switch value.kind {
+        case .quote:
+            self.iconView.isHidden = false
+            
+            switch theme.lineStyle {
+            case let .solid(color):
+                primaryColor = color
+            case let .doubleDashed(mainColor, secondaryColorValue):
+                primaryColor = mainColor
+                secondaryColor = secondaryColorValue
+            case let .tripleDashed(mainColor, secondaryColorValue, tertiaryColorValue):
+                primaryColor = mainColor
+                secondaryColor = secondaryColorValue
+                tertiaryColor = tertiaryColorValue
+            }
+        case .code:
+            self.iconView.isHidden = true
+            
+            primaryColor = .gray
         }
         
         self.backgroundView.update(

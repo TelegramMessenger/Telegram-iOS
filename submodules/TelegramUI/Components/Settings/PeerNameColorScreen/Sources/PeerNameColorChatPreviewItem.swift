@@ -172,7 +172,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
             }
 
-            let insets: UIEdgeInsets
+            var insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
             let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(1))
@@ -192,7 +192,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 var media: [Media] = []
-                if let (site, title, text) = messageItem.linkPreview {
+                if let (site, title, text) = messageItem.linkPreview, params.width > 320.0 {
                     media.append(TelegramMediaWebpage(webpageId: MediaId(namespace: 0, id: 0), content: .Loaded(TelegramMediaWebpageLoadedContent(url: "", displayUrl: "", hash: 0, type: nil, websiteName: site, title: title, text: text, embedUrl: nil, embedType: nil, embedSize: nil, duration: nil, author: nil, isMediaLargeByDefault: nil, image: nil, file: nil, story: nil, attributes: [], instantPage: nil))))
                 }
                 
@@ -239,6 +239,9 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 contentSize.height += node.frame.size.height
             }
             insets = itemListNeighborsGroupedInsets(neighbors, params)
+            if params.width <= 320.0 {
+                insets.top = 0.0
+            }
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size

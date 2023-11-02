@@ -773,6 +773,8 @@ public final class DatePickerNode: ASDisplayNode {
     public func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         
+        let constrainedSize = CGSize(width: min(390.0, size.width), height: size.height)
+        
         let timeHeight: CGFloat = 50.0
         let topInset: CGFloat = 78.0 + timeHeight
         let sideInset: CGFloat = 16.0
@@ -783,8 +785,8 @@ public final class DatePickerNode: ASDisplayNode {
         let timeTitleSize = self.timeTitleNode.updateLayout(size)
         self.timeTitleNode.frame = CGRect(origin: CGPoint(x: 16.0, y: 12.0), size: timeTitleSize)
         
-        let timePickerSize = CGSize(width: size.width, height: 180.0)
-        self.timePickerNode.frame = CGRect(origin: CGPoint(x: 0.0, y: timeHeight + 11.0), size: timePickerSize)
+        let timePickerSize = CGSize(width: constrainedSize.width, height: 180.0)
+        self.timePickerNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - constrainedSize.width) / 2.0), y: timeHeight + 11.0), size: timePickerSize)
         
         self.monthTextNode.attributedText = NSAttributedString(string: stringForMonth(strings: self.strings, month: components.month.flatMap { Int32($0) - 1 } ?? 0, ofYear: components.year.flatMap { Int32($0) - 1900 } ?? 100), font: controlFont, textColor: self.state.displayingMonthSelection ? self.theme.accentColor : self.theme.textColor)
         let monthSize = self.monthTextNode.updateLayout(size)
@@ -827,23 +829,23 @@ public final class DatePickerNode: ASDisplayNode {
         self.dateButtonNode.frame = CGRect(x: size.width - timeSize.width - 4.0 - 4.0 - dateSize.width, y: 4.0, width: dateSize.width, height: dateSize.height)
         
         let daysSideInset: CGFloat = 12.0
-        let cellSize: CGFloat = floor((size.width - daysSideInset * 2.0) / 7.0)
+        let cellSize: CGFloat = floor((constrainedSize.width - daysSideInset * 2.0) / 7.0)
         
         var dayIndex: Int32 = Int32(calendar.firstWeekday) - 1
         for i in 0 ..< self.dayNodes.count {
             let dayNode = self.dayNodes[i]
             dayNode.attributedText = NSAttributedString(string: shortStringForDayOfWeek(strings: self.strings, day: dayIndex % 7).uppercased(), font: dayFont, textColor: theme.secondaryTextColor)
             
-            let textSize = dayNode.updateLayout(size)
-            let cellFrame = CGRect(x: daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
+            let textSize = dayNode.updateLayout(constrainedSize)
+            let cellFrame = CGRect(x: floorToScreenPixels((size.width - constrainedSize.width) / 2.0) + daysSideInset + CGFloat(i) * cellSize, y: topInset - 38.0, width: cellSize, height: cellSize)
             let textFrame = CGRect(origin: CGPoint(x: cellFrame.minX + floor((cellFrame.width - textSize.width) / 2.0), y: cellFrame.minY + floor((cellFrame.height - textSize.height) / 2.0)), size: textSize)
             
             dayNode.frame = textFrame
             dayIndex += 1
         }
         
-        let containerSize = CGSize(width: size.width, height: size.height - topInset)
-        self.contentNode.frame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: containerSize)
+        let containerSize = CGSize(width: constrainedSize.width, height: size.height - topInset)
+        self.contentNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - constrainedSize.width) / 2.0), y: topInset), size: containerSize)
         
         self.updateItems(size: containerSize, transition: transition)
         
@@ -1083,7 +1085,8 @@ private final class TimePickerNode: ASDisplayNode {
     
     init(theme: DatePickerTheme, date: Date, valueChanged: @escaping (Date) -> Void) {
         self.theme = theme
-            
+        UILabel.setDateLabel(theme.textColor)
+        
         self.valueChanged = valueChanged
         
         self.pickerView = UIDatePicker()

@@ -635,7 +635,7 @@ public final class MessageInlineBlockBackgroundView: UIView {
         }
         
         if previousParams?.pattern != params.pattern {
-            if let pattern = params.pattern {
+            if let pattern = params.pattern, pattern.fileId != 0 {
                 self.layer.masksToBounds = true
                 self.layer.cornerRadius = radius
                 if #available(iOS 13.0, *) {
