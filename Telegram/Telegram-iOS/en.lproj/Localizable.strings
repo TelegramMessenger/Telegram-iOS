@@ -10421,3 +10421,5 @@ Sorry for the inconvenience.";
 "ChannelBoost.Or" = "or";
 
 "Channel.ChannelColor" = "Channel Color";
+
+"TextFormat.Code" = "Code";
