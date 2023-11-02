@@ -13,6 +13,7 @@ import LiveLocationPositionNode
 import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
+import ChatControllerInteraction
 
 private let titleFont = Font.medium(14.0)
 private let liveTitleFont = Font.medium(16.0)
@@ -47,7 +48,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     
     override public func accessibilityActivate() -> Bool {
         if let item = self.item {
-            let _ = item.controllerInteraction.openMessage(item.message, .default)
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
         return true
     }
@@ -511,7 +512,7 @@ public class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
     @objc private func imageTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
             }
         }
     }

@@ -1419,7 +1419,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 item.context.sharedContext.mediaManager.playlistControl(.playback(.togglePlayPause), type: .voice)
             }
         } else {
-            let _ = item.controllerInteraction.openMessage(item.message, .default)
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
         
     }
@@ -1573,7 +1573,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }
                         if canPlay {
-                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                         }
                     })
                 }

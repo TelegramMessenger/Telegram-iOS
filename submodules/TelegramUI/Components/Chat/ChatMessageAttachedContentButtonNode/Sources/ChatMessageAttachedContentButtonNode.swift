@@ -12,7 +12,7 @@ private let sharedBackgroundImage = generateStretchableFilledCircleImage(radius:
 public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButtonNode {
     private let textNode: TextNode
     private var iconView: UIImageView?
-    private let shimmerEffectNode: ShimmerEffectForegroundNode
+    private var shimmerEffectNode: ShimmerEffectForegroundNode?
     
     private var backgroundView: UIImageView?
     
@@ -26,12 +26,8 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
         self.textNode = TextNode()
         self.textNode.isUserInteractionEnabled = false
         
-        self.shimmerEffectNode = ShimmerEffectForegroundNode()
-        self.shimmerEffectNode.cornerRadius = 5.0
-        
         super.init()
         
-        self.addSubnode(self.shimmerEffectNode)
         self.addSubnode(self.textNode)
         
         self.highligthedChanged = { [weak self] highlighted in
@@ -58,18 +54,32 @@ public final class ChatMessageAttachedContentButtonNode: HighlightTrackingButton
         guard let titleColor = self.titleColor else {
             return
         }
-        self.shimmerEffectNode.isHidden = false
-        self.shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        let shimmerEffectNode: ShimmerEffectForegroundNode
+        if let current = self.shimmerEffectNode {
+            shimmerEffectNode = current
+        } else {
+            shimmerEffectNode = ShimmerEffectForegroundNode()
+            shimmerEffectNode.cornerRadius = 5.0
+            self.insertSubnode(shimmerEffectNode, at: 0)
+            self.shimmerEffectNode = shimmerEffectNode
+        }
+        
+        shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         let backgroundFrame = self.bounds
-        self.shimmerEffectNode.frame = backgroundFrame
-        self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
-        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: titleColor.withAlphaComponent(0.3), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+        shimmerEffectNode.frame = backgroundFrame
+        shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
+        shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: titleColor.withAlphaComponent(0.3), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
     }
     
     public func stopShimmering() {
-        self.shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-            self?.shimmerEffectNode.isHidden = true
+        guard let shimmerEffectNode = self.shimmerEffectNode else {
+            return
+        }
+        self.shimmerEffectNode = nil
+        shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak shimmerEffectNode] _ in
+            shimmerEffectNode?.removeFromSupernode()
         })
     }
     

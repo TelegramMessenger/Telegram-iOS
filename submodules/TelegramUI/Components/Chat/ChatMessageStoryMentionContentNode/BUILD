@@ -33,6 +33,7 @@ swift_library(
         "//submodules/AvatarNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

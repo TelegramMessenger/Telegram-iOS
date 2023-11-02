@@ -2709,7 +2709,8 @@ final class StoryItemSetContainerSendMessage {
                 }
                 view.endEditing(true)
             },
-            contentContext: self.progressPauseContext
+            contentContext: self.progressPauseContext,
+            progress: nil
         )
     }
     

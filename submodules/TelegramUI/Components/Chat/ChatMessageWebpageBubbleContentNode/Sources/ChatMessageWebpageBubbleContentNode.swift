@@ -91,7 +91,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     case .automaticPlayback:
                         openChatMessageMode = .automaticPlayback
                 }
-                if !item.controllerInteraction.openMessage(item.message, openChatMessageMode) {
+                if !item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode)) {
                     if let webPage = strongSelf.webPage, case let .Loaded(content) = webPage.content {
                         var isConcealed = true
                         if item.message.text.contains(content.url) {
@@ -123,7 +123,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                     if let webpage = webPageContent {
                         if webpage.story != nil {
-                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                         } else if webpage.instantPage != nil {
                             strongSelf.contentNode.openMedia?(.default)
                         } else {

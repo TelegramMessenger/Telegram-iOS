@@ -834,7 +834,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
         
         self._itemInteraction = VisualMediaItemInteraction(
             openMessage: { [weak self] message in
-                let _ = self?.chatControllerInteraction.openMessage(message, .default)
+                let _ = self?.chatControllerInteraction.openMessage(message, OpenMessageParams(mode: .default))
             },
             openMessageContextActions: { [weak self] message, sourceNode, sourceRect, gesture in
                 self?.chatControllerInteraction.openMessageContextActions(message, sourceNode, sourceRect, gesture)

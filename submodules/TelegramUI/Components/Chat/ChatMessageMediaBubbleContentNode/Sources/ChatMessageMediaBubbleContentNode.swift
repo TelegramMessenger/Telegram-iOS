@@ -14,6 +14,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageInteractiveMediaNode
+import ChatControllerInteraction
 
 public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override public var supportsMosaic: Bool {
@@ -52,7 +53,7 @@ public class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         case .automaticPlayback:
                             openChatMessageMode = .automaticPlayback
                     }
-                    let _ = item.controllerInteraction.openMessage(item.message, openChatMessageMode)
+                    let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: openChatMessageMode))
                 }
             }
         }

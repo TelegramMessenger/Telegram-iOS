@@ -2217,7 +2217,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     }
                                 }
                             } else if let emojiString = self.emojiString, emojiString.count == 1 {
-                                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                             }
                             
                             if shouldPlay {
@@ -2298,7 +2298,7 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         })
                     } else {
                         return .optionalAction({
-                            let _ = item.controllerInteraction.openMessage(item.message, .default)
+                            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
                         })
                     }
                 } else if let dice = self.telegramDice {

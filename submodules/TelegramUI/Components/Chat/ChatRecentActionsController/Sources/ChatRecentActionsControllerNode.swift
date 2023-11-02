@@ -1068,7 +1068,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             self?.presentController(c, .window(.root), a)
                         }, dismissInput: {
                             self?.view.endEditing(true)
-                        }, contentContext: nil)
+                        }, contentContext: nil, progress: nil)
                     case .wallpaper:
                         break
                     case .theme:

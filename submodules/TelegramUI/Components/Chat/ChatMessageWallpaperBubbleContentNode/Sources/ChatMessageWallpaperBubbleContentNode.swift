@@ -21,6 +21,7 @@ import AudioTranscriptionPendingIndicatorComponent
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import WallpaperPreviewMedia
+import ChatControllerInteraction
 
 public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
@@ -181,7 +182,7 @@ public class ChatMessageWallpaperBubbleContentNode: ChatMessageBubbleContentNode
         guard let item = self.item else {
             return
         }
-        let _ = item.controllerInteraction.openMessage(item.message, .default)
+        let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
     }
     
     private func updateProgress(_ progress: Float?) {

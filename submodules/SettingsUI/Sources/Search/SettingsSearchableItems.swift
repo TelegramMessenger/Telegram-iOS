@@ -1068,7 +1068,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
                 context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { peer, navigation in
                 }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { controller, arguments in
                     present(.push, controller)
-                }, dismissInput: {}, contentContext: nil)
+                }, dismissInput: {}, contentContext: nil, progress: nil)
             })
         })
         allItems.append(faq)

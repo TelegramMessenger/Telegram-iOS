@@ -30,6 +30,7 @@ swift_library(
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/Chat/ChatMessageBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
+        "//submodules/TelegramUI/Components/ChatControllerInteraction",
     ],
     visibility = [
         "//visibility:public",

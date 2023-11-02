@@ -39,7 +39,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let placeholderNode: StickerShimmerEffectNode
     private let animationNode: AnimatedStickerNode
     
-    private let shimmerEffectNode: ShimmerEffectForegroundNode
+    private var shimmerEffectNode: ShimmerEffectForegroundNode?
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
@@ -48,6 +48,8 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private var absoluteRect: (CGRect, CGSize)?
     
     private var isPlaying: Bool = false
+    
+    private var currentProgressDisposable: Disposable?
     
     override public var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -94,10 +96,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 17.0
-        
-        self.shimmerEffectNode = ShimmerEffectForegroundNode()
-        self.shimmerEffectNode.cornerRadius = 17.0
-                
+                        
         self.placeholderNode = StickerShimmerEffectNode()
         self.placeholderNode.isUserInteractionEnabled = false
         self.placeholderNode.alpha = 0.75
@@ -120,7 +119,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.addSubnode(self.animationNode)
         
         self.addSubnode(self.buttonNode)
-        self.buttonNode.addSubnode(self.shimmerEffectNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
         self.addSubnode(self.buttonTitleNode)
         
@@ -149,32 +147,68 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     
     deinit {
         self.animationDisposable?.dispose()
+        self.currentProgressDisposable?.dispose()
     }
     
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
         }
-        let _ = item.controllerInteraction.openMessage(item.message, .default)
-        self.startShimmering()
-        Queue.mainQueue().after(0.75) {
-            self.stopShimmering()
+        let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default, progress: self.makeProgress()))
+    }
+    
+    private func makeProgress() -> Promise<Bool> {
+        let progress = Promise<Bool>()
+        self.currentProgressDisposable?.dispose()
+        self.currentProgressDisposable = (progress.get()
+        |> distinctUntilChanged
+        |> deliverOnMainQueue).start(next: { [weak self] hasProgress in
+            guard let self else {
+                return
+            }
+            self.displayProgress = hasProgress
+        })
+        return progress
+    }
+    
+    private var displayProgress = false {
+        didSet {
+            if self.displayProgress != oldValue {
+                if self.displayProgress {
+                    self.startShimmering()
+                } else {
+                    self.stopShimmering()
+                }
+            }
         }
     }
     
-    func startShimmering() {
-        self.shimmerEffectNode.isHidden = false
-        self.shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    private func startShimmering() {        
+        let shimmerEffectNode: ShimmerEffectForegroundNode
+        if let current = self.shimmerEffectNode {
+            shimmerEffectNode = current
+        } else {
+            shimmerEffectNode = ShimmerEffectForegroundNode()
+            shimmerEffectNode.cornerRadius = 17.0
+            self.buttonNode.insertSubnode(shimmerEffectNode, at: 0)
+            self.shimmerEffectNode = shimmerEffectNode
+        }
+        
+        shimmerEffectNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         let backgroundFrame = self.buttonNode.frame
-        self.shimmerEffectNode.frame = CGRect(origin: .zero, size: backgroundFrame.size)
-        self.shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
-        self.shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.2), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
+        shimmerEffectNode.frame = CGRect(origin: .zero, size: backgroundFrame.size)
+        shimmerEffectNode.updateAbsoluteRect(CGRect(origin: .zero, size: backgroundFrame.size), within: backgroundFrame.size)
+        shimmerEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor.white.withAlphaComponent(0.15), horizontal: true, effectSize: nil, globalTimeOffset: false, duration: nil)
     }
     
-    func stopShimmering() {
-        self.shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
-            self?.shimmerEffectNode.isHidden = true
+    private func stopShimmering() {
+        guard let shimmerEffectNode = self.shimmerEffectNode else {
+            return
+        }
+        self.shimmerEffectNode = nil
+        shimmerEffectNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak shimmerEffectNode] _ in
+            shimmerEffectNode?.removeFromSupernode()
         })
     }
     

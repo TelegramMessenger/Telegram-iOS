@@ -13,6 +13,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageAttachedContentButtonNode
+import ChatControllerInteraction
 
 private let avatarFont = avatarPlaceholderFont(size: 16.0)
 
@@ -390,14 +391,14 @@ public class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
     @objc private func contactTap(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             if let item = self.item {
-                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
             }
         }
     }
     
     @objc private func buttonPressed() {
         if let item = self.item {
-            let _ = item.controllerInteraction.openMessage(item.message, .default)
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
     }
     

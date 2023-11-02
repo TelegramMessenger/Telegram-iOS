@@ -85,6 +85,16 @@ public struct NavigateToMessageParams {
     }
 }
 
+public struct OpenMessageParams {
+    public var mode: ChatControllerInteractionOpenMessageMode
+    public var progress: Promise<Bool>?
+    
+    public init(mode: ChatControllerInteractionOpenMessageMode, progress: Promise<Bool>? = nil) {
+        self.mode = mode
+        self.progress = progress
+    }
+}
+
 public final class ChatControllerInteraction {
     public enum OpenPeerSource {
         case `default`
@@ -110,7 +120,7 @@ public final class ChatControllerInteraction {
         }
     }
     
-    public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
+    public let openMessage: (Message, OpenMessageParams) -> Bool
     public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     public let openPeerMention: (String, Promise<Bool>?) -> Void
     public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
@@ -228,7 +238,7 @@ public final class ChatControllerInteraction {
     public var enableFullTranslucency: Bool = true
     
     public init(
-        openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
+        openMessage: @escaping (Message, OpenMessageParams) -> Bool,
         openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void,
         openPeerMention: @escaping (String, Promise<Bool>?) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,

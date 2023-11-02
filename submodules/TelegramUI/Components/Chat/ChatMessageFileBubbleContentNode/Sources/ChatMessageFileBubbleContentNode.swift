@@ -12,6 +12,7 @@ import ChatMessageDateAndStatusNode
 import ChatMessageBubbleContentNode
 import ChatMessageItemCommon
 import ChatMessageInteractiveFileNode
+import ChatControllerInteraction
 
 public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     public let interactiveFileNode: ChatMessageInteractiveFileNode
@@ -47,7 +48,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveFileNode.activateLocalContent = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                let _ = item.controllerInteraction.openMessage(item.message, .default)
+                let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
             }
         }
         
@@ -86,7 +87,7 @@ public class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         
     override public func accessibilityActivate() -> Bool {
         if let item = self.item {
-            let _ = item.controllerInteraction.openMessage(item.message, .default)
+            let _ = item.controllerInteraction.openMessage(item.message, OpenMessageParams(mode: .default))
         }
         return true
     }
