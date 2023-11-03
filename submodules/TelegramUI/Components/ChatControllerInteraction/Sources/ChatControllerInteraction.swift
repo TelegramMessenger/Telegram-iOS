@@ -19,10 +19,20 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public struct ChatInterfaceHighlightedState: Equatable {
-    public let messageStableId: UInt32
-    public let quote: String?
+    public struct Quote: Equatable {
+        public var string: String
+        public var offset: Int?
+        
+        public init(string: String, offset: Int?) {
+            self.string = string
+            self.offset = offset
+        }
+    }
     
-    public init(messageStableId: UInt32, quote: String?) {
+    public let messageStableId: UInt32
+    public let quote: Quote?
+    
+    public init(messageStableId: UInt32, quote: Quote?) {
         self.messageStableId = messageStableId
         self.quote = quote
     }
@@ -74,11 +84,21 @@ public protocol ChatMessageTransitionProtocol: ASDisplayNode {
 }
 
 public struct NavigateToMessageParams {
+    public struct Quote {
+        public var string: String
+        public var offset: Int?
+        
+        public init(string: String, offset: Int?) {
+            self.string = string
+            self.offset = offset
+        }
+    }
+    
     public var timestamp: Double?
-    public var quote: String?
+    public var quote: Quote?
     public var progress: Promise<Bool>?
     
-    public init(timestamp: Double?, quote: String?, progress: Promise<Bool>? = nil) {
+    public init(timestamp: Double?, quote: Quote?, progress: Promise<Bool>? = nil) {
         self.timestamp = timestamp
         self.quote = quote
         self.progress = progress

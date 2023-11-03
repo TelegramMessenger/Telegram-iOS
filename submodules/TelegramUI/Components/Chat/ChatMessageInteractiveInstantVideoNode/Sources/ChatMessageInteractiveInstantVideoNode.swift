@@ -1345,7 +1345,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 if let item = self.item {
                                     for attribute in item.message.attributes {
                                         if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil))
+                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil))
                                             return
                                         } else if let attribute = attribute as? ReplyStoryAttribute {
                                             item.controllerInteraction.navigateToStory(item.message, attribute.storyId)

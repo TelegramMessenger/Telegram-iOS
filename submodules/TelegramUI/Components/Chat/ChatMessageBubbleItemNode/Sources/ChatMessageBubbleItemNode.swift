@@ -563,7 +563,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var backgroundType: ChatMessageBackgroundType?
     
     private struct HighlightedState: Equatable {
-        var quote: String?
+        var quote: ChatInterfaceHighlightedState.Quote?
     }
     private var highlightedState: HighlightedState?
     
@@ -4055,7 +4055,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     if let replyInfoNode = self.replyInfoNode {
                                         progress = replyInfoNode.makeProgress()
                                     }
-                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote?.text : nil, progress: progress))
+                                    item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil, progress: progress))
                                 }, contextMenuOnLongPress: true))
                             } else if let attribute = attribute as? ReplyStoryAttribute {
                                 return .action(InternalBubbleTapAction.Action({
@@ -4692,7 +4692,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             
             for contentNode in self.contentNodes {
                 if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                    contentNode.updateQuoteTextHighlightState(text: nil, color: .clear, animated: true)
+                    contentNode.updateQuoteTextHighlightState(text: nil, offset: nil, color: .clear, animated: true)
                 }
             }
             
@@ -4745,7 +4745,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                                     var quoteFrame: CGRect?
                                     for contentNode in self.contentNodes {
                                         if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                                            contentNode.updateQuoteTextHighlightState(text: quote, color: highlightColor, animated: false)
+                                            contentNode.updateQuoteTextHighlightState(text: quote.string, offset: quote.offset, color: highlightColor, animated: false)
                                             var sourceFrame = backgroundHighlightNode.view.convert(backgroundHighlightNode.bounds, to: contentNode.view)
                                             if item.message.effectivelyIncoming(item.context.account.peerId) {
                                                 sourceFrame.origin.x += 6.0
@@ -5186,10 +5186,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         return nil
     }
     
-    public func getQuoteRect(quote: String) -> CGRect? {
+    public func getQuoteRect(quote: String, offset: Int?) -> CGRect? {
         for contentNode in self.contentNodes {
             if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-                if let result = contentNode.getQuoteRect(quote: quote) {
+                if let result = contentNode.getQuoteRect(quote: quote, offset: offset) {
                     return contentNode.view.convert(result, to: self.view)
                 }
             }

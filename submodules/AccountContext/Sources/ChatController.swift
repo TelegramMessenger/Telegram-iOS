@@ -578,10 +578,12 @@ public enum ChatControllerSubject: Equatable {
         public struct Quote: Equatable {
             public let messageId: EngineMessage.Id
             public let text: String
+            public let offset: Int?
             
-            public init(messageId: EngineMessage.Id, text: String) {
+            public init(messageId: EngineMessage.Id, text: String, offset: Int?) {
                 self.messageId = messageId
                 self.text = text
+                self.offset = offset
             }
         }
         
@@ -645,9 +647,19 @@ public enum ChatControllerSubject: Equatable {
     }
     
     public struct MessageHighlight: Equatable {
-        public var quote: String?
+        public struct Quote: Equatable {
+            public var string: String
+            public var offset: Int?
+            
+            public init(string: String, offset: Int?) {
+                self.string = string
+                self.offset = offset
+            }
+        }
         
-        public init(quote: String? = nil) {
+        public var quote: Quote?
+        
+        public init(quote: Quote? = nil) {
             self.quote = quote
         }
     }
