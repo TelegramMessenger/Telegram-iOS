@@ -1188,6 +1188,10 @@ private final class LimitSheetContent: CombinedComponent {
                         case .nameColors:
                             titleText = strings.ChannelBoost_EnableColors
                             string = strings.ChannelBoost_EnableColorsText(valueString).string
+                        case .channelReactions:
+                            //TODO:localize
+                            titleText = "Custom Reactions"
+                            string = "Your channel needs \(valueString) to add custom emoji as reactions.\n\nAsk your **Premium** subscribers to boost your channel with this link:"
                         }
                     } else {
                         let storiesString = strings.ChannelBoost_StoriesPerDay(level)
@@ -1769,11 +1773,12 @@ public class PremiumLimitScreen: ViewControllerComponentContainer {
         case storiesWeekly
         case storiesMonthly
         
-        
         public enum BoostSubject {
             case stories
             case nameColors
+            case channelReactions
         }
+        
         case storiesChannelBoost(peer: EnginePeer, boostSubject: BoostSubject, isCurrent: Bool, level: Int32, currentLevelBoosts: Int32, nextLevelBoosts: Int32?, link: String?, myBoostCount: Int32, canBoostAgain: Bool)
     }
     

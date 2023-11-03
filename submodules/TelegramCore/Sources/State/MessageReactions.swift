@@ -597,6 +597,7 @@ public final class EngineMessageReactionListContext {
 
 public enum UpdatePeerAllowedReactionsError {
     case generic
+    case boostRequired
 }
 
 func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
@@ -620,11 +621,20 @@ func _internal_updatePeerAllowedReactions(account: Account, peerId: PeerId, allo
         }
         
         return account.network.request(Api.functions.messages.setChatAvailableReactions(peer: inputPeer, availableReactions: mappedReactions))
-        |> mapError { _ -> UpdatePeerAllowedReactionsError in
-            return .generic
+        |> map(Optional.init)
+        |> `catch` { error -> Signal<Api.Updates?, UpdatePeerAllowedReactionsError> in
+            if error.errorDescription == "CHAT_NOT_MODIFIED" {
+                return .single(nil)
+            } else if error.errorDescription == "BOOSTS_REQUIRED" {
+                return .fail(.boostRequired)
+            } else {
+                return .fail(.generic)
+            }
         }
         |> mapToSignal { result -> Signal<Never, UpdatePeerAllowedReactionsError> in
-            account.stateManager.addUpdates(result)
+            if let result = result {
+                account.stateManager.addUpdates(result)
+            }
             
             return account.postbox.transaction { transaction -> Void in
                 transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
