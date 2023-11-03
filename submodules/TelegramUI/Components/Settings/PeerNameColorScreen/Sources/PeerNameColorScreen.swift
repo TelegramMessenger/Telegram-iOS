@@ -233,7 +233,7 @@ private func peerNameColorScreenEntries(
         }
         let messageItem = PeerNameColorChatPreviewItem.MessageItem(
             outgoing: false,
-            peerId: peer.id,
+            peerId: PeerId(namespace: peer.id.namespace, id: PeerId.Id._internalFromInt64Value(0)),
             author: peer.compactDisplayTitle,
             photo: peer.profileImageRepresentations,
             nameColor: nameColor,

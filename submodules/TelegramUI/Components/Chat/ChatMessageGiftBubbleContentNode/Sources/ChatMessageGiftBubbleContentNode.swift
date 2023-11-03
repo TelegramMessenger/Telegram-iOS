@@ -28,7 +28,6 @@ private func attributedServiceMessageString(theme: ChatPresentationThemeData, st
 public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
     private let labelNode: TextNode
     private var backgroundNode: WallpaperBubbleBackgroundNode?
-    private var backgroundColorNode: ASDisplayNode
     private let backgroundMaskNode: ASImageNode
     private var linkHighlightingNode: LinkHighlightingNode?
     
@@ -78,7 +77,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
 
-        self.backgroundColorNode = ASDisplayNode()
         self.backgroundMaskNode = ASImageNode()
         
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
@@ -367,9 +365,7 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                             strongSelf.updateVisibility()
                             
                             strongSelf.labelNode.isHidden = !hasServiceMessage
-                            
-                            strongSelf.backgroundColorNode.backgroundColor = selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
-                            
+                                                        
                             let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: hasServiceMessage ? labelLayout.size.height + 16.0 : 0.0), size: giftSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
@@ -426,7 +422,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 if strongSelf.backgroundNode == nil {
                                     if let backgroundNode = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
                                         strongSelf.backgroundNode = backgroundNode
-                                        backgroundNode.addSubnode(strongSelf.backgroundColorNode)
                                         strongSelf.insertSubnode(backgroundNode, at: 0)
                                     }
                                 }
@@ -448,7 +443,6 @@ public class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                                 strongSelf.backgroundMaskNode.image = image
                                 strongSelf.backgroundMaskNode.frame = CGRect(origin: CGPoint(), size: image.size)
-                                strongSelf.backgroundColorNode.frame = CGRect(origin: CGPoint(), size: image.size)
 
                                 strongSelf.cachedMaskBackgroundImage = (offset, image, labelRects)
                             }
