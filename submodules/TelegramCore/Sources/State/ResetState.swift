@@ -71,6 +71,18 @@ func _internal_resetAccountState(postbox: Postbox, network: Network, accountPeer
                         }
                     })
                 }
+                for (peerId, value) in fetchedChats.viewForumAsMessages {
+                    if value {
+                        transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                            if peerId.namespace == Namespaces.Peer.CloudChannel {
+                                let current = (current as? CachedChannelData) ?? CachedChannelData()
+                                return current.withUpdatedViewForumAsMessages(.known(value))
+                            } else {
+                                return current
+                            }
+                        })
+                    }
+                }
                 
                 for hole in transaction.allChatListHoles(groupId: .root) {
                     transaction.replaceChatListHole(groupId: .root, index: hole.index, hole: nil)

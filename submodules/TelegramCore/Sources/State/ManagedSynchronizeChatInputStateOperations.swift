@@ -167,8 +167,10 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             
             var quoteText: String?
             var quoteEntities: [Api.MessageEntity]?
+            var quoteOffset: Int32?
             if let replyQuote = replySubject.quote {
                 quoteText = replyQuote.text
+                quoteOffset = replyQuote.offset.flatMap { Int32(clamping: $0) }
                 
                 if !replyQuote.entities.isEmpty {
                     var associatedPeers = SimpleDictionary<PeerId, Peer>()
@@ -194,16 +196,19 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
             if quoteEntities != nil {
                 innerFlags |= 1 << 3
             }
+            if quoteOffset != nil {
+                innerFlags |= 1 << 4
+            }
             
             if !discard {
-                replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities)
+                replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: replySubject.messageId.id, topMsgId: topMsgId, replyToPeerId: replyToPeer, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
             }
         } else if let topMsgId = topMsgId {
             flags |= 1 << 0
             
             var innerFlags: Int32 = 0
             innerFlags |= 1 << 0
-            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+            replyTo = .inputReplyToMessage(flags: innerFlags, replyToMsgId: topMsgId, topMsgId: topMsgId, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
         }
         
         return network.request(Api.functions.messages.saveDraft(flags: flags, replyTo: replyTo, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary()), media: nil))

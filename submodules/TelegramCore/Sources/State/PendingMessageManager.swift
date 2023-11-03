@@ -950,9 +950,11 @@ public final class PendingMessageManager {
                         
                         var quoteText: String?
                         var quoteEntities: [Api.MessageEntity]?
+                        var quoteOffset: Int32?
                         if let replyQuote = replyQuote {
                             replyFlags |= 1 << 2
                             quoteText = replyQuote.text
+                            quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
                             
                             if !replyQuote.entities.isEmpty {
                                 replyFlags |= 1 << 3
@@ -968,9 +970,13 @@ public final class PendingMessageManager {
                                 }
                                 quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                             }
+                            
+                            if quoteOffset != nil {
+                                replyFlags |= 1 << 4
+                            }
                         }
                         
-                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities)
+                        replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: topMsgId, replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
                     } else if let replyToStoryId = replyToStoryId {
                         if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                             flags |= 1 << 0
@@ -1236,9 +1242,11 @@ public final class PendingMessageManager {
                             
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
+                            var quoteOffset: Int32?
                             if let replyQuote = replyQuote {
                                 replyFlags |= 1 << 2
                                 quoteText = replyQuote.text
+                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
                                 
                                 if !replyQuote.entities.isEmpty {
                                     replyFlags |= 1 << 3
@@ -1254,9 +1262,13 @@ public final class PendingMessageManager {
                                     }
                                     quoteEntities = apiEntitiesFromMessageTextEntities(replyQuote.entities, associatedPeers: associatedPeers)
                                 }
+                                
+                                if quoteOffset != nil {
+                                    replyFlags |= 1 << 4
+                                }
                             }
                             
-                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities)
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
@@ -1295,9 +1307,15 @@ public final class PendingMessageManager {
                             
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
+                            var quoteOffset: Int32?
                             if let replyQuote = replyQuote {
                                 replyFlags |= 1 << 2
                                 quoteText = replyQuote.text
+                                
+                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                                if quoteOffset != nil {
+                                    replyFlags |= 1 << 4
+                                }
                                 
                                 if !replyQuote.entities.isEmpty {
                                     replyFlags |= 1 << 3
@@ -1315,7 +1333,7 @@ public final class PendingMessageManager {
                                 }
                             }
                             
-                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities)
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
@@ -1368,9 +1386,15 @@ public final class PendingMessageManager {
                             
                             var quoteText: String?
                             var quoteEntities: [Api.MessageEntity]?
+                            var quoteOffset: Int32?
                             if let replyQuote = replyQuote {
                                 replyFlags |= 1 << 2
                                 quoteText = replyQuote.text
+                                
+                                quoteOffset = replyQuote.offset.flatMap { Int32.init(clamping: $0) }
+                                if quoteOffset != nil {
+                                    replyFlags |= 1 << 4
+                                }
                                 
                                 if !replyQuote.entities.isEmpty {
                                     replyFlags |= 1 << 3
@@ -1388,7 +1412,7 @@ public final class PendingMessageManager {
                                 }
                             }
                             
-                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities)
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: message.threadId.flatMap(Int32.init(clamping:)), replyToPeerId: replyToPeerId, quoteText: quoteText, quoteEntities: quoteEntities, quoteOffset: quoteOffset)
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
@@ -1403,18 +1427,18 @@ public final class PendingMessageManager {
                     
                         if let replyMessageId = replyMessageId {
                             let replyFlags: Int32 = 0
-                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: replyMessageId, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                         } else if let replyToStoryId = replyToStoryId {
                             if let inputUser = transaction.getPeer(replyToStoryId.peerId).flatMap(apiInputUser) {
                                 flags |= 1 << 0
                                 replyTo = .inputReplyToStory(userId: inputUser, storyId: replyToStoryId.id)
                             } else {
                                 let replyFlags: Int32 = 0
-                                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+                                replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                             }
                         } else {
                             let replyFlags: Int32 = 0
-                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil)
+                            replyTo = .inputReplyToMessage(flags: replyFlags, replyToMsgId: 0, topMsgId: nil, replyToPeerId: nil, quoteText: nil, quoteEntities: nil, quoteOffset: nil)
                         }
                     
                         sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyTo: replyTo, randomId: uniqueId))

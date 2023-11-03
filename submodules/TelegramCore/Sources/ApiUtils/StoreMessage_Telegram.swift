@@ -261,12 +261,13 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
                 let peerId: PeerId = chatPeerId.peerId
                 
                 switch replyTo {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
                     let _ = replyHeader
                     let _ = replyMedia
                     let _ = replyToTopId
                     let _ = quoteText
                     let _ = quoteEntities
+                    let _ = quoteOffset
                     
                     if let replyToMsgId = replyToMsgId {
                         let targetId = MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
@@ -283,12 +284,13 @@ func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: Refere
         case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
-                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
+                case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
                     let _ = replyHeader
                     let _ = replyMedia
                     let _ = replyToTopId
                     let _ = quoteText
                     let _ = quoteEntities
+                    let _ = quoteOffset
                     
                     if let replyToMsgId = replyToMsgId {
                         let targetId = MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
@@ -586,14 +588,14 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
                         let isForumTopic = (innerFlags & (1 << 3)) != 0
                         
                         var quote: EngineMessageReplyQuote?
                         let isQuote = (innerFlags & (1 << 9)) != 0
                         
                         if quoteText != nil || replyMedia != nil {
-                            quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
                         
                         if let replyToMsgId = replyToMsgId {
@@ -873,11 +875,11 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities):
+                    case let .messageReplyHeader(innerFlags, replyToMsgId, replyToPeerId, replyHeader, replyMedia, replyToTopId, quoteText, quoteEntities, quoteOffset):
                         var quote: EngineMessageReplyQuote?
                         let isQuote = (innerFlags & (1 << 9)) != 0
                         if quoteText != nil || replyMedia != nil {
-                            quote = EngineMessageReplyQuote(text: quoteText ?? "", entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
+                            quote = EngineMessageReplyQuote(text: quoteText ?? "", offset: quoteOffset.flatMap(Int.init), entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []), media: textMediaAndExpirationTimerFromApiMedia(replyMedia, peerId).media)
                         }
                         
                         if let replyToMsgId = replyToMsgId {

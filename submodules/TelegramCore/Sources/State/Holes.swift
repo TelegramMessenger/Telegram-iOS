@@ -910,6 +910,18 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                     }
                 })
             }
+            for (peerId, value) in fetchedChats.viewForumAsMessages {
+                if value {
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let current = (current as? CachedChannelData) ?? CachedChannelData()
+                            return current.withUpdatedViewForumAsMessages(.known(value))
+                        } else {
+                            return current
+                        }
+                    })
+                }
+            }
             
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             

@@ -302,7 +302,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
         var quote: EngineMessageReplyQuote?
         let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
         if !trimmedText.string.isEmpty {
-            quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+            quote = EngineMessageReplyQuote(text: trimmedText.string, offset: nil, entities: trimmedText.entities, media: nil)
         }
         
         selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })
@@ -367,7 +367,7 @@ private func generateChatReplyOptionItems(selfController: ChatControllerImpl, ch
                                 var quote: EngineMessageReplyQuote?
                                 let trimmedText = trimStringWithEntities(string: textSelection.text, entities: textSelection.entities, maxLength: quoteMaxLength(appConfig: selfController.context.currentAppConfiguration.with({ $0 })))
                                 if !trimmedText.string.isEmpty {
-                                    quote = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+                                    quote = EngineMessageReplyQuote(text: trimmedText.string, offset: nil, entities: trimmedText.entities, media: nil)
                                 }
                                 
                                 selfController.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withUpdatedReplyMessageSubject(ChatInterfaceState.ReplyMessageSubject(messageId: replySubject.messageId, quote: quote)).withoutSelectionState() }) })

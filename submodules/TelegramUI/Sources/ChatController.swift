@@ -3893,7 +3893,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     let trimmedText = trimStringWithEntities(string: quoteText, entities: messageTextEntitiesInRange(entities: message.textEntitiesAttribute?.entities ?? [], range: nsRange, onlyQuoteable: true), maxLength: quoteMaxLength(appConfig: strongSelf.context.currentAppConfiguration.with({ $0 })))
                     if !trimmedText.string.isEmpty {
-                        quoteData = EngineMessageReplyQuote(text: trimmedText.string, entities: trimmedText.entities, media: nil)
+                        quoteData = EngineMessageReplyQuote(text: trimmedText.string, offset: nil, entities: trimmedText.entities, media: nil)
                     }
                     
                     let replySubject = ChatInterfaceState.ReplyMessageSubject(
