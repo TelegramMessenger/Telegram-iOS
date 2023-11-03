@@ -23,7 +23,7 @@ public final class EmojiStatusComponent: Component {
         case file(file: TelegramMediaFile)
         case customEmoji(fileId: Int64)
         
-        var fileId: MediaId {
+        public var fileId: MediaId {
             switch self {
             case let .file(file):
                 return file.fileId
