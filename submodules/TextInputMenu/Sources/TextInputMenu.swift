@@ -17,6 +17,7 @@ public final class TextInputMenu {
     private var stringUnderline: String = "Underline"
     private var stringSpoiler: String = "Spoiler"
     private var stringQuote: String = "Quote"
+    private var stringCode: String = "Code"
     
     private let hasSpoilers: Bool
     private let hasQuotes: Bool
@@ -43,8 +44,7 @@ public final class TextInputMenu {
                     }
                     if self.hasQuotes {
                         menuItems.insert(UIMenuItem(title: self.stringQuote, action: Selector(("formatAttributesQuote:"))), at: 0)
-                        //TODO:localize
-                        menuItems.append(UIMenuItem(title: "Code", action: Selector(("formatAttributesCodeBlock:"))))
+                        menuItems.append(UIMenuItem(title: self.stringCode, action: Selector(("formatAttributesCodeBlock:"))))
                     }
                     UIMenuController.shared.menuItems = menuItems
                 }
@@ -77,6 +77,7 @@ public final class TextInputMenu {
         self.stringUnderline = strings.TextFormat_Underline
         self.stringSpoiler = strings.TextFormat_Spoiler
         self.stringQuote = strings.TextFormat_Quote
+        self.stringCode = strings.TextFormat_Code
     }
     
     public func activate() {

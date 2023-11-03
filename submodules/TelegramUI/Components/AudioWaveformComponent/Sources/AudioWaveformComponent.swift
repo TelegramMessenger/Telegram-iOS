@@ -85,7 +85,7 @@ public final class AudioWaveformComponent: Component {
                         if self.shimmerParams != nil {
                             if self.shimmerNode == nil {
                                 let shimmerNode = ShimmerEffectNode()
-                                shimmerNode.isLayerBacked = true
+                                shimmerNode.isUserInteractionEnabled = false
                                 self.shimmerNode = shimmerNode
                                 self.addSublayer(shimmerNode.layer)
                                 
