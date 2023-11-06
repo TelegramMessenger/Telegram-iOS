@@ -3741,15 +3741,17 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate, Ch
         } else {
             var children: [UIAction] = []
             
-            children.append(UIAction(title: self.strings?.TextFormat_Quote ?? "Quote", image: nil) { [weak self] (action) in
-                if let strongSelf = self {
-                    strongSelf.formatAttributesQuote(strongSelf)
-                }
-            })
-            
             var hasSpoilers = true
             if self.presentationInterfaceState?.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
                 hasSpoilers = false
+            }
+            
+            if hasSpoilers {
+                children.append(UIAction(title: self.strings?.TextFormat_Quote ?? "Quote", image: nil) { [weak self] (action) in
+                    if let strongSelf = self {
+                        strongSelf.formatAttributesQuote(strongSelf)
+                    }
+                })
             }
             
             if hasSpoilers {

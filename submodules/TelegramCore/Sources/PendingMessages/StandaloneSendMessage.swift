@@ -125,7 +125,12 @@ public func standaloneSendEnqueueMessages(
     threadId: Int64?,
     messages: [StandaloneSendEnqueueMessage]
 ) -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> {
-    let signals: [Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>] = messages.map { message in
+    struct MessageResult {
+        var result: PendingMessageUploadedContentResult
+        var media: [Media]
+    }
+    
+    let signals: [Signal<MessageResult, PendingMessageUploadError>] = messages.map { message in
         var attributes: [MessageAttribute] = []
         var text: String = ""
         var media: [Media] = []
@@ -184,6 +189,9 @@ public func standaloneSendEnqueueMessages(
             contentResult = .single(value)
         }
         return contentResult
+        |> map { contentResult in
+            return MessageResult(result: contentResult, media: media)
+        }
     }
     
     return combineLatest(signals)
@@ -192,21 +200,21 @@ public func standaloneSendEnqueueMessages(
     }
     |> mapToSignal { contentResults -> Signal<StandaloneSendMessageStatus, StandaloneSendMessagesError> in
         var progressSum: Float = 0.0
-        var allResults: [PendingMessageUploadedContentAndReuploadInfo] = []
+        var allResults: [(result: PendingMessageUploadedContentAndReuploadInfo, media: [Media])] = []
         var allDone = true
-        for status in contentResults {
-            switch status {
+        for result in contentResults {
+            switch result.result {
             case let .progress(value):
                 allDone = false
                 progressSum += value
             case let .content(content):
-                allResults.append(content)
+                allResults.append((content, result.media))
             }
         }
         if allDone {
             var sendSignals: [Signal<Never, StandaloneSendMessagesError>] = []
             
-            for content in allResults {
+            for (content, media) in allResults {
                 var text: String = ""
                 switch content.content {
                 case let .text(textValue):
@@ -218,6 +226,7 @@ public func standaloneSendEnqueueMessages(
                 }
                 
                 sendSignals.append(sendUploadedMessageContent(
+                    auxiliaryMethods: auxiliaryMethods,
                     postbox: postbox,
                     network: network,
                     stateManager: stateManager,
@@ -226,6 +235,7 @@ public func standaloneSendEnqueueMessages(
                     content: content,
                     text: text,
                     attributes: [],
+                    media: media,
                     threadId: threadId
                 ))
             }
@@ -241,12 +251,70 @@ public func standaloneSendEnqueueMessages(
     }
 }
 
-private func sendUploadedMessageContent(postbox: Postbox, network: Network, stateManager: AccountStateManager, accountPeerId: PeerId, peerId: PeerId, content: PendingMessageUploadedContentAndReuploadInfo, text: String, attributes: [MessageAttribute], threadId: Int64?) -> Signal<Never, StandaloneSendMessagesError> {
+private func sendUploadedMessageContent(
+    auxiliaryMethods: AccountAuxiliaryMethods,
+    postbox: Postbox,
+    network: Network,
+    stateManager: AccountStateManager,
+    accountPeerId: PeerId,
+    peerId: PeerId,
+    content: PendingMessageUploadedContentAndReuploadInfo,
+    text: String,
+    attributes: [MessageAttribute],
+    media: [Media],
+    threadId: Int64?
+) -> Signal<Never, StandaloneSendMessagesError> {
     return postbox.transaction { transaction -> Signal<Never, StandaloneSendMessagesError> in
         if peerId.namespace == Namespaces.Peer.SecretChat {
-            assertionFailure()
-            //PendingMessageManager.sendSecretMessageContent(transaction: transaction, message: message, content: content)
-            return .complete()
+            var secretFile: SecretChatOutgoingFile?
+            switch content.content {
+                case let .secretMedia(file, size, key):
+                    if let fileReference = SecretChatOutgoingFileReference(file) {
+                        secretFile = SecretChatOutgoingFile(reference: fileReference, size: size, key: key)
+                    }
+                default:
+                    break
+            }
+            
+            var layer: SecretChatLayer?
+            let state = transaction.getPeerChatState(peerId) as? SecretChatState
+            if let state = state {
+                switch state.embeddedState {
+                case .terminated, .handshake:
+                    break
+                case .basicLayer:
+                    layer = .layer8
+                case let .sequenceBasedLayer(sequenceState):
+                    layer = sequenceState.layerNegotiationState.activeLayer.secretChatLayer
+                }
+            }
+            
+            if let state = state, let layer = layer {
+                let messageContents = StandaloneSecretMessageContents(
+                    id: Int64.random(in: Int64.min ... Int64.max),
+                    text: text,
+                    attributes: attributes,
+                    media: media.first,
+                    file: secretFile
+                )
+                
+                let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: peerId, operation: .sendStandaloneMessage(layer: layer, contents: messageContents), state: state)
+                if updatedState != state {
+                    transaction.setPeerChatState(peerId, state: updatedState)
+                }
+                
+                return managedSecretChatOutgoingOperations(
+                    auxiliaryMethods: auxiliaryMethods,
+                    postbox: postbox,
+                    network: network,
+                    accountPeerId: accountPeerId,
+                    mode: .standaloneComplete(peerId: peerId)
+                )
+                |> castError(StandaloneSendMessagesError.self)
+                |> ignoreValues
+            } else {
+                return .fail(StandaloneSendMessagesError(peerId: peerId, reason: .none))
+            }
         } else if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
             var uniqueId: Int64 = 0
             var forwardSourceInfoAttribute: ForwardSourceInfoAttribute?

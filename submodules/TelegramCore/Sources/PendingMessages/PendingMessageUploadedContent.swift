@@ -963,5 +963,15 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                     }
             }
         }
+        |> take(until: { result in
+            var complete = false
+            switch result {
+            case .content:
+                complete = true
+            case .progress:
+                complete = false
+            }
+            return SignalTakeAction(passthrough: true, complete: complete)
+        })
     }
 }

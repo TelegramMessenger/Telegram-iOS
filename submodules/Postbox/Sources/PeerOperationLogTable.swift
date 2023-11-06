@@ -2,7 +2,7 @@ import Foundation
 
 enum PeerMergedOperationLogOperation {
     case append(PeerMergedOperationLogEntry)
-    case remove(tag: PeerOperationLogTag, mergedIndices: Set<Int32>)
+    case remove(tag: PeerOperationLogTag, peerId: PeerId, mergedIndices: Set<Int32>)
     case updateContents(PeerMergedOperationLogEntry)
 }
 
@@ -197,7 +197,7 @@ final class PeerOperationLogTable: Table {
         
         if !mergedIndices.isEmpty {
             self.mergedIndexTable.remove(tag: tag, mergedIndices: mergedIndices)
-            operations.append(.remove(tag: tag, mergedIndices: Set(mergedIndices)))
+            operations.append(.remove(tag: tag, peerId: peerId, mergedIndices: Set(mergedIndices)))
         }
         return removed
     }
@@ -224,7 +224,7 @@ final class PeerOperationLogTable: Table {
         
         if !mergedIndices.isEmpty {
             self.mergedIndexTable.remove(tag: tag, mergedIndices: mergedIndices)
-            operations.append(.remove(tag: tag, mergedIndices: Set(mergedIndices)))
+            operations.append(.remove(tag: tag, peerId: peerId, mergedIndices: Set(mergedIndices)))
         }
     }
     
@@ -250,13 +250,30 @@ final class PeerOperationLogTable: Table {
         
         if !mergedIndices.isEmpty {
             self.mergedIndexTable.remove(tag: tag, mergedIndices: mergedIndices)
-            operations.append(.remove(tag: tag, mergedIndices: Set(mergedIndices)))
+            operations.append(.remove(tag: tag, peerId: peerId, mergedIndices: Set(mergedIndices)))
         }
     }
     
     func getMergedEntries(tag: PeerOperationLogTag, fromIndex: Int32, limit: Int) -> [PeerMergedOperationLogEntry] {
         var entries: [PeerMergedOperationLogEntry] = []
         for (peerId, tagLocalIndex, mergedIndex) in self.mergedIndexTable.getTagLocalIndices(tag: tag, fromMergedIndex: fromIndex, limit: limit) {
+            if let value = self.valueBox.get(self.table, key: self.key(peerId: peerId, tag: tag, index: tagLocalIndex)) {
+                if let entry = parseMergedEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, value) {
+                    entries.append(entry)
+                } else {
+                    assertionFailure()
+                }
+            } else {
+                self.mergedIndexTable.remove(tag: tag, mergedIndices: [mergedIndex])
+                assertionFailure()
+            }
+        }
+        return entries
+    }
+    
+    func getMergedEntries(tag: PeerOperationLogTag, peerId: PeerId, fromIndex: Int32, limit: Int) -> [PeerMergedOperationLogEntry] {
+        var entries: [PeerMergedOperationLogEntry] = []
+        for (peerId, tagLocalIndex, mergedIndex) in self.mergedIndexTable.getTagLocalIndices(tag: tag, peerId: peerId, fromMergedIndex: fromIndex, limit: limit) {
             if let value = self.valueBox.get(self.table, key: self.key(peerId: peerId, tag: tag, index: tagLocalIndex)) {
                 if let entry = parseMergedEntry(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex, value) {
                     entries.append(entry)
@@ -317,12 +334,12 @@ final class PeerOperationLogTable: Table {
                         if let mergedIndexValue = mergedIndex {
                             mergedIndex = nil
                             self.mergedIndexTable.remove(tag: tag, mergedIndices: [mergedIndexValue])
-                            operations.append(.remove(tag: tag, mergedIndices: Set([mergedIndexValue])))
+                            operations.append(.remove(tag: tag, peerId: peerId, mergedIndices: Set([mergedIndexValue])))
                         }
                     case .newAutomatic:
                         if let mergedIndexValue = mergedIndex {
                             self.mergedIndexTable.remove(tag: tag, mergedIndices: [mergedIndexValue])
-                            operations.append(.remove(tag: tag, mergedIndices: Set([mergedIndexValue])))
+                            operations.append(.remove(tag: tag, peerId: peerId, mergedIndices: Set([mergedIndexValue])))
                         }
                         let updatedMergedIndexValue = self.mergedIndexTable.add(peerId: peerId, tag: tag, tagLocalIndex: tagLocalIndex)
                         mergedIndex = updatedMergedIndexValue

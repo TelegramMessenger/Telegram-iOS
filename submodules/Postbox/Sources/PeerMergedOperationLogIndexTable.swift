@@ -52,6 +52,30 @@ final class PeerMergedOperationLogIndexTable: Table {
         return result
     }
     
+    func getTagLocalIndices(tag: PeerOperationLogTag, peerId: PeerId, fromMergedIndex: Int32, limit: Int) -> [(PeerId, Int32, Int32)] {
+        var result: [(PeerId, Int32, Int32)] = []
+        self.valueBox.range(self.table, start: self.key(tag: tag, index: fromMergedIndex == 0 ? 0 : fromMergedIndex - 1), end: self.key(tag: tag, index: Int32.max), values: { key, value in
+            assert(key.getUInt8(0) == tag.rawValue)
+            var peerIdValue: Int64 = 0
+            var tagLocalIndexValue: Int32 = 0
+            value.read(&peerIdValue, offset: 0, length: 8)
+            value.read(&tagLocalIndexValue, offset: 0, length: 4)
+            
+            let parsedPeerId = PeerId(peerIdValue)
+            if parsedPeerId != peerId {
+                return true
+            }
+            
+            result.append((parsedPeerId, tagLocalIndexValue, key.getInt32(1)))
+            if result.count >= limit {
+                return false
+            }
+            
+            return true
+        }, limit: 0)
+        return result
+    }
+    
     func tailIndex(tag: PeerOperationLogTag) -> Int32? {
         var result: Int32?
         self.valueBox.range(self.table, start: self.key(tag: tag, index: Int32.max), end: self.key(tag: tag, index: 0), keys: {
