@@ -583,19 +583,25 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             var updatedMediaReference: AnyMediaReference?
             var imageDimensions: CGSize?
             
+            let giveaway = pinnedMessage.message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway
+            
             var titleStrings: [AnimatedCountLabelNode.Segment] = []
-            if pinnedMessage.totalCount == 2 {
-                if pinnedMessage.index == 0 {
-                    titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedPreviousMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+            if let _ = giveaway {
+                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedGiveaway) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+            } else {
+                if pinnedMessage.totalCount == 2 {
+                    if pinnedMessage.index == 0 {
+                        titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedPreviousMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                    } else {
+                        titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                    }
+                } else if pinnedMessage.totalCount > 1 && pinnedMessage.index != pinnedMessage.totalCount - 1 {
+                    titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                    titleStrings.append(.text(1, NSAttributedString(string: " #", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
+                    titleStrings.append(.number(pinnedMessage.index + 1, NSAttributedString(string: "\(pinnedMessage.index + 1)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
                 } else {
                     titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
                 }
-            } else if pinnedMessage.totalCount > 1 && pinnedMessage.index != pinnedMessage.totalCount - 1 {
-                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                titleStrings.append(.text(1, NSAttributedString(string: " #", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-                titleStrings.append(.number(pinnedMessage.index + 1, NSAttributedString(string: "\(pinnedMessage.index + 1)", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
-            } else {
-                titleStrings.append(.text(0, NSAttributedString(string: "\(strings.Conversation_PinnedMessage) ", font: Font.medium(15.0), textColor: theme.chat.inputPanel.panelControlAccentColor)))
             }
             
             if !message.containsSecretMedia {
@@ -679,7 +685,20 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             
             let messageText: NSAttributedString
             let textFont = Font.regular(15.0)
-            if isText {
+            if let giveaway {
+                let dateString = stringForDateWithoutYear(date: Date(timeIntervalSince1970: TimeInterval(giveaway.untilDate)), timeZone: .current, strings: strings)
+                let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                let isFinished = currentTime >= giveaway.untilDate
+                let text: String
+                if isFinished {
+                    let winnersString = strings.Conversation_PinnedGiveaway_Finished_Winners(giveaway.quantity)
+                    text = strings.Conversation_PinnedGiveaway_Finished(winnersString, dateString).string
+                } else {
+                    let winnersString = strings.Conversation_PinnedGiveaway_Ongoing_Winners(giveaway.quantity)
+                    text = strings.Conversation_PinnedGiveaway_Ongoing(winnersString, dateString).string
+                }
+                messageText = NSAttributedString(string: text, font: textFont, textColor: theme.chat.inputPanel.primaryTextColor)
+            } else if isText {
                 var text = message.text
                 var messageEntities = message.textEntitiesAttribute?.entities ?? []
                 
