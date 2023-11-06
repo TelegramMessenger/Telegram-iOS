@@ -110,6 +110,34 @@ public extension CGRect {
     }
 }
 
+private extension CALayer {
+    func animate(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double, curve: ContainedViewLayoutTransitionCurve, removeOnCompletion: Bool, additive: Bool, completion: ((Bool) -> Void)? = nil) {
+        let timingFunction: String
+        let mediaTimingFunction: CAMediaTimingFunction?
+        switch curve {
+        case .spring:
+            timingFunction = kCAMediaTimingFunctionSpring
+            mediaTimingFunction = nil
+        default:
+            timingFunction = CAMediaTimingFunctionName.easeInEaseOut.rawValue
+            mediaTimingFunction = curve.mediaTimingFunction
+        }
+        
+        self.animate(
+            from: from,
+            to: to,
+            keyPath: keyPath,
+            timingFunction: timingFunction,
+            duration: duration,
+            delay: delay,
+            mediaTimingFunction: mediaTimingFunction,
+            removeOnCompletion: removeOnCompletion,
+            additive: additive,
+            completion: completion
+        )
+    }
+}
+
 public extension ContainedViewLayoutTransition {
     func animation() -> CABasicAnimation? {
         switch self {
@@ -1538,6 +1566,25 @@ public extension ContainedViewLayoutTransition {
                     completion(result)
                 }
             })
+        }
+    }
+    
+    func attachAnimation(view: UIView, id: String, completion: @escaping (Bool) -> Void) {
+        switch self {
+        case .immediate:
+            completion(true)
+        case let .animated(duration, curve):
+            view.layer.animate(
+                from: 0.0 as NSNumber,
+                to: 1.0 as NSNumber,
+                keyPath: id,
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
         }
     }
 }

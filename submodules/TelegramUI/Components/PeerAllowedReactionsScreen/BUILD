@@ -1,0 +1,35 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "PeerAllowedReactionsScreen",
+    module_name = "PeerAllowedReactionsScreen",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/Display:Display",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ComponentFlow",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/AppBundle",
+        "//submodules/Components/ViewControllerComponent",
+        "//submodules/SSignalKit/SwiftSignalKit",
+        "//submodules/TelegramCore",
+        "//submodules/Postbox",
+        "//submodules/AccountContext",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
+        "//submodules/TelegramUI/Components/SwitchComponent",
+        "//submodules/Components/MultilineTextComponent",
+        "//submodules/Markdown",
+        "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/Components/PagerComponent",
+        "//submodules/PremiumUI",
+        "//submodules/UndoUI",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

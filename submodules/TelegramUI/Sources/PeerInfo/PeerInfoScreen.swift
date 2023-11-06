@@ -95,6 +95,7 @@ import WebUI
 import ShareWithPeersScreen
 import ItemListPeerItem
 import PeerNameColorScreen
+import PeerAllowedReactionsScreen
 
 enum PeerInfoAvatarEditingMode {
     case generic
@@ -7117,7 +7118,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         guard let data = self.data, let peer = data.peer else {
             return
         }
-        self.controller?.push(peerAllowedReactionListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+            let subscription = Promise<PeerAllowedReactionsScreen.Content>()
+            subscription.set(PeerAllowedReactionsScreen.content(context: self.context, peerId: peer.id))
+            let _ = (subscription.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak self] content in
+                guard let self else {
+                    return
+                }
+                self.controller?.push(PeerAllowedReactionsScreen(context: self.context, peerId: peer.id, initialContent: content))
+            })
+        } else {
+            self.controller?.push(peerAllowedReactionListController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id))
+        }
     }
     
     private func toggleForumTopics(isEnabled: Bool) {

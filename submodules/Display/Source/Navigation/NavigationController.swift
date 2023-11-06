@@ -364,7 +364,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
         
-    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void = {}) {
+    private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition, completion externalCompletion: (() -> Void)? = nil) {
         self.isUpdatingContainers = true
                 
         var layout = rawLayout
@@ -1268,6 +1268,16 @@ open class NavigationController: UINavigationController, ContainableController, 
         if initialPrefersOnScreenNavigationHidden != updatedPrefersOnScreenNavigationHidden {
             self.currentWindow?.invalidatePrefersOnScreenNavigationHidden()
         }
+        
+        if let externalCompletion {
+            if transition.isAnimated {
+                transition.attachAnimation(view: self.view, id: "updateContainers", completion: { _ in
+                    externalCompletion()
+                })
+            } else {
+                externalCompletion()
+            }
+        }
     }
     
     private func controllerRemoved(_ controller: ViewController) {
@@ -1346,8 +1356,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     public func pushViewController(_ controller: ViewController, animated: Bool = true, completion: @escaping () -> Void) {
-        self.pushViewController(controller, animated: animated)
-        completion()
+        var controllers = self.viewControllers
+        controllers.append(controller)
+        self.setViewControllers(controllers, animated: animated, completion: completion)
     }
         
     open override func pushViewController(_ viewController: UIViewController, animated: Bool) {
@@ -1468,6 +1479,10 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     open override func setViewControllers(_ viewControllers: [UIViewController], animated: Bool) {
+        self.setViewControllers(viewControllers, animated: animated, completion: {})
+    }
+    
+    public func setViewControllers(_ viewControllers: [UIViewController], animated: Bool, completion: @escaping () -> Void) {
         for i in 0 ..< viewControllers.count {
             guard let controller = viewControllers[i] as? ViewController else {
                 continue
@@ -1500,7 +1515,10 @@ open class NavigationController: UINavigationController, ContainableController, 
         if let layout = self.validLayout {
             self.updateContainers(layout: layout, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate, completion: { [weak self] in
                 self?.notifyAccessibilityScreenChanged()
+                completion()
             })
+        } else {
+            completion()
         }
         self._viewControllersPromise.set(self.viewControllers)
     }

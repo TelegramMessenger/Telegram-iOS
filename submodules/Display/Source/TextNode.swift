@@ -10,6 +10,10 @@ private let quoteIcon: UIImage = {
     return UIImage(bundleImageName: "Chat/Message/ReplyQuoteIcon")!.precomposed()
 }()
 
+private let codeIcon: UIImage = {
+    return UIImage(bundleImageName: "Chat/Message/TextCodeIcon")!.precomposed()
+}()
+
 private final class TextNodeStrikethrough {
     let range: NSRange
     let frame: CGRect
@@ -1363,7 +1367,9 @@ open class TextNode: ASDisplayNode {
                 case .quote:
                     additionalSegmentRightInset = blockQuoteIconInset
                 case .code:
-                    break
+                    if segment.title != nil {
+                        additionalSegmentRightInset = blockQuoteIconInset
+                    }
                 }
             }
             
@@ -2245,7 +2251,17 @@ open class TextNode: ASDisplayNode {
                     context.restoreGState()
                     context.resetClip()
                 case .code:
-                    break
+                    if blockQuote.data.title != nil {
+                        let quoteRect = CGRect(origin: CGPoint(x: blockFrame.maxX - 4.0 - codeIcon.size.width, y: blockFrame.minY + 4.0), size: codeIcon.size)
+                        context.saveGState()
+                        context.translateBy(x: quoteRect.midX, y: quoteRect.midY)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -quoteRect.midX, y: -quoteRect.midY)
+                        context.clip(to: quoteRect, mask: codeIcon.cgImage!)
+                        context.fill(quoteRect)
+                        context.restoreGState()
+                        context.resetClip()
+                    }
                 }
                 
                 let lineFrame = CGRect(origin: CGPoint(x: blockFrame.minX, y: blockFrame.minY), size: CGSize(width: lineWidth, height: blockFrame.height))

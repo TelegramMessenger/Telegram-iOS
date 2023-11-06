@@ -1129,6 +1129,37 @@ public extension TelegramEngine {
             }
         }
         
+        public func updateForumViewAsMessages(peerId: EnginePeer.Id, value: Bool) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Api.InputChannel? in
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if let current = current as? CachedChannelData {
+                        return current.withUpdatedViewForumAsMessages(.known(value))
+                    } else {
+                        return current
+                    }
+                })
+                
+                return transaction.getPeer(peerId).flatMap(apiInputChannel)
+            }
+            |> mapToSignal { inputChannel -> Signal<Never, NoError> in
+                guard let inputChannel = inputChannel else {
+                    return .complete()
+                }
+                
+                return self.account.network.request(Api.functions.channels.toggleViewForumAsMessages(channel: inputChannel, enabled: value ? .boolTrue : .boolFalse))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                    return .single(nil)
+                }
+                |> beforeNext { updates in
+                    if let updates = updates {
+                        self.account.stateManager.addUpdates(updates)
+                    }
+                }
+                |> ignoreValues
+            }
+        }
+        
         public func exportChatFolder(filterId: Int32, title: String, peerIds: [PeerId]) -> Signal<ExportedChatFolderLink, ExportChatFolderError> {
             return _internal_exportChatFolder(account: self.account, filterId: filterId, title: title, peerIds: peerIds)
         }

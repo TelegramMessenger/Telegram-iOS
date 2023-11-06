@@ -331,12 +331,13 @@ public final class EntityKeyboardComponent: Component {
                         let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                             "saved": .saved,
                             "recent": .recent,
-                            "premium": .premium
+                            "premium": .premium,
+                            "liked": .liked
                         ]
                         let titleMapping: [String: String] = [
                             "saved": component.strings.Stickers_Favorites,
                             "recent": component.strings.Stickers_Recent,
-                            "premium": component.strings.EmojiInput_PanelTitlePremium
+                            "premium": component.strings.EmojiInput_PanelTitlePremium,
                         ]
                         if let icon = iconMapping[id], let title = titleMapping[id] {
                             topMaskItems.append(EntityKeyboardTopPanelComponent.Item(
@@ -468,6 +469,7 @@ public final class EntityKeyboardComponent: Component {
                             let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                                 "saved": .saved,
                                 "recent": .recent,
+                                "liked": .liked,
                                 "premium": .premium
                             ]
                             let titleMapping: [String: String] = [
@@ -568,12 +570,14 @@ public final class EntityKeyboardComponent: Component {
                 for itemGroup in emojiContent.panelItemGroups {
                     if !itemGroup.items.isEmpty {
                         if let id = itemGroup.groupId.base as? String {
-                            if id == "recent" {
+                            if id == "recent" || id == "liked" {
                                 let iconMapping: [String: EntityKeyboardIconTopPanelComponent.Icon] = [
                                     "recent": .recent,
+                                    "liked": .liked,
                                 ]
                                 let titleMapping: [String: String] = [
                                     "recent": component.strings.Stickers_Recent,
+                                    "liked": "",
                                 ]
                                 if let icon = iconMapping[id], let title = titleMapping[id] {
                                     topEmojiItems.append(EntityKeyboardTopPanelComponent.Item(

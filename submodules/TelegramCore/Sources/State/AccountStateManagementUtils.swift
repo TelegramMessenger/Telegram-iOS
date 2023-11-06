@@ -1538,13 +1538,14 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         var replySubject: EngineMessageReplySubject?
                         if let replyToMsgHeader = replyToMsgHeader {
                             switch replyToMsgHeader {
-                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities):
+                            case let .inputReplyToMessage(_, replyToMsgId, topMsgId, replyToPeerId, quoteText, quoteEntities, quoteOffset):
                                 let _ = topMsgId
                                 
                                 var quote: EngineMessageReplyQuote?
                                 if let quoteText = quoteText {
                                     quote = EngineMessageReplyQuote(
                                         text: quoteText,
+                                        offset: quoteOffset.flatMap(Int.init),
                                         entities: messageTextEntitiesFromApiEntities(quoteEntities ?? []),
                                         media: nil
                                     )

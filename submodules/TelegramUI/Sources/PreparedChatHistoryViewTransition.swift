@@ -203,7 +203,7 @@ func preparedChatHistoryViewTransition(from fromView: ChatHistoryView?, to toVie
                 if case .center = position, let quote = scrollSubject.quote {
                     position = .center(.custom({ itemNode in
                         if let itemNode = itemNode as? ChatMessageBubbleItemNode {
-                            if let quoteRect = itemNode.getQuoteRect(quote: quote) {
+                            if let quoteRect = itemNode.getQuoteRect(quote: quote.string, offset: quote.offset) {
                                 return quoteRect.midY
                             }
                         }

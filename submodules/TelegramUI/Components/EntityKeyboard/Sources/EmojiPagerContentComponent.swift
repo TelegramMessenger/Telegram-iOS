@@ -164,7 +164,7 @@ private final class WarpView: UIView {
     }
 }
 
-public struct EmojiComponentReactionItem {
+public struct EmojiComponentReactionItem: Equatable {
     public var reaction: MessageReaction.Reaction
     public var file: TelegramMediaFile
     
@@ -2764,6 +2764,32 @@ public final class EmojiPagerContentComponent: Component {
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
             selectedItems: self.selectedItems
+        )
+    }
+    
+    public func withSelectedItems(_ selectedItems: Set<MediaId>) -> EmojiPagerContentComponent {
+        return EmojiPagerContentComponent(
+            id: self.id,
+            context: self.context,
+            avatarPeer: self.avatarPeer,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            inputInteractionHolder: self.inputInteractionHolder,
+            panelItemGroups: panelItemGroups,
+            contentItemGroups: contentItemGroups,
+            itemLayoutType: self.itemLayoutType,
+            itemContentUniqueId: itemContentUniqueId,
+            searchState: searchState,
+            warpContentsOnEdges: self.warpContentsOnEdges,
+            hideBackground: self.hideBackground,
+            displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
+            searchCategories: self.searchCategories,
+            searchInitiallyHidden: self.searchInitiallyHidden,
+            searchAlwaysActive: self.searchAlwaysActive,
+            searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            emptySearchResults: emptySearchResults,
+            enableLongPress: self.enableLongPress,
+            selectedItems: selectedItems
         )
     }
     
@@ -7124,6 +7150,7 @@ public final class EmojiPagerContentComponent: Component {
         case profilePhoto
         case groupPhoto
         case backgroundIcon
+        case reactionList
     }
     
     public static func emojiInputData(
@@ -7195,14 +7222,14 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError>
-        if [.reaction, .quickReaction].contains(subject) {
+        if [.reaction, .quickReaction, .reactionList].contains(subject) {
             availableReactions = context.engine.stickers.availableReactions()
         } else {
             availableReactions = .single(nil)
         }
         
         let searchCategories: Signal<EmojiSearchCategories?, NoError>
-        if [.emoji, .reaction].contains(subject) {
+        if [.emoji, .reaction, .reactionList].contains(subject) {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .emoji)
         } else if case .status = subject {
             searchCategories = context.engine.stickers.emojiSearchCategories(kind: .status)
@@ -7584,6 +7611,51 @@ public final class EmojiPagerContentComponent: Component {
                             }
                             
                             itemGroups[groupIndex].items.append(resultItem)
+                        }
+                    }
+                }
+            } else if subject == .reactionList {
+                var existingIds = Set<MessageReaction.Reaction>()
+                
+                if let availableReactions = availableReactions {
+                    for reactionItem in availableReactions.reactions {
+                        if !reactionItem.isEnabled {
+                            continue
+                        }
+                        if existingIds.contains(reactionItem.value) {
+                            continue
+                        }
+                        existingIds.insert(reactionItem.value)
+                        
+                        let icon: EmojiPagerContentComponent.Item.Icon
+                        if !hasPremium, case .custom = reactionItem.value {
+                            icon = .locked
+                        } else {
+                            icon = .none
+                        }
+                        
+                        var tintMode: Item.TintMode = .none
+                        if reactionItem.selectAnimation.isCustomTemplateEmoji {
+                            tintMode = .primary
+                        }
+                        
+                        let animationFile = reactionItem.selectAnimation
+                        let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
+                        let resultItem = EmojiPagerContentComponent.Item(
+                            animationData: animationData,
+                            content: .animation(animationData),
+                            itemFile: animationFile,
+                            subgroupId: nil,
+                            icon: icon,
+                            tintMode: tintMode
+                        )
+                        
+                        let groupId = "liked"
+                        if let groupIndex = itemGroupIndexById[groupId] {
+                            itemGroups[groupIndex].items.append(resultItem)
+                        } else {
+                            itemGroupIndexById[groupId] = itemGroups.count
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }
@@ -8159,7 +8231,12 @@ public final class EmojiPagerContentComponent: Component {
                                     )
                                 }
                                 
-                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, collapsedLineCount: 3, isClearable: false, headerItem: headerItem, items: [resultItem]))
+                                var isFeatured = true
+                                if case .reactionList = subject {
+                                    isFeatured = false
+                                }
+                                
+                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: isFeatured, collapsedLineCount: 3, isClearable: false, headerItem: headerItem, items: [resultItem]))
                             }
                         }
                     }
