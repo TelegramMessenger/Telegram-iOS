@@ -7,47 +7,97 @@ private enum SecretChatOutgoingFileValue: Int32 {
     case uploadedLarge = 2
 }
 
-public enum SecretChatOutgoingFileReference: PostboxCoding {
+public enum SecretChatOutgoingFileReference: PostboxCoding, Codable {
     case remote(id: Int64, accessHash: Int64)
     case uploadedRegular(id: Int64, partCount: Int32, md5Digest: String, keyFingerprint: Int32)
     case uploadedLarge(id: Int64, partCount: Int32, keyFingerprint: Int32)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
-            case SecretChatOutgoingFileValue.remote.rawValue:
-                self = .remote(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0))
-            case SecretChatOutgoingFileValue.uploadedRegular.rawValue:
-                self = .uploadedRegular(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), md5Digest: decoder.decodeStringForKey("d", orElse: ""), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
-            case SecretChatOutgoingFileValue.uploadedLarge.rawValue:
-                self = .uploadedLarge(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
-            default:
-                assertionFailure()
-                self = .remote(id: 0, accessHash: 0)
+        case SecretChatOutgoingFileValue.remote.rawValue:
+            self = .remote(id: decoder.decodeInt64ForKey("i", orElse: 0), accessHash: decoder.decodeInt64ForKey("a", orElse: 0))
+        case SecretChatOutgoingFileValue.uploadedRegular.rawValue:
+            self = .uploadedRegular(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), md5Digest: decoder.decodeStringForKey("d", orElse: ""), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
+        case SecretChatOutgoingFileValue.uploadedLarge.rawValue:
+            self = .uploadedLarge(id: decoder.decodeInt64ForKey("i", orElse: 0), partCount: decoder.decodeInt32ForKey("p", orElse: 0), keyFingerprint: decoder.decodeInt32ForKey("f", orElse: 0))
+        default:
+            assertionFailure()
+            self = .remote(id: 0, accessHash: 0)
+        }
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        switch try container.decode(Int32.self, forKey: "v") {
+        case SecretChatOutgoingFileValue.remote.rawValue:
+            self = .remote(
+                id: try container.decode(Int64.self, forKey: "i"),
+                accessHash: try container.decode(Int64.self, forKey: "a")
+            )
+        case SecretChatOutgoingFileValue.uploadedRegular.rawValue:
+            self = .uploadedRegular(
+                id: try container.decode(Int64.self, forKey: "i"),
+                partCount: try container.decode(Int32.self, forKey: "p"),
+                md5Digest: try container.decode(String.self, forKey: "d"),
+                keyFingerprint: try container.decode(Int32.self, forKey: "f")
+            )
+        case SecretChatOutgoingFileValue.uploadedLarge.rawValue:
+            self = .uploadedLarge(
+                id: try container.decode(Int64.self, forKey: "i"),
+                partCount: try container.decode(Int32.self, forKey: "p"),
+                keyFingerprint: try container.decode(Int32.self, forKey: "f")
+            )
+        default:
+            assertionFailure()
+            self = .remote(id: 0, accessHash: 0)
         }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .remote(id, accessHash):
-                encoder.encodeInt32(SecretChatOutgoingFileValue.remote.rawValue, forKey: "v")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt64(accessHash, forKey: "a")
-            case let .uploadedRegular(id, partCount, md5Digest, keyFingerprint):
-                encoder.encodeInt32(SecretChatOutgoingFileValue.uploadedRegular.rawValue, forKey: "v")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt32(partCount, forKey: "p")
-                encoder.encodeString(md5Digest, forKey: "d")
-                encoder.encodeInt32(keyFingerprint, forKey: "f")
-            case let .uploadedLarge(id, partCount, keyFingerprint):
-                encoder.encodeInt32(SecretChatOutgoingFileValue.uploadedLarge.rawValue, forKey: "v")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt32(partCount, forKey: "p")
-                encoder.encodeInt32(keyFingerprint, forKey: "f")
+        case let .remote(id, accessHash):
+            encoder.encodeInt32(SecretChatOutgoingFileValue.remote.rawValue, forKey: "v")
+            encoder.encodeInt64(id, forKey: "i")
+            encoder.encodeInt64(accessHash, forKey: "a")
+        case let .uploadedRegular(id, partCount, md5Digest, keyFingerprint):
+            encoder.encodeInt32(SecretChatOutgoingFileValue.uploadedRegular.rawValue, forKey: "v")
+            encoder.encodeInt64(id, forKey: "i")
+            encoder.encodeInt32(partCount, forKey: "p")
+            encoder.encodeString(md5Digest, forKey: "d")
+            encoder.encodeInt32(keyFingerprint, forKey: "f")
+        case let .uploadedLarge(id, partCount, keyFingerprint):
+            encoder.encodeInt32(SecretChatOutgoingFileValue.uploadedLarge.rawValue, forKey: "v")
+            encoder.encodeInt64(id, forKey: "i")
+            encoder.encodeInt32(partCount, forKey: "p")
+            encoder.encodeInt32(keyFingerprint, forKey: "f")
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        switch self {
+        case let .remote(id, accessHash):
+            try container.encode(SecretChatOutgoingFileValue.remote.rawValue, forKey: "v")
+            try container.encode(id, forKey: "i")
+            try container.encode(accessHash, forKey: "a")
+        case let .uploadedRegular(id, partCount, md5Digest, keyFingerprint):
+            try container.encode(SecretChatOutgoingFileValue.uploadedRegular.rawValue, forKey: "v")
+            try container.encode(id, forKey: "i")
+            try container.encode(partCount, forKey: "p")
+            try container.encode(md5Digest, forKey: "d")
+            try container.encode(keyFingerprint, forKey: "f")
+        case let .uploadedLarge(id, partCount, keyFingerprint):
+            try container.encode(SecretChatOutgoingFileValue.uploadedLarge.rawValue, forKey: "v")
+            try container.encode(id, forKey: "i")
+            try container.encode(partCount, forKey: "p")
+            try container.encode(keyFingerprint, forKey: "f")
         }
     }
 }
 
-public struct SecretChatOutgoingFile: PostboxCoding {
+public struct SecretChatOutgoingFile: PostboxCoding, Codable {
     public let reference: SecretChatOutgoingFileReference
     public let size: Int64
     public let key: SecretFileEncryptionKey
@@ -68,11 +118,31 @@ public struct SecretChatOutgoingFile: PostboxCoding {
         self.key = SecretFileEncryptionKey(aesKey: decoder.decodeBytesForKey("k")!.makeData(), aesIv: decoder.decodeBytesForKey("i")!.makeData())
     }
     
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: StringCodingKey.self)
+        
+        self.reference = try container.decode(SecretChatOutgoingFileReference.self, forKey: "r")
+        self.size = try container.decode(Int64.self, forKey: "s64")
+        self.key = SecretFileEncryptionKey(
+            aesKey: try container.decode(Data.self, forKey: "k"),
+            aesIv: try container.decode(Data.self, forKey: "i")
+        )
+    }
+    
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.reference, forKey: "r")
         encoder.encodeInt64(self.size, forKey: "s64")
         encoder.encodeBytes(MemoryBuffer(data: self.key.aesKey), forKey: "k")
         encoder.encodeBytes(MemoryBuffer(data: self.key.aesIv), forKey: "i")
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: StringCodingKey.self)
+        
+        try container.encode(self.reference, forKey: "r")
+        try container.encode(self.size, forKey: "s64")
+        try container.encode(self.key.aesKey, forKey: "k")
+        try container.encode(self.key.aesIv, forKey: "i")
     }
 }
 
@@ -112,11 +182,72 @@ private enum SecretChatOutgoingOperationValue: Int32 {
     case noop = 12
     case setMessageAutoremoveTimeout = 13
     case terminate = 14
+    case sendStandaloneMessage = 15
+}
+
+public struct StandaloneSecretMessageContents: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id = "i"
+        case text = "t"
+        case attributes = "a"
+        case media = "m"
+        case file = "f"
+    }
+    
+    public var id: Int64
+    public var text: String
+    public var attributes: [MessageAttribute]
+    public var media: Media?
+    public var file: SecretChatOutgoingFile?
+    
+    public init(id: Int64, text: String, attributes: [MessageAttribute], media: Media?, file: SecretChatOutgoingFile?) {
+        self.id = id
+        self.text = text
+        self.attributes = attributes
+        self.media = media
+        self.file = file
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.id = try container.decode(Int64.self, forKey: .id)
+        self.text = try container.decode(String.self, forKey: .text)
+        
+        let attributes = try container.decode([Data].self, forKey: .attributes)
+        self.attributes = attributes.compactMap { attribute -> MessageAttribute? in
+            return PostboxDecoder(buffer: MemoryBuffer(data: attribute)).decodeRootObject() as? MessageAttribute
+        }
+        self.media = (try container.decodeIfPresent(Data.self, forKey: .media)).flatMap { media in
+            return PostboxDecoder(buffer: MemoryBuffer(data: media)).decodeRootObject() as? Media
+        }
+        self.file = try container.decodeIfPresent(SecretChatOutgoingFile.self, forKey: .file)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.id, forKey: .id)
+        try container.encode(self.text, forKey: .text)
+        let attributes = self.attributes.map { attribute -> Data in
+            let innerEncoder = PostboxEncoder()
+            innerEncoder.encodeRootObject(attribute)
+            return innerEncoder.makeData()
+        }
+        try container.encode(attributes, forKey: .attributes)
+        try container.encodeIfPresent(self.media.flatMap { media in
+            let innerEncoder = PostboxEncoder()
+            innerEncoder.encodeRootObject(media)
+            return innerEncoder.makeData()
+        }, forKey: .media)
+        try container.encodeIfPresent(self.file, forKey: .file)
+    }
 }
 
 public enum SecretChatOutgoingOperationContents: PostboxCoding {
     case initialHandshakeAccept(gA: MemoryBuffer, accessHash: Int64, b: MemoryBuffer)
     case sendMessage(layer: SecretChatLayer, id: MessageId, file: SecretChatOutgoingFile?)
+    case sendStandaloneMessage(layer: SecretChatLayer, contents: StandaloneSecretMessageContents)
     case readMessagesContent(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
     case deleteMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64])
     case screenshotMessages(layer: SecretChatLayer, actionGloballyUniqueId: Int64, globallyUniqueIds: [Int64], messageId: MessageId)
@@ -137,6 +268,11 @@ public enum SecretChatOutgoingOperationContents: PostboxCoding {
                 self = .initialHandshakeAccept(gA: decoder.decodeBytesForKey("g")!, accessHash: decoder.decodeInt64ForKey("h", orElse: 0), b: decoder.decodeBytesForKey("b")!)
             case SecretChatOutgoingOperationValue.sendMessage.rawValue:
                 self = .sendMessage(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, id: MessageId(peerId: PeerId(decoder.decodeInt64ForKey("i.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("i.n", orElse: 0), id: decoder.decodeInt32ForKey("i.i", orElse: 0)), file: decoder.decodeObjectForKey("f", decoder: { SecretChatOutgoingFile(decoder: $0) }) as? SecretChatOutgoingFile)
+            case SecretChatOutgoingOperationValue.sendStandaloneMessage.rawValue:
+                self = .sendStandaloneMessage(
+                    layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!,
+                    contents: decoder.decodeCodable(StandaloneSecretMessageContents.self, forKey: "c") ?? StandaloneSecretMessageContents(id: 0, text: "", attributes: [], media: nil, file: nil)
+                )
             case SecretChatOutgoingOperationValue.readMessagesContent.rawValue:
                 self = .readMessagesContent(layer: SecretChatLayer(rawValue: decoder.decodeInt32ForKey("l", orElse: 0))!, actionGloballyUniqueId: decoder.decodeInt64ForKey("i", orElse: 0), globallyUniqueIds: decoder.decodeInt64ArrayForKey("u"))
             case SecretChatOutgoingOperationValue.deleteMessages.rawValue:
@@ -187,6 +323,10 @@ public enum SecretChatOutgoingOperationContents: PostboxCoding {
                 } else {
                     encoder.encodeNil(forKey: "f")
                 }
+            case let .sendStandaloneMessage(layer, contents):
+                encoder.encodeInt32(SecretChatOutgoingOperationValue.sendStandaloneMessage.rawValue, forKey: "r")
+                encoder.encodeInt32(layer.rawValue, forKey: "l")
+                encoder.encodeCodable(contents, forKey: "c")
             case let .readMessagesContent(layer, actionGloballyUniqueId, globallyUniqueIds):
                 encoder.encodeInt32(SecretChatOutgoingOperationValue.readMessagesContent.rawValue, forKey: "r")
                 encoder.encodeInt32(layer.rawValue, forKey: "l")

@@ -971,9 +971,6 @@ public final class ShareController: ViewController {
             if self.environment.isMainApp {
                 useLegacy = true
             }
-            if peerIds.contains(where: { $0.namespace == Namespaces.Peer.SecretChat }) {
-                useLegacy = true
-            }
             if let currentContext = self.currentContext as? ShareControllerAppAccountContext, let data = currentContext.context.currentAppConfiguration.with({ $0 }).data {
                 if let _ = data["ios_disable_modern_sharing"] {
                     useLegacy = true
