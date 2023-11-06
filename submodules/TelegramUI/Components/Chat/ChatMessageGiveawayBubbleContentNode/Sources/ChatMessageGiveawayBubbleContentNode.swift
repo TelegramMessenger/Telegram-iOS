@@ -218,13 +218,17 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
             let backgroundColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first! : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill.first!
             let textColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor
             let accentColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+            var badgeTextColor: UIColor = .white
+            if badgeTextColor.distance(to: accentColor) < 1 {
+                badgeTextColor = incoming ? item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first! : item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper.fill.first!
+            }
             
             var updatedBadgeImage: UIImage?
             if themeUpdated {
                 updatedBadgeImage = generateStretchableFilledCircleImage(diameter: 21.0, color: accentColor, strokeColor: backgroundColor, strokeWidth: 1.0 + UIScreenPixel, backgroundColor: nil)
             }
             
-            let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 1)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: .white)
+            let badgeString = NSAttributedString(string: "X\(giveaway?.quantity ?? 1)", font: Font.with(size: 10.0, design: .round , weight: .bold, traits: .monospacedNumbers), textColor: badgeTextColor)
             
             let prizeTitleString = NSAttributedString(string: item.presentationData.strings.Chat_Giveaway_Message_PrizeTitle, font: titleFont, textColor: textColor)
             var prizeTextString: NSAttributedString?
@@ -433,7 +437,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                         }
                     }
                 }
-                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 240.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
+                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
                 maxContentWidth = max(maxContentWidth, channelsWidth)
                 maxContentWidth += 30.0
                 

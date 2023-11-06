@@ -588,17 +588,22 @@ public extension ShareWithPeersScreen {
             case let .channels(excludePeerIds, searchQuery):
                 self.stateDisposable = (combineLatest(
                     context.engine.messages.chatList(group: .root, count: 500) |> take(1),
+                    searchQuery.flatMap { context.engine.contacts.searchLocalPeers(query: $0) } ?? .single([]),
                     context.engine.data.get(EngineDataMap(Array(self.initialPeerIds).map(TelegramEngine.EngineData.Item.Peer.Peer.init)))
                 )
-                |> mapToSignal { chatList, initialPeers -> Signal<(EngineChatList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]), NoError> in
+                |> mapToSignal { chatList, searchResults, initialPeers -> Signal<(EngineChatList, [EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]), NoError> in
+                    var peerIds: [EnginePeer.Id] = []
+                    peerIds.append(contentsOf: chatList.items.map(\.renderedPeer.peerId))
+                    peerIds.append(contentsOf: searchResults.map(\.peerId))
+                    peerIds.append(contentsOf: initialPeers.compactMap(\.value?.id))
                     return context.engine.data.subscribe(
                         EngineDataMap(chatList.items.map(\.renderedPeer.peerId).map(TelegramEngine.EngineData.Item.Peer.ParticipantCount.init))
                     )
-                    |> map { participantCountMap -> (EngineChatList, [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]) in
-                        return (chatList, initialPeers, participantCountMap)
+                    |> map { participantCountMap -> (EngineChatList, [EngineRenderedPeer], [EnginePeer.Id: Optional<EnginePeer>], [EnginePeer.Id: Optional<Int>]) in
+                        return (chatList, searchResults, initialPeers, participantCountMap)
                     }
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] chatList, initialPeers, participantCounts in
+                |> deliverOnMainQueue).start(next: { [weak self] chatList, searchResults, initialPeers, participantCounts in
                     guard let self else {
                         return
                     }
@@ -612,7 +617,7 @@ public extension ShareWithPeersScreen {
                     
                     var existingIds = Set<EnginePeer.Id>()
                     var selectedPeers: [EnginePeer] = []
-                                     
+                                                         
                     for item in chatList.items.reversed() {
                         if let peer = item.renderedPeer.peer {
                             if self.initialPeerIds.contains(peer.id) {
@@ -628,6 +633,13 @@ public extension ShareWithPeersScreen {
                             existingIds.insert(peerId)
                         }
                     }
+                    
+                    for item in searchResults {
+                        if let peer = item.peer, case let .channel(channel) = peer, case .broadcast = channel.info {
+                            selectedPeers.append(peer)
+                            existingIds.insert(peer.id)
+                        }
+                    }
                  
                     let queryTokens = stringIndexTokens(searchQuery ?? "", transliteration: .combined)
                     func peerMatchesTokens(peer: EnginePeer, tokens: [ValueBoxKey]) -> Bool {
@@ -640,7 +652,13 @@ public extension ShareWithPeersScreen {
                     var peers: [EnginePeer] = []
                     peers = chatList.items.filter { peer in
                         if let peer = peer.renderedPeer.peer {
+                            if existingIds.contains(peer.id) {
+                                return false
+                            }
                             if excludePeerIds.contains(peer.id) {
+                                return false
+                            }
+                            if peer.isFake || peer.isScam {
                                 return false
                             }
                             if let _ = searchQuery, !peerMatchesTokens(peer: peer, tokens: queryTokens) {

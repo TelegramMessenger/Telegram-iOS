@@ -666,6 +666,13 @@ public final class DatePickerNode: ASDisplayNode {
                 }
             }
             
+            if let date = calendar.date(from: dateComponents), date > self.maximumDate {
+                let maximumDateComponents = calendar.dateComponents([.hour, .minute, .day, .month, .year], from: self.maximumDate)
+                if let hour = maximumDateComponents.hour {
+                    dateComponents.hour = hour - 1
+                }
+            }
+            
             if let date = calendar.date(from: dateComponents), date >= self.minimumDate && date < self.maximumDate {
                 let updatedState = State(minDate: self.state.minDate, maxDate: self.state.maxDate, date: date, displayingMonthSelection: self.state.displayingMonthSelection, displayingDateSelection: self.state.displayingDateSelection, displayingTimeSelection: self.state.displayingTimeSelection, selectedMonth: monthNode.month)
                 self.updateState(updatedState, animated: false)
