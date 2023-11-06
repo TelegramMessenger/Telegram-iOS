@@ -433,7 +433,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         forwardAuthorSignature = forwardInfo.authorSignature
                     }
                 }
-                let availableWidth: CGFloat = max(60.0, availableContentWidth - 210.0 + 6.0)
+                let availableWidth: CGFloat = max(60.0, availableContentWidth - 220.0 + 6.0)
                 forwardInfoSizeApply = makeForwardInfoLayout(item.context, item.presentationData, item.presentationData.strings, .standalone, forwardSource, forwardAuthorSignature, forwardPsaType, nil, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
             }
             
