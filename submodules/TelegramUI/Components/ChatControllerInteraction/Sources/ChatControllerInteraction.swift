@@ -229,6 +229,7 @@ public final class ChatControllerInteraction {
     public let saveMediaToFiles: (EngineMessage.Id) -> Void
     public let openNoAdsDemo: () -> Void
     public let displayGiveawayParticipationStatus: (EngineMessage.Id) -> Void
+    public let openPremiumStatusInfo: (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -347,6 +348,7 @@ public final class ChatControllerInteraction {
         saveMediaToFiles: @escaping (EngineMessage.Id) -> Void,
         openNoAdsDemo: @escaping () -> Void,
         displayGiveawayParticipationStatus: @escaping (EngineMessage.Id) -> Void,
+        openPremiumStatusInfo: @escaping (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -447,6 +449,7 @@ public final class ChatControllerInteraction {
         self.saveMediaToFiles = saveMediaToFiles
         self.openNoAdsDemo = openNoAdsDemo
         self.displayGiveawayParticipationStatus = displayGiveawayParticipationStatus
+        self.openPremiumStatusInfo = openPremiumStatusInfo
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput

@@ -22,7 +22,7 @@ import ShareController
 import ItemListPeerActionItem
 import PremiumUI
 
-private let maxUsersDisplayedLimit: Int32 = 5
+private let initialBoostersDisplayedLimit: Int32 = 5
 
 private final class ChannelStatsControllerArguments {
     let context: AccountContext
@@ -652,17 +652,20 @@ public enum ChannelStatsSection {
 private struct ChannelStatsControllerState: Equatable {
     let section: ChannelStatsSection
     let boostersExpanded: Bool
+    let moreBoostersDisplayed: Int32
     let giftsSelected: Bool
   
     init() {
         self.section = .stats
         self.boostersExpanded = false
+        self.moreBoostersDisplayed = 0
         self.giftsSelected = false
     }
     
-    init(section: ChannelStatsSection, boostersExpanded: Bool, giftsSelected: Bool) {
+    init(section: ChannelStatsSection, boostersExpanded: Bool, moreBoostersDisplayed: Int32, giftsSelected: Bool) {
         self.section = section
         self.boostersExpanded = boostersExpanded
+        self.moreBoostersDisplayed = moreBoostersDisplayed
         self.giftsSelected = giftsSelected
     }
     
@@ -673,6 +676,9 @@ private struct ChannelStatsControllerState: Equatable {
         if lhs.boostersExpanded != rhs.boostersExpanded {
             return false
         }
+        if lhs.moreBoostersDisplayed != rhs.moreBoostersDisplayed {
+            return false
+        }
         if lhs.giftsSelected != rhs.giftsSelected {
             return false
         }
@@ -680,15 +686,19 @@ private struct ChannelStatsControllerState: Equatable {
     }
     
     func withUpdatedSection(_ section: ChannelStatsSection) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, giftsSelected: self.giftsSelected)
+        return ChannelStatsControllerState(section: section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected)
     }
     
     func withUpdatedBoostersExpanded(_ boostersExpanded: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, giftsSelected: self.giftsSelected)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: self.giftsSelected)
+    }
+    
+    func withUpdatedMoreBoostersDisplayed(_ moreBoostersDisplayed: Int32) -> ChannelStatsControllerState {
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: moreBoostersDisplayed, giftsSelected: self.giftsSelected)
     }
     
     func withUpdatedGiftsSelected(_ giftsSelected: Bool) -> ChannelStatsControllerState {
-        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, giftsSelected: giftsSelected)
+        return ChannelStatsControllerState(section: self.section, boostersExpanded: self.boostersExpanded, moreBoostersDisplayed: self.moreBoostersDisplayed, giftsSelected: giftsSelected)
     }
 }
 
@@ -826,20 +836,32 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 var boosterIndex: Int32 = 0
                 
                 var boosters: [ChannelBoostersContext.State.Boost] = selectedState.boosts
-                var effectiveExpanded = state.boostersExpanded
-                if boosters.count > maxUsersDisplayedLimit && !state.boostersExpanded {
-                    boosters = Array(boosters.prefix(Int(maxUsersDisplayedLimit)))
+                
+                var limit: Int32
+                if state.boostersExpanded {
+                    limit = 25 + state.moreBoostersDisplayed
                 } else {
-                    effectiveExpanded = true
+                    limit = initialBoostersDisplayedLimit
                 }
+                boosters = Array(boosters.prefix(Int(limit)))
                 
                 for booster in boosters {
                     entries.append(.booster(boosterIndex, presentationData.theme, presentationData.dateTimeFormat, booster))
                     boosterIndex += 1
                 }
                 
-                if !effectiveExpanded {
-                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.Stats_Boosts_ShowMoreBoosts(Int32(selectedState.count) - maxUsersDisplayedLimit)))
+                let totalBoostsCount = boosters.reduce(Int32(0)) { partialResult, boost in
+                    return partialResult + boost.multiplier
+                }
+                
+                if totalBoostsCount < selectedState.count {
+                    let moreCount: Int32
+                    if !state.boostersExpanded {
+                        moreCount = min(80, selectedState.count - totalBoostsCount)
+                    } else {
+                        moreCount = min(200, selectedState.count - totalBoostsCount)
+                    }
+                    entries.append(.boostersExpand(presentationData.theme, presentationData.strings.Stats_Boosts_ShowMoreBoosts(moreCount)))
                 }
             }
             
@@ -862,8 +884,8 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
 }
 
 public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, statsDatacenterId: Int32?) -> ViewController {
-    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, giftsSelected: false), ignoreRepeated: true)
-    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, giftsSelected: false))
+    let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false), ignoreRepeated: true)
+    let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
@@ -993,7 +1015,20 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         pushImpl?(controller)
     },
     expandBoosters: {
-        updateState { $0.withUpdatedBoostersExpanded(true) }
+        var giftsSelected = false
+        updateState { state in
+            giftsSelected = state.giftsSelected
+            if state.boostersExpanded {
+                return state.withUpdatedMoreBoostersDisplayed(state.moreBoostersDisplayed + 50)
+            } else {
+                return state.withUpdatedBoostersExpanded(true)
+            }
+        }
+        if giftsSelected {
+            giftsContext.loadMore()
+        } else {
+            boostsContext.loadMore()
+        }
     },
     openGifts: {
         let controller = createGiveawayController(context: context, peerId: peerId, subject: .generic)
@@ -1074,12 +1109,6 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 itemNode.resetInteraction()
             }
         })
-    }
-    controller.visibleBottomContentOffsetChanged = { offset in
-        let state = stateValue.with { $0 }
-        if case let .known(value) = offset, value < 510.0, case .boosts = state.section, state.boostersExpanded {
-            boostsContext.loadMore()
-        }
     }
     controller.titleControlValueChanged = { value in
         updateState { $0.withUpdatedSection(value == 1 ? .boosts : .stats) }

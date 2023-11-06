@@ -829,9 +829,9 @@ final class CountriesMultiselectionScreenComponent: Component {
             }
             navigationButtonsWidth += navigationLeftButtonSize.width + navigationSideInset
             
-            let actionButtonTitle = "Save Countries"
-            let title = "Select Countries"
-            let subtitle = "select up to \(component.context.userLimits.maxGiveawayCountriesCount) countries"
+            let actionButtonTitle = environment.strings.CountriesList_SaveCountries
+            let title = environment.strings.CountriesList_SelectCountries
+            let subtitle = environment.strings.CountriesList_SelectUpTo(component.context.userLimits.maxGiveawayCountriesCount)
             
             let titleComponent = AnyComponent<Empty>(
                 List([

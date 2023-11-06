@@ -10297,8 +10297,8 @@ Sorry for the inconvenience.";
 "Stats.Boosts.Gift" = "Gift";
 "Stats.Boosts.TabBoosts_1" = "%@ Boost";
 "Stats.Boosts.TabBoosts_any" = "%@ Boosts";
-"Stats.Boosts.TabGifts_1" = "%@ Boost";
-"Stats.Boosts.TabGifts_any" = "%@ Boosts";
+"Stats.Boosts.TabGifts_1" = "%@ Gift";
+"Stats.Boosts.TabGifts_any" = "%@ Gifts";
 "Stats.Boosts.ToBeDistributed" = "To Be Distributed";
 "Stats.Boosts.Unclaimed" = "Unclaimed";
 "Stats.Boosts.GetBoosts" = "Get Boosts via Gifts";
@@ -10364,6 +10364,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Info.DidntWin" = "You didn't win a prize in this giveaway.";
 "Chat.Giveaway.Info.ViewPrize" = "View My Prize";
 
+"Chat.Giveaway.Info.FullDate" = "**%1$@** on **%2$@**";
+
 "Chat.Giveaway.Toast.NotAllowed" = "You can't participate in this giveaway.";
 "Chat.Giveaway.Toast.Participating" = "You are participating in this giveaway.";
 "Chat.Giveaway.Toast.NotQualified" = "You are not qualified for this giveaway yet.";
@@ -10414,6 +10416,7 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.EnableColors" = "Enable Colors";
 "ChannelBoost.EnableColorsText" = "Your channel needs %1$@ to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+"ChannelBoost.EnableColorsLevelText" = "Your channel needs **Level %1$@** to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
 "ChannelBoost.BoostAgain" = "Boost Again";
 
 "Settings.New" = "NEW";
@@ -10423,3 +10426,10 @@ Sorry for the inconvenience.";
 "Channel.ChannelColor" = "Channel Color";
 
 "TextFormat.Code" = "Code";
+
+"Notification.ChannelJoinedByYou" = "You joined the channel";
+
+"CountriesList.SelectCountries" = "Select Countries";
+"CountriesList.SaveCountries" = "Save Countries";
+"CountriesList.SelectUpTo_1" = "select up to %@ country";
+"CountriesList.SelectUpTo_any" = "select up to %@ countries";
