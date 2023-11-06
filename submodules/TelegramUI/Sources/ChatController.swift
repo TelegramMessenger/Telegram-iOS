@@ -4852,6 +4852,65 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.present(controller, in: .current)
                 
             }))
+        }, openPremiumStatusInfo: { [weak self] peerId, sourceView, peerStatus, nameColor in
+            guard let self else {
+                return
+            }
+            
+            let context = self.context
+            let source: Signal<PremiumSource, NoError>
+            if let peerStatus {
+                source = context.engine.stickers.resolveInlineStickers(fileIds: [peerStatus])
+                |> mapToSignal { files in
+                    if let file = files[peerStatus] {
+                        var reference: StickerPackReference?
+                        for attribute in file.attributes {
+                            if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
+                                reference = packReference
+                                break
+                            }
+                        }
+                        
+                        if let reference {
+                            return context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                            |> filter { result in
+                                if case .result = result {
+                                    return true
+                                } else {
+                                    return false
+                                }
+                            }
+                            |> take(1)
+                            |> mapToSignal { result -> Signal<PremiumSource, NoError> in
+                                if case let .result(_, items, _) = result {
+                                    return .single(.emojiStatus(peerId, peerStatus, items.first?.file, result))
+                                } else {
+                                    return .single(.emojiStatus(peerId, peerStatus, nil, nil))
+                                }
+                            }
+                        } else {
+                            return .single(.emojiStatus(peerId, peerStatus, nil, nil))
+                        }
+                    } else {
+                        return .single(.emojiStatus(peerId, peerStatus, nil, nil))
+                    }
+                }
+            } else {
+                source = .single(.profile(peerId))
+            }
+            
+            let _ = (source
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] source in
+                guard let self else {
+                    return
+                }
+                let controller = PremiumIntroScreen(context: self.context, source: source)
+                controller.sourceView = sourceView
+                controller.containerView = self.navigationController?.view
+                controller.animationColor = self.context.peerNameColors.get(nameColor, dark: self.presentationData.theme.overallDarkAppearance).main
+                self.push(controller)
+            })
+            
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)

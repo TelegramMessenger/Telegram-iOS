@@ -2921,6 +2921,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, saveMediaToFiles: { _ in
         }, openNoAdsDemo: {
         }, displayGiveawayParticipationStatus: { _ in
+        }, openPremiumStatusInfo: { _, _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -3794,37 +3795,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     return
                 }
                 
-                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId))
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] _ in
+                let source: Signal<PremiumSource, NoError>
+                if let peerStatus = peerStatus {
+                    source = emojiStatusFileAndPack
+                    |> take(1)
+                    |> mapToSignal { emojiStatusFileAndPack -> Signal<PremiumSource, NoError> in
+                        if let (file, pack) = emojiStatusFileAndPack {
+                            return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, pack))
+                        } else {
+                            return .complete()
+                        }
+                    }
+                } else {
+                    source = .single(.profile(strongSelf.peerId))
+                }
+                
+                let _ = (source
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] source in
                     guard let strongSelf = self else {
                         return
                     }
-                    let source: Signal<PremiumSource, NoError>
-                    if let peerStatus = peerStatus {
-                        source = emojiStatusFileAndPack
-                        |> take(1)
-                        |> mapToSignal { emojiStatusFileAndPack -> Signal<PremiumSource, NoError> in
-                            if let (file, pack) = emojiStatusFileAndPack {
-                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, pack))
-                            } else {
-                                return .complete()
-                            }
-                        }
-                    } else {
-                        source = .single(.profile(strongSelf.peerId))
-                    }
-                    
-                    let _ = (source
-                    |> deliverOnMainQueue).startStandalone(next: { [weak self] source in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
-                        controller.sourceView = sourceView
-                        controller.containerView = strongSelf.controller?.navigationController?.view
-                        controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                        strongSelf.controller?.push(controller)
-                    })
+                    let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
+                    controller.sourceView = sourceView
+                    controller.containerView = strongSelf.controller?.navigationController?.view
+                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                    strongSelf.controller?.push(controller)
                 })
             }
             

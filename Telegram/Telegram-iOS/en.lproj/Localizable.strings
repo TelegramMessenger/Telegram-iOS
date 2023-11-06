@@ -10364,6 +10364,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.Info.DidntWin" = "You didn't win a prize in this giveaway.";
 "Chat.Giveaway.Info.ViewPrize" = "View My Prize";
 
+"Chat.Giveaway.Info.FullDate" = "**%1$@** on **%2$@**";
+
 "Chat.Giveaway.Toast.NotAllowed" = "You can't participate in this giveaway.";
 "Chat.Giveaway.Toast.Participating" = "You are participating in this giveaway.";
 "Chat.Giveaway.Toast.NotQualified" = "You are not qualified for this giveaway yet.";
@@ -10423,3 +10425,10 @@ Sorry for the inconvenience.";
 "Channel.ChannelColor" = "Channel Color";
 
 "TextFormat.Code" = "Code";
+
+"Notification.ChannelJoinedByYou" = "You joined the channel";
+
+"CountriesList.SelectCountries" = "Select Countries";
+"CountriesList.SaveCountries" = "Save Countries";
+"CountriesList.SelectUpTo_1" = "select up to %@ country";
+"CountriesList.SelectUpTo_any" = "select up to %@ countries";
