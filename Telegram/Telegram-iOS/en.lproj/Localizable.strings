@@ -10297,8 +10297,8 @@ Sorry for the inconvenience.";
 "Stats.Boosts.Gift" = "Gift";
 "Stats.Boosts.TabBoosts_1" = "%@ Boost";
 "Stats.Boosts.TabBoosts_any" = "%@ Boosts";
-"Stats.Boosts.TabGifts_1" = "%@ Boost";
-"Stats.Boosts.TabGifts_any" = "%@ Boosts";
+"Stats.Boosts.TabGifts_1" = "%@ Gift";
+"Stats.Boosts.TabGifts_any" = "%@ Gifts";
 "Stats.Boosts.ToBeDistributed" = "To Be Distributed";
 "Stats.Boosts.Unclaimed" = "Unclaimed";
 "Stats.Boosts.GetBoosts" = "Get Boosts via Gifts";
@@ -10416,6 +10416,7 @@ Sorry for the inconvenience.";
 
 "ChannelBoost.EnableColors" = "Enable Colors";
 "ChannelBoost.EnableColorsText" = "Your channel needs %1$@ to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
+"ChannelBoost.EnableColorsLevelText" = "Your channel needs **Level %1$@** to change channel color.\n\nAsk your **Premium** subscribers to boost your channel with this link:";
 "ChannelBoost.BoostAgain" = "Boost Again";
 
 "Settings.New" = "NEW";

@@ -1187,7 +1187,7 @@ private final class LimitSheetContent: CombinedComponent {
                             }
                         case .nameColors:
                             titleText = strings.ChannelBoost_EnableColors
-                            string = strings.ChannelBoost_EnableColorsText(valueString).string
+                            string = strings.ChannelBoost_EnableColorsLevelText("\(premiumConfiguration.minChannelNameColorLevel)").string
                         case .channelReactions:
                             //TODO:localize
                             titleText = "Custom Reactions"

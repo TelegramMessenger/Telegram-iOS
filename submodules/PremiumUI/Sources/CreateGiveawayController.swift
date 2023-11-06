@@ -898,13 +898,7 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
         let state = stateValue.with { $0 }
 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-             
-        updateState { state in
-            var updatedState = state
-            updatedState.updating = true
-            return updatedState
-        }
-        
+                     
         switch subject {
         case .generic:
             guard let products = productsValue.with({ $0 }), !products.isEmpty else {
@@ -933,6 +927,12 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 })], parseMarkdown: true)
                 presentControllerImpl?(alertController)
                 return
+            }
+            
+            updateState { state in
+                var updatedState = state
+                updatedState.updating = true
+                return updatedState
             }
             
             let (currency, amount) = selectedProduct.storeProduct.priceCurrencyAndAmount
@@ -1033,6 +1033,12 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                 }
             })
         case let .prepaid(prepaidGiveaway):
+            updateState { state in
+                var updatedState = state
+                updatedState.updating = true
+                return updatedState
+            }
+            
             let _ = (context.engine.payments.launchPrepaidGiveaway(peerId: peerId, id: prepaidGiveaway.id, additionalPeerIds: state.channels.filter { $0 != peerId }, countries: state.countries, onlyNewSubscribers: state.onlyNewEligible, randomId: Int64.random(in: .min ..< .max), untilDate: state.time)
             |> deliverOnMainQueue).startStandalone(completed: {
                 if let controller, let navigationController = controller.navigationController as? NavigationController {

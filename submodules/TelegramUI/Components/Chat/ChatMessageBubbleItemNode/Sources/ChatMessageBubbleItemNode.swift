@@ -2844,6 +2844,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             return
         }
         
+        let themeUpdated = strongSelf.appliedItem?.presentationData.theme.theme !== item.presentationData.theme.theme
         let previousContextFrame = strongSelf.mainContainerNode.frame
         strongSelf.mainContainerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
         strongSelf.mainContextSourceNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
@@ -2992,7 +2993,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             nameButtonNode.frame = nameNodeFrame.insetBy(dx: -2.0, dy: -3.0)
             
             let nameColor = authorNameColor ?? item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-            if "".isEmpty {
+            if themeUpdated {
                 nameHighlightNode.image = generateFilledRoundedRectImage(size: CGSize(width: 8.0, height: 8.0), cornerRadius: 4.0, color: nameColor.withAlphaComponent(0.1))?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 4)
             }
             
@@ -3065,7 +3066,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 credibilityHighlightNode.frame = credibilityIconFrame.insetBy(dx: -1.0, dy: -1.0)
                 credibilityButtonNode.frame = credibilityIconFrame.insetBy(dx: -2.0, dy: -3.0)
                 
-                if "".isEmpty {
+                if themeUpdated {
                     credibilityHighlightNode.image = generateFilledRoundedRectImage(size: CGSize(width: 8.0, height: 8.0), cornerRadius: 4.0, color: nameColor.withAlphaComponent(0.1))?.stretchableImage(withLeftCapWidth: 4, topCapHeight: 4)
                 }
             } else {
