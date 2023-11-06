@@ -105,17 +105,30 @@ private func takenImmutableOperation(postbox: Postbox, peerId: PeerId, tagLocalI
     }
 }
 
-func managedSecretChatOutgoingOperations(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
-    return Signal { _ in
+enum ManagedSecretChatOutgoingOperationsMode {
+    case all
+    case standaloneComplete(peerId: PeerId)
+}
+
+func managedSecretChatOutgoingOperations(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network, accountPeerId: PeerId, mode: ManagedSecretChatOutgoingOperationsMode) -> Signal<Void, NoError> {
+    return Signal { subscriber in
         let helper = Atomic<ManagedSecretChatOutgoingOperationsHelper>(value: ManagedSecretChatOutgoingOperationsHelper())
         
-        let disposable = postbox.mergedOperationLogView(tag: OperationLogTags.SecretOutgoing, limit: 10).start(next: { view in
+        var filterByPeerId: PeerId?
+        if case let .standaloneComplete(peerId) = mode {
+            filterByPeerId = peerId
+        }
+        let disposable = postbox.mergedOperationLogView(tag: OperationLogTags.SecretOutgoing, filterByPeerId: filterByPeerId, limit: 10).start(next: { view in
             let (disposeOperations, beginOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PeerMergedOperationLogEntry, MetaDisposable)]) in
                 return helper.update(view.entries)
             }
             
             for disposable in disposeOperations {
                 disposable.dispose()
+            }
+            
+            if case .standaloneComplete = mode, view.entries.isEmpty {
+                subscriber.putCompletion()
             }
             
             for (entry, disposable) in beginOperations {
@@ -128,6 +141,8 @@ func managedSecretChatOutgoingOperations(auxiliaryMethods: AccountAuxiliaryMetho
                                     return initialHandshakeAccept(postbox: postbox, network: network, peerId: entry.peerId, accessHash: accessHash, gA: gA, b: b, tagLocalIndex: entry.tagLocalIndex)
                                 case let .sendMessage(layer, id, file):
                                     return sendMessage(auxiliaryMethods: auxiliaryMethods, postbox: postbox, network: network, messageId: id, file: file, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
+                                case let .sendStandaloneMessage(layer, contents):
+                                    return sendStandaloneMessage(auxiliaryMethods: auxiliaryMethods, postbox: postbox, network: network, accountPeerId: accountPeerId, peerId: entry.peerId, contents: contents, tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered, layer: layer)
                                 case let .reportLayerSupport(layer, actionGloballyUniqueId, layerSupport):
                                     return sendServiceActionMessage(postbox: postbox, network: network, peerId: entry.peerId, action: .reportLayerSupport(layer: layer, actionGloballyUniqueId: actionGloballyUniqueId, layerSupport: layerSupport), tagLocalIndex: entry.tagLocalIndex, wasDelivered: operation.delivered)
                                 case let .deleteMessages(layer, actionGloballyUniqueId, globallyUniqueIds):
@@ -1711,9 +1726,9 @@ private func resourceThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, me
     }
 }
 
-private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, message: Message) -> Signal<[MediaId: (PixelDimensions, Data)], NoError> {
+private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods, mediaBox: MediaBox, media: [Media]) -> Signal<[MediaId: (PixelDimensions, Data)], NoError> {
     var signals: [Signal<(MediaId, PixelDimensions, Data)?, NoError>] = []
-    for media in message.media {
+    for media in media {
         if let image = media as? TelegramMediaImage {
             if let smallestRepresentation = smallestImageRepresentation(image.representations) {
                 signals.append(resourceThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: mediaBox, resource: smallestRepresentation.resource, mediaId: image.imageId))
@@ -1739,7 +1754,7 @@ private func messageWithThumbnailData(auxiliaryMethods: AccountAuxiliaryMethods,
 private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network, messageId: MessageId, file: SecretChatOutgoingFile?, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Signal<[MediaId: (PixelDimensions, Data)], NoError> in
         if let message = transaction.getMessage(messageId) {
-            return messageWithThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: postbox.mediaBox, message: message)
+            return messageWithThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: postbox.mediaBox, media: message.media)
         } else {
             return .single([:])
         }
@@ -1837,6 +1852,166 @@ private func sendMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Pos
                 return .complete()
             }
         } |> switchToLatest
+    }
+}
+
+private func sendStandaloneMessage(auxiliaryMethods: AccountAuxiliaryMethods, postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, contents: StandaloneSecretMessageContents, tagLocalIndex: Int32, wasDelivered: Bool, layer: SecretChatLayer) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<[MediaId: (PixelDimensions, Data)], NoError> in
+        var media: [Media] = []
+        if let value = contents.media {
+            media.append(value)
+        }
+        return messageWithThumbnailData(auxiliaryMethods: auxiliaryMethods, mediaBox: postbox.mediaBox, media: media)
+    }
+    |> switchToLatest
+    |> mapToSignal { thumbnailData -> Signal<Void, NoError> in
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            guard let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat else {
+                return .complete()
+            }
+            
+            let globallyUniqueId = contents.id
+            
+            var media: [Media] = []
+            if let value = contents.media {
+                media.append(value)
+            }
+            let message = Message(
+                stableId: 1,
+                stableVersion: 0,
+                id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 1),
+                globallyUniqueId: globallyUniqueId,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: 1,
+                flags: [],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: nil,
+                text: contents.text,
+                attributes: contents.attributes,
+                media: media,
+                peers: SimpleDictionary(),
+                associatedMessages: SimpleDictionary(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+            
+            let decryptedMessage = boxedDecryptedMessage(transaction: transaction, message: message, globallyUniqueId: globallyUniqueId, uploadedFile: contents.file, thumbnailData: [:], layer: layer)
+            return sendBoxedDecryptedMessage(postbox: postbox, network: network, peer: peer, state: state, operationIndex: tagLocalIndex, decryptedMessage: decryptedMessage, globallyUniqueId: globallyUniqueId, file: contents.file, silent: message.muted, asService: wasDelivered, wasDelivered: wasDelivered)
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                return postbox.transaction { transaction -> Void in
+                    let forceRemove: Bool
+                    switch result {
+                    case .message:
+                        forceRemove = false
+                    case .error:
+                        forceRemove = true
+                    }
+                    markOutgoingOperationAsCompleted(transaction: transaction, peerId: peerId, tagLocalIndex: tagLocalIndex, forceRemove: forceRemove)
+                    
+                    var timestamp: Int32?
+                    var encryptedFile: SecretChatFileReference?
+                    if case let .message(result) = result {
+                        switch result {
+                        case let .sentEncryptedMessage(date):
+                            timestamp = date
+                        case let .sentEncryptedFile(date, file):
+                            timestamp = date
+                            encryptedFile = SecretChatFileReference(file)
+                        }
+                    }
+                    
+                    if let timestamp = timestamp {
+                        var updatedMedia: [Media] = []
+                        for item in media {
+                            if let file = item as? TelegramMediaFile, let encryptedFile = encryptedFile, let sourceFile = contents.file {
+                                let updatedFile = TelegramMediaFile(
+                                    fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: encryptedFile.id),
+                                    partialReference: nil,
+                                    resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: sourceFile.size, datacenterId: Int(encryptedFile.datacenterId), key: sourceFile.key),
+                                    previewRepresentations: file.previewRepresentations,
+                                    videoThumbnails: file.videoThumbnails,
+                                    immediateThumbnailData: file.immediateThumbnailData,
+                                    mimeType: file.mimeType,
+                                    size: file.size,
+                                    attributes: file.attributes
+                                )
+                                updatedMedia.append(updatedFile)
+                            } else if let image = item as? TelegramMediaImage, let encryptedFile = encryptedFile, let sourceFile = contents.file, let representation = image.representations.last {
+                                let updatedImage = TelegramMediaImage(
+                                    imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: encryptedFile.id),
+                                    representations: [
+                                        TelegramMediaImageRepresentation(
+                                            dimensions: representation.dimensions,
+                                            resource: SecretFileMediaResource(fileId: encryptedFile.id, accessHash: encryptedFile.accessHash, containerSize: encryptedFile.size, decryptedSize: sourceFile.size, datacenterId: Int(encryptedFile.datacenterId), key: sourceFile.key),
+                                            progressiveSizes: [],
+                                            immediateThumbnailData: image.immediateThumbnailData,
+                                            hasVideo: false,
+                                            isPersonal: false
+                                        )],
+                                    immediateThumbnailData: nil,
+                                    reference: nil,
+                                    partialReference: nil,
+                                    flags: []
+                                )
+                                updatedMedia.append(updatedImage)
+                            } else {
+                                updatedMedia.append(item)
+                            }
+                        }
+                        
+                        let entitiesAttribute = message.textEntitiesAttribute
+                        let (tags, globalTags) = tagsForStoreMessage(incoming: false, attributes: contents.attributes, media: updatedMedia, textEntities: entitiesAttribute?.entities, isPinned: false)
+                        
+                        let storedMessage = StoreMessage(
+                            peerId: peerId,
+                            namespace: Namespaces.Message.Local,
+                            globallyUniqueId: globallyUniqueId,
+                            groupingKey: nil,
+                            threadId: nil,
+                            timestamp: timestamp,
+                            flags: [],
+                            tags: tags,
+                            globalTags: globalTags,
+                            localTags: [],
+                            forwardInfo: nil,
+                            authorId: accountPeerId,
+                            text: message.text,
+                            attributes: message.attributes,
+                            media: updatedMedia
+                        )
+                        
+                        let idMapping = transaction.addMessages([storedMessage], location: .Random)
+                        if let id = idMapping[globallyUniqueId] {
+                            maybeReadSecretOutgoingMessage(transaction: transaction, index: MessageIndex(id: id, timestamp: timestamp))
+                        }
+                        
+                        var sentStickers: [TelegramMediaFile] = []
+                        for media in message.media {
+                            if let file = media as? TelegramMediaFile {
+                                if file.isSticker {
+                                    sentStickers.append(file)
+                                }
+                            }
+                        }
+                        
+                        for file in sentStickers {
+                            addRecentlyUsedSticker(transaction: transaction, fileReference: .standalone(media: file))
+                        }
+                        
+                        if case .error(.chatCancelled) = result {
+                        }
+                    }
+                }
+            }
+        }
+        |> switchToLatest
     }
 }
 

@@ -520,7 +520,7 @@ func urlPreviewStateForInputText(_ inputText: NSAttributedString?, context: Acco
     }
     if let _ = dataDetector {
         let detectedUrls = detectUrls(inputText)
-        if detectedUrls != currentQuery?.detectedUrls {
+        if detectedUrls != (currentQuery?.detectedUrls ?? []) {
             if !detectedUrls.isEmpty {
                 return (UrlPreviewState(detectedUrls: detectedUrls), webpagePreview(account: context.account, urls: detectedUrls)
                 |> mapToSignal { result -> Signal<(TelegramMediaWebpage, String)?, NoError> in
