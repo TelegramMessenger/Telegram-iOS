@@ -538,7 +538,11 @@ private final class StoryContainerScreenComponent: Component {
                     let fraction = translation.x / (self.bounds.width / 2.0)
                     timestamp = initialSeekTimestamp + duration * fraction
                 }
-                visibleItemView.seekTo(max(0.0, min(duration, timestamp)), apply: apply)
+                if translation.y < 64.0 {
+                    visibleItemView.seekTo(max(0.0, min(duration, timestamp)), apply: apply)
+                } else {
+                    visibleItemView.seekTo(initialSeekTimestamp, apply: apply)
+                }
             }
             longPressRecognizer.updatePanEnded = { [weak self] in
                 guard let self else {

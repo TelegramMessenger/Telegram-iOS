@@ -886,6 +886,11 @@ private extension MediaEditorValues {
         if let paintingData = legacyAdjustments.paintingData {
             if let entitiesData = paintingData.entitiesData {
                 entities = decodeCodableDrawingEntities(data: entitiesData)
+                
+                let hasAnimation = entities.first(where: { $0.entity.isAnimated }) != nil
+                if !hasAnimation {
+                    entities = []
+                }
             }
             if let imagePath = paintingData.imagePath, let image = UIImage(contentsOfFile: imagePath) {
                 drawing = image

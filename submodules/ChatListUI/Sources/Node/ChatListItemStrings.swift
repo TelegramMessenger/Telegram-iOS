@@ -305,9 +305,18 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                         } else {
                             messageText = strings.Notification_Story
                         }
-                    case _ as TelegramMediaGiveaway:
-                        messageText = strings.Message_Giveaway
-                        case let webpage as TelegramMediaWebpage:
+                    case let giveaway as TelegramMediaGiveaway:
+                        let dateString = stringForDateWithoutYear(date: Date(timeIntervalSince1970: TimeInterval(giveaway.untilDate)), timeZone: .current, strings: strings)
+                        let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
+                        let isFinished = currentTime >= giveaway.untilDate
+                        if isFinished {
+                            let winnersString = strings.Message_GiveawayFinished_Winners(giveaway.quantity)
+                            messageText = strings.Message_GiveawayFinished(winnersString, dateString).string
+                        } else {
+                            let winnersString = strings.Message_GiveawayOngoing_Winners(giveaway.quantity)
+                            messageText = strings.Message_GiveawayOngoing(winnersString, dateString).string
+                        }
+                    case let webpage as TelegramMediaWebpage:
                         if messageText.isEmpty, case let .Loaded(content) = webpage.content {
                             messageText = content.displayUrl
                         }

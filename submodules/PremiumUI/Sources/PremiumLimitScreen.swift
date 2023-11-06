@@ -517,6 +517,10 @@ public class PremiumLimitDisplayComponent: Component {
                         countWidth = 51.0
                     case 4:
                         countWidth = 60.0
+                    case 5:
+                        countWidth = 74.0
+                    case 6:
+                        countWidth = 88.0
                     default:
                         countWidth = 51.0
                 }

@@ -57,7 +57,10 @@ public func presentGiveawayInfoController(
         
         switch giveawayInfo {
         case let .ongoing(start, status):
-            let startDate = stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            let startDate = presentationData.strings.Chat_Giveaway_Info_FullDate(
+                stringForMessageTimestamp(timestamp: start, dateTimeFormat: presentationData.dateTimeFormat),
+                stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            ).string.trimmingCharacters(in: CharacterSet(charactersIn: "*"))
             
             title = presentationData.strings.Chat_Giveaway_Info_Title
             
@@ -123,7 +126,11 @@ public func presentGiveawayInfoController(
             
             text = "\(intro)\n\n\(ending)\(participation)"
         case let .finished(status, start, finish, _, activatedCount):
-            let startDate = stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            let startDate = presentationData.strings.Chat_Giveaway_Info_FullDate(
+                stringForMessageTimestamp(timestamp: start, dateTimeFormat: presentationData.dateTimeFormat),
+                stringForDate(timestamp: start, timeZone: timeZone, strings: presentationData.strings)
+            ).string.trimmingCharacters(in: CharacterSet(charactersIn: "*"))
+            
             let finishDate = stringForDate(timestamp: finish, timeZone: timeZone, strings: presentationData.strings)
             title = presentationData.strings.Chat_Giveaway_Info_EndedTitle
             
