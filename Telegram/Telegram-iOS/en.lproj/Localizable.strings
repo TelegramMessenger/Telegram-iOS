@@ -10433,3 +10433,21 @@ Sorry for the inconvenience.";
 "CountriesList.SaveCountries" = "Save Countries";
 "CountriesList.SelectUpTo_1" = "select up to %@ country";
 "CountriesList.SelectUpTo_any" = "select up to %@ countries";
+
+"Message.GiveawayOngoing" = "Giveaway: %1$@ on %2$@";
+"Message.GiveawayOngoing.Winners_1" = "%@ winner to be selected";
+"Message.GiveawayOngoing.Winners_any" = "%@ winners to be selected";
+
+"Message.GiveawayFinished" = "Giveaway: %1$@ on %2$@";
+"Message.GiveawayFinished.Winners_1" = "%@ winner was selected";
+"Message.GiveawayFinished.Winners_any" = "%@ winners were selected";
+
+"Conversation.PinnedGiveaway" = "Giveaway";
+
+"Conversation.PinnedGiveaway.Ongoing" = "%1$@ on %2$@";
+"Conversation.PinnedGiveaway.Ongoing.Winners_1" = "%@ winner to be selected";
+"Conversation.PinnedGiveaway.Ongoing.Winners_any" = "%@ winners to be selected";
+
+"Conversation.PinnedGiveaway.Finished" = "%1$@ on %2$@";
+"Conversation.PinnedGiveaway.Finished.Winners_1" = "%@ winner was selected";
+"Conversation.PinnedGiveaway.Finished.Winners_any" = "%@ winners were selected";
