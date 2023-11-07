@@ -530,6 +530,7 @@ private final class PeerInfoInteraction {
     let editingToggleMessageSignatures: (Bool) -> Void
     let openParticipantsSection: (PeerInfoParticipantsSection) -> Void
     let openRecentActions: () -> Void
+    let openStats: () -> Void
     let editingOpenPreHistorySetup: () -> Void
     let editingOpenAutoremoveMesages: () -> Void
     let openPermissions: () -> Void
@@ -583,6 +584,7 @@ private final class PeerInfoInteraction {
         editingToggleMessageSignatures: @escaping (Bool) -> Void,
         openParticipantsSection: @escaping (PeerInfoParticipantsSection) -> Void,
         openRecentActions: @escaping () -> Void,
+        openStats: @escaping () -> Void,
         editingOpenPreHistorySetup: @escaping () -> Void,
         editingOpenAutoremoveMesages: @escaping () -> Void,
         openPermissions: @escaping () -> Void,
@@ -635,6 +637,7 @@ private final class PeerInfoInteraction {
         self.editingToggleMessageSignatures = editingToggleMessageSignatures
         self.openParticipantsSection = openParticipantsSection
         self.openRecentActions = openRecentActions
+        self.openStats = openStats
         self.editingOpenPreHistorySetup = editingOpenPreHistorySetup
         self.editingOpenAutoremoveMesages = editingOpenAutoremoveMesages
         self.openPermissions = openPermissions
@@ -1551,8 +1554,9 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 let ItemAdmins = 9
                 let ItemMembers = 10
                 let ItemMemberRequests = 11
-                let ItemBanned = 12
-                let ItemRecentActions = 13
+                let ItemStats = 12
+                let ItemBanned = 13
+                let ItemRecentActions = 14
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 
@@ -1642,45 +1646,54 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                 }
                 
                 var canEditMembers = false
-                if channel.hasPermission(.banMembers) {
+                if channel.hasPermission(.banMembers) && (channel.adminRights != nil || channel.flags.contains(.isCreator)) {
                     canEditMembers = true
                 }
                 if canEditMembers {
-                    if channel.adminRights != nil || channel.flags.contains(.isCreator) {
-                        let adminCount: Int32
-                        let memberCount: Int32
-                        let bannedCount: Int32
-                        if let cachedData = data.cachedData as? CachedChannelData {
-                            adminCount = cachedData.participantsSummary.adminCount ?? 0
-                            memberCount = cachedData.participantsSummary.memberCount ?? 0
-                            bannedCount = cachedData.participantsSummary.kickedCount ?? 0
-                        } else {
-                            adminCount = 0
-                            memberCount = 0
-                            bannedCount = 0
-                        }
-                        
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
-                            interaction.openParticipantsSection(.admins)
-                        }))
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
-                            interaction.openParticipantsSection(.members)
-                        }))
-                        
-                        if let count = data.requests?.count, count > 0 {
-                            items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
-                                interaction.openParticipantsSection(.memberRequests)
-                            }))
-                        }
-                        
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
-                            interaction.openParticipantsSection(.banned)
-                        }))
-                        
-                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
-                            interaction.openRecentActions()
+                    let adminCount: Int32
+                    let memberCount: Int32
+                    if let cachedData = data.cachedData as? CachedChannelData {
+                        adminCount = cachedData.participantsSummary.adminCount ?? 0
+                        memberCount = cachedData.participantsSummary.memberCount ?? 0
+                    } else {
+                        adminCount = 0
+                        memberCount = 0
+                    }
+                    
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemAdmins, label: .text("\(adminCount == 0 ? "" : "\(presentationStringsFormattedNumber(adminCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Administrators, icon: UIImage(bundleImageName: "Chat/Info/GroupAdminsIcon"), action: {
+                        interaction.openParticipantsSection(.admins)
+                    }))
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMembers, label: .text("\(memberCount == 0 ? "" : "\(presentationStringsFormattedNumber(memberCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.Channel_Info_Subscribers, icon: UIImage(bundleImageName: "Chat/Info/GroupMembersIcon"), action: {
+                        interaction.openParticipantsSection(.members)
+                    }))
+                    
+                    if let count = data.requests?.count, count > 0 {
+                        items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemMemberRequests, label: .badge(presentationStringsFormattedNumber(count, presentationData.dateTimeFormat.groupingSeparator), presentationData.theme.list.itemAccentColor), text: presentationData.strings.GroupInfo_MemberRequests, icon: UIImage(bundleImageName: "Chat/Info/GroupRequestsIcon"), action: {
+                            interaction.openParticipantsSection(.memberRequests)
                         }))
                     }
+                }
+                
+                if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canViewStats) {
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemStats, label: .none, text: presentationData.strings.Channel_Info_Stats, icon: UIImage(bundleImageName: "Chat/Info/StatsIcon"), action: {
+                        interaction.openStats()
+                    }))
+                }
+                
+                if canEditMembers {
+                    let bannedCount: Int32
+                    if let cachedData = data.cachedData as? CachedChannelData {
+                        bannedCount = cachedData.participantsSummary.kickedCount ?? 0
+                    } else {
+                        bannedCount = 0
+                    }
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemBanned, label: .text("\(bannedCount == 0 ? "" : "\(presentationStringsFormattedNumber(bannedCount, presentationData.dateTimeFormat.groupingSeparator))")"), text: presentationData.strings.GroupInfo_Permissions_Removed, icon: UIImage(bundleImageName: "Chat/Info/GroupRemovedIcon"), action: {
+                        interaction.openParticipantsSection(.banned)
+                    }))
+                    
+                    items[.peerAdditionalSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemRecentActions, label: .none, text: presentationData.strings.Group_Info_AdminLog, icon: UIImage(bundleImageName: "Chat/Info/RecentActionsIcon"), action: {
+                        interaction.openRecentActions()
+                    }))
                 }
                 
                 if isCreator { //if let cachedData = data.cachedData as? CachedChannelData, cachedData.flags.contains(.canDeleteHistory) {
@@ -2304,6 +2317,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             openRecentActions: { [weak self] in
                 self?.openRecentActions()
+            },
+            openStats: { [weak self] in
+                self?.openStats()
             },
             editingOpenPreHistorySetup: { [weak self] in
                 self?.editingOpenPreHistorySetup()
