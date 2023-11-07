@@ -10442,6 +10442,9 @@ Sorry for the inconvenience.";
 "Message.GiveawayFinished.Winners_1" = "%@ winner was selected";
 "Message.GiveawayFinished.Winners_any" = "%@ winners were selected";
 
+"Message.GiveawayStarted" = "Channel started a giveaway";
+"Message.GiveawayStartedOther" = "%@ started a giveaway";
+
 "Conversation.PinnedGiveaway" = "Giveaway";
 
 "Conversation.PinnedGiveaway.Ongoing" = "%1$@ on %2$@";
@@ -10451,3 +10454,9 @@ Sorry for the inconvenience.";
 "Conversation.PinnedGiveaway.Finished" = "%1$@ on %2$@";
 "Conversation.PinnedGiveaway.Finished.Winners_1" = "%@ winner was selected";
 "Conversation.PinnedGiveaway.Finished.Winners_any" = "%@ winners were selected";
+
+"BoostGift.StartConfirmation.Title" = "Start Giveaway";
+"BoostGift.StartConfirmation.Text" = "Are you sure you want to start giveaway now?";
+"BoostGift.StartConfirmation.Start" = "Start";
+
+"Channel.Info.Stats" = "Statistics and Boosts";

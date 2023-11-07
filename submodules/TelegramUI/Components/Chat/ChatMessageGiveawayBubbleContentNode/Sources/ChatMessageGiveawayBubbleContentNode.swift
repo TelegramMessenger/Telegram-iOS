@@ -437,7 +437,7 @@ public class ChatMessageGiveawayBubbleContentNode: ChatMessageBubbleContentNode 
                         }
                     }
                 }
-                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1))
+                let (channelsWidth, continueChannelLayout) = makeChannelsLayout(item.context, 220.0, channelPeers, accentColor, accentColor.withAlphaComponent(0.1), incoming, item.presentationData.theme.theme.overallDarkAppearance)
                 maxContentWidth = max(maxContentWidth, channelsWidth)
                 maxContentWidth += 30.0
                 
@@ -649,11 +649,11 @@ private final class PeerButtonsStackNode: ASDisplayNode {
     var buttonNodes: [PeerButtonNode] = []
     var openPeer: (EnginePeer) -> Void = { _ in }
     
-    static func asyncLayout(_ current: PeerButtonsStackNode) -> (_ context: AccountContext, _ width: CGFloat, _ peers: [EnginePeer], _ titleColor: UIColor, _ backgroundColor: UIColor) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonsStackNode)) {
+    static func asyncLayout(_ current: PeerButtonsStackNode) -> (_ context: AccountContext, _ width: CGFloat, _ peers: [EnginePeer], _ titleColor: UIColor, _ backgroundColor: UIColor, _ incoming: Bool, _ dark: Bool) -> (CGFloat, (CGFloat) -> (CGSize, () -> PeerButtonsStackNode)) {
         let currentChannelButtons = current.buttonNodes.isEmpty ? nil : current.buttonNodes
         let maybeMakeChannelButtons = current.buttonNodes.map(PeerButtonNode.asyncLayout)
         
-        return { context, width, peers, titleColor, backgroundColor in
+        return { context, width, peers, titleColor, backgroundColor, incoming, dark in
             let targetNode = current
             
             var buttonNodes: [PeerButtonNode] = []
@@ -681,6 +681,13 @@ private final class PeerButtonsStackNode: ASDisplayNode {
             for i in 0 ..< makeChannelButtonLayouts.count {
                 let peer = peers[i]
                 let makeChannelButtonLayout = makeChannelButtonLayouts[i]
+                
+                var titleColor = titleColor
+                var backgroundColor = backgroundColor
+                if incoming, let nameColor = peer.nameColor {
+                    titleColor = context.peerNameColors.get(nameColor, dark: dark).main
+                    backgroundColor = titleColor.withAlphaComponent(0.1)
+                }
                 
                 let (buttonWidth, buttonContinue) = makeChannelButtonLayout(context, width, peer, titleColor, backgroundColor)
                 sizes.append(CGSize(width: buttonWidth, height: buttonHeight))
