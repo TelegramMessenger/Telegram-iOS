@@ -22,6 +22,31 @@ import ChatControllerInteraction
 
 private let titleFont: UIFont = Font.semibold(15.0)
 
+public func defaultWebpageImageSizeIsSmall(webpage: TelegramMediaWebpageLoadedContent) -> Bool {
+    let type = websiteType(of: webpage.websiteName)
+    
+    let mainMedia: Media?
+    switch type {
+    case .instagram, .twitter:
+        mainMedia = webpage.story ?? webpage.image ?? webpage.file
+    default:
+        mainMedia = webpage.story ?? webpage.file ?? webpage.image
+    }
+    
+    if let image = mainMedia as? TelegramMediaImage {
+        if let type = webpage.type, (["photo", "video", "embed", "gif", "document", "telegram_album"] as [String]).contains(type) {
+        } else if let type = webpage.type, (["article"] as [String]).contains(type) {
+            return true
+        } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
+            if webpage.instantPage == nil {
+                return true
+            }
+        }
+    }
+    
+    return false
+}
+
 public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     private var webPage: TelegramMediaWebpage?
     
@@ -309,10 +334,7 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         }
                         mediaAndFlags = (image, flags)
                     } else if let _ = largestImageRepresentation(image.representations)?.dimensions {
-                        var flags = ChatMessageAttachedContentNodeMediaFlags()
-                        if webpage.instantPage == nil {
-                            flags.insert(.preferMediaInline)
-                        }
+                        let flags = ChatMessageAttachedContentNodeMediaFlags()
                         mediaAndFlags = (image, flags)
                     }
                 } else if let story = mainMedia as? TelegramMediaStory {
@@ -439,6 +461,10 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                         default:
                             break
                     }
+                }
+                
+                if defaultWebpageImageSizeIsSmall(webpage: webpage) {
+                    mediaAndFlags?.1.insert(.preferMediaInline)
                 }
                 
                 if let webPageContent, let isMediaLargeByDefault = webPageContent.isMediaLargeByDefault, !isMediaLargeByDefault {

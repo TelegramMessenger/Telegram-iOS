@@ -16,6 +16,7 @@ import TextFormat
 import ChatMessageItemView
 import ChatMessageBubbleItemNode
 import TelegramNotices
+import ChatMessageWebpageBubbleContentNode
 
 private enum OptionsId: Hashable {
     case reply
@@ -710,7 +711,13 @@ private func chatLinkOptions(selfController: ChatControllerImpl, sourceNode: ASD
         
         var largeMedia = false
         if webpageHasLargeMedia {
-            largeMedia = urlPreview.largeMedia ?? true
+            if let value = urlPreview.largeMedia {
+                largeMedia = value
+            } else if case let .Loaded(content) = urlPreview.webPage.content {
+                largeMedia = !defaultWebpageImageSizeIsSmall(webpage: content)
+            } else {
+                largeMedia = true
+            }
         } else {
             largeMedia = false
         }
