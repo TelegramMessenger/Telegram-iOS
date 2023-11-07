@@ -32,14 +32,16 @@ final class PeerInfoScreenDisclosureItem: PeerInfoScreenItem {
     
     let id: AnyHashable
     let label: Label
+    let additionalBadgeLabel: String?
     let text: String
     let icon: UIImage?
     let iconSignal: Signal<UIImage?, NoError>?
     let action: (() -> Void)?
     
-    init(id: AnyHashable, label: Label = .none, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
+    init(id: AnyHashable, label: Label = .none, additionalBadgeLabel: String? = nil, text: String, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, action: (() -> Void)?) {
         self.id = id
         self.label = label
+        self.additionalBadgeLabel = additionalBadgeLabel
         self.text = text
         self.icon = icon
         self.iconSignal = iconSignal
@@ -57,6 +59,7 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
     private let iconNode: ASImageNode
     private let labelBadgeNode: ASImageNode
     private let labelNode: ImmediateTextNode
+    private var additionalLabelNode: ImmediateTextNode?
     private let textNode: ImmediateTextNode
     private let arrowNode: ASImageNode
     private let bottomSeparatorNode: ASDisplayNode
@@ -228,6 +231,13 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             if self.labelBadgeNode.supernode == nil {
                 self.insertSubnode(self.labelBadgeNode, belowSubnode: self.labelNode)
             }
+        } else if item.additionalBadgeLabel != nil {
+            if previousItem?.additionalBadgeLabel == nil {
+                self.labelBadgeNode.image = generateFilledRoundedRectImage(size: CGSize(width: 16.0, height: 16.0), cornerRadius: 5.0, color: presentationData.theme.list.itemCheckColors.fillColor)?.stretchableImage(withLeftCapWidth: 6, topCapHeight: 6)
+            }
+            if self.labelBadgeNode.supernode == nil {
+                self.insertSubnode(self.labelBadgeNode, belowSubnode: self.labelNode)
+            }
         } else {
             self.labelBadgeNode.removeFromSupernode()
         }
@@ -247,9 +257,30 @@ private final class PeerInfoScreenDisclosureItemNode: PeerInfoScreenItemNode {
             labelFrame = CGRect(origin: CGPoint(x: width - rightInset - labelSize.width, y: 12.0), size: labelSize)
         }
         
+        if let additionalBadgeLabel = item.additionalBadgeLabel {
+            let additionalLabelNode: ImmediateTextNode
+            if let current = self.additionalLabelNode {
+                additionalLabelNode = current
+            } else {
+                additionalLabelNode = ImmediateTextNode()
+                additionalLabelNode.isUserInteractionEnabled = false
+                self.additionalLabelNode = additionalLabelNode
+                self.addSubnode(additionalLabelNode)
+            }
+            
+            additionalLabelNode.attributedText = NSAttributedString(string: additionalBadgeLabel, font: Font.medium(11.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
+            let additionalLabelSize = additionalLabelNode.updateLayout(CGSize(width: labelConstrainWidth, height: .greatestFiniteMagnitude))
+            additionalLabelNode.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 10.0, y: floor((height - additionalLabelSize.height) / 2.0) + 1.0), size: additionalLabelSize)
+        } else if let additionalLabelNode = self.additionalLabelNode {
+            self.additionalLabelNode = nil
+            additionalLabelNode.removeFromSupernode()
+        }
+        
         let labelBadgeNodeFrame: CGRect
         if case .titleBadge = item.label {
             labelBadgeNodeFrame = labelFrame.insetBy(dx: -4.0, dy: -2.0 + UIScreenPixel)
+        } else if let additionalLabelNode = self.additionalLabelNode {
+            labelBadgeNodeFrame = additionalLabelNode.frame.insetBy(dx: -4.0, dy: -2.0 + UIScreenPixel)
         } else {
             labelBadgeNodeFrame = CGRect(origin: CGPoint(x: width - rightInset - badgeWidth, y: floorToScreenPixels(labelFrame.midY - badgeDiameter / 2.0)), size: CGSize(width: badgeWidth, height: badgeDiameter))
         }

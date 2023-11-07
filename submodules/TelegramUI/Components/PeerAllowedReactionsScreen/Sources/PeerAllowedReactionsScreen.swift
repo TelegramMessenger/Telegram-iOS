@@ -16,6 +16,66 @@ import Markdown
 import ButtonComponent
 import PremiumUI
 import UndoUI
+import BundleIconComponent
+import AnimatedTextComponent
+
+private final class ButtonSubtitleComponent: CombinedComponent {
+    let count: Int
+    let theme: PresentationTheme
+    
+    init(count: Int, theme: PresentationTheme) {
+        self.count = count
+        self.theme = theme
+    }
+    
+    static func ==(lhs: ButtonSubtitleComponent, rhs: ButtonSubtitleComponent) -> Bool {
+        if lhs.count != rhs.count {
+            return false
+        }
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        return true
+    }
+    
+    static var body: Body {
+        let icon = Child(BundleIconComponent.self)
+        let text = Child(AnimatedTextComponent.self)
+
+        return { context in
+            let icon = icon.update(
+                component: BundleIconComponent(
+                    name: "Chat/Input/Accessory Panels/TextLockIcon",
+                    tintColor: context.component.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7),
+                    maxSize: CGSize(width: 10.0, height: 10.0)
+                ),
+                availableSize: CGSize(width: 100.0, height: 100.0),
+                transition: context.transition
+            )
+            //TODO:localize
+            var textItems: [AnimatedTextComponent.Item] = []
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .text("Level ")))
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(1 as Int), content: .number(context.component.count, minDigits: 1)))
+            textItems.append(AnimatedTextComponent.Item(id: AnyHashable(2 as Int), content: .text(" Required")))
+            let text = text.update(
+                component: AnimatedTextComponent(font: Font.medium(11.0), color: context.component.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.7), items: textItems),
+                availableSize: CGSize(width: context.availableSize.width - 20.0, height: 100.0),
+                transition: context.transition
+            )
+
+            let spacing: CGFloat = 3.0
+            let size = CGSize(width: icon.size.width + spacing + text.size.width, height: text.size.height)
+            context.add(icon
+                .position(icon.size.centered(in: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: icon.size.width, height: size.height))).center)
+            )
+            context.add(text
+                .position(text.size.centered(in: CGRect(origin: CGPoint(x: icon.size.width + spacing, y: 0.0), size: text.size)).center)
+            )
+
+            return size
+        }
+    }
+}
 
 final class PeerAllowedReactionsScreenComponent: Component {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
@@ -62,17 +122,23 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private(set) weak var state: EmptyComponentState?
         private var environment: EnvironmentType?
         
+        private var boostStatus: ChannelBoostStatus?
+        private var boostStatusDisposable: Disposable?
+        
         private var isEnabled: Bool = false
         private var availableReactions: AvailableReactions?
         private var enabledReactions: [EmojiComponentReactionItem]?
         
         private var emojiContent: EmojiPagerContentComponent?
         private var emojiContentDisposable: Disposable?
+        private var caretPosition: Int?
         
         private var displayInput: Bool = false
         
         private var isApplyingSettings: Bool = false
         private var applyDisposable: Disposable?
+        
+        private weak var currentUndoController: UndoOverlayController?
         
         override init(frame: CGRect) {
             self.scrollView = UIScrollView()
@@ -97,6 +163,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
         deinit {
             self.emojiContentDisposable?.dispose()
             self.applyDisposable?.dispose()
+            self.boostStatusDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -123,10 +190,28 @@ final class PeerAllowedReactionsScreenComponent: Component {
             if self.isApplyingSettings {
                 return
             }
-            guard let enabledReactions = self.enabledReactions else {
+            guard var enabledReactions = self.enabledReactions else {
                 return
             }
+            if !self.isEnabled {
+                enabledReactions.removeAll()
+            }
+            
             guard let availableReactions = self.availableReactions else {
+                return
+            }
+            
+            let customReactions = enabledReactions.filter({ item in
+                switch item.reaction {
+                case .custom:
+                    return true
+                case .builtin:
+                    return false
+                }
+            })
+            
+            if let boostStatus = self.boostStatus, !customReactions.isEmpty, customReactions.count > boostStatus.level {
+                self.displayPremiumScreen()
                 return
             }
             
@@ -155,38 +240,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 
                 switch error {
                 case .boostRequired:
-                    let _ = combineLatest(
-                        queue: Queue.mainQueue(),
-                        component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId)),
-                        component.context.engine.peers.getChannelBoostStatus(peerId: component.peerId)
-                    ).startStandalone(next: { [weak self] peer, status in
-                        guard let self, let component = self.component, let peer, let status else {
-                            return
-                        }
-                        
-                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
-                        
-                        let link = status.url
-                        let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
-                            guard let self, let component = self.component else {
-                                return true
-                            }
-                                    
-                            UIPasteboard.general.string = link
-                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
-                            return true
-                        }, openStats: nil, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
-                            guard let self, let component = self.component else {
-                                return
-                            }
-                            let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
-                            self.environment?.controller()?.push(controller)
-                        } : nil)
-                        self.environment?.controller()?.push(controller)
-                        
-                        HapticFeedback().impact(.light)
-                    })
+                    self.displayPremiumScreen()
                 case .generic:
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                     //TODO:localize
@@ -197,6 +251,68 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     return
                 }
                 self.environment?.controller()?.dismiss()
+            })
+        }
+        
+        private func displayPremiumScreen() {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.peerId))
+            |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                guard let self, let component = self.component, let peer, let status = self.boostStatus else {
+                    return
+                }
+                
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: component.context.currentAppConfiguration.with { $0 })
+                
+                let link = status.url
+                let controller = PremiumLimitScreen(context: component.context, subject: .storiesChannelBoost(peer: peer, boostSubject: .channelReactions, isCurrent: true, level: Int32(status.level), currentLevelBoosts: Int32(status.currentLevelBoosts), nextLevelBoosts: status.nextLevelBoosts.flatMap(Int32.init), link: link, myBoostCount: 0, canBoostAgain: false), count: Int32(status.boosts), action: { [weak self] in
+                    guard let self, let component = self.component else {
+                        return true
+                    }
+                            
+                    UIPasteboard.general.string = link
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.ChannelBoost_BoostLinkCopied), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                    return true
+                }, openStats: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.openBoostStats()
+                }, openGift: premiumConfiguration.giveawayGiftsPurchaseAvailable ? { [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let controller = createGiveawayController(context: component.context, peerId: component.peerId, subject: .generic)
+                    self.environment?.controller()?.push(controller)
+                } : nil)
+                self.environment?.controller()?.push(controller)
+                
+                HapticFeedback().impact(.light)
+            })
+        }
+        
+        private func openBoostStats() {
+            guard let component = self.component else {
+                return
+            }
+            
+            let _ = (component.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: component.peerId)
+            )
+            |> deliverOnMainQueue).start(next: { [weak self] statsDatacenterId in
+                guard let self, let component = self.component, let boostStatus = self.boostStatus else {
+                    return
+                }
+                guard let statsDatacenterId else {
+                    return
+                }
+                
+                let statsController = component.context.sharedContext.makeChannelStatsController(context: component.context, updatedPresentationData: nil, peerId: component.peerId, boosts: true, boostStatus: boostStatus, statsDatacenterId: statsDatacenterId)
+                self.environment?.controller()?.push(statsController)
             })
         }
         
@@ -228,6 +344,9 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.availableReactions = component.initialContent.availableReactions
                 self.isEnabled = component.initialContent.isEnabled
             }
+            var caretPosition = self.caretPosition ?? enabledReactions.count
+            caretPosition = max(0, min(enabledReactions.count, caretPosition))
+            self.caretPosition = caretPosition
             
             if self.emojiContentDisposable == nil {
                 let emojiContent = EmojiPagerContentComponent.emojiInputData(
@@ -267,18 +386,47 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             
                             if let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
                                 enabledReactions.remove(at: index)
+                                if let caretPosition = self.caretPosition, caretPosition > index {
+                                    self.caretPosition = max(0, caretPosition - 1)
+                                }
                             } else {
                                 let reaction: MessageReaction.Reaction
                                 if let availableReactions = self.availableReactions, let reactionItem = availableReactions.reactions.first(where: { $0.selectAnimation.fileId.id == itemFile.fileId.id }) {
                                     reaction = reactionItem.value
                                 } else {
                                     reaction = .custom(itemFile.fileId.id)
+                                    
+                                    if let boostStatus = self.boostStatus {
+                                        let enabledCustomReactions = enabledReactions.filter({ item in
+                                            switch item.reaction {
+                                            case .custom:
+                                                return true
+                                            case .builtin:
+                                                return false
+                                            }
+                                        })
+                                        
+                                        let nextCustomReactionCount = enabledCustomReactions.count + 1
+                                        if nextCustomReactionCount > boostStatus.level {
+                                            //TODO:localize
+                                            let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount) custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                        }
+                                    }
                                 }
-                                enabledReactions.append(EmojiComponentReactionItem(reaction: reaction, file: itemFile))
+                                let item = EmojiComponentReactionItem(reaction: reaction, file: itemFile)
+                                
+                                if let caretPosition = self.caretPosition, caretPosition < enabledReactions.count {
+                                    enabledReactions.insert(item, at: caretPosition)
+                                    self.caretPosition = caretPosition + 1
+                                } else {
+                                    enabledReactions.append(item)
+                                    self.caretPosition = enabledReactions.count
+                                }
                             }
                             self.enabledReactions = enabledReactions
                             if !self.isUpdating {
-                                self.state?.updated(transition: .spring(duration: 0.4))
+                                self.state?.updated(transition: .spring(duration: 0.25))
                             }
                         },
                         deleteBackwards: {
@@ -327,6 +475,19 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 })
             }
             
+            if self.boostStatusDisposable == nil {
+                self.boostStatusDisposable = (component.context.engine.peers.getChannelBoostStatus(peerId: component.peerId)
+                |> deliverOnMainQueue).start(next: { [weak self] boostStatus in
+                    guard let self else {
+                        return
+                    }
+                    self.boostStatus = boostStatus
+                    if !self.isUpdating {
+                        self.state?.updated(transition: .immediate)
+                    }
+                })
+            }
+            
             if themeUpdated {
                 self.backgroundColor = environment.theme.list.blocksBackgroundColor
             }
@@ -340,7 +501,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 component: AnyComponent(ListSwitchItemComponent(
                     theme: environment.theme,
                     title: environment.strings.PeerInfo_AllowedReactions_AllowAllText,
-                    value: true,
+                    value: self.isEnabled,
                     valueUpdated: { [weak self] value in
                         guard let self else {
                             return
@@ -356,6 +517,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         }
                                     }
                                     self.enabledReactions = enabledReactions
+                                    self.caretPosition = enabledReactions.count
                                 }
                             } else {
                                 self.displayInput = false
@@ -467,6 +629,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         placeholder: "Add Reactions...",
                         reactionItems: enabledReactions,
                         isInputActive: self.displayInput,
+                        caretPosition: caretPosition,
                         activateInput: { [weak self] in
                             guard let self else {
                                 return
@@ -474,6 +637,15 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             if self.emojiContent != nil && !self.displayInput {
                                 self.displayInput = true
                                 self.state?.updated(transition: .spring(duration: 0.5))
+                            }
+                        },
+                        setCaretPosition: { [weak self] value in
+                            guard let self else {
+                                return
+                            }
+                            if self.caretPosition != value {
+                                self.caretPosition = value
+                                self.state?.updated(transition: .immediate)
                             }
                         }
                     )),
@@ -584,13 +756,23 @@ final class PeerAllowedReactionsScreenComponent: Component {
             buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
                 Text(text: "Update Reactions", font: Font.semibold(17.0), color: environment.theme.list.itemCheckColors.foregroundColor)
             )))
-            /*if self.remainingTimer > 0 {
-                buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(
-                    AnimatedTextComponent(font: Font.with(size: 17.0, weight: .semibold, traits: .monospacedNumbers), color: environment.theme.list.itemCheckColors.foregroundColor.withMultipliedAlpha(0.5), items: [
-                        AnimatedTextComponent.Item(id: AnyHashable(0 as Int), content: .number(self.remainingTimer, minDigits: 0))
-                    ])
-                )))
-            }*/
+            
+            let customReactionCount = self.isEnabled ? enabledReactions.filter({ item in
+                switch item.reaction {
+                case .custom:
+                    return true
+                case .builtin:
+                    return false
+                }
+            }).count : 0
+            
+            if let boostStatus = self.boostStatus, customReactionCount > boostStatus.level {
+                //TODO:localize
+                buttonContents.append(AnyComponentWithIdentity(id: AnyHashable(1 as Int), component: AnyComponent(ButtonSubtitleComponent(
+                    count: customReactionCount,
+                    theme: environment.theme
+                ))))
+            }
             
             let buttonSize = self.actionButton.update(
                 transition: transition,
@@ -601,7 +783,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         pressedColor: environment.theme.list.itemCheckColors.fillColor.withMultipliedAlpha(0.8)
                     ),
                     content: AnyComponentWithIdentity(id: AnyHashable(0 as Int), component: AnyComponent(
-                        HStack(buttonContents, spacing: 5.0)
+                        VStack(buttonContents, spacing: 3.0)
                     )),
                     isEnabled: true,
                     tintWhenDisabled: false,
@@ -640,8 +822,26 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         emojiContent: emojiContent.withSelectedItems(Set(enabledReactions.map(\.file.fileId))),
                         backgroundIconColor: nil,
                         backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
-                        separatorColor: environment.theme.list.itemBlocksSeparatorColor)
-                    ),
+                        separatorColor: environment.theme.list.itemBlocksSeparatorColor,
+                        backspace: enabledReactions.isEmpty ? nil : { [weak self] in
+                            guard let self, var enabledReactions = self.enabledReactions, !enabledReactions.isEmpty else {
+                                return
+                            }
+                            if let caretPosition = self.caretPosition, caretPosition < enabledReactions.count {
+                                if caretPosition > 0 {
+                                    enabledReactions.remove(at: caretPosition - 1)
+                                    self.caretPosition = caretPosition - 1
+                                }
+                            } else {
+                                enabledReactions.removeLast()
+                                self.caretPosition = enabledReactions.count
+                            }
+                            self.enabledReactions = enabledReactions
+                            if !self.isUpdating {
+                                self.state?.updated(transition: .spring(duration: 0.25))
+                            }
+                        }
+                    )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width, height: min(340.0, max(50.0, availableSize.height - 200.0)))
                 )

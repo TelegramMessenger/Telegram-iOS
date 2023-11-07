@@ -14,7 +14,9 @@ final class EmojiListInputComponent: Component {
     let placeholder: String
     let reactionItems: [EmojiComponentReactionItem]
     let isInputActive: Bool
+    let caretPosition: Int
     let activateInput: () -> Void
+    let setCaretPosition: (Int) -> Void
     
     init(
         context: AccountContext,
@@ -22,14 +24,18 @@ final class EmojiListInputComponent: Component {
         placeholder: String,
         reactionItems: [EmojiComponentReactionItem],
         isInputActive: Bool,
-        activateInput: @escaping () -> Void
+        caretPosition: Int,
+        activateInput: @escaping () -> Void,
+        setCaretPosition: @escaping (Int) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.placeholder = placeholder
         self.reactionItems = reactionItems
         self.isInputActive = isInputActive
+        self.caretPosition = caretPosition
         self.activateInput = activateInput
+        self.setCaretPosition = setCaretPosition
     }
     
     static func ==(lhs: EmojiListInputComponent, rhs: EmojiListInputComponent) -> Bool {
@@ -46,6 +52,9 @@ final class EmojiListInputComponent: Component {
             return false
         }
         if lhs.isInputActive != rhs.isInputActive {
+            return false
+        }
+        if lhs.caretPosition != rhs.caretPosition {
             return false
         }
         return true
@@ -78,19 +87,29 @@ final class EmojiListInputComponent: Component {
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
+            guard let component = self.component else {
+                return
+            }
+            
             if case .ended = recognizer.state {
                 let point = recognizer.location(in: self)
                 
                 var tapOnItem = false
-                for (_, itemLayer) in self.itemLayers {
+                for (itemId, itemLayer) in self.itemLayers {
                     if itemLayer.frame.insetBy(dx: -6.0, dy: -6.0).contains(point) {
+                        if let itemIndex = component.reactionItems.firstIndex(where: { $0.file.fileId.id == itemId }) {
+                            var caretPosition = point.x >= itemLayer.frame.midX ? (itemIndex + 1) : itemIndex
+                            caretPosition = max(0, min(component.reactionItems.count, caretPosition))
+                            component.setCaretPosition(caretPosition)
+                        }
                         tapOnItem = true
                         break
                     }
                 }
                 
                 if !tapOnItem {
-                    self.component?.activateInput()
+                    component.setCaretPosition(component.reactionItems.count)
+                    component.activateInput()
                 }
             }
         }
@@ -113,7 +132,8 @@ final class EmojiListInputComponent: Component {
             let itemSpacing = floor(itemSizePlusSpacing * itemSpacingFactor)
             let sideInset = floor((availableSize.width - (itemSize * CGFloat(itemsPerRow) + itemSpacing * CGFloat(itemsPerRow - 1))) * 0.5)
             
-            let rowCount = (component.reactionItems.count + (itemsPerRow - 1)) / itemsPerRow
+            var rowCount = (component.reactionItems.count + (itemsPerRow - 1)) / itemsPerRow
+            rowCount = max(1, rowCount)
             
             self.component = component
             self.state = state
@@ -126,7 +146,7 @@ final class EmojiListInputComponent: Component {
             )
             
             var lastRowItemCount = component.reactionItems.count % itemsPerRow
-            if lastRowItemCount == 0 {
+            if lastRowItemCount == 0 && !component.reactionItems.isEmpty {
                 lastRowItemCount = itemsPerRow
             }
             let trailingLineWidth = sideInset + CGFloat(lastRowItemCount) * (itemSize + itemSpacing) + placeholderSpacing
@@ -148,10 +168,13 @@ final class EmojiListInputComponent: Component {
                 }
                 transition.setPosition(view: trailingPlaceholderView, position: trailingPlaceholderFrame.origin)
                 trailingPlaceholderView.bounds = CGRect(origin: CGPoint(), size: trailingPlaceholderFrame.size)
-                
-                self.caretIndicator.tintColor = component.theme.list.itemAccentColor
+            }
+            
+            self.caretIndicator.tintColor = component.theme.list.itemAccentColor
+            self.caretIndicator.isHidden = !component.isInputActive
+            
+            if component.caretPosition >= component.reactionItems.count {
                 transition.setFrame(view: self.caretIndicator, frame: CGRect(origin: CGPoint(x: trailingPlaceholderFrame.minX, y: trailingPlaceholderFrame.minY + floorToScreenPixels((trailingPlaceholderFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0)))
-                self.caretIndicator.isHidden = !component.isInputActive
             }
             
             var validIds: [Int64] = []
@@ -201,6 +224,11 @@ final class EmojiListInputComponent: Component {
                 itemLayer.isVisibleForAnimations = true
                 
                 itemTransition.setFrame(layer: itemLayer, frame: itemFrame)
+                
+                if component.caretPosition == i {
+                    transition.setFrame(view: self.caretIndicator, frame: CGRect(origin: CGPoint(x: itemFrame.minX - 2.0, y: itemFrame.minY + floorToScreenPixels((itemFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0)))
+                }
+                
                 if animateIn, !transition.animation.isImmediate {
                     itemLayer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
                     itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
