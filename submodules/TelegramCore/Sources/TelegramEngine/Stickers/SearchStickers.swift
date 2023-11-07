@@ -558,6 +558,54 @@ func _internal_searchStickerSetsRemotely(network: Network, query: String) -> Sig
     }
 }
 
+func _internal_searchEmojiSetsRemotely(postbox: Postbox, network: Network, query: String) -> Signal<FoundStickerSets, NoError> {
+    return network.request(Api.functions.messages.searchEmojiStickerSets(flags: 0, q: query, hash: 0))
+    |> mapError {_ in}
+    |> mapToSignal { value in
+        var index: Int32 = 1000
+        switch value {
+        case let .foundStickerSets(_, sets: sets):
+            var result = FoundStickerSets()
+            for set in sets {
+                let parsed = parsePreviewStickerSet(set, namespace: Namespaces.ItemCollection.CloudEmojiPacks)
+                let values = parsed.1.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: parsed.0.id, itemIndex: $0.index), item: $0) })
+                result = result.withUpdatedInfosAndEntries(infos: [(parsed.0.id, parsed.0, parsed.1.first, false)], entries: values)
+                index += 1
+            }
+            return .single(result)
+        default:
+            break
+        }
+        
+        return .complete()
+    }
+    |> `catch` { _ -> Signal<FoundStickerSets, NoError> in
+        return .single(FoundStickerSets())
+    }
+    |> mapToSignal { result -> Signal<FoundStickerSets, NoError> in
+        return postbox.combinedView(keys: [PostboxViewKey.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudEmojiPacks])])
+        |> map { combinedView -> Set<ItemCollectionId> in
+            var installed = Set<ItemCollectionId>()
+            
+            if let view = combinedView.views[PostboxViewKey.itemCollectionInfos(namespaces: [Namespaces.ItemCollection.CloudEmojiPacks])] as? ItemCollectionInfosView {
+                var installedIds = Set<ItemCollectionId>()
+                if let ids = view.entriesByNamespace[Namespaces.ItemCollection.CloudEmojiPacks] {
+                    installedIds = Set(ids.map(\.id))
+                }
+                installed = installedIds.intersection(Set(result.infos.map(\.0)))
+            }
+            
+            return installed
+        }
+        |> distinctUntilChanged
+        |> map { installed -> FoundStickerSets in
+            return FoundStickerSets(infos: result.infos.map { info in
+                return (info.0, info.1, info.2, installed.contains(info.0))
+            }, entries: result.entries)
+        }
+    }
+}
+
 func _internal_searchStickerSets(postbox: Postbox, query: String) -> Signal<FoundStickerSets, NoError> {
     return postbox.transaction { transaction -> Signal<FoundStickerSets, NoError> in
         let infos = transaction.getItemCollectionsInfos(namespace: Namespaces.ItemCollection.CloudStickerPacks)

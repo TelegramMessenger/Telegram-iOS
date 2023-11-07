@@ -19,6 +19,9 @@ import WallpaperBackgroundNode
 import TelegramIntents
 import AnimationCache
 import MultiAnimationRenderer
+import ObjectiveC
+
+private var ObjCKey_DeinitWatcher: Int?
 
 public struct ShareControllerAction {
     let title: String
@@ -992,7 +995,6 @@ public final class ShareController: ViewController {
                     subject = selectedValue.subject
                 }
                 var messageUrl: String?
-//                var messagesToShare: [Message]?
                 switch subject {
                     case let .url(text):
                         collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
@@ -1009,7 +1011,6 @@ public final class ShareController: ViewController {
                         let latLong = "\(media.latitude),\(media.longitude)"
                         collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .messages(messages):
-//                        messagesToShare = messages
                         for message in messages {
                             var url: String?
                             var selectedMedia: Media?
@@ -1099,16 +1100,52 @@ public final class ShareController: ViewController {
                                 |> filter { $0 }
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] _ in
-//                                    if asImage, let messages = messagesToShare {
-//                                        self?.openShareAsImage?(messages)
-//                                    } else {
-                                        let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
-                                        if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
-                                            activityController.popoverPresentationController?.sourceView = window
-                                            activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                                            rootViewController.present(activityController, animated: true, completion: nil)
+                                    let activityController = UIActivityViewController(activityItems: activityItems, applicationActivities: activities)
+                                    if let strongSelf = self, let window = strongSelf.view.window, let rootViewController = window.rootViewController {
+                                        activityController.popoverPresentationController?.sourceView = window
+                                        activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                        rootViewController.present(activityController, animated: true, completion: nil)
+                                        
+                                        final class DeinitWatcher: NSObject {
+                                            let f: () -> Void
+                                            
+                                            init(_ f: @escaping () -> Void) {
+                                                self.f = f
+                                            }
+                                            
+                                            deinit {
+                                                f()
+                                            }
                                         }
-//                                    }
+                                        
+                                        let watchDisposable = MetaDisposable()
+                                        objc_setAssociatedObject(activityController, &ObjCKey_DeinitWatcher, DeinitWatcher {
+                                            watchDisposable.dispose()
+                                        }, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                                        
+                                        if case let .messages(messages) = subject {
+                                            watchDisposable.set((currentContext.context.engine.data.subscribe(
+                                                EngineDataMap(messages.map { TelegramEngine.EngineData.Item.Messages.Message(id: $0.id) })
+                                            )
+                                            |> deliverOnMainQueue).start(next: { [weak activityController] currentMessages in
+                                                guard let activityController else {
+                                                    return
+                                                }
+                                                var allFound = true
+                                                for message in messages {
+                                                    if let value = currentMessages[message.id], value != nil {
+                                                    } else {
+                                                        allFound = false
+                                                        break
+                                                    }
+                                                }
+                                                
+                                                if !allFound {
+                                                    activityController.presentingViewController?.dismiss(animated: true)
+                                                }
+                                            }))
+                                        }
+                                    }
                                 })
                             }
                             return .done

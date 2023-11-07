@@ -1877,7 +1877,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var currentCredibilityIcon: EmojiStatusComponent.Content?
         
         var initialDisplayHeader = true
-        if hidesHeaders {
+        if hidesHeaders || item.message.adAttribute != nil {
             initialDisplayHeader = false
         } else if let backgroundHiding, case .always = backgroundHiding {
             initialDisplayHeader = false

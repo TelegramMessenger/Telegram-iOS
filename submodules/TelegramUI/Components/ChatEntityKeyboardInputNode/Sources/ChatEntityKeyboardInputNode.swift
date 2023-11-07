@@ -882,13 +882,18 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 }
                             }
                             let remoteSignal: Signal<(items: [TelegramMediaFile], isFinalResult: Bool), NoError>
+                            let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError>
                             if hasPremium {
                                 remoteSignal = context.engine.stickers.searchEmoji(emojiString: Array(allEmoticons.keys))
+                                remotePacksSignal = .single((FoundStickerSets(), false)) |> then(context.engine.stickers.searchEmojiSetsRemotely(query: query) |> map {
+                                    ($0, true)
+                                })
                             } else {
                                 remoteSignal = .single(([], true))
+                                remotePacksSignal = .single((FoundStickerSets(), true))
                             }
-                            return remoteSignal
-                            |> mapToSignal { foundEmoji -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                            return combineLatest(remoteSignal, remotePacksSignal)
+                            |> mapToSignal { foundEmoji, foundPacks -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                                 if foundEmoji.items.isEmpty && !foundEmoji.isFinalResult {
                                     return .complete()
                                 }
@@ -940,8 +945,9 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 if hasPremium {
                                     appendUnicodeEmoji()
                                 }
-                            
-                                return .single([EmojiPagerContentComponent.ItemGroup(
+                                
+                                var resultGroups: [EmojiPagerContentComponent.ItemGroup] = []
+                                resultGroups.append(EmojiPagerContentComponent.ItemGroup(
                                     supergroupId: "search",
                                     groupId: "search",
                                     title: nil,
@@ -956,7 +962,59 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     headerItem: nil,
                                     fillWithLoadingPlaceholders: false,
                                     items: items
-                                )])
+                                ))
+                                
+                                for (collectionId, info, _, _) in foundPacks.sets.infos {
+                                    if let info = info as? StickerPackCollectionInfo {
+                                        var topItems: [StickerPackItem] = []
+                                        for e in foundPacks.sets.entries {
+                                            if let item = e.item as? StickerPackItem {
+                                                if e.index.collectionId == collectionId {
+                                                    topItems.append(item)
+                                                }
+                                            }
+                                        }
+                                        
+                                        var groupItems: [EmojiPagerContentComponent.Item] = []
+                                        for item in topItems {
+                                            var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
+                                            if item.file.isCustomTemplateEmoji {
+                                                tintMode = .primary
+                                            }
+                                            
+                                            let animationData = EntityKeyboardAnimationData(file: item.file)
+                                            let resultItem = EmojiPagerContentComponent.Item(
+                                                animationData: animationData,
+                                                content: .animation(animationData),
+                                                itemFile: item.file,
+                                                subgroupId: nil,
+                                                icon: .none,
+                                                tintMode: tintMode
+                                            )
+                                            
+                                            groupItems.append(resultItem)
+                                        }
+                                        
+                                        resultGroups.append(EmojiPagerContentComponent.ItemGroup(
+                                            supergroupId: AnyHashable(info.id),
+                                            groupId: AnyHashable(info.id),
+                                            title: info.title,
+                                            subtitle: nil,
+                                            actionButtonTitle: nil,
+                                            isFeatured: false,
+                                            isPremiumLocked: false,
+                                            isEmbedded: false,
+                                            hasClear: false,
+                                            collapsedLineCount: 3,
+                                            displayPremiumBadges: false,
+                                            headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
+                                            items: groupItems
+                                        ))
+                                    }
+                                }
+                            
+                                return .single(resultGroups)
                             }
                         }
                         

@@ -25,6 +25,8 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Markdown",
         "//submodules/TelegramUI/Components/ButtonComponent",
+        "//submodules/TelegramUI/Components/AnimatedTextComponent",
+        "//submodules/Components/BundleIconComponent",
         "//submodules/Components/PagerComponent",
         "//submodules/PremiumUI",
         "//submodules/UndoUI",

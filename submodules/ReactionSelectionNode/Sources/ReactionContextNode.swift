@@ -1502,15 +1502,21 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         |> distinctUntilChanged
                         
+                        let remotePacksSignal: Signal<(sets: FoundStickerSets, isFinalResult: Bool), NoError> = .single((FoundStickerSets(), false)) |> then(
+                            context.engine.stickers.searchEmojiSetsRemotely(query: query) |> map {
+                                ($0, true)
+                            }
+                        )
+                        
                         let resultSignal = signal
                         |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                             return combineLatest(
-                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-                                context.engine.stickers.availableReactions(),
-                                hasPremium
+                                context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000) |> take(1),
+                                context.engine.stickers.availableReactions() |> take(1),
+                                hasPremium |> take(1),
+                                remotePacksSignal
                             )
-                            |> take(1)
-                            |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
+                            |> map { view, availableReactions, hasPremium, foundPacks -> [EmojiPagerContentComponent.ItemGroup] in
                                 var result: [(String, TelegramMediaFile?, String)] = []
                                 
                                 var allEmoticons: [String: String] = [:]
@@ -1561,7 +1567,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     }
                                 }
                                 
-                                return [EmojiPagerContentComponent.ItemGroup(
+                                var resultGroups: [EmojiPagerContentComponent.ItemGroup] = []
+                                resultGroups.append(EmojiPagerContentComponent.ItemGroup(
                                     supergroupId: "search",
                                     groupId: "search",
                                     title: nil,
@@ -1576,7 +1583,59 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                     headerItem: nil,
                                     fillWithLoadingPlaceholders: false,
                                     items: items
-                                )]
+                                ))
+                                
+                                for (collectionId, info, _, _) in foundPacks.sets.infos {
+                                    if let info = info as? StickerPackCollectionInfo {
+                                        var topItems: [StickerPackItem] = []
+                                        for e in foundPacks.sets.entries {
+                                            if let item = e.item as? StickerPackItem {
+                                                if e.index.collectionId == collectionId {
+                                                    topItems.append(item)
+                                                }
+                                            }
+                                        }
+                                        
+                                        var groupItems: [EmojiPagerContentComponent.Item] = []
+                                        for item in topItems {
+                                            var tintMode: EmojiPagerContentComponent.Item.TintMode = .none
+                                            if item.file.isCustomTemplateEmoji {
+                                                tintMode = .primary
+                                            }
+                                            
+                                            let animationData = EntityKeyboardAnimationData(file: item.file)
+                                            let resultItem = EmojiPagerContentComponent.Item(
+                                                animationData: animationData,
+                                                content: .animation(animationData),
+                                                itemFile: item.file,
+                                                subgroupId: nil,
+                                                icon: .none,
+                                                tintMode: tintMode
+                                            )
+                                            
+                                            groupItems.append(resultItem)
+                                        }
+                                        
+                                        resultGroups.append(EmojiPagerContentComponent.ItemGroup(
+                                            supergroupId: AnyHashable(info.id),
+                                            groupId: AnyHashable(info.id),
+                                            title: info.title,
+                                            subtitle: nil,
+                                            actionButtonTitle: nil,
+                                            isFeatured: false,
+                                            isPremiumLocked: false,
+                                            isEmbedded: false,
+                                            hasClear: false,
+                                            collapsedLineCount: 3,
+                                            displayPremiumBadges: false,
+                                            headerItem: nil,
+                                            fillWithLoadingPlaceholders: false,
+                                            items: groupItems
+                                        ))
+                                    }
+                                }
+                                
+                                return resultGroups
                             }
                         }
                         

@@ -6614,6 +6614,23 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
+                static func searchEmojiStickerSets(flags: Int32, q: String, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.FoundStickerSets>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1833678516)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeString(q, buffer: buffer, boxed: false)
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.searchEmojiStickerSets", parameters: [("flags", String(describing: flags)), ("q", String(describing: q)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.FoundStickerSets? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.FoundStickerSets?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.FoundStickerSets
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
                 static func searchGlobal(flags: Int32, folderId: Int32?, q: String, filter: Api.MessagesFilter, minDate: Int32, maxDate: Int32, offsetRate: Int32, offsetPeer: Api.InputPeer, offsetId: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1271290010)

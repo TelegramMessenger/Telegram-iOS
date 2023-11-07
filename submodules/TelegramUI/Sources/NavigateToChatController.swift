@@ -20,6 +20,10 @@ import MediaEditorScreen
 import ChatControllerInteraction
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
+    if case let .peer(peer) = params.chatLocation {
+        let _ = params.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer).startStandalone()
+    }
+    
     var viewForumAsMessages: Signal<Bool, NoError> = .single(false)
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         viewForumAsMessages = params.context.account.postbox.combinedView(keys: [.cachedPeerData(peerId: peer.id)])

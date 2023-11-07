@@ -1619,7 +1619,11 @@ private func editingItems(data: PeerInfoScreenData?, state: PeerInfoState, chatL
                     } else {
                         label = ""
                     }
-                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), text: presentationData.strings.PeerInfo_Reactions, icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
+                    var additionalBadgeLabel: String? = nil
+                    if case .broadcast = channel.info {
+                        additionalBadgeLabel = presentationData.strings.Settings_New
+                    }
+                    items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemReactions, label: .text(label), additionalBadgeLabel: additionalBadgeLabel, text: presentationData.strings.PeerInfo_Reactions, icon: UIImage(bundleImageName: "Settings/Menu/Reactions"), action: {
                         interaction.editingOpenReactionsSetup()
                     }))
                 }
