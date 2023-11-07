@@ -410,7 +410,16 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                         if nextCustomReactionCount > boostStatus.level {
                                             //TODO:localize
                                             let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                            self.environment?.controller()?.present(UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount) custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                            
+                                            var animateAsReplacement = false
+                                            if let currentUndoController = self.currentUndoController {
+                                                currentUndoController.dismiss()
+                                                animateAsReplacement = true
+                                            }
+                                            
+                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount) custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                            self.currentUndoController = undoController
+                                            self.environment?.controller()?.present(undoController, in: .current)
                                         }
                                     }
                                 }

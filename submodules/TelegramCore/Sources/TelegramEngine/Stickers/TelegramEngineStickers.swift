@@ -37,6 +37,10 @@ public extension TelegramEngine {
         public func searchStickerSetsRemotely(query: String) -> Signal<FoundStickerSets, NoError> {
             return _internal_searchStickerSetsRemotely(network: self.account.network, query: query)
         }
+        
+        public func searchEmojiSetsRemotely(query: String) -> Signal<FoundStickerSets, NoError> {
+            return _internal_searchEmojiSetsRemotely(postbox: self.account.postbox, network: self.account.network, query: query)
+        }
 
         public func searchStickerSets(query: String) -> Signal<FoundStickerSets, NoError> {
             return _internal_searchStickerSets(postbox: self.account.postbox, query: query)
