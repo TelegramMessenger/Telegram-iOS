@@ -468,7 +468,8 @@ final class CountriesMultiselectionScreenComponent: Component {
                                     self.hapticFeedback.error()
                                     
                                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select maximum \(limit) countries.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                    let countriesValue = environment.strings.CountriesList_MaximumReached_Countries(limit)
+                                    controller.present(UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: environment.strings.CountriesList_MaximumReached(countriesValue).string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                                     return
                                 }
                                 toggleCountry()
@@ -721,7 +722,7 @@ final class CountriesMultiselectionScreenComponent: Component {
                 ))
             }
             
-            let placeholder: String = "Search"
+            let placeholder: String = environment.strings.CountriesList_Search
             self.navigationTextField.parentState = state
             let navigationTextFieldSize = self.navigationTextField.update(
                 transition: transition,
