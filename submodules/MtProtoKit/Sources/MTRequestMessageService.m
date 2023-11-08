@@ -699,13 +699,9 @@
         {
             bool requestFound = false;
             
-            int index = -1;
-            for (MTRequest *request in _requests)
-            {
-                index++;
-                
-                if (request.requestContext != nil && request.requestContext.messageId == rpcResultMessage.requestMessageId)
-                {
+            NSMutableArray<MTRequest *> *removeRequests = [[NSMutableArray alloc] init];
+            for (MTRequest *request in _requests) {
+                if (request.requestContext != nil && request.requestContext.messageId == rpcResultMessage.requestMessageId) {
                     requestFound = true;
                     
                     bool restartRequest = false;
@@ -734,25 +730,20 @@
                         }
                     }
                     
-                    if (rpcResult != nil)
-                    {
+                    if (rpcResult != nil) {
                         if (MTLogEnabled()) {
                             MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is %@]", self, request.requestContext.messageId, rpcResult);
                         }
-                    }
-                    else
-                    {
+                    } else {
                         if (MTLogEnabled()) {
                             MTLog(@"[MTRequestMessageService#%p response for %" PRId64 " is error: %d: %@]", self, request.requestContext.messageId, (int)rpcError.errorCode, rpcError.errorDescription);
                         }
                     }
                     
-                    if (rpcResult != nil && request.requestContext.willInitializeApi)
-                    {
+                    if (rpcResult != nil && request.requestContext.willInitializeApi) {
                         MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:mtProto.datacenterId selector:authInfoSelector];
                         
-                        if (![_apiEnvironment.apiInitializationHash isEqualToString:authInfo.authKeyAttributes[@"apiInitializationHash"]])
-                        {
+                        if (![_apiEnvironment.apiInitializationHash isEqualToString:authInfo.authKeyAttributes[@"apiInitializationHash"]]) {
                             NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
                             authKeyAttributes[@"apiInitializationHash"] = _apiEnvironment.apiInitializationHash;
                             
@@ -761,19 +752,14 @@
                         }
                     }
                     
-                    if (rpcError != nil)
-                    {
-                        if (rpcError.errorCode == 401)
-                        {
-                            if ([rpcError.errorDescription rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound)
-                            {
+                    if (rpcError != nil) {
+                        if (rpcError.errorCode == 401) {
+                            if ([rpcError.errorDescription rangeOfString:@"SESSION_PASSWORD_NEEDED"].location != NSNotFound) {
                                 if (!request.passthroughPasswordEntryError)
                                 {
                                     [_context updatePasswordInputRequiredForDatacenterWithId:mtProto.datacenterId required:true];
                                 }
-                            }
-                            else
-                            {
+                            } else {
                                 id<MTRequestMessageServiceDelegate> delegate = _delegate;
                                 if ([delegate respondsToSelector:@selector(requestMessageServiceAuthorizationRequired:)])
                                 {
@@ -790,15 +776,12 @@
                                     restartRequest = true;
                                 }
                             }
-                        }
-                        else if (rpcError.errorCode == -500 || rpcError.errorCode == 500)
-                        {
+                        } else if (rpcError.errorCode == -500 || rpcError.errorCode == 500) {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             request.errorContext.internalServerErrorCount++;
                             
-                            if (request.shouldContinueExecutionWithErrorContext != nil && request.shouldContinueExecutionWithErrorContext(request.errorContext))
-                            {
+                            if (request.shouldContinueExecutionWithErrorContext != nil && request.shouldContinueExecutionWithErrorContext(request.errorContext)) {
                                 restartRequest = true;
                                 request.errorContext.minimalExecuteTime = MAX(request.errorContext.minimalExecuteTime, MTAbsoluteSystemTime() + 2.0);
                             }
@@ -825,13 +808,11 @@
                             }
                             restartRequest = true;
                         }
-                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
-                        {
+                        else if (rpcError.errorCode == 420 || [rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound) {
                             if (request.errorContext == nil)
                                 request.errorContext = [[MTRequestErrorContext alloc] init];
                             
-                            if ([rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound)
-                            {
+                            if ([rpcError.errorDescription rangeOfString:@"FLOOD_WAIT_"].location != NSNotFound) {
                                 int errorWaitTime = 0;
                                 
                                 NSScanner *scanner = [[NSScanner alloc] initWithString:rpcError.errorDescription];
@@ -857,10 +838,8 @@
                                 }
                             }
                         }
-                        else if (rpcError.errorCode == 400 && [rpcError.errorDescription rangeOfString:@"CONNECTION_NOT_INITED"].location != NSNotFound)
-                        {
-                            [_context performBatchUpdates:^
-                            {
+                        else if (rpcError.errorCode == 400 && [rpcError.errorDescription rangeOfString:@"CONNECTION_NOT_INITED"].location != NSNotFound) {
+                            [_context performBatchUpdates:^{
                                 MTDatacenterAuthInfo *authInfo = [_context authInfoForDatacenterWithId:mtProto.datacenterId selector:authInfoSelector];
                                 
                                 NSMutableDictionary *authKeyAttributes = [[NSMutableDictionary alloc] initWithDictionary:authInfo.authKeyAttributes];
@@ -882,14 +861,10 @@
                     
                     request.requestContext = nil;
                     
-                    if (restartRequest)
-                    {
-                        
-                    }
-                    else
-                    {
+                    if (restartRequest) {
+                    } else {
                         void (^completed)(id result, MTRequestResponseInfo *info, id error) = [request.completed copy];
-                        [_requests removeObjectAtIndex:(NSUInteger)index];
+                        [removeRequests addObject:request];
                         
                         if (completed) {
                             double duration = 0.0;
@@ -903,6 +878,10 @@
                     
                     break;
                 }
+            }
+            
+            for (MTRequest *request in removeRequests) {
+                [_requests removeObject:request];
             }
             
             if (!requestFound) {
