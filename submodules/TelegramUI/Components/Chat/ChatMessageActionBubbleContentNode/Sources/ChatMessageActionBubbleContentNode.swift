@@ -227,11 +227,9 @@ public class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 }
             
                 var backgroundSize = CGSize(width: labelLayout.size.width + 8.0 + 8.0, height: labelLayout.size.height + 4.0)
-                
                 if let _ = image {
                     backgroundSize.height += imageSize.height + 10
                 }
-                
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {

@@ -131,6 +131,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .giftCode(slug: slug, fromGiveaway: (flags & (1 << 0)) != 0, isUnclaimed: (flags & (1 << 2)) != 0, boostPeerId: boostPeer?.peerId, months: months))
     case .messageActionGiveawayLaunch:
         return TelegramMediaAction(action: .giveawayLaunched)
+    case let .messageActionGiveawayResults(winners):
+        return TelegramMediaAction(action: .giveawayResults(winners: winners))
     }
 }
 

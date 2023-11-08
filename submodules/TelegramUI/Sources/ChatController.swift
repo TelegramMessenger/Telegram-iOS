@@ -791,7 +791,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                     switch action.action {
-                        case .pinnedMessageUpdated:
+                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
                                     strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
@@ -800,13 +800,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case let .photoUpdated(image):
                             openMessageByAction = image != nil
-                        case .gameScore:
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
-                                    break
-                                }
-                            }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
                                 strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled, isStream: activeCall.isStream))
@@ -955,13 +948,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.push(wallpaperPreviewController)
                             return true
-                        case .setSameChatWallpaper:
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.controllerInteraction?.navigateToMessage(message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
-                                    return true
-                                }
-                            }
                         case let .giftPremium(_, _, duration, _, _):
                             strongSelf.chatDisplayNode.dismissInput()
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId

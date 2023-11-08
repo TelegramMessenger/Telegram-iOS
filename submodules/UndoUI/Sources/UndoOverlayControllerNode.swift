@@ -1097,8 +1097,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             self.panelNode.backgroundColor = .clear
         }
         self.panelNode.clipsToBounds = true
-        self.panelNode.cornerRadius = 9.0
-        
+        self.panelNode.cornerRadius = 14.0
+
         self.panelWrapperNode = ASDisplayNode()
         
         self.effectView = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
@@ -1183,6 +1183,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     override func didLoad() {
         super.didLoad()
+        
+        if #available(iOS 13.0, *) {
+            self.panelNode.layer.cornerCurve = .continuous
+        }
         
         self.panelNode.view.addSubview(self.effectView)
     }
