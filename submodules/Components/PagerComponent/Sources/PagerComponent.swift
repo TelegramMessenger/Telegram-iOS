@@ -747,6 +747,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 }
                 
                 self.bottomPanelHeight = 0.0
+                
+                contentInsets.bottom = component.contentInsets.bottom
             }
             
             contentInsets.top *= topPanelVisibility

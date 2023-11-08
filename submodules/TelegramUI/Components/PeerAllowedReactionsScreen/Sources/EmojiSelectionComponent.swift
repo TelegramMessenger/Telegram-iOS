@@ -231,7 +231,7 @@ public final class EmojiSelectionComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     isContentInFocus: false,
-                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + backspaceButtonInset.bottom + backspaceButtonSize.height + backspaceButtonInset.top, right: component.sideInset),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.sideInset),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                     emojiContent: component.emojiContent,
                     stickerContent: nil,
