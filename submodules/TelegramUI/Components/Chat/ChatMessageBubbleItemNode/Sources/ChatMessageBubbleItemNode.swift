@@ -1556,7 +1556,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         for contentNodeItemValue in contentNodeMessagesAndClasses {
             let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
             if contentNodeItem.type == ChatMessageGiveawayBubbleContentNode.self {
-                maximumContentWidth = 260.0
+                maximumContentWidth = min(305.0, maximumContentWidth)
                 break
             }
             if contentNodeItem.type == ChatMessageInstantVideoBubbleContentNode.self, !contentNodeItem.bubbleAttributes.isAttachment {

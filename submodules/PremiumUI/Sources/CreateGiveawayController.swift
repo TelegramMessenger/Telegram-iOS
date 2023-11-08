@@ -837,7 +837,14 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
             badgeCount = Int32(state.peers.count) * 4
         }
         let footerItem = CreateGiveawayFooterItem(theme: presentationData.theme, title: state.mode == .gift ? presentationData.strings.BoostGift_GiftPremium : presentationData.strings.BoostGift_StartGiveaway, badgeCount: badgeCount, isLoading: state.updating, action: {
-            buyActionImpl?()
+            if case .prepaid = subject {
+                let alertController = textAlertController(context: context, title: presentationData.strings.BoostGift_StartConfirmation_Title, text: presentationData.strings.BoostGift_StartConfirmation_Text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.BoostGift_StartConfirmation_Start, action: {
+                    buyActionImpl?()
+                })], parseMarkdown: true)
+                presentControllerImpl?(alertController)
+            } else {
+                buyActionImpl?()
+            }
         })
         let leftNavigationButton = ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {})
         
