@@ -10215,9 +10215,9 @@ Sorry for the inconvenience.";
 "ReassignBoost.ExpiresOn" = "Boost expires on %@";
 "ReassignBoost.WaitForCooldown" = "Wait until the boost is available or get **%1$@** more boosts by gifting a **Telegram Premium** subscription.";
 
-"ReassignBoost.Success" = "%1$@ are reassigned from %2$@.";
-"ReassignBoost.Boosts_1" = "%@ boost";
-"ReassignBoost.Boosts_any" = "%@ boosts";
+"ReassignBoost.Success" = "%1$@ from %2$@.";
+"ReassignBoost.Boosts_1" = "%@ boost is reassigned";
+"ReassignBoost.Boosts_any" = "%@ boosts are reassigned";
 "ReassignBoost.OtherChannels_1" = "%@ other channel";
 "ReassignBoost.OtherChannels_any" = "%@ other channels";
 
@@ -10433,6 +10433,10 @@ Sorry for the inconvenience.";
 "CountriesList.SaveCountries" = "Save Countries";
 "CountriesList.SelectUpTo_1" = "select up to %@ country";
 "CountriesList.SelectUpTo_any" = "select up to %@ countries";
+"CountriesList.Search" = "Search";
+"CountriesList.MaximumReached" = "You can select up to %@.";
+"CountriesList.MaximumReached.Countries_1" = "%@ country";
+"CountriesList.MaximumReached.Countries_any" = "%@ countries";
 
 "Message.GiveawayOngoing" = "Giveaway: %1$@ on %2$@";
 "Message.GiveawayOngoing.Winners_1" = "%@ winner to be selected";
