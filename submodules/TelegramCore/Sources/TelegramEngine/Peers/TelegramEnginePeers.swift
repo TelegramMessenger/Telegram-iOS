@@ -1240,6 +1240,14 @@ public extension TelegramEngine {
         public func applyChannelBoost(peerId: EnginePeer.Id, slots: [Int32]) -> Signal<MyBoostStatus?, NoError> {
             return _internal_applyChannelBoost(account: self.account, peerId: peerId, slots: slots)
         }
+        
+        public func recommendedChannels(peerId: EnginePeer.Id) -> Signal<RecommendedChannels?, NoError> {
+            return _internal_recommendedChannels(account: self.account, peerId: peerId)
+        }
+        
+        public func toggleRecommendedChannelsHidden(peerId: EnginePeer.Id, hidden: Bool) -> Signal<Never, NoError> {
+            return _internal_toggleRecommendedChannelsHidden(account: self.account, peerId: peerId, hidden: hidden)
+        }
     }
 }
 

@@ -111,6 +111,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
     case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32)
     case giveawayLaunched
+    case joinedChannel
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -209,6 +210,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .giftCode(slug: decoder.decodeStringForKey("slug", orElse: ""), fromGiveaway: decoder.decodeBoolForKey("give", orElse: false), isUnclaimed: decoder.decodeBoolForKey("unclaimed", orElse: false), boostPeerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)), months: decoder.decodeInt32ForKey("months", orElse: 0))
         case 37:
             self = .giveawayLaunched
+        case 38:
+            self = .joinedChannel
         default:
             self = .unknown
         }
@@ -401,6 +404,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(months, forKey: "months")
         case .giveawayLaunched:
             encoder.encodeInt32(37, forKey: "_rawValue")
+        case .joinedChannel:
+            encoder.encodeInt32(38, forKey: "_rawValue")
         }
     }
     

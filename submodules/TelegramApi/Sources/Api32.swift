@@ -2473,6 +2473,21 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
+                static func getChannelRecommendations(channelId: Api.InputChannel) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-873707987)
+                    channelId.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.getChannelRecommendations", parameters: [("channelId", String(describing: channelId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Chats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.messages.Chats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.messages.Chats
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
                 static func getChannels(id: [Api.InputChannel]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Chats>) {
                     let buffer = Buffer()
                     buffer.appendInt32(176122811)

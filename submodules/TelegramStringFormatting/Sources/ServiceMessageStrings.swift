@@ -903,6 +903,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .giveawayLaunched:
                 let resultTitleString = strings.Notification_GiveawayStarted(compactAuthorName)
                 attributedString = addAttributesToStringWithRanges(resultTitleString._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+            case .joinedChannel:
+                attributedString = NSAttributedString(string: strings.Notification_ChannelJoinedByYou, font: titleBoldFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }
