@@ -10,6 +10,21 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
     "plist_fragment",
 )
 
+load(
+    "@rules_xcodeproj//xcodeproj:defs.bzl",
+    "top_level_target",
+    "top_level_targets",
+    "xcodeproj",
+    "xcode_provisioning_profile",
+)
+
+load("@build_bazel_rules_apple//apple:apple.bzl", "local_provisioning_profile")
+
+load(
+    "@build_configuration//:variables.bzl",
+    "telegram_bazel_path",
+)
+
 filegroup(
     name = "AppResources",
     srcs = glob([
@@ -72,7 +87,7 @@ plist_fragment(
     <key>CFBundleDisplayName</key>
     <string>Test</string>
     <key>CFBundleIdentifier</key>
-    <string>org.telegram.CallUITest</string>
+    <string>org.telegram.Telegram-iOS</string>
     <key>CFBundleName</key>
     <string>Telegram</string>
     <key>CFBundlePackageType</key>
@@ -129,7 +144,7 @@ plist_fragment(
 
 ios_application(
     name = "CallUITest",
-    bundle_id = "org.telegram.TelegramiOS",
+    bundle_id = "org.telegram.Telegram-iOS",
     families = ["iphone", "ipad"],
     minimum_os_version = "12.0",
     provisioning_profile = "@build_configuration//provisioning:Telegram.mobileprovision",
@@ -147,4 +162,29 @@ ios_application(
         "//Tests/Common:Main",
         ":Lib",
     ],
+    visibility = ["//visibility:public"],
+)
+
+xcodeproj(
+    name = "CallUITest_xcodeproj",
+    build_mode = "bazel",
+    bazel_path = telegram_bazel_path,
+    project_name = "CallUITest",
+    tags = ["manual"],
+    top_level_targets = top_level_targets(
+        labels = [
+            ":CallUITest",
+        ],
+        target_environments = ["device", "simulator"],
+    ),
+    xcode_configurations = {
+        "Debug": {
+            "//command_line_option:compilation_mode": "dbg",
+        },
+        "Release": {
+            "//command_line_option:compilation_mode": "opt",
+        },
+    },
+    default_xcode_configuration = "Debug"
+
 )
