@@ -79,6 +79,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageWallpaperBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiftBubbleContentNode",
         "//submodules/TelegramUI/Components/Chat/ChatMessageGiveawayBubbleContentNode",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageJoinedChannelBubbleContentNode",
     ],
     visibility = [
         "//visibility:public",

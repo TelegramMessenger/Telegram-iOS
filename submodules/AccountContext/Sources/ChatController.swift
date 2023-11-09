@@ -50,8 +50,33 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let hasBots: Bool
     public let translateToLanguage: String?
     public let maxReadStoryId: Int32?
+    public let recommendedChannels: RecommendedChannels?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadPeerId: EnginePeer.Id?, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil, hasBots: Bool = false, translateToLanguage: String? = nil, maxReadStoryId: Int32? = nil) {
+    public init(
+        automaticDownloadPeerType: MediaAutoDownloadPeerType,
+        automaticDownloadPeerId: EnginePeer.Id?,
+        automaticDownloadNetworkType: MediaAutoDownloadNetworkType,
+        isRecentActions: Bool = false,
+        subject: ChatControllerSubject? = nil,
+        contactsPeerIds: Set<EnginePeer.Id> = Set(),
+        channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown,
+        animatedEmojiStickers: [String: [StickerPackItem]] = [:],
+        additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:],
+        forcedResourceStatus: FileMediaResourceStatus? = nil,
+        currentlyPlayingMessageId: EngineMessage.Index? = nil,
+        isCopyProtectionEnabled: Bool = false,
+        availableReactions: AvailableReactions?,
+        defaultReaction: MessageReaction.Reaction?,
+        isPremium: Bool,
+        accountPeer: EnginePeer?,
+        forceInlineReactions: Bool = false,
+        alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false),
+        topicAuthorId: EnginePeer.Id? = nil,
+        hasBots: Bool = false,
+        translateToLanguage: String? = nil,
+        maxReadStoryId: Int32? = nil,
+        recommendedChannels: RecommendedChannels? = nil
+    ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
@@ -74,6 +99,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.hasBots = hasBots
         self.translateToLanguage = translateToLanguage
         self.maxReadStoryId = maxReadStoryId
+        self.recommendedChannels = recommendedChannels
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -138,6 +164,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.maxReadStoryId != rhs.maxReadStoryId {
+            return false
+        }
+        if lhs.recommendedChannels != rhs.recommendedChannels {
             return false
         }
         return true

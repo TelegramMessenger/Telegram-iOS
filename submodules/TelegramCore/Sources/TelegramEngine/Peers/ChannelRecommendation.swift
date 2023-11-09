@@ -49,7 +49,7 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
         guard let inputChannel = channel.flatMap(apiInputChannel) else {
             return .complete()
         }
-        return account.network.request(Api.functions.channels.getChannelRecommendations(channelId: inputChannel))
+        return account.network.request(Api.functions.channels.getChannelRecommendations(channel: inputChannel))
         |> retryRequest
         |> mapToSignal { result -> Signal<Never, NoError> in
             return account.postbox.transaction { transaction -> [EnginePeer] in
@@ -90,8 +90,8 @@ func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.I
     }
 }
 
-public struct RecommendedChannels {
-    public struct Channel {
+public struct RecommendedChannels: Equatable {
+    public struct Channel: Equatable {
         public let peer: EnginePeer
         public let subscribers: Int32
     }
