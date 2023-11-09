@@ -540,6 +540,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private var nameNode: TextNode?
     private var nameButtonNode: HighlightTrackingButtonNode?
     private var nameHighlightNode: ASImageNode?
+    private var viaMeasureNode: TextNode?
     
     private var adminBadgeNode: TextNode?
     private var credibilityIconView: ComponentHostView<Empty>?
@@ -1245,6 +1246,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         }
         
         let authorNameLayout = TextNode.asyncLayout(self.nameNode)
+        let viaMeasureLayout = TextNode.asyncLayout(self.viaMeasureNode)
         let adminBadgeLayout = TextNode.asyncLayout(self.adminBadgeNode)
         let threadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
@@ -1268,6 +1270,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
+                viaMeasureLayout: viaMeasureLayout,
                 adminBadgeLayout: adminBadgeLayout,
                 threadInfoLayout: threadInfoLayout,
                 forwardInfoLayout: forwardInfoLayout,
@@ -1286,6 +1289,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     private static func beginLayout(selfReference: Weak<ChatMessageBubbleItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool,
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
+        viaMeasureLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         threadInfoLayout: (ChatMessageThreadInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode),
         forwardInfoLayout: (AccountContext, ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, ChatMessageForwardInfoNode.StoryData?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
@@ -2104,6 +2108,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var nameNodeOriginY: CGFloat = 0.0
         var nameNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
+        var viaWidth: CGFloat = 0.0
 
         var threadInfoOriginY: CGFloat = 0.0
         var threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?) = (CGSize(), {  _ in nil })
@@ -2142,6 +2147,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 } else if authorIsChannel, case .peer = item.chatLocation {
                     adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }
+                
+                var viaSuffix: NSAttributedString?
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedString.Key.font: nameFont, NSAttributedString.Key.foregroundColor: authorNameColor])
                     let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
@@ -2149,6 +2156,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
                     mutableString.append(botString)
                     attributedString = mutableString
+                    viaSuffix = botString
                 } else if let authorNameString = authorNameString, let authorNameColor = authorNameColor {
                     attributedString = NSAttributedString(string: authorNameString, font: nameFont, textColor: authorNameColor)
                 } else if let inlineBotNameString = inlineBotNameString {
@@ -2183,6 +2191,11 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     return sizeAndApply.1()
                 })
 
+                if let viaSuffix {
+                    let (viaLayout, _) = viaMeasureLayout(TextNodeLayoutArguments(attributedString: viaSuffix, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right - credibilityIconWidth - adminBadgeSizeAndApply.0.size.width - closeButtonWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                    viaWidth = viaLayout.size.width + 4.0
+                }
+                
                 nameNodeOriginY = headerSize.height
                 headerSize.width = max(headerSize.width, nameNodeSizeApply.0.width + adminBadgeSizeAndApply.0.size.width + credibilityIconWidth + closeButtonWidth + bubbleWidthInsets)
                 headerSize.height += nameNodeSizeApply.0.height
@@ -2768,6 +2781,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 backgroundFrame: backgroundFrame,
                 deliveryFailedInset: deliveryFailedInset,
                 nameNodeSizeApply: nameNodeSizeApply,
+                viaWidth: viaWidth,
                 contentOrigin: contentOrigin,
                 nameNodeOriginY: nameNodeOriginY,
                 authorNameColor: authorNameColor,
@@ -2820,6 +2834,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         backgroundFrame: CGRect,
         deliveryFailedInset: CGFloat,
         nameNodeSizeApply: (CGSize, () -> TextNode?),
+        viaWidth: CGFloat,
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
         authorNameColor: UIColor?,
@@ -2996,8 +3011,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 strongSelf.clippingNode.addSubnode(nameButtonNode)
                 strongSelf.nameButtonNode = nameButtonNode
             }
-            nameHighlightNode.frame = nameNodeFrame.insetBy(dx: -2.0, dy: -1.0)
-            nameButtonNode.frame = nameNodeFrame.insetBy(dx: -2.0, dy: -3.0)
+            var nameHiglightFrame = nameNodeFrame
+            nameHiglightFrame.size.width -= viaWidth
+            nameHighlightNode.frame = nameHiglightFrame.insetBy(dx: -2.0, dy: -1.0)
+            nameButtonNode.frame = nameHiglightFrame.insetBy(dx: -2.0, dy: -3.0)
             
             let nameColor = authorNameColor ?? item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
             if themeUpdated {
