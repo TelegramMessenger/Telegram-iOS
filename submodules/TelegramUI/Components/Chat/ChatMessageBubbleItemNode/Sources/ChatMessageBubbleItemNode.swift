@@ -2163,6 +2163,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                     let bodyAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
                     let boldAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
                     attributedString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                    viaSuffix = attributedString
                 } else {
                     attributedString = NSAttributedString(string: "", font: nameFont, textColor: inlineBotNameColor)
                 }
