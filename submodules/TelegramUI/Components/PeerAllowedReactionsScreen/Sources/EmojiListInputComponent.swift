@@ -101,6 +101,7 @@ final class EmojiListInputComponent: Component {
                             var caretPosition = point.x >= itemLayer.frame.midX ? (itemIndex + 1) : itemIndex
                             caretPosition = max(0, min(component.reactionItems.count, caretPosition))
                             component.setCaretPosition(caretPosition)
+                            component.activateInput()
                         }
                         tapOnItem = true
                         break
