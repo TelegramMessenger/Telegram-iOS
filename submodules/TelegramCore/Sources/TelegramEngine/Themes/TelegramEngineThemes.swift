@@ -18,12 +18,16 @@ public extension TelegramEngine {
         }
         
         public func setChatWallpaper(peerId: PeerId, wallpaper: TelegramWallpaper?) -> Signal<Never, SetChatWallpaperError> {
-            return _internal_setChatWallpaper(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, wallpaper: wallpaper)
+            return _internal_setChatWallpaper(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, wallpaper: wallpaper, forBoth: false)
             |> ignoreValues
         }
         
         public func setExistingChatWallpaper(messageId: MessageId, settings: WallpaperSettings?) -> Signal<Void, SetExistingChatWallpaperError> {
             return _internal_setExistingChatWallpaper(account: self.account, messageId: messageId, settings: settings)
+        }
+        
+        public func revertChatWallpaper(peerId: EnginePeer.Id) -> Signal<Void, RevertChatWallpaperError> {
+            return _internal_revertChatWallpaper(account: self.account, peerId: peerId)
         }
     }
 }

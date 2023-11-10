@@ -1329,7 +1329,10 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
 
         let buttonSpacing: CGFloat = 18.0
         
-        let toolbarHeight: CGFloat = 66.0
+        var toolbarHeight: CGFloat = 66.0
+        if let mode = self.mode, case .peer = mode {
+            toolbarHeight += 58.0
+        }
         
         let leftButtonFrame = CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0 - buttonSize.width - buttonSpacing) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
         let centerButtonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonSize.width) / 2.0) + offset.x, y: layout.size.height - toolbarHeight - layout.intrinsicInsets.bottom - 54.0 + offset.y + additionalYOffset), size: buttonSize)
@@ -1479,6 +1482,9 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
         self.nativeNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
         
         var bottomInset: CGFloat = 132.0
+        if let mode = self.mode, case .peer = mode {
+            bottomInset += 58.0
+        }
 
         var items: [ListViewItem] = []
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))

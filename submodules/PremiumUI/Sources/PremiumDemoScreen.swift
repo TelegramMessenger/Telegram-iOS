@@ -1042,6 +1042,8 @@ private final class DemoSheetContent: CombinedComponent {
                         case .stories:
                             buttonText = strings.Common_OK
                             buttonAnimationName = "premium_unlock"
+                        case .voiceToText:
+                            buttonText = strings.Premium_VoiceToText_Proceed
                         default:
                             buttonText = strings.Common_OK
                     }

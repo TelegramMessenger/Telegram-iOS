@@ -25,7 +25,7 @@ func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (V
         controller.selectionBlock = { [weak legacyController] asset, _ in
             if let asset = asset {
                 let controller = WallpaperGalleryController(context: context, source: .asset(asset.backingAsset))
-                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, editedImage, cropRect, brightness in
+                controller.apply = { [weak legacyController, weak controller] wallpaper, mode, editedImage, cropRect, brightness, _ in
                     if let legacyController = legacyController, let controller = controller {
                         uploadCustomWallpaper(context: context, wallpaper: wallpaper, mode: mode, editedImage: nil, cropRect: cropRect, brightness: brightness, completion: { [weak legacyController, weak controller] in
                             if let legacyController = legacyController, let controller = controller {
@@ -200,7 +200,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
     }).start()
 }
 
-public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, completion: @escaping () -> Void) {
+public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: WallpaperGalleryEntry, mode: WallpaperPresentationOptions, editedImage: UIImage?, cropRect: CGRect?, brightness: CGFloat?, peerId: PeerId, forBoth: Bool, completion: @escaping () -> Void) {
     var imageSignal: Signal<UIImage, NoError>
     switch wallpaper {
         case let .wallpaper(wallpaper, _):
@@ -308,7 +308,7 @@ public func uploadCustomPeerWallpaper(context: AccountContext, wallpaper: Wallpa
                 let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: intensity)
                 let temporaryWallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], settings)
                 
-                context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(temporaryWallpaper))
+                context.account.pendingPeerMediaUploadManager.add(peerId: peerId, content: .wallpaper(wallpaper: temporaryWallpaper, forBoth: forBoth))
                 
                 Queue.mainQueue().after(0.05) {
                     completion()

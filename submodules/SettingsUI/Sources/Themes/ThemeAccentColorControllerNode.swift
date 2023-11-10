@@ -307,8 +307,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let doneButtonType: WallpaperGalleryToolbarDoneButtonType
         if case .edit(_, _, _, _, _, true, _) = self.mode {
             doneButtonType = .proceed
-        } else if case .peer = resultMode {
-            doneButtonType = .setPeer
+        } else if case let .peer(peer) = resultMode {
+            doneButtonType = .setPeer(peer.compactDisplayTitle, context.isPremium)
         } else {
             doneButtonType = .set
         }
@@ -437,7 +437,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
         
-        self.toolbarNode.done = { [weak self] in
+        self.toolbarNode.done = { [weak self] _ in
             if let strongSelf = self {
                 if strongSelf.state.displayPatternPanel {
                     strongSelf.updateState({ current in
@@ -774,8 +774,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             } else {
                 if case .edit(_, _, _, _, _, true, _) = self.mode {
                     doneButtonType = .proceed
-                } else if case .peer = self.resultMode {
-                    doneButtonType = .setPeer
+                } else if case let .peer(peer) = self.resultMode {
+                    doneButtonType = .setPeer(peer.compactDisplayTitle, self.context.isPremium)
                 } else {
                     doneButtonType = .set
                 }
@@ -1179,8 +1179,11 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         
         var toolbarBottomInset = layout.intrinsicInsets.bottom
-        if case .background = mode, toolbarBottomInset.isZero {
+        if case .background = self.mode, toolbarBottomInset.isZero {
             toolbarBottomInset = 16.0
+        }
+        if case .peer = self.resultMode {
+            toolbarBottomInset += 58.0
         }
         let toolbarHeight = 49.0 + toolbarBottomInset
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))

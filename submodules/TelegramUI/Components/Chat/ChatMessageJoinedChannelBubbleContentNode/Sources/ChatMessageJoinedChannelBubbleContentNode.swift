@@ -318,6 +318,14 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                     theme: item.presentationData.theme.theme,
                     peers: recommendedChannels,
                     action: { peer in
+                        var jsonString: String = "{"
+                        jsonString += "\"ref_channel_id\": \"\(item.message.id.peerId.id._internalGetInt64Value())\","
+                        jsonString += "\"open_channel_id\": \"\(peer.id.id._internalGetInt64Value())\""
+                        jsonString += "}"
+                        
+                        if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
+                            addAppLogEvent(postbox: item.context.account.postbox, type: "channels.open_recommended_channel", data: json)
+                        }
                         item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                     }
                 )
@@ -488,7 +496,7 @@ private class MessageBackgroundNode: ASDisplayNode {
     }
 }
 
-private let itemSize = CGSize(width: 94.0, height: 90.0)
+private let itemSize = CGSize(width: 84.0, height: 90.0)
 
 private final class ChannelItemComponent: Component {
     let context: AccountContext
@@ -581,7 +589,7 @@ private final class ChannelItemComponent: Component {
                     text: .plain(NSAttributedString(string: component.subtitle, font: Font.regular(10.0), textColor: component.theme.chat.message.incoming.secondaryTextColor))
                 )),
                 environment: {},
-                containerSize: CGSize(width: itemSize.width - 12.0, height: 100.0)
+                containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
             )
             
             let avatarSize = CGSize(width: 60.0, height: 60.0)
@@ -694,7 +702,7 @@ final class ChannelListPanelComponent: Component {
         }
         
         func itemFrame(for index: Int) -> CGRect {
-            return CGRect(origin: CGPoint(x: self.containerInsets.top + CGFloat(index) * self.itemWidth, y: 0.0), size: CGSize(width: self.itemWidth, height: self.containerHeight))
+            return CGRect(origin: CGPoint(x: self.containerInsets.left + CGFloat(index) * self.itemWidth, y: 0.0), size: CGSize(width: self.itemWidth, height: self.containerHeight))
         }
     }
     
@@ -820,7 +828,7 @@ final class ChannelListPanelComponent: Component {
             self.component = component
                         
             let itemLayout = ItemLayout(
-                containerInsets: .zero,
+                containerInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                 containerHeight: availableSize.height,
                 itemWidth: itemSize.width,
                 itemCount: component.peers.channels.count

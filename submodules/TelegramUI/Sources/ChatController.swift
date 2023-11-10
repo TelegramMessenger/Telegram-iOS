@@ -908,7 +908,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case .setChatTheme:
                             strongSelf.presentThemeSelection()
                             return true
-                        case let .setChatWallpaper(wallpaper):
+                        case let .setChatWallpaper(wallpaper, _):
                             guard message.effectivelyIncoming(strongSelf.context.account.peerId), let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                                 strongSelf.presentThemeSelection()
                                 return true
@@ -928,7 +928,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
-                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness in
+                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness, _ in
                                 var settings: WallpaperSettings?
                                 if case let .wallpaper(wallpaper, _) = entry {
                                     let baseSettings = wallpaper.settings
@@ -6109,7 +6109,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let peerId = self.chatLocation.peerId {
             uploadingChatWallpaper = self.context.account.pendingPeerMediaUploadManager.uploadingPeerMedia
             |> map { uploadingPeerMedia -> TelegramWallpaper? in
-                if let item = uploadingPeerMedia[peerId], case let .wallpaper(wallpaper) = item.content {
+                if let item = uploadingPeerMedia[peerId], case let .wallpaper(wallpaper, _) = item.content {
                     return wallpaper
                 } else {
                     return nil
@@ -18232,9 +18232,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 let controller = WallpaperGalleryController(context: strongSelf.context, source: .asset(asset), mode: .peer(EnginePeer(peer), false))
                                 controller.navigationPresentation = .modal
-                                controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness in
+                                controller.apply = { [weak self] wallpaper, options, editedImage, cropRect, brightness, forBoth in
                                     if let strongSelf = self {
-                                        uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peerId, completion: {
+                                        uploadCustomPeerWallpaper(context: strongSelf.context, wallpaper: wallpaper, mode: options, editedImage: editedImage, cropRect: cropRect, brightness: brightness, peerId: peerId, forBoth: forBoth, completion: {
                                             Queue.mainQueue().after(0.3, {
                                                 dismissControllers()
                                             })
