@@ -1,6 +1,7 @@
 import Foundation
 import MetalKit
 import UIKit
+import MetalEngine
 
 private func shiftArray(array: [SIMD2<Float>], offset: Int) -> [SIMD2<Float>] {
     var newArray = array
@@ -28,13 +29,28 @@ private func hexToFloat(_ hex: Int) -> SIMD4<Float> {
     return SIMD4<Float>(x: red, y: green, z: blue, w: 1.0)
 }
 
-final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
-    var internalData: MetalSubjectInternalData?
+private struct ColorSet: Equatable, AnimationInterpolatable {
+    static let animationInterpolator = AnimationInterpolator<ColorSet> { from, to, fraction in
+        var result: [SIMD4<Float>] = []
+        for i in 0 ..< min(from.colors.count, to.colors.count) {
+            result.append(from.colors[i] * Float(1.0 - fraction) + to.colors[i] * Float(fraction))
+        }
+        return ColorSet(colors: result)
+    }
+    
+    var colors: [SIMD4<Float>]
+}
+
+final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    var internalData: MetalEngineSubjectInternalData?
     
     final class RenderState: RenderToLayerState {
         let pipelineState: MTLRenderPipelineState
         
-        init?(device: MTLDevice, library: MTLLibrary) {
+        init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
             guard let vertexFunction = library.makeFunction(name: "callBackgroundVertex"), let fragmentFunction = library.makeFunction(name: "callBackgroundFragment") else {
                 return nil
             }
@@ -66,10 +82,43 @@ final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
     
     private var displayLinkSubscription: SharedDisplayLink.Subscription?
     
-    var renderSpec: RenderLayerSpec?
+    var renderSpec: RenderLayerSpec? {
+        didSet {
+            if self.renderSpec != oldValue {
+                self.setNeedsUpdate()
+            }
+        }
+    }
+    
+    private let colorSets: [ColorSet]
+    private let colorTransition: AnimatedProperty<ColorSet>
+    private var stateIndex: Int = 0
+    private let phaseAcceleration = AnimatedProperty<CGFloat>(0.0)
     
     init(isBlur: Bool) {
         self.isBlur = isBlur
+        
+        self.colorSets = [
+            ColorSet(colors: [
+                hexToFloat(0x568FD6),
+                hexToFloat(0x626ED5),
+                hexToFloat(0xA667D5),
+                hexToFloat(0x7664DA)
+            ]),
+            ColorSet(colors: [
+                hexToFloat(0xACBD65),
+                hexToFloat(0x459F8D),
+                hexToFloat(0x53A4D1),
+                hexToFloat(0x3E917A)
+            ]),
+            ColorSet(colors: [
+                hexToFloat(0xC0508D),
+                hexToFloat(0xF09536),
+                hexToFloat(0xCE5081),
+                hexToFloat(0xFC7C4C)
+            ])
+        ]
+        self.colorTransition = AnimatedProperty<ColorSet>(colorSets[0])
         
         super.init()
         
@@ -81,8 +130,14 @@ final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
                 guard let self else {
                     return
                 }
+                self.colorTransition.update()
+                self.phaseAcceleration.update()
+                
                 let stepCount = 8
-                self.phase = (self.phase + 1.0 / 60.0).truncatingRemainder(dividingBy: Float(stepCount))
+                var phaseStep: CGFloat = 0.5 / 30.0
+                phaseStep += phaseStep * self.phaseAcceleration.value * 0.5
+                self.phase = (self.phase + Float(phaseStep)).truncatingRemainder(dividingBy: Float(stepCount))
+                
                 self.setNeedsUpdate()
             })
         }
@@ -95,6 +150,9 @@ final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
     }
     
     override init(layer: Any) {
+        self.colorSets = []
+        self.colorTransition = AnimatedProperty<ColorSet>(ColorSet(colors: []))
+        
         super.init(layer: layer)
     }
     
@@ -102,7 +160,19 @@ final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalSubjectContext) {
+    func update(stateIndex: Int, animated: Bool) {
+        if self.stateIndex != stateIndex {
+            self.stateIndex = stateIndex
+            if animated {
+                self.phaseAcceleration.animate(from: 1.0, to: 0.0, duration: 2.0, curve: .easeInOut)
+                self.colorTransition.animate(to: self.colorSets[stateIndex % self.colorSets.count], duration: 0.3, curve: .easeInOut)
+            } else {
+                self.colorTransition.set(to: self.colorSets[stateIndex % self.colorSets.count])
+            }
+        }
+    }
+    
+    func update(context: MetalEngineSubjectContext) {
         guard let renderSpec = self.renderSpec else {
             return
         }
@@ -127,22 +197,9 @@ final class CallBackgroundLayer: MetalSubjectLayer, MetalSubject {
             }
             encoder.setFragmentBytes(&positions, length: 4 * MemoryLayout<SIMD2<Float>>.size, index: 0)
             
-            var colors: [[SIMD4<Float>]] = [
-                [
-                    hexToFloat(0x568FD6),
-                    hexToFloat(0x626ED5),
-                    hexToFloat(0xA667D5),
-                    hexToFloat(0x7664DA)
-                ],
-                [
-                    hexToFloat(0xACBD65),
-                    hexToFloat(0x459F8D),
-                    hexToFloat(0x53A4D1),
-                    hexToFloat(0x3E917A)
-                ]
-            ]
+            var colors: [SIMD4<Float>] = self.colorTransition.value.colors
             
-            encoder.setFragmentBytes(&colors[0], length: 4 * MemoryLayout<SIMD4<Float>>.size, index: 1)
+            encoder.setFragmentBytes(&colors, length: 4 * MemoryLayout<SIMD4<Float>>.size, index: 1)
             var brightness: Float = isBlur ? 1.1 : 1.0
             var saturation: Float = isBlur ? 1.2 : 1.0
             encoder.setFragmentBytes(&brightness, length: 4, index: 2)

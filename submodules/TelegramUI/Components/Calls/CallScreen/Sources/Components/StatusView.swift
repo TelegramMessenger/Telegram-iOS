@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 private final class AnimatedDotsLayer: SimpleLayer {
     private let dotLayers: [SimpleLayer]
@@ -76,8 +77,18 @@ final class StatusView: UIView {
         case ringing
         case generatingKeys
     }
+    
+    struct ActiveState {
+        var signalStrength: Double
+        
+        init(signalStrength: Double) {
+            self.signalStrength = signalStrength
+        }
+    }
+    
     enum State {
         case waiting(WaitingState)
+        case active(ActiveState)
     }
     
     private var textView: TextView
@@ -110,6 +121,9 @@ final class StatusView: UIView {
             case .generatingKeys:
                 textString = "Exchanging encryption keys"
             }
+        case let .active(activeState):
+            textString = "0:00"
+            let _ = activeState
         }
         let textSize = self.textView.update(string: textString, fontSize: 16.0, fontWeight: 0.0, constrainedWidth: 200.0)
         self.textView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: textSize)

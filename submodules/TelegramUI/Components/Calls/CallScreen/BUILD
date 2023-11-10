@@ -10,7 +10,7 @@ load("//build-system/bazel-utils:plist_fragment.bzl",
 )
 
 filegroup(
-    name = "MetalSources",
+    name = "CallScreenMetalSources",
     srcs = glob([
         "Metal/**/*.metal",
     ]),
@@ -18,7 +18,7 @@ filegroup(
 )
 
 plist_fragment(
-    name = "MetalSourcesBundleInfoPlist",
+    name = "CallScreenMetalSourcesBundleInfoPlist",
     extension = "plist",
     template =
     """
@@ -27,18 +27,24 @@ plist_fragment(
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleName</key>
-    <string>AnimationCompression</string>
+    <string>CallScreen</string>
     """
 )
 
 apple_resource_bundle(
-    name = "MetalSourcesBundle",
+    name = "CallScreenMetalSourcesBundle",
     infoplists = [
-        ":MetalSourcesBundleInfoPlist",
+        ":CallScreenMetalSourcesBundleInfoPlist",
     ],
     resources = [
-        ":MetalSources",
+        ":CallScreenMetalSources",
     ],
+)
+
+filegroup(
+    name = "Assets",
+    srcs = glob(["CallScreenAssets.xcassets/**"]),
+    visibility = ["//visibility:public"],
 )
 
 swift_library(
@@ -51,13 +57,14 @@ swift_library(
         "-warnings-as-errors",
     ],
     data = [
-        ":MetalSourcesBundle",
+        ":CallScreenMetalSourcesBundle",
+        ":Assets",
     ],
     deps = [
         "//submodules/Display",
+        "//submodules/MetalEngine",
         "//submodules/ComponentFlow",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
-        "//submodules/Utils/ShelfPack",
     ],
     visibility = [
         "//visibility:public",

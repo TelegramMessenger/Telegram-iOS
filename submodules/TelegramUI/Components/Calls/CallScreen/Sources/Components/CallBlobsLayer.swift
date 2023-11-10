@@ -1,8 +1,9 @@
 import Foundation
 import MetalKit
+import MetalEngine
 
-final class CallBlobsLayer: MetalSubjectLayer, MetalSubject {
-    var internalData: MetalSubjectInternalData?
+final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    var internalData: MetalEngineSubjectInternalData?
     
     struct Blob {
         var points: [Float]
@@ -48,10 +49,10 @@ final class CallBlobsLayer: MetalSubjectLayer, MetalSubject {
         
         let pipelineState: MTLRenderPipelineState
         
-        required init?(
-            device: MTLDevice,
-            library: MTLLibrary
-        ) {
+        required init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
             guard let vertexFunction = library.makeFunction(name: "callBlobVertex"), let fragmentFunction = library.makeFunction(name: "callBlobFragment") else {
                 return nil
             }
@@ -123,7 +124,7 @@ final class CallBlobsLayer: MetalSubjectLayer, MetalSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalSubjectContext) {
+    func update(context: MetalEngineSubjectContext) {
         if self.bounds.isEmpty {
             return
         }

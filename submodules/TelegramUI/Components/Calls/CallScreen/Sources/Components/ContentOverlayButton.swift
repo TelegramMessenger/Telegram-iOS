@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 final class ContentOverlayButton: UIButton, ContentOverlayView {
     var overlayMaskLayer: CALayer {

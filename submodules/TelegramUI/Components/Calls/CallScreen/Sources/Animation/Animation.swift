@@ -147,6 +147,18 @@ public final class AnimatedProperty<T: AnimationInterpolatable>: AnyAnimatedProp
         self.didStartAnimation?()
     }
     
+    public func animate(from: T, to: T, duration: Double, curve: AnimationCurve) {
+        self.value = from
+        self.animation = Animation(from: from, to: to, duration: duration, curve: curve)
+        self.animation?.start()
+        self.didStartAnimation?()
+    }
+    
+    public func set(to: T) {
+        self.animation = nil
+        self.value = to
+    }
+    
     override public func update() {
         if let animation = self.animation {
             self.value = animation.update(at: CACurrentMediaTime())

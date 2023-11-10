@@ -1,7 +1,21 @@
 import Foundation
 import UIKit
+import Display
+import MetalEngine
 
 final class ContentView: UIView {
+    private struct Params: Equatable {
+        var size: CGSize
+        var insets: UIEdgeInsets
+        var state: PrivateCallScreen.State
+        
+        init(size: CGSize, insets: UIEdgeInsets, state: PrivateCallScreen.State) {
+            self.size = size
+            self.insets = insets
+            self.state = state
+        }
+    }
+    
     private let blobLayer: CallBlobsLayer
     private let avatarLayer: AvatarLayer
     private let titleView: TextView
@@ -14,8 +28,7 @@ final class ContentView: UIView {
     private var videoLayerMask: SimpleShapeLayer?
     private var blurredVideoLayerMask: SimpleShapeLayer?
     
-    private var currentLayout: (size: CGSize, insets: UIEdgeInsets)?
-    private var phase: CGFloat = 0.0
+    private var params: Params?
     
     private var isDisplayingVideo: Bool = false
     private var videoDisplayFraction = AnimatedProperty<CGFloat>(0.0)
@@ -54,8 +67,8 @@ final class ContentView: UIView {
             guard let self else {
                 return
             }
-            if let currentLayout = self.currentLayout {
-                self.update(size: currentLayout.size, insets: currentLayout.insets)
+            if let params = self.params {
+                self.updateInternal(params: params)
             }
         }
     }
@@ -64,41 +77,59 @@ final class ContentView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(size: CGSize, insets: UIEdgeInsets) {
-        self.currentLayout = (size, insets)
-        
+    func update(size: CGSize, insets: UIEdgeInsets, state: PrivateCallScreen.State) {
+        let params = Params(size: size, insets: insets, state: state)
+        if self.params == params {
+            return
+        }
+        self.params = params
+        self.updateInternal(params: params)
+    }
+    
+    private func updateInternal(params: Params) {
         if self.emojiView == nil {
             let emojiView = KeyEmojiView(emoji: ["🐱", "🚂", "❄️", "🎨"])
             self.emojiView = emojiView
             self.addSubview(emojiView)
         }
         if let emojiView = self.emojiView {
-            emojiView.frame = CGRect(origin: CGPoint(x: size.width - 12.0 - emojiView.size.width, y: insets.top + 27.0), size: emojiView.size)
+            emojiView.frame = CGRect(origin: CGPoint(x: params.size.width - 12.0 - emojiView.size.width, y: params.insets.top + 27.0), size: emojiView.size)
         }
         
         if self.videoInput == nil, let url = Bundle.main.url(forResource: "test2", withExtension: "mp4") {
-            self.videoInput = VideoInput(device: MetalContext.shared.device, url: url)
+            self.videoInput = VideoInput(device: MetalEngine.shared.device, url: url)
             self.videoLayer.video = self.videoInput
         }
         
-        self.phase += 3.0 / 60.0
-        self.phase = self.phase.truncatingRemainder(dividingBy: 1.0)
-        var avatarScale: CGFloat = 0.05 * sin(CGFloat(self.phase) * CGFloat.pi)
+        //self.phase += 3.0 / 60.0
+        //self.phase = self.phase.truncatingRemainder(dividingBy: 1.0)
+        var avatarScale: CGFloat = 0.05 * sin(CGFloat(0.0) * CGFloat.pi)
         avatarScale *= 1.0 - self.videoDisplayFraction.value
         
         let avatarSize: CGFloat = 136.0
         let blobSize: CGFloat = 176.0
         
-        let expandedVideoRadius: CGFloat = sqrt(pow(size.width * 0.5, 2.0) + pow(size.height * 0.5, 2.0))
+        let expandedVideoRadius: CGFloat = sqrt(pow(params.size.width * 0.5, 2.0) + pow(params.size.height * 0.5, 2.0))
         
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((size.width - avatarSize) * 0.5), y: CGFloat.animationInterpolator.interpolate(from: 222.0, to: floor((size.height - avatarSize) * 0.5), fraction: self.videoDisplayFraction.value)), size: CGSize(width: avatarSize, height: avatarSize))
+        let avatarFrame = CGRect(origin: CGPoint(x: floor((params.size.width - avatarSize) * 0.5), y: CGFloat.animationInterpolator.interpolate(from: 222.0, to: floor((params.size.height - avatarSize) * 0.5), fraction: self.videoDisplayFraction.value)), size: CGSize(width: avatarSize, height: avatarSize))
         
-        let titleSize = self.titleView.update(string: "Emma Walters", fontSize: CGFloat.animationInterpolator.interpolate(from: 28.0, to: 17.0, fraction: self.videoDisplayFraction.value), fontWeight: CGFloat.animationInterpolator.interpolate(from: 0.0, to: 0.25, fraction: self.videoDisplayFraction.value), constrainedWidth: size.width - 16.0 * 2.0)
-        let titleFrame = CGRect(origin: CGPoint(x: (size.width - titleSize.width) * 0.5, y: CGFloat.animationInterpolator.interpolate(from: avatarFrame.maxY + 39.0, to: insets.top + 17.0, fraction: self.videoDisplayFraction.value)), size: titleSize)
+        let titleSize = self.titleView.update(string: "Emma Walters", fontSize: CGFloat.animationInterpolator.interpolate(from: 28.0, to: 17.0, fraction: self.videoDisplayFraction.value), fontWeight: CGFloat.animationInterpolator.interpolate(from: 0.0, to: 0.25, fraction: self.videoDisplayFraction.value), constrainedWidth: params.size.width - 16.0 * 2.0)
+        let titleFrame = CGRect(origin: CGPoint(x: (params.size.width - titleSize.width) * 0.5, y: CGFloat.animationInterpolator.interpolate(from: avatarFrame.maxY + 39.0, to: params.insets.top + 17.0, fraction: self.videoDisplayFraction.value)), size: titleSize)
         self.titleView.frame = titleFrame
         
-        let statusSize = self.statusView.update(state: .waiting(.requesting))
-        self.statusView.frame = CGRect(origin: CGPoint(x: (size.width - statusSize.width) * 0.5, y: titleFrame.maxY + CGFloat.animationInterpolator.interpolate(from: 4.0, to: 0.0, fraction: self.videoDisplayFraction.value)), size: statusSize)
+        let statusState: StatusView.State
+        switch params.state.lifecycleState {
+        case .connecting:
+            statusState = .waiting(.requesting)
+        case .ringing:
+            statusState = .waiting(.ringing)
+        case .exchangingKeys:
+            statusState = .waiting(.generatingKeys)
+        case let .active(_, signalInfo):
+            statusState = .active(StatusView.ActiveState(signalStrength: signalInfo.quality))
+        }
+        let statusSize = self.statusView.update(state: statusState)
+        self.statusView.frame = CGRect(origin: CGPoint(x: (params.size.width - statusSize.width) * 0.5, y: titleFrame.maxY + CGFloat.animationInterpolator.interpolate(from: 4.0, to: 0.0, fraction: self.videoDisplayFraction.value)), size: statusSize)
         
         let blobFrame = CGRect(origin: CGPoint(x: floor(avatarFrame.midX - blobSize * 0.5), y: floor(avatarFrame.midY - blobSize * 0.5)), size: CGSize(width: blobSize, height: blobSize))
         
@@ -114,7 +145,7 @@ final class ContentView: UIView {
         self.blobLayer.transform = CATransform3DMakeScale(1.0 + avatarScale * 2.0, 1.0 + avatarScale * 2.0, 1.0)
         
         let videoResolution = CGSize(width: 400.0, height: 400.0)
-        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: size)
+        let videoFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: params.size)
         
         let videoRenderingSize = CGSize(width: videoResolution.width * 2.0, height: videoResolution.height * 2.0)
         

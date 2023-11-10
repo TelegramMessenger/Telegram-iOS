@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 final class ContentOverlayLayer: SimpleLayer {
     private struct Params: Equatable {

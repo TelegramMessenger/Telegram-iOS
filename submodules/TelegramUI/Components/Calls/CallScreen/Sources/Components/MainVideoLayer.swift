@@ -3,6 +3,7 @@ import UIKit
 import MetalKit
 import MetalPerformanceShaders
 import Accelerate
+import MetalEngine
 
 func imageToCVPixelBuffer(image: UIImage) -> CVPixelBuffer? {
     guard let cgImage = image.cgImage, let data = cgImage.dataProvider?.data, let bytes = CFDataGetBytePtr(data), let colorSpace = cgImage.colorSpace, case .rgb = colorSpace.model, cgImage.bitsPerPixel / cgImage.bitsPerComponent == 4 else {
@@ -36,10 +37,10 @@ func imageToCVPixelBuffer(image: UIImage) -> CVPixelBuffer? {
     return pixelBuffer
 }
 
-final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
-    var internalData: MetalSubjectInternalData?
+final class MainVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+    var internalData: MetalEngineSubjectInternalData?
     
-    let blurredLayer: MetalSubjectLayer
+    let blurredLayer: MetalEngineSubjectLayer
     
     final class BlurState: ComputeState {
         let computePipelineStateYUVToRGBA: MTLComputePipelineState
@@ -47,10 +48,10 @@ final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
         let computePipelineStateVertical: MTLComputePipelineState
         let downscaleKernel: MPSImageBilinearScale
         
-        required init?(
-            device: MTLDevice,
-            library: MTLLibrary
-        ) {
+        required init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
             guard let functionVideoYUVToRGBA = library.makeFunction(name: "videoYUVToRGBA") else {
                 return nil
             }
@@ -79,10 +80,10 @@ final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
     final class RenderState: RenderToLayerState {
         let pipelineState: MTLRenderPipelineState
         
-        required init?(
-            device: MTLDevice,
-            library: MTLLibrary
-        ) {
+        required init?(device: MTLDevice) {
+            guard let library = metalLibrary(device: device) else {
+                return nil
+            }
             guard let vertexFunction = library.makeFunction(name: "mainVideoVertex"), let fragmentFunction = library.makeFunction(name: "mainVideoFragment") else {
                 return nil
             }
@@ -115,13 +116,13 @@ final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
     private var blurredVerticalTexture: PooledTexture?
     
     override init() {
-        self.blurredLayer = MetalSubjectLayer()
+        self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init()
     }
     
     override init(layer: Any) {
-        self.blurredLayer = MetalSubjectLayer()
+        self.blurredLayer = MetalEngineSubjectLayer()
         
         super.init(layer: layer)
     }
@@ -130,7 +131,7 @@ final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(context: MetalSubjectContext) {
+    func update(context: MetalEngineSubjectContext) {
         if self.isHidden {
             return
         }
@@ -143,16 +144,16 @@ final class MainVideoLayer: MetalSubjectLayer, MetalSubject {
         
         let rgbaTextureSpec = TextureSpec(width: videoTextures.y.width, height: videoTextures.y.height, pixelFormat: .rgba8UnsignedNormalized)
         if self.rgbaTexture == nil || self.rgbaTexture?.spec != rgbaTextureSpec {
-            self.rgbaTexture = MetalContext.shared.pooledTexture(spec: rgbaTextureSpec)
+            self.rgbaTexture = MetalEngine.shared.pooledTexture(spec: rgbaTextureSpec)
         }
         if self.downscaledTexture == nil {
-            self.downscaledTexture = MetalContext.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
+            self.downscaledTexture = MetalEngine.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
         }
         if self.blurredHorizontalTexture == nil {
-            self.blurredHorizontalTexture = MetalContext.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
+            self.blurredHorizontalTexture = MetalEngine.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
         }
         if self.blurredVerticalTexture == nil {
-            self.blurredVerticalTexture = MetalContext.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
+            self.blurredVerticalTexture = MetalEngine.shared.pooledTexture(spec: TextureSpec(width: 128, height: 128, pixelFormat: .rgba8UnsignedNormalized))
         }
         
         guard let rgbaTexture = self.rgbaTexture?.get(context: context) else {

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 final class AvatarLayer: SimpleLayer {
     var image: UIImage? {

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Display
 
 final class ButtonGroupView: UIView, ContentOverlayView {
     enum Key: Hashable {
@@ -12,6 +13,7 @@ final class ButtonGroupView: UIView, ContentOverlayView {
     let overlayMaskLayer: CALayer
     private var buttons: [Key: ContentOverlayButton] = [:]
     
+    var audioPressed: (() -> Void)?
     var toggleVideo: (() -> Void)?
     
     override init(frame: CGRect) {
@@ -89,9 +91,15 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                 let image: UIImage?
                 switch key {
                 case .audio:
-                    image = UIImage(named: "Call/ButtonSpeaker")
+                    image = UIImage(named: "Call/Speaker")
+                    button.action = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.audioPressed?()
+                    }
                 case .video:
-                    image = UIImage(named: "Call/ButtonVideo")
+                    image = UIImage(named: "Call/Video")
                     button.action = { [weak self] in
                         guard let self else {
                             return
@@ -99,9 +107,9 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                         self.toggleVideo?()
                     }
                 case .mic:
-                    image = UIImage(named: "Call/ButtonMicMuted")
+                    image = UIImage(named: "Call/Mute")
                 case .close:
-                    image = UIImage(named: "Call/ButtonEnd")
+                    image = UIImage(named: "Call/End")
                 }
                 
                 button.setImage(image?.withRenderingMode(.alwaysTemplate), for: .normal)
