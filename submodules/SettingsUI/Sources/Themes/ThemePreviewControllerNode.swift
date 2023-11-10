@@ -183,7 +183,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.toolbarNode.cancel = {
             dismiss()
         }
-        self.toolbarNode.done = { [weak self] in
+        self.toolbarNode.done = { [weak self] _ in
             if let strongSelf = self {
                 if !strongSelf.dismissed {
                     strongSelf.dismissed = true

@@ -107,12 +107,12 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case suggestedProfilePhoto(image: TelegramMediaImage?)
     case attachMenuBotAllowed
     case requestedPeer(buttonId: Int32, peerId: PeerId)
-    case setChatWallpaper(wallpaper: TelegramWallpaper)
+    case setChatWallpaper(wallpaper: TelegramWallpaper, forBoth: Bool)
     case setSameChatWallpaper(wallpaper: TelegramWallpaper)
     case giftCode(slug: String, fromGiveaway: Bool, isUnclaimed: Bool, boostPeerId: PeerId?, months: Int32)
     case giveawayLaunched
     case joinedChannel
-    case giveawayResults(winners: Int32)
+    case giveawayResults(winners: Int32, unclaimed: Int32)
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -195,7 +195,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .requestedPeer(buttonId: decoder.decodeInt32ForKey("b", orElse: 0), peerId: PeerId(decoder.decodeInt64ForKey("pi", orElse: 0)))
         case 33:
             if let wallpaper = decoder.decode(TelegramWallpaperNativeCodable.self, forKey: "wallpaper")?.value {
-                self = .setChatWallpaper(wallpaper: wallpaper)
+                self = .setChatWallpaper(wallpaper: wallpaper, forBoth: decoder.decodeBoolForKey("both", orElse: false))
             } else {
                 self = .unknown
             }
@@ -214,7 +214,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 38:
             self = .joinedChannel
         case 39:
-            self = .giveawayResults(winners: decoder.decodeInt32ForKey("winners", orElse: 0))
+            self = .giveawayResults(winners: decoder.decodeInt32ForKey("winners", orElse: 0), unclaimed: decoder.decodeInt32ForKey("unclaimed", orElse: 0))
         default:
             self = .unknown
         }
@@ -376,9 +376,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(32, forKey: "_rawValue")
             encoder.encodeInt32(buttonId, forKey: "b")
             encoder.encodeInt64(peerId.toInt64(), forKey: "pi")
-        case let .setChatWallpaper(wallpaper):
+        case let .setChatWallpaper(wallpaper, forBoth):
             encoder.encodeInt32(33, forKey: "_rawValue")
             encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
+            encoder.encodeBool(forBoth, forKey: "both")
         case let .setSameChatWallpaper(wallpaper):
             encoder.encodeInt32(34, forKey: "_rawValue")
             encoder.encode(TelegramWallpaperNativeCodable(wallpaper), forKey: "wallpaper")
@@ -409,9 +410,10 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(37, forKey: "_rawValue")
         case .joinedChannel:
             encoder.encodeInt32(38, forKey: "_rawValue")
-        case let .giveawayResults(winners):
+        case let .giveawayResults(winners, unclaimed):
             encoder.encodeInt32(39, forKey: "_rawValue")
             encoder.encodeInt32(winners, forKey: "winners")
+            encoder.encodeInt32(unclaimed, forKey: "unclaimed")
         }
     }
     
