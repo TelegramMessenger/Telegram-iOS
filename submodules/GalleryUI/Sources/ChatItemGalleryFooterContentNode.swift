@@ -173,6 +173,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     private var validLayout: (CGSize, LayoutMetrics, CGFloat, CGFloat, CGFloat, CGFloat)?
     
+    private var codeHighlightState: (id: EngineMessage.Id, specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
+    
     var playbackControl: (() -> Void)?
     var seekBackward: ((Double) -> Void)?
     var seekForward: ((Double) -> Void)?
@@ -631,6 +633,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     
     deinit {
         self.messageContextDisposable.dispose()
+        self.codeHighlightState?.disposable.dispose()
     }
     
     override func didLoad() {
@@ -946,7 +949,39 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     }
                 }
             }
-            messageText = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
+            
+            let codeHighlightSpecs = extractMessageSyntaxHighlightSpecs(text: text, entities: entities)
+            var cachedMessageSyntaxHighlight: CachedMessageSyntaxHighlight?
+            
+            if !codeHighlightSpecs.isEmpty {
+                for attribute in message.attributes {
+                    if let attribute = attribute as? DerivedDataMessageAttribute {
+                        if let value = attribute.data["code"]?.get(CachedMessageSyntaxHighlight.self) {
+                            cachedMessageSyntaxHighlight = value
+                        }
+                    }
+                }
+            }
+            
+            if !codeHighlightSpecs.isEmpty {
+                if let current = self.codeHighlightState, current.id == message.id, current.specs == codeHighlightSpecs {
+                } else {
+                    if let codeHighlightState = self.codeHighlightState {
+                        self.codeHighlightState = nil
+                        codeHighlightState.disposable.dispose()
+                    }
+                    
+                    let disposable = MetaDisposable()
+                    self.codeHighlightState = (message.id, codeHighlightSpecs, disposable)
+                    disposable.set(asyncUpdateMessageSyntaxHighlight(engine: self.context.engine, messageId: message.id, current: cachedMessageSyntaxHighlight, specs: codeHighlightSpecs).startStrict(completed: {
+                    }))
+                }
+            } else if let codeHighlightState = self.codeHighlightState {
+                self.codeHighlightState = nil
+                codeHighlightState.disposable.dispose()
+            }
+            
+            messageText = galleryCaptionStringWithAppliedEntities(context: self.context, text: text, entities: entities, message: message, cachedMessageSyntaxHighlight: cachedMessageSyntaxHighlight)
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {

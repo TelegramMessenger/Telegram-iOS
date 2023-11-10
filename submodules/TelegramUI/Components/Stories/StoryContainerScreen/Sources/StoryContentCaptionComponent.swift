@@ -11,6 +11,7 @@ import InvisibleInkDustNode
 import UrlEscaping
 import TelegramPresentationData
 import TextSelectionNode
+import SwiftSignalKit
 
 final class StoryContentCaptionComponent: Component {
     enum Action {
@@ -55,6 +56,7 @@ final class StoryContentCaptionComponent: Component {
     let strings: PresentationStrings
     let theme: PresentationTheme
     let text: String
+    let author: EnginePeer
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
@@ -68,6 +70,7 @@ final class StoryContentCaptionComponent: Component {
         strings: PresentationStrings,
         theme: PresentationTheme,
         text: String,
+        author: EnginePeer,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
@@ -79,6 +82,7 @@ final class StoryContentCaptionComponent: Component {
         self.context = context
         self.strings = strings
         self.theme = theme
+        self.author = author
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -99,6 +103,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.author != rhs.author {
             return false
         }
         if lhs.text != rhs.text {
@@ -165,6 +172,7 @@ final class StoryContentCaptionComponent: Component {
 
         private var component: StoryContentCaptionComponent?
         private weak var state: EmptyComponentState?
+        private var isUpdating: Bool = false
         
         private var itemLayout: ItemLayout?
         
@@ -172,6 +180,9 @@ final class StoryContentCaptionComponent: Component {
         private var ignoreExternalState: Bool = false
         
         private var isExpanded: Bool = false
+        
+        private var codeHighlight: CachedMessageSyntaxHighlight?
+        private var codeHighlightState: (specs: [CachedMessageSyntaxHighlight.Spec], disposable: Disposable)?
         
         private static let shadowImage: UIImage? = {
             UIImage(named: "Stories/PanelGradient")
@@ -243,6 +254,10 @@ final class StoryContentCaptionComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        deinit {
+            self.codeHighlightState?.disposable.dispose()
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -518,6 +533,11 @@ final class StoryContentCaptionComponent: Component {
         }
         
         func update(component: StoryContentCaptionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.isUpdating = true
+            defer {
+                self.isUpdating = false
+            }
+            
             self.ignoreExternalState = true
             
             self.component = component
@@ -527,11 +547,47 @@ final class StoryContentCaptionComponent: Component {
             let verticalInset: CGFloat = 7.0
             let textContainerSize = CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height - verticalInset * 2.0)
             
+            var baseQuoteSecondaryTintColor: UIColor?
+            var baseQuoteTertiaryTintColor: UIColor?
+            if let nameColor = component.author.nameColor {
+                let resolvedColor = component.context.peerNameColors.get(nameColor)
+                if resolvedColor.secondary != nil {
+                    baseQuoteSecondaryTintColor = .clear
+                }
+                if resolvedColor.tertiary != nil {
+                    baseQuoteTertiaryTintColor = .clear
+                }
+            }
+            
+            let codeSpec = extractMessageSyntaxHighlightSpecs(text: component.text, entities: component.entities)
+            if self.codeHighlightState?.specs != codeSpec {
+                let disposable = MetaDisposable()
+                self.codeHighlightState = (codeSpec, disposable)
+                disposable.set((asyncStanaloneSyntaxHighlight(current: self.codeHighlight, specs: codeSpec)
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let self else {
+                        return
+                    }
+                    if self.codeHighlight != result {
+                        self.codeHighlight = result
+                        if !self.isUpdating {
+                            self.state?.updated(transition: .immediate)
+                        }
+                    }
+                }))
+            }
+            
             let attributedText = stringWithAppliedEntities(
                 component.text,
                 entities: component.entities,
                 baseColor: .white,
                 linkColor: .white,
+                baseQuoteTintColor: .white,
+                baseQuoteSecondaryTintColor: baseQuoteSecondaryTintColor,
+                baseQuoteTertiaryTintColor: baseQuoteTertiaryTintColor,
+                codeBlockTitleColor: .white,
+                codeBlockAccentColor: .white,
+                codeBlockBackgroundColor: UIColor(white: 1.0, alpha: 0.2),
                 baseFont: Font.regular(16.0),
                 linkFont: Font.regular(16.0),
                 boldFont: Font.semibold(16.0),
@@ -541,7 +597,8 @@ final class StoryContentCaptionComponent: Component {
                 blockQuoteFont: Font.monospace(16.0),
                 message: nil,
                 entityFiles: component.entityFiles,
-                adjustQuoteFontSize: true
+                adjustQuoteFontSize: true,
+                cachedMessageSyntaxHighlight: self.codeHighlight
             )
             
             let truncationToken = NSMutableAttributedString()

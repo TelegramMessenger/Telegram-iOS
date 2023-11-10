@@ -41,6 +41,7 @@ import DeviceProximity
 import MediaEditor
 import TelegramUIDeclareEncodables
 import ContextMenuScreen
+import MetalEngine
 
 #if canImport(AppCenter)
 import AppCenter
@@ -340,6 +341,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.window = window
         self.nativeWindow = window
+        
+        hostView.containerView.layer.addSublayer(MetalEngine.shared.rootLayer)
         
         if !UIDevice.current.isBatteryMonitoringEnabled {
             UIDevice.current.isBatteryMonitoringEnabled = true

@@ -105,6 +105,7 @@ swift_library(
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/TelegramUI/Components/Calls/CallScreen",
     ],
     visibility = [
         "//visibility:public",

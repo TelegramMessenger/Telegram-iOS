@@ -21,6 +21,9 @@ swift_library(
         "//submodules/ChatTextLinkEditUI",
         "//submodules/Pasteboard",
         "//submodules/ImageTransparency",
+        "//submodules/TelegramUI/Components/Chat/ChatInputTextNode",
+        "//submodules/TextInputMenu",
+        "//submodules/ObjCRuntimeUtils",
     ],
     visibility = [
         "//visibility:public",

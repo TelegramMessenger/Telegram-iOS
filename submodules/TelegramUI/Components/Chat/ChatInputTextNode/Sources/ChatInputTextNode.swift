@@ -26,7 +26,7 @@ public protocol ChatInputTextNodeDelegate: AnyObject {
     func chatInputTextNodeTargetForAction(action: Selector) -> ChatInputTextNode.TargetForAction?
 }
 
-open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
+open class ChatInputTextNode: ASDisplayNode {
     public final class TargetForAction {
         public let target: Any?
         
@@ -40,8 +40,6 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
             self.textView.customDelegate = self.delegate
         }
     }
-    
-    private var selectionChangedForEditedText: Bool = false
     
     public var textView: ChatInputTextView {
         return self.view as! ChatInputTextView
@@ -122,30 +120,6 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
         self.setViewBlock({
             return ChatInputTextView(disableTiling: disableTiling)
         })
-        
-        self.textView.delegate = self
-        self.textView.shouldRespondToAction = { [weak self] action in
-            guard let self, let action else {
-                return false
-            }
-            if let delegate = self.delegate {
-                return delegate.chatInputTextNodeShouldRespondToAction(action: action)
-            } else {
-                return true
-            }
-        }
-        self.textView.targetForAction = { [weak self] action in
-            guard let self, let action else {
-                return nil
-            }
-            if let delegate = self.delegate {
-                return delegate.chatInputTextNodeTargetForAction(action: action).flatMap { value in
-                    return ChatInputTextViewImplTargetForAction(target: value.target)
-                }
-            } else {
-                return nil
-            }
-        }
     }
     
     public func resetInitialPrimaryLanguage() {
@@ -153,52 +127,6 @@ open class ChatInputTextNode: ASDisplayNode, UITextViewDelegate {
     
     public func textHeightForWidth(_ width: CGFloat, rightInset: CGFloat) -> CGFloat {
         return self.textView.textHeightForWidth(width, rightInset: rightInset)
-    }
-    
-    @objc public func textViewDidBeginEditing(_ textView: UITextView) {
-        self.delegate?.chatInputTextNodeDidBeginEditing()
-    }
-
-    @objc public func textViewDidEndEditing(_ textView: UITextView) {
-        self.delegate?.chatInputTextNodeDidFinishEditing()
-    }
-
-    @objc public func textViewDidChange(_ textView: UITextView) {
-        self.selectionChangedForEditedText = true
-        
-        self.delegate?.chatInputTextNodeDidUpdateText()
-        
-        self.textView.updateTextContainerInset()
-    }
-
-    @objc public func textViewDidChangeSelection(_ textView: UITextView) {
-        if self.textView.isPreservingSelection {
-            return
-        }
-        
-        self.selectionChangedForEditedText = false
-        
-        DispatchQueue.main.async { [weak self] in
-            guard let self else {
-                return
-            }
-            self.delegate?.chatInputTextNodeDidChangeSelection(dueToEditing: self.selectionChangedForEditedText)
-        }
-    }
-
-    @available(iOS 16.0, *)
-    @objc public func textView(_ textView: UITextView, editMenuForTextIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
-        return self.delegate?.chatInputTextNodeMenu(forTextRange: range, suggestedActions: suggestedActions)
-    }
-    
-    @objc public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        guard let delegate = self.delegate else {
-            return true
-        }
-        if self.textView.isPreservingText {
-            return false
-        }
-        return delegate.chatInputTextNode(shouldChangeTextIn: range, replacementText: text)
     }
     
     public func updateLayout(size: CGSize) {
@@ -267,7 +195,7 @@ private final class ChatInputTextContainer: NSTextContainer {
     }
 }
 
-public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDelegate, NSTextStorageDelegate {
+public final class ChatInputTextView: ChatInputTextViewImpl, UITextViewDelegate, NSLayoutManagerDelegate, NSTextStorageDelegate {
     public final class Theme: Equatable {
         public final class Quote: Equatable {
             public enum LineStyle: Equatable {
@@ -387,6 +315,8 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     private var didInitializePrimaryInputLanguage: Bool = false
     public var initialPrimaryLanguage: String?
     
+    private var selectionChangedForEditedText: Bool = false
+    
     override public var textInputMode: UITextInputMode? {
         if !self.didInitializePrimaryInputLanguage {
             self.didInitializePrimaryInputLanguage = true
@@ -421,6 +351,31 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         self.measurementLayoutManager.addTextContainer(self.measurementTextContainer)
         
         super.init(frame: CGRect(), textContainer: self.customTextContainer, disableTiling: disableTiling)
+        
+        self.delegate = self
+        
+        self.shouldRespondToAction = { [weak self] action in
+            guard let self, let action else {
+                return false
+            }
+            if let delegate = self.customDelegate {
+                return delegate.chatInputTextNodeShouldRespondToAction(action: action)
+            } else {
+                return true
+            }
+        }
+        self.targetForAction = { [weak self] action in
+            guard let self, let action else {
+                return nil
+            }
+            if let delegate = self.customDelegate {
+                return delegate.chatInputTextNodeTargetForAction(action: action).flatMap { value in
+                    return ChatInputTextViewImplTargetForAction(target: value.target)
+                }
+            } else {
+                return nil
+            }
+        }
         
         self.textContainerInset = UIEdgeInsets()
         self.backgroundColor = nil
@@ -570,6 +525,54 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         self.updateTextElements()
     }
     
+    @objc public func textViewDidBeginEditing(_ textView: UITextView) {
+        self.customDelegate?.chatInputTextNodeDidBeginEditing()
+    }
+
+    @objc public func textViewDidEndEditing(_ textView: UITextView) {
+        self.customDelegate?.chatInputTextNodeDidFinishEditing()
+    }
+
+    @objc public func textViewDidChange(_ textView: UITextView) {
+        self.selectionChangedForEditedText = true
+        
+        self.updateTextContainerInset()
+        
+        self.customDelegate?.chatInputTextNodeDidUpdateText()
+        
+        self.updateTextContainerInset()
+    }
+
+    @objc public func textViewDidChangeSelection(_ textView: UITextView) {
+        if self.isPreservingSelection {
+            return
+        }
+        
+        self.selectionChangedForEditedText = false
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                return
+            }
+            self.customDelegate?.chatInputTextNodeDidChangeSelection(dueToEditing: self.selectionChangedForEditedText)
+        }
+    }
+
+    @available(iOS 16.0, *)
+    @objc public func textView(_ textView: UITextView, editMenuForTextIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
+        return self.customDelegate?.chatInputTextNodeMenu(forTextRange: range, suggestedActions: suggestedActions)
+    }
+    
+    @objc public func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        guard let customDelegate = self.customDelegate else {
+            return true
+        }
+        if self.isPreservingText {
+            return false
+        }
+        return customDelegate.chatInputTextNode(shouldChangeTextIn: range, replacementText: text)
+    }
+    
     public func updateTextContainerInset() {
         var result = self.defaultTextContainerInset
         
@@ -608,9 +611,16 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
     public func textHeightForWidth(_ width: CGFloat, rightInset: CGFloat) -> CGFloat {
         let measureSize = CGSize(width: width, height: 1000000.0)
         
-        if self.measurementTextStorage != self.attributedText || self.measurementTextContainer.size != measureSize || self.measurementTextContainer.rightInset != rightInset {
+        let measureText: NSAttributedString
+        if let attributedText = self.attributedText, attributedText.length != 0 {
+            measureText = attributedText
+        } else {
+            measureText = NSAttributedString(string: "A", attributes: self.typingAttributes)
+        }
+        
+        if self.measurementTextStorage != measureText || self.measurementTextContainer.size != measureSize || self.measurementTextContainer.rightInset != rightInset {
             self.measurementTextContainer.rightInset = rightInset
-            self.measurementTextStorage.setAttributedString(self.attributedText ?? NSAttributedString())
+            self.measurementTextStorage.setAttributedString(measureText)
             self.measurementTextContainer.size = measureSize
             self.measurementLayoutManager.invalidateLayout(forCharacterRange: NSRange(location: 0, length: self.measurementTextStorage.length), actualCharacterRange: nil)
             self.measurementLayoutManager.ensureLayout(for: self.measurementTextContainer)
@@ -618,7 +628,7 @@ public final class ChatInputTextView: ChatInputTextViewImpl, NSLayoutManagerDele
         
         let textSize = self.measurementLayoutManager.usedRect(for: self.measurementTextContainer).size
         
-        return textSize.height + self.textContainerInset.top + self.textContainerInset.bottom
+        return ceil(textSize.height + self.textContainerInset.top + self.textContainerInset.bottom)
     }
     
     public func updateLayout(size: CGSize) {

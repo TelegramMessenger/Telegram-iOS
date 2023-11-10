@@ -538,3 +538,41 @@ public func asyncUpdateMessageSyntaxHighlight(engine: TelegramEngine, messageId:
     }
     |> runOn(messageSyntaxHighlightQueue)
 }
+
+public func asyncStanaloneSyntaxHighlight(current: CachedMessageSyntaxHighlight?, specs: [CachedMessageSyntaxHighlight.Spec]) -> Signal<CachedMessageSyntaxHighlight, NoError> {
+    if let current, !specs.contains(where: { current.values[$0] == nil }) {
+        return .single(current)
+    }
+    
+    return Signal { subscriber in
+        var updated: [CachedMessageSyntaxHighlight.Spec: MessageSyntaxHighlight] = [:]
+        
+        let theme = SyntaxterTheme(dark: false, textColor: .black, textFont: internalFixedCodeFont, italicFont: internalFixedCodeFont, mediumFont: internalFixedCodeFont)
+        
+        for spec in specs {
+            if let value = current?.values[spec] {
+                updated[spec] = value
+            } else {
+                var entities: [MessageSyntaxHighlight.Entity] = []
+                
+                if let syntaxHighlighter {
+                    if let highlightedString = syntaxHighlighter.syntax(spec.text, language: spec.language, theme: theme) {
+                        highlightedString.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: highlightedString.length), using: { value, subRange, _ in
+                            if let value = value as? UIColor, value != .black {
+                                entities.append(MessageSyntaxHighlight.Entity(color: Int32(bitPattern: value.rgb), range: subRange.lowerBound ..< subRange.upperBound))
+                            }
+                        })
+                    }
+                }
+                
+                updated[spec] = MessageSyntaxHighlight(entities: entities)
+            }
+        }
+        
+        subscriber.putNext(CachedMessageSyntaxHighlight(values: updated))
+        subscriber.putCompletion()
+        
+        return EmptyDisposable
+    }
+    |> runOn(messageSyntaxHighlightQueue)
+}
