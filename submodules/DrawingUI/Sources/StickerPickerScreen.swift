@@ -1258,6 +1258,7 @@ public class StickerPickerScreen: ViewController {
                     guard let self, let controller = self.controller, let file = item.itemFile else {
                         return
                     }
+                    let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
                     if groupId == AnyHashable("featuredTop") {
                         let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                         let _ = (controller.context.account.postbox.combinedView(keys: [viewKey])
@@ -1268,10 +1269,11 @@ public class StickerPickerScreen: ViewController {
                             }
                             for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
                                 if featuredStickerPack.topItems.contains(where: { $0.file.fileId == file.fileId }) {
-                                    controller.push(FeaturedStickersScreen(
+                                    controller.pushController(FeaturedStickersScreen(
                                         context: controller.context,
                                         highlightedPackId: featuredStickerPack.info.id,
-                                        forceTheme: defaultDarkPresentationTheme,
+                                        forceTheme: defaultDarkColorPresentationTheme,
+                                        stickerActionTitle: presentationData.strings.StickerPack_AddSticker,
                                         sendSticker: { [weak self] fileReference, _, _ in
                                             guard let self, let controller = self.controller else {
                                                 return false
@@ -2089,13 +2091,6 @@ private final class InteractiveStickerButtonContent: Component {
         }
         
         func update(component: InteractiveStickerButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-//            if component.useOpaqueTheme {
-//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
-//                self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
-//            } else {
-//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-//                self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
-//            }
             self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
             
             let iconSize = self.icon.update(
