@@ -4089,6 +4089,7 @@ public final class StoryItemSetContainerComponent: Component {
                         strings: component.strings,
                         theme: component.theme,
                         text: component.slice.item.storyItem.text,
+                        author: component.slice.peer,
                         entities: enableEntities ? component.slice.item.storyItem.entities : [],
                         entityFiles: component.slice.item.entityFiles,
                         action: { [weak self] action in
