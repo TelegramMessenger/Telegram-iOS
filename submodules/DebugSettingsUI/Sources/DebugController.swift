@@ -71,6 +71,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case keepChatNavigationStack(PresentationTheme, Bool)
     case skipReadHistory(PresentationTheme, Bool)
     case unidirectionalSwipeToReply(Bool)
+    case dustEffect(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case crashOnMemoryPressure(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
@@ -119,7 +120,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -168,70 +169,72 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 15
         case .unidirectionalSwipeToReply:
             return 16
-        case .crashOnSlowQueries:
+        case .dustEffect:
             return 17
-        case .crashOnMemoryPressure:
+        case .crashOnSlowQueries:
             return 18
-        case .clearTips:
+        case .crashOnMemoryPressure:
             return 19
-        case .resetNotifications:
+        case .clearTips:
             return 20
-        case .crash:
+        case .resetNotifications:
             return 21
-        case .resetData:
+        case .crash:
             return 22
-        case .resetDatabase:
+        case .resetData:
             return 23
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 24
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 25
-        case .reindexUnread:
+        case .resetHoles:
             return 26
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 27
-        case .reindexCache:
+        case .resetCacheIndex:
             return 28
-        case .resetBiometricsData:
+        case .reindexCache:
             return 29
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 30
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 31
-        case .photoPreview:
+        case .optimizeDatabase:
             return 32
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 33
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 34
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 35
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 36
-        case .inlineForums:
+        case .acceleratedStickers:
             return 37
-        case .localTranscription:
+        case .inlineForums:
             return 38
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 39
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 40
-        case .logTranslationRecognition:
+        case .restorePurchases:
             return 41
-        case .resetTranslationStates:
+        case .logTranslationRecognition:
             return 42
-        case .storiesExperiment:
+        case .resetTranslationStates:
             return 43
-        case .storiesJpegExperiment:
+        case .storiesExperiment:
             return 44
-        case .playlistPlayback:
+        case .storiesJpegExperiment:
             return 45
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 46
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 47
+        case .voiceConference:
+            return 48
         case let .preferredVideoCodec(index, _, _, _):
-            return 48 + index
+            return 49 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -939,6 +942,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
+        case let .dustEffect(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Dust Effect", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.dustEffect = value
+                    return settings
+                }).start()
+            })
         case let .crashOnSlowQueries(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1387,6 +1398,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
         #endif
         entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
+        entries.append(.dustEffect(experimentalSettings.dustEffect))
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.crashOnMemoryPressure(presentationData.theme, experimentalSettings.crashOnMemoryPressure))

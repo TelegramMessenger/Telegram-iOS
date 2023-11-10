@@ -124,6 +124,6 @@ fragment half4 dustEffectFragment(
 ) {
     constexpr sampler sampler(coord::normalized, address::clamp_to_edge, filter::linear);
     
-    half3 color = inTexture.sample(sampler, float2(in.uv.x, 1.0 - in.uv.y)).rgb;
-    return half4(color * in.alpha, in.alpha);
+    half4 color = inTexture.sample(sampler, float2(in.uv.x, 1.0 - in.uv.y));
+    return color * in.alpha;
 }

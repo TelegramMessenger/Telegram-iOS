@@ -95,8 +95,9 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     }
     
     private var updateLink: SharedDisplayLinkDriver.Link?
-    
     private var items: [Item] = []
+    
+    public var becameEmpty: (() -> Void)?
     
     override public init() {
         super.init()
@@ -127,14 +128,20 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     }
     
     private func updateItems() {
+        var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
-            self.items[i].phase += 1.0 / 60.0
+            self.items[i].phase += (1.0 / 60.0) / Float(UIView.animationDurationFactor())
             
             if self.items[i].phase >= 4.0 {
                 self.items.remove(at: i)
+                didRemoveItems = true
             }
         }
         self.updateNeedsAnimation()
+        
+        if didRemoveItems && self.items.isEmpty {
+            self.becameEmpty?()
+        }
     }
     
     private func updateNeedsAnimation() {
@@ -222,7 +229,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                 computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 1)
                 var phase = item.phase
                 computeEncoder.setBytes(&phase, length: 4, index: 2)
-                var timeStep: Float = 1.0 / 60.0
+                var timeStep: Float = (1.0 / 60.0) / Float(UIView.animationDurationFactor())
                 computeEncoder.setBytes(&timeStep, length: 4, index: 3)
                 computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
             }

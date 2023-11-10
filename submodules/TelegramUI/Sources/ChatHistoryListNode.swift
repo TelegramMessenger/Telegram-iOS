@@ -31,6 +31,7 @@ import ChatMessageItemImpl
 import ChatMessageItemView
 import ChatMessageTransitionNode
 import ChatControllerInteraction
+import DustEffect
 
 struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
@@ -698,6 +699,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let clientId: Atomic<Int32>
     
     private var toLang: String?
+    
+    private var dustEffectLayer: DustEffectLayer?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl? = { nil }) {
         var tagMask = tagMask
@@ -3195,6 +3198,50 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
                 
+                if let currentDeleteAnimationCorrelationIds = strongSelf.currentDeleteAnimationCorrelationIds {
+                    var foundItemNodes: [ChatMessageItemView] = []
+                    strongSelf.forEachRemovedItemNode { itemNode in
+                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                            for (message, _) in item.content {
+                                if currentDeleteAnimationCorrelationIds.contains(message.id) {
+                                    foundItemNodes.append(itemNode)
+                                }
+                            }
+                        }
+                    }
+                    if !foundItemNodes.isEmpty {
+                        strongSelf.currentDeleteAnimationCorrelationIds = nil
+                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
+                            if strongSelf.dustEffectLayer == nil {
+                                let dustEffectLayer = DustEffectLayer()
+                                dustEffectLayer.position = strongSelf.bounds.center
+                                dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: strongSelf.bounds.size)
+                                strongSelf.dustEffectLayer = dustEffectLayer
+                                dustEffectLayer.zPosition = 10.0
+                                dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+                                strongSelf.layer.addSublayer(dustEffectLayer)
+                                dustEffectLayer.becameEmpty = { [weak strongSelf] in
+                                    guard let strongSelf else {
+                                        return
+                                    }
+                                    strongSelf.dustEffectLayer?.removeFromSuperlayer()
+                                    strongSelf.dustEffectLayer = nil
+                                }
+                            }
+                            if let dustEffectLayer = strongSelf.dustEffectLayer {
+                                for itemNode in foundItemNodes {
+                                    guard let (image, subFrame) = itemNode.makeContentSnapshot() else {
+                                        continue
+                                    }
+                                    let itemFrame = itemNode.layer.convert(subFrame, to: dustEffectLayer)
+                                    dustEffectLayer.addItem(frame: itemFrame, image: image)
+                                    itemNode.isHidden = true
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 if !newIncomingReactions.isEmpty {
                     let messageIds = Array(newIncomingReactions.keys)
                     
@@ -3871,6 +3918,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var currentSendAnimationCorrelationIds: Set<Int64>?
     func setCurrentSendAnimationCorrelationIds(_ value: Set<Int64>?) {
         self.currentSendAnimationCorrelationIds = value
+    }
+    
+    private var currentDeleteAnimationCorrelationIds: Set<MessageId>?
+    func setCurrentDeleteAnimationCorrelationIds(_ value: Set<MessageId>?) {
+        self.currentDeleteAnimationCorrelationIds = value
     }
 
     var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?

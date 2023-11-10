@@ -716,6 +716,10 @@ open class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol {
         return nil
     }
     
+    open func makeContentSnapshot() -> (UIImage, CGRect)? {
+        return nil
+    }
+    
     open func getMessageContextSourceNode(stableId: UInt32?) -> ContextExtractedContentContainingNode? {
         return nil
     }

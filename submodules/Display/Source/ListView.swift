@@ -4669,6 +4669,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             }
         }
     }
+    
+    public func forEachRemovedItemNode(_ f: (ASDisplayNode) -> Void) {
+        for itemNode in self.itemNodes {
+            if itemNode.index == nil {
+                f(itemNode)
+            }
+        }
+    }
 
     public func enumerateItemNodes(_ f: (ASDisplayNode) -> Bool) {
         for itemNode in self.itemNodes {

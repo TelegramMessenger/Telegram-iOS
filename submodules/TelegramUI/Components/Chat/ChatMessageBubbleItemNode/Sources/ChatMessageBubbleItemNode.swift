@@ -5382,4 +5382,22 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
     override public func contentFrame() -> CGRect {
         return self.backgroundNode.frame
     }
+    
+    override public func makeContentSnapshot() -> (UIImage, CGRect)? {
+        UIGraphicsBeginImageContextWithOptions(self.backgroundNode.view.bounds.size, false, 0.0)
+        let context = UIGraphicsGetCurrentContext()!
+        
+        context.translateBy(x: -self.backgroundNode.frame.minX, y: -self.insets.top - self.backgroundNode.frame.minY)
+        
+        self.view.drawHierarchy(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.view.bounds.size), afterScreenUpdates: false)
+        
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        guard let image else {
+            return nil
+        }
+        
+        return (image, self.backgroundNode.frame)
+    }
 }

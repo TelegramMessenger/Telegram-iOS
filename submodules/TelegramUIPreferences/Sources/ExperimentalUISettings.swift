@@ -54,6 +54,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var storiesJpegExperiment: Bool
     public var crashOnMemoryPressure: Bool
     public var unidirectionalSwipeToReply: Bool
+    public var dustEffect: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -85,7 +86,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             storiesExperiment: false,
             storiesJpegExperiment: false,
             crashOnMemoryPressure: false,
-            unidirectionalSwipeToReply: false
+            unidirectionalSwipeToReply: false,
+            dustEffect: false
         )
     }
     
@@ -118,7 +120,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         storiesExperiment: Bool,
         storiesJpegExperiment: Bool,
         crashOnMemoryPressure: Bool,
-        unidirectionalSwipeToReply: Bool
+        unidirectionalSwipeToReply: Bool,
+        dustEffect: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -149,6 +152,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.storiesJpegExperiment = storiesJpegExperiment
         self.crashOnMemoryPressure = crashOnMemoryPressure
         self.unidirectionalSwipeToReply = unidirectionalSwipeToReply
+        self.dustEffect = dustEffect
     }
     
     public init(from decoder: Decoder) throws {
@@ -183,6 +187,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.storiesJpegExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesJpegExperiment") ?? false
         self.crashOnMemoryPressure = try container.decodeIfPresent(Bool.self, forKey: "crashOnMemoryPressure") ?? false
         self.unidirectionalSwipeToReply = try container.decodeIfPresent(Bool.self, forKey: "unidirectionalSwipeToReply") ?? false
+        self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -217,6 +222,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.storiesJpegExperiment, forKey: "storiesJpegExperiment")
         try container.encode(self.crashOnMemoryPressure, forKey: "crashOnMemoryPressure")
         try container.encode(self.unidirectionalSwipeToReply, forKey: "unidirectionalSwipeToReply")
+        try container.encode(self.dustEffect, forKey: "dustEffect")
     }
 }
 
