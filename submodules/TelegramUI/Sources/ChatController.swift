@@ -791,7 +791,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return false
                     }
                     switch action.action {
-                        case .pinnedMessageUpdated:
+                        case .pinnedMessageUpdated, .gameScore, .setSameChatWallpaper, .giveawayResults:
                             for attribute in message.attributes {
                                 if let attribute = attribute as? ReplyMessageAttribute {
                                     strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
@@ -800,13 +800,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         case let .photoUpdated(image):
                             openMessageByAction = image != nil
-                        case .gameScore:
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.navigateToMessage(from: message.id, to: .id(attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: attribute.isQuote ? attribute.quote.flatMap { quote in NavigateToMessageParams.Quote(string: quote.text, offset: quote.offset) } : nil)))
-                                    break
-                                }
-                            }
                         case .groupPhoneCall, .inviteToGroupPhoneCall:
                             if let activeCall = strongSelf.presentationInterfaceState.activeGroupCallInfo?.activeCall {
                                 strongSelf.joinGroupCall(peerId: message.id.peerId, invite: nil, activeCall: EngineGroupCallDescription(id: activeCall.id, accessHash: activeCall.accessHash, title: activeCall.title, scheduleTimestamp: activeCall.scheduleTimestamp, subscribedToScheduled: activeCall.subscribedToScheduled, isStream: activeCall.isStream))
@@ -955,13 +948,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.push(wallpaperPreviewController)
                             return true
-                        case .setSameChatWallpaper:
-                            for attribute in message.attributes {
-                                if let attribute = attribute as? ReplyMessageAttribute {
-                                    strongSelf.controllerInteraction?.navigateToMessage(message.id, attribute.messageId, NavigateToMessageParams(timestamp: nil, quote: nil))
-                                    return true
-                                }
-                            }
                         case let .giftPremium(_, _, duration, _, _):
                             strongSelf.chatDisplayNode.dismissInput()
                             let fromPeerId: PeerId = message.author?.id == strongSelf.context.account.peerId ? strongSelf.context.account.peerId : message.id.peerId
@@ -17819,9 +17805,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             contextItems.append(.action(ContextMenuActionItem(text: globalTitle, textColor: .destructive, icon: { _ in nil }, action: { [weak self] _, f in
                 if let strongSelf = self {
-                    strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
-                    let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
-                    f(.dismissWithoutContent)
+                    var giveaway: TelegramMediaGiveaway?
+                    for messageId in messageIds {
+                        if let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId) {
+                            if let media = message.media.first(where: { $0 is TelegramMediaGiveaway }) as? TelegramMediaGiveaway {
+                                giveaway = media
+                                break
+                            }
+                        }
+                    }
+                    let commit = {
+                        strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
+                        let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: .forEveryone).startStandalone()
+                    }
+                    if let giveaway {
+                        Queue.mainQueue().after(0.2) {
+                            let dateString = stringForDate(timestamp: giveaway.untilDate, timeZone: .current, strings: strongSelf.presentationData.strings)
+                            strongSelf.present(textAlertController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, title: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Title, text: strongSelf.presentationData.strings.Chat_Giveaway_DeleteConfirmation_Text(dateString).string, actions: [TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.Common_Delete, action: {
+                                commit()
+                            }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            })], parseMarkdown: true), in: .window(.root))
+                        }
+                        f(.default)
+                    } else {
+                        commit()
+                        f(.dismissWithoutContent)
+                    }
                 }
             })))
             items.append(ActionSheetButtonItem(title: globalTitle, color: .destructive, action: { [weak self, weak actionSheet] in

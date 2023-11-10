@@ -69,6 +69,7 @@ import ChatMessageUnsupportedBubbleContentNode
 import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
+import ChatMessageJoinedChannelBubbleContentNode
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -183,6 +184,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                     result.append((message, ChatMessageWallpaperBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else if case .giftCode = action.action {
                     result.append((message, ChatMessageGiftBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
+                } else if case .joinedChannel = action.action {
+                    result.append((message, ChatMessageJoinedChannelBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .text, neighborSpacing: .default)))
                 }
@@ -1555,6 +1558,10 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         var hasInstantVideo = false
         for contentNodeItemValue in contentNodeMessagesAndClasses {
             let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
+            if contentNodeItem.type == ChatMessageJoinedChannelBubbleContentNode.self {
+                maximumContentWidth = baseWidth
+                break
+            }
             if contentNodeItem.type == ChatMessageGiveawayBubbleContentNode.self {
                 maximumContentWidth = min(305.0, maximumContentWidth)
                 break
@@ -3939,16 +3946,26 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             strongSelf.mainContextSourceNode.layoutUpdated?(strongSelf.mainContextSourceNode.bounds.size, animation)
         }
         
+        var hasMenuGesture = true
         if let subject = item.associatedData.subject, case let .messageOptions(_, _, info) = subject {
             if case .link = info {
             } else {
                 strongSelf.tapRecognizer?.isEnabled = false
             }
             strongSelf.replyRecognizer?.isEnabled = false
-            strongSelf.mainContainerNode.isGestureEnabled = false
-            for contentContainer in strongSelf.contentContainers {
-                contentContainer.containerNode.isGestureEnabled = false
+            hasMenuGesture = false
+        }
+        for media in item.message.media {
+            if let action = media as? TelegramMediaAction {
+                if case .joinedChannel = action.action {
+                    hasMenuGesture = false
+                    break
+                }
             }
+        }
+        strongSelf.mainContainerNode.isGestureEnabled = hasMenuGesture
+        for contentContainer in strongSelf.contentContainers {
+            contentContainer.containerNode.isGestureEnabled = hasMenuGesture
         }
         
         strongSelf.updateSearchTextHighlightState()
