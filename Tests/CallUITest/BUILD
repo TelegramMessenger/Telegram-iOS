@@ -41,7 +41,9 @@ swift_library(
         ":AppResources",
     ],
     deps = [
-        "//submodules/TelegramUI/Components/Calls/CallScreen",
+        "//submodules/Display",
+        "//submodules/MetalEngine",
+        "//submodules/TelegramUI/Components/DustEffect",
     ],
 )
 

@@ -136,13 +136,21 @@ open class MetalEngineSubjectLayer: SimpleLayer {
     }
 }
 
+protocol MetalEngineResource: AnyObject {
+    func free()
+}
+
 public final class PooledTexture {
-    final class Texture {
+    final class Texture: MetalEngineResource {
         let value: MTLTexture
         var isInUse: Bool = false
         
         init(value: MTLTexture) {
             self.value = value
+        }
+        
+        public func free() {
+            self.isInUse = false
         }
     }
     
@@ -187,6 +195,86 @@ public final class PooledTexture {
     }
 }
 
+public struct BufferSpec: Equatable {
+    public var length: Int
+    
+    public init(length: Int) {
+        self.length = length
+    }
+}
+
+public final class BufferPlaceholder {
+    public let placeholer: Placeholder<MTLBuffer?>
+    public let spec: BufferSpec
+    
+    init(placeholer: Placeholder<MTLBuffer?>, spec: BufferSpec) {
+        self.placeholer = placeholer
+        self.spec = spec
+    }
+}
+
+public final class PooledBuffer {
+    final class Buffer: MetalEngineResource {
+        let value: MTLBuffer
+        var isInUse: Bool = false
+        
+        init(value: MTLBuffer) {
+            self.value = value
+        }
+        
+        public func free() {
+            self.isInUse = false
+        }
+    }
+    
+    public let spec: BufferSpec
+    
+    private let buffers: [Buffer]
+    
+    init(device: MTLDevice, spec: BufferSpec) {
+        self.spec = spec
+        
+        self.buffers = (0 ..< 3).compactMap { _ -> Buffer? in
+            guard let texture = device.makeBuffer(length: spec.length, options: [.storageModePrivate]) else {
+                return nil
+            }
+            return Buffer(value: texture)
+        }
+    }
+    
+    public func get(context: MetalEngineSubjectContext) -> BufferPlaceholder? {
+        #if DEBUG
+        if context.freeResourcesOnCompletion.contains(where: { $0 === self }) {
+            assertionFailure("Trying to get PooledTexture more than once per update cycle")
+        }
+        #endif
+        
+        for buffer in self.buffers {
+            if !buffer.isInUse {
+                buffer.isInUse = true
+                let placeholder = Placeholder<MTLBuffer?>()
+                placeholder.contents = buffer.value
+                context.freeResourcesOnCompletion.append(buffer)
+                return BufferPlaceholder(placeholer: placeholder, spec: self.spec)
+            }
+        }
+        
+        print("PooledBuffer: all textures are in use")
+        return nil
+    }
+}
+
+public final class SharedBuffer {
+    public let buffer: MTLBuffer
+    
+    init?(device: MTLDevice, spec: BufferSpec) {
+        guard let buffer = device.makeBuffer(length: spec.length, options: [.storageModeShared]) else {
+            return nil
+        }
+        self.buffer = buffer
+    }
+}
+
 public final class MetalEngineSubjectContext {
     fileprivate final class ComputeOperation {
         let commands: (MTLCommandBuffer) -> Void
@@ -220,7 +308,7 @@ public final class MetalEngineSubjectContext {
     
     fileprivate var computeOperations: [ComputeOperation] = []
     fileprivate var renderToLayerOperationsGroupedByState: [ObjectIdentifier: [RenderToLayerOperation]] = [:]
-    fileprivate var freeResourcesOnCompletion: [PooledTexture.Texture] = []
+    fileprivate var freeResourcesOnCompletion: [MetalEngineResource] = []
     
     fileprivate init(device: MTLDevice, impl: MetalEngine.Impl) {
         self.device = device
@@ -319,16 +407,6 @@ public final class MetalEngineSubjectContext {
         return self.compute(state: state, inputs: noInputPlaceholder, commands: { commandBuffer, state, _ in
             return commands(commandBuffer, state)
         })
-    }
-    
-    public func temporaryTexture(spec: TextureSpec) -> TexturePlaceholder {
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: spec.pixelFormat.metalFormat, width: spec.width, height: spec.height, mipmapped: false)
-        descriptor.storageMode = .private
-        descriptor.usage = [.shaderRead, .shaderWrite]
-        
-        let placeholder = Placeholder<MTLTexture?>()
-        placeholder.contents = self.impl.device.makeTexture(descriptor: descriptor)
-        return TexturePlaceholder(placeholer: placeholder, spec: spec)
     }
 }
 
@@ -854,6 +932,8 @@ public final class MetalEngine {
                                     continue
                                 }
                                 
+                                let subRect = surfaceAllocation.effectivePhase.subRect
+                                renderEncoder.setScissorRect(MTLScissorRect(x: Int(subRect.minX), y: Int(subRect.minY), width: Int(subRect.width), height: Int(subRect.height)))
                                 renderToLayerOperation.commands(renderEncoder, RenderLayerPlacement(effectiveRect: surfaceAllocation.effectivePhase.renderingRect))
                             }
                         }
@@ -868,7 +948,7 @@ public final class MetalEngine {
                 commandBuffer.addCompletedHandler { _ in
                     DispatchQueue.main.async {
                         for resource in freeResourcesOnCompletion {
-                            resource.isInUse = false
+                            resource.free()
                         }
                     }
                 }
@@ -915,5 +995,13 @@ public final class MetalEngine {
     
     public func pooledTexture(spec: TextureSpec) -> PooledTexture {
         return PooledTexture(device: self.device, spec: spec)
+    }
+    
+    public func pooledBuffer(spec: BufferSpec) -> PooledBuffer {
+        return PooledBuffer(device: self.device, spec: spec)
+    }
+    
+    public func sharedBuffer(spec: BufferSpec) -> SharedBuffer? {
+        return SharedBuffer(device: self.device, spec: spec)
     }
 }
