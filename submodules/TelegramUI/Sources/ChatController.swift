@@ -3848,14 +3848,21 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             strongSelf.openResolved(result: .join(joinHash), sourceMessageId: nil)
         }, openWebView: { [weak self] buttonText, url, simple, source in
-            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser else {
+            guard let strongSelf = self, let peerId = strongSelf.chatLocation.peerId, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer else {
                 return
             }
             
             strongSelf.chatDisplayNode.dismissInput()
             
-            let botName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-            let botAddress = peer.addressName ?? ""
+            let botName: String
+            let botAddress: String
+            if case let .inline(bot) = source {
+                botName = bot.compactDisplayTitle
+                botAddress = bot.addressName ?? ""
+            } else {
+                botName = EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
+                botAddress = peer.addressName ?? ""
+            }
             
             if source == .generic {
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {

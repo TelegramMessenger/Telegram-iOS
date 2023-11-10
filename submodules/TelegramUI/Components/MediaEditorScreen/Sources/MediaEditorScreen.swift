@@ -3545,9 +3545,11 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                                             self.mediaEditor?.play()
                                         }
                                     }
+                                    controller.pushController = { [weak self] c in
+                                        self?.controller?.push(c)
+                                    }
                                     self.stickerScreen = controller
-                                    self.controller?.present(controller, in: .window(.root))
-                                    return
+                                    self.controller?.present(controller, in: .current)
                                 case .text:
                                     self.mediaEditor?.stop()
                                     self.insertTextEntity()
