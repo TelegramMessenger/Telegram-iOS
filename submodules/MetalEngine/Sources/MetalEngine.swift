@@ -898,7 +898,11 @@ public final class MetalEngine {
     fileprivate let impl: Impl
     
     public var rootLayer: CALayer {
+        #if targetEnvironment(simulator)
         return self.impl._layer
+        #else
+        return self.impl.layer
+        #endif
     }
     
     public var device: MTLDevice {
