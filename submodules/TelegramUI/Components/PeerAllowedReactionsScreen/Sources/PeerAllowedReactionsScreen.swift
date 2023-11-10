@@ -128,6 +128,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private var isEnabled: Bool = false
         private var availableReactions: AvailableReactions?
         private var enabledReactions: [EmojiComponentReactionItem]?
+        private var appliedAllowedReactions: PeerAllowedReactions?
         
         private var emojiContent: EmojiPagerContentComponent?
         private var emojiContentDisposable: Disposable?
@@ -168,6 +169,53 @@ final class PeerAllowedReactionsScreenComponent: Component {
 
         func scrollToTop() {
             self.scrollView.setContentOffset(CGPoint(), animated: true)
+        }
+        
+        func attemptNavigation(complete: @escaping () -> Void) -> Bool {
+            guard let component = self.component else {
+                return true
+            }
+            if self.isApplyingSettings {
+                return true
+            }
+            guard var enabledReactions = self.enabledReactions else {
+                return true
+            }
+            if !self.isEnabled {
+                enabledReactions.removeAll()
+            }
+            guard let availableReactions = self.availableReactions else {
+                return true
+            }
+            
+            let allowedReactions: PeerAllowedReactions
+            if self.isEnabled {
+                if Set(availableReactions.reactions.map(\.value)) == Set(enabledReactions.map(\.reaction)) {
+                    allowedReactions = .all
+                } else {
+                    allowedReactions = .limited(enabledReactions.map(\.reaction))
+                }
+            } else {
+                allowedReactions = .empty
+            }
+            
+            if self.appliedAllowedReactions != allowedReactions {
+                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                //TODO:localize
+                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Save Changes?", actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
+                    TextAlertAction(type: .defaultAction, title: "Save", action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.applySettings()
+                    })
+                ]), in: .window(.root))
+                
+                return false
+            }
+            
+            return true
         }
         
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -250,6 +298,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 guard let self else {
                     return
                 }
+                self.appliedAllowedReactions = allowedReactions
                 self.environment?.controller()?.dismiss()
             })
         }
@@ -343,6 +392,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.enabledReactions = enabledReactions
                 self.availableReactions = component.initialContent.availableReactions
                 self.isEnabled = component.initialContent.isEnabled
+                self.appliedAllowedReactions = component.initialContent.allowedReactions
             }
             var caretPosition = self.caretPosition ?? enabledReactions.count
             caretPosition = max(0, min(enabledReactions.count, caretPosition))
@@ -896,6 +946,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                     self.addSubview(buttonView)
                 }
                 transition.setFrame(view: buttonView, frame: buttonFrame)
+                transition.setAlpha(view: buttonView, alpha: self.isEnabled ? 1.0 : 0.0)
             }
             
             let contentSize = CGSize(width: availableSize.width, height: contentHeight)
@@ -930,15 +981,18 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
         public let isEnabled: Bool
         public let enabledReactions: [EmojiComponentReactionItem]
         public let availableReactions: AvailableReactions?
+        public let allowedReactions: PeerAllowedReactions?
         
         init(
             isEnabled: Bool,
             enabledReactions: [EmojiComponentReactionItem],
-            availableReactions: AvailableReactions?
+            availableReactions: AvailableReactions?,
+            allowedReactions: PeerAllowedReactions?
         ) {
             self.isEnabled = isEnabled
             self.enabledReactions = enabledReactions
             self.availableReactions = availableReactions
+            self.allowedReactions = allowedReactions
         }
         
         public static func ==(lhs: Content, rhs: Content) -> Bool {
@@ -952,6 +1006,9 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                 return false
             }
             if lhs.availableReactions != rhs.availableReactions {
+                return false
+            }
+            if lhs.allowedReactions != rhs.allowedReactions {
                 return false
             }
             return true
@@ -981,9 +1038,13 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             componentView.scrollToTop()
         }
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        self.title = presentationData.strings.PeerInfo_AllowedReactions_Title
-        self.navigationItem.setLeftBarButton(UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        self.attemptNavigation = { [weak self] complete in
+            guard let self, let componentView = self.node.hostView.componentView as? PeerAllowedReactionsScreenComponent.View else {
+                return true
+            }
+            
+            return componentView.attemptNavigation(complete: complete)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -1014,7 +1075,8 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             var reactions: [MessageReaction.Reaction] = []
             var isEnabled = false
             
-            if let allowedReactions = cachedData.allowedReactions.knownValue {
+            let allowedReactions = cachedData.allowedReactions.knownValue
+            if let allowedReactions {
                 switch allowedReactions {
                 case .all:
                     isEnabled = true
@@ -1057,7 +1119,7 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
                     }
                 }
                 
-                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions)
+                return Content(isEnabled: isEnabled, enabledReactions: result, availableReactions: availableReactions, allowedReactions: allowedReactions)
             }
         }
         |> distinctUntilChanged
