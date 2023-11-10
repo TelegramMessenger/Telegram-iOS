@@ -50,7 +50,7 @@ public extension TelegramEngine {
             return _internal_checkPremiumGiftCode(account: self.account, slug: slug)
         }
         
-        public func applyPremiumGiftCode(slug: String) -> Signal<Never, NoError> {
+        public func applyPremiumGiftCode(slug: String) -> Signal<Never, ApplyPremiumGiftCodeError> {
             return _internal_applyPremiumGiftCode(account: self.account, slug: slug)
         }
         
@@ -62,7 +62,7 @@ public extension TelegramEngine {
             return _internal_getPremiumGiveawayInfo(account: self.account, peerId: peerId, messageId: messageId)
         }
         
-        public func launchPrepaidGiveaway(peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, NoError> {
+        public func launchPrepaidGiveaway(peerId: EnginePeer.Id, id: Int64, additionalPeerIds: [EnginePeer.Id], countries: [String], onlyNewSubscribers: Bool, randomId: Int64, untilDate: Int32) -> Signal<Never, LaunchPrepaidGiveawayError> {
             return _internal_launchPrepaidGiveaway(account: self.account, peerId: peerId, id: id, additionalPeerIds: additionalPeerIds, countries: countries, onlyNewSubscribers: onlyNewSubscribers, randomId: randomId, untilDate: untilDate)
         }
     }
