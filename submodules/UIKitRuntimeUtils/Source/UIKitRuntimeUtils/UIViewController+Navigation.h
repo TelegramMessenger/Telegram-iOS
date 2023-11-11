@@ -55,3 +55,5 @@ void applyKeyboardAutocorrection(UITextView * _Nonnull textView);
 - (void)fixScrollDisplayLink;
 
 @end
+
+void snapshotViewByDrawingInContext(UIView * _Nonnull view);

@@ -2435,17 +2435,22 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         if node.index == nil {
+            var duration = insertionAnimationDuration
+            if let value = self.customItemDeleteAnimationDuration(itemNode: node) {
+                duration = value
+            }
+            
             if node.animationForKey("height") == nil || !(node is ListViewTempItemNode) {
-                node.addHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp)
+                node.addHeightAnimation(0.0, duration: duration * UIView.animationDurationFactor(), beginAt: timestamp)
             }
             if node.animationForKey("apparentHeight") == nil || !(node is ListViewTempItemNode) {
-                node.addApparentHeightAnimation(0.0, duration: insertionAnimationDuration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
+                node.addApparentHeightAnimation(0.0, duration: duration * UIView.animationDurationFactor(), beginAt: timestamp, update: { [weak node] progress, currentValue in
                     if let node = node {
                         node.animateFrameTransition(progress, currentValue)
                     }
                 })
             }
-            node.animateRemoved(timestamp, duration: insertionAnimationDuration * UIView.animationDurationFactor())
+            node.animateRemoved(timestamp, duration: duration * UIView.animationDurationFactor())
         } else if animated {
             if takenAnimation {
                 if let previousFrame = previousFrame {
@@ -5040,6 +5045,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 scrollDirection = self.rotated ? .down : .up
         }
         return self.scrollWithDirection(scrollDirection, distance: distance)
+    }
+    
+    open func customItemDeleteAnimationDuration(itemNode: ListViewItemNode) -> Double? {
+        return nil
     }
 }
 
