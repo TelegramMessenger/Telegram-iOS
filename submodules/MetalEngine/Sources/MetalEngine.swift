@@ -954,7 +954,6 @@ public final class MetalEngine {
                 }
             }
             
-            #if DEBUG
             #if targetEnvironment(simulator)
             if #available(iOS 13.0, *) {
                 if let drawable = self.layer.nextDrawable() {
@@ -965,7 +964,6 @@ public final class MetalEngine {
             if let drawable = self.layer.nextDrawable() {
                 commandBuffer.present(drawable)
             }
-            #endif
             #endif
             
             commandBuffer.commit()
