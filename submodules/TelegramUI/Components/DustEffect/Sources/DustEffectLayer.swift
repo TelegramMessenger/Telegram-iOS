@@ -166,6 +166,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         if let item = Item(frame: frame, image: image) {
             self.items.append(item)
             self.updateNeedsAnimation()
+            self.setNeedsUpdate()
         }
     }
     
