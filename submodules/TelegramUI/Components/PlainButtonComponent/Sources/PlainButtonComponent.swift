@@ -72,7 +72,7 @@ public final class PlainButtonComponent: Component {
                         transition.setScale(layer: self.contentContainer.layer, scale: topScale)
                     } else {
                         self.contentContainer.alpha = 1.0
-                        self.contentContainer.layer.animateAlpha(from: 7, to: 1.0, duration: 0.2)
+                        self.contentContainer.layer.animateAlpha(from: 0.7, to: 1.0, duration: 0.2)
                         
                         let transition = Transition(animation: .none)
                         transition.setScale(layer: self.contentContainer.layer, scale: 1.0)

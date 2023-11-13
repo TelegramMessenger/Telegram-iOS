@@ -121,6 +121,10 @@ open class MetalEngineSubjectLayer: SimpleLayer {
         self.setNeedsDisplay()
     }
     
+    deinit {
+        MetalEngine.shared.impl.removeLayerSurfaceAllocation(layer: self)
+    }
+    
     override public init(layer: Any) {
         super.init(layer: layer)
     }
@@ -485,6 +489,10 @@ public final class MetalEngine {
         let texture: MTLTexture
         let packContext: ShelfPackContext
         
+        var isEmpty: Bool {
+            return self.packContext.isEmpty
+        }
+        
         init?(id: Int, device: MTLDevice, width: Int, height: Int) {
             self.id = id
             self.width = width
@@ -692,13 +700,11 @@ public final class MetalEngine {
             fatalError("init(coder:) has not been implemented")
         }
         
-        private func addSurface(minSize: CGSize) -> Surface? {
+        private func addSurface(width: Int, height: Int) -> Surface? {
             let surfaceId = self.nextSurfaceId
             self.nextSurfaceId += 1
             
-            let surfaceWidth = max(1024, alignUp(Int(minSize.width), alignment: 64))
-            let surfaceHeight = max(512, alignUp(Int(minSize.height), alignment: 64))
-            let surface = Surface(id: surfaceId, device: self.device, width: surfaceWidth, height: surfaceHeight)
+            let surface = Surface(id: surfaceId, device: self.device, width: width, height: height)
             self.surfaces[surfaceId] = surface
             
             return surface
@@ -727,16 +733,32 @@ public final class MetalEngine {
                     updatedSurfaceId = updatedAllocation.surfaceId
                     layer.contentsRect = updatedAllocation.effectivePhase.contentsRect
                 } else {
-                    for (_, surface) in self.surfaces {
-                        if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
-                            layer.surfaceAllocation = allocation
-                            layer.contentsRect = allocation.effectivePhase.contentsRect
-                            updatedSurfaceId = allocation.surfaceId
-                            break
+                    if renderingParameters.allocationWidth >= 1024 || renderingParameters.allocationHeight >= 1024 {
+                        let surfaceWidth = max(1024, alignUp(renderingParameters.allocationWidth * 2, alignment: 64))
+                        let surfaceHeight = max(512, alignUp(renderingParameters.allocationHeight, alignment: 64))
+                        
+                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight) {
+                            if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
+                                layer.surfaceAllocation = allocation
+                                layer.contentsRect = allocation.effectivePhase.contentsRect
+                                updatedSurfaceId = allocation.surfaceId
+                            }
+                        }
+                    } else {
+                        for (_, surface) in self.surfaces {
+                            if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
+                                layer.surfaceAllocation = allocation
+                                layer.contentsRect = allocation.effectivePhase.contentsRect
+                                updatedSurfaceId = allocation.surfaceId
+                                break
+                            }
                         }
                     }
                     if updatedSurfaceId == nil {
-                        if let surface = self.addSurface(minSize: CGSize(width: CGFloat(renderingParameters.allocationWidth) * 2.0, height: CGFloat(renderingParameters.allocationHeight))) {
+                        let surfaceWidth = alignUp(2048, alignment: 64)
+                        let surfaceHeight = alignUp(2048, alignment: 64)
+                        
+                        if let surface = self.addSurface(width: surfaceWidth, height: surfaceHeight) {
                             if let allocation = surface.allocateIfPossible(renderingParameters: renderingParameters) {
                                 layer.surfaceAllocation = allocation
                                 layer.contentsRect = allocation.effectivePhase.contentsRect
@@ -755,9 +777,27 @@ public final class MetalEngine {
             if previousSurfaceId != updatedSurfaceId {
                 if let updatedSurfaceId {
                     layer.contents = self.surfaces[updatedSurfaceId]?.ioSurface
+                    
+                    if previousSurfaceId != nil {
+                        #if DEBUG
+                        print("Changing surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight)")
+                        #endif
+                    }
                 } else {
                     layer.contents = nil
+                    
+                    if layer.internalId != -1 {
+                        #if DEBUG
+                        print("Unable to allocate rendering surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight)")
+                        #endif
+                    }
                 }
+            }
+        }
+        
+        func removeLayerSurfaceAllocation(layer: MetalEngineSubjectLayer) {
+            if let allocation = layer.surfaceAllocation {
+                self.scheduledClearAllocations.append(allocation)
             }
         }
         
@@ -933,7 +973,7 @@ public final class MetalEngine {
                                 }
                                 
                                 let subRect = surfaceAllocation.effectivePhase.subRect
-                                renderEncoder.setScissorRect(MTLScissorRect(x: Int(subRect.minX), y: Int(subRect.minY), width: Int(subRect.width), height: Int(subRect.height)))
+                                renderEncoder.setScissorRect(MTLScissorRect(x: Int(subRect.minX), y: surface.height - Int(subRect.maxY), width: Int(subRect.width), height: Int(subRect.height)))
                                 renderToLayerOperation.commands(renderEncoder, RenderLayerPlacement(effectiveRect: surfaceAllocation.effectivePhase.renderingRect))
                             }
                         }
@@ -952,6 +992,16 @@ public final class MetalEngine {
                         }
                     }
                 }
+            }
+            
+            var removeSurfaceIds: [Int] = []
+            for (id, surface) in self.surfaces {
+                if surface.isEmpty {
+                    removeSurfaceIds.append(id)
+                }
+            }
+            for id in removeSurfaceIds {
+                self.surfaces.removeValue(forKey: id)
             }
             
             #if DEBUG

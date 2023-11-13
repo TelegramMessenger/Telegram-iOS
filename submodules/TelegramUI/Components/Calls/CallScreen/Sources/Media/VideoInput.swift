@@ -2,17 +2,26 @@ import AVFoundation
 import Metal
 import CoreVideo
 
-class VideoInput {
-    final class Output {
-        let y: MTLTexture
-        let uv: MTLTexture
-        
-        init(y: MTLTexture, uv: MTLTexture) {
-            self.y = y
-            self.uv = uv
-        }
-    }
+public final class VideoSourceOutput {
+    let y: MTLTexture
+    let uv: MTLTexture
+    let rotationAngle: Float
     
+    init(y: MTLTexture, uv: MTLTexture, rotationAngle: Float) {
+        self.y = y
+        self.uv = uv
+        self.rotationAngle = rotationAngle
+    }
+}
+
+public protocol VideoSource: AnyObject {
+    typealias Output = VideoSourceOutput
+    
+    var updated: (() -> Void)? { get set }
+    var currentOutput: Output? { get }
+}
+
+public final class FileVideoSource: VideoSource {
     private let playerLooper: AVPlayerLooper
     private let queuePlayer: AVQueuePlayer
     
@@ -22,12 +31,12 @@ class VideoInput {
     
     private var targetItem: AVPlayerItem?
     
-    private(set) var currentOutput: Output?
-    var updated: (() -> Void)?
+    public private(set) var currentOutput: Output?
+    public var updated: (() -> Void)?
     
     private var displayLink: SharedDisplayLink.Subscription?
     
-    init?(device: MTLDevice, url: URL) {
+    public init?(device: MTLDevice, url: URL) {
         self.device = device
         CVMetalTextureCacheCreate(nil, nil, device, nil, &self.textureCache)
         
@@ -71,6 +80,17 @@ class VideoInput {
             return false
         }
         
+        var rotationAngle: Float = 0.0
+        if currentTime.seconds <= currentItem.duration.seconds * 0.25 {
+            rotationAngle = 0.0
+        } else if currentTime.seconds <= currentItem.duration.seconds * 0.5 {
+            rotationAngle = Float.pi * 0.5
+        } else if currentTime.seconds <= currentItem.duration.seconds * 0.75 {
+            rotationAngle = Float.pi
+        } else {
+            rotationAngle = Float.pi * 3.0 / 2.0
+        }
+        
         var pixelBuffer: CVPixelBuffer?
         pixelBuffer = self.videoOutput.copyPixelBuffer(forItemTime: currentTime, itemTimeForDisplay: nil)
         
@@ -92,27 +112,9 @@ class VideoInput {
             return false
         }
         
-        self.currentOutput = Output(y: yTexture, uv: uvTexture)
+        rotationAngle = Float.pi * 0.5
+        
+        self.currentOutput = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle)
         return true
-    }
-}
-
-class ControlVideoInput {
-    private let playerLooper: AVPlayerLooper
-    private let queuePlayer: AVQueuePlayer
-    
-    private let playerLayer: AVPlayerLayer
-    
-    private var targetItem: AVPlayerItem?
-    
-    init(url: URL, playerLayer: AVPlayerLayer) {
-        let playerItem = AVPlayerItem(url: url)
-        self.queuePlayer = AVQueuePlayer(playerItem: playerItem)
-        self.playerLooper = AVPlayerLooper(player: self.queuePlayer, templateItem: playerItem)
-        
-        self.playerLayer = playerLayer
-        playerLayer.player = self.queuePlayer
-        
-        self.queuePlayer.play()
     }
 }

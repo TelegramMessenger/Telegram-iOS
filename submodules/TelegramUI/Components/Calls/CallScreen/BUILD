@@ -64,6 +64,7 @@ swift_library(
         "//submodules/Display",
         "//submodules/MetalEngine",
         "//submodules/ComponentFlow",
+        "//submodules/SSignalKit/SwiftSignalKit",
         "//submodules/TelegramUI/Components/AnimatedTextComponent",
     ],
     visibility = [

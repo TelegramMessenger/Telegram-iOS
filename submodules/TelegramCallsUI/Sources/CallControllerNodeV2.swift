@@ -32,6 +32,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     var dismissedInteractively: (() -> Void)?
     var dismissAllTooltips: (() -> Void)?
     
+    private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat)?
+    
     init(
         sharedContext: SharedAccountContext,
         account: Account,
@@ -60,6 +62,8 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     }
     
     func updateCallState(_ callState: PresentationCallState) {
+        
+        
         if case let .terminated(id, _, reportRating) = callState.state, let callId = id {
             if reportRating {
                 self.presentCallRating?(callId, self.call.isVideo)
@@ -82,6 +86,13 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
     
     func expandFromPipIfPossible() {
 
+    }
+    
+    private func update(transition: ContainedViewLayoutTransition) {
+        guard let (layout, navigationBarHeight) = self.validLayout else {
+            return
+        }
+        self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

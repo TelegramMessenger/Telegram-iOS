@@ -37,7 +37,7 @@ func imageToCVPixelBuffer(image: UIImage) -> CVPixelBuffer? {
     return pixelBuffer
 }
 
-final class MainVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
+final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     var internalData: MetalEngineSubjectInternalData?
     
     let blurredLayer: MetalEngineSubjectLayer
@@ -99,11 +99,8 @@ final class MainVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         }
     }
     
-    var video: VideoInput? {
+    var video: VideoSource.Output? {
         didSet {
-            self.video?.updated = { [weak self] in
-                self?.setNeedsUpdate()
-            }
             self.setNeedsUpdate()
         }
     }
@@ -138,7 +135,7 @@ final class MainVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         guard let renderSpec = self.renderSpec else {
             return
         }
-        guard let videoTextures = self.video?.currentOutput else {
+        guard let videoTextures = self.video else {
             return
         }
         

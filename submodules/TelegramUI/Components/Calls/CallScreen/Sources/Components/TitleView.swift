@@ -1,11 +1,13 @@
 import Foundation
 import UIKit
+import ComponentFlow
 
 final class TextView: UIView {
     private struct Params: Equatable {
         var string: String
         var fontSize: CGFloat
         var fontWeight: CGFloat
+        var monospacedDigits: Bool
         var constrainedWidth: CGFloat
     }
     
@@ -16,6 +18,7 @@ final class TextView: UIView {
     }
     
     private var layoutState: LayoutState?
+    private var animateContentsTransition: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: CGRect())
@@ -28,17 +31,33 @@ final class TextView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, constrainedWidth: CGFloat) -> CGSize {
-        let params = Params(string: string, fontSize: fontSize, fontWeight: fontWeight, constrainedWidth: constrainedWidth)
+    override func action(for layer: CALayer, forKey event: String) -> CAAction? {
+        if self.animateContentsTransition && event == "contents" {
+            self.animateContentsTransition = false
+            let animation = CABasicAnimation(keyPath: "contents")
+            animation.duration = 0.15 * UIView.animationDurationFactor()
+            animation.timingFunction = CAMediaTimingFunction(name: .linear)
+            return animation
+        }
+        return super.action(for: layer, forKey: event)
+    }
+    
+    func update(string: String, fontSize: CGFloat, fontWeight: CGFloat, monospacedDigits: Bool = false, color: UIColor, constrainedWidth: CGFloat, transition: Transition) -> CGSize {
+        let params = Params(string: string, fontSize: fontSize, fontWeight: fontWeight, monospacedDigits: monospacedDigits, constrainedWidth: constrainedWidth)
         if let layoutState = self.layoutState, layoutState.params == params {
             return layoutState.size
         }
         
-        let font = UIFont.systemFont(ofSize: fontSize, weight: UIFont.Weight(fontWeight))
+        let font: UIFont
+        if monospacedDigits {
+            font = UIFont.monospacedDigitSystemFont(ofSize: fontSize, weight: UIFont.Weight(fontWeight))
+        } else {
+            font = UIFont.systemFont(ofSize: fontSize, weight: UIFont.Weight(fontWeight))
+        }
         
         let attributedString = NSAttributedString(string: string, attributes: [
             .font: font,
-            .foregroundColor: UIColor.white
+            .foregroundColor: color,
         ])
         let stringBounds = attributedString.boundingRect(with: CGSize(width: constrainedWidth, height: 200.0), options: .usesLineFragmentOrigin, context: nil)
         let stringSize = CGSize(width: ceil(stringBounds.width), height: ceil(stringBounds.height))
@@ -47,6 +66,7 @@ final class TextView: UIView {
         let layoutState = LayoutState(params: params, size: size, attributedString: attributedString)
         if self.layoutState != layoutState {
             self.layoutState = layoutState
+            self.animateContentsTransition = !transition.animation.isImmediate
             self.setNeedsDisplay()
         }
         

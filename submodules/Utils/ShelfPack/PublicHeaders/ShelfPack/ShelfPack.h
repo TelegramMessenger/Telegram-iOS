@@ -17,6 +17,8 @@ typedef struct {
 
 @interface ShelfPackContext : NSObject
 
+@property (nonatomic, readonly) bool isEmpty;
+
 - (instancetype _Nonnull)initWithWidth:(int32_t)width height:(int32_t)height;
 
 - (ShelfPackItem)addItemWithWidth:(int32_t)width height:(int32_t)height;

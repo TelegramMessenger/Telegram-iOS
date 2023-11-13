@@ -2,6 +2,7 @@ import Foundation
 import MetalKit
 import UIKit
 import MetalEngine
+import ComponentFlow
 
 private func shiftArray(array: [SIMD2<Float>], offset: Int) -> [SIMD2<Float>] {
     var newArray = array
@@ -160,15 +161,16 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func update(stateIndex: Int, animated: Bool) {
+    func update(stateIndex: Int, transition: Transition) {
         if self.stateIndex != stateIndex {
             self.stateIndex = stateIndex
-            if animated {
+            if !transition.animation.isImmediate {
                 self.phaseAcceleration.animate(from: 1.0, to: 0.0, duration: 2.0, curve: .easeInOut)
                 self.colorTransition.animate(to: self.colorSets[stateIndex % self.colorSets.count], duration: 0.3, curve: .easeInOut)
             } else {
                 self.colorTransition.set(to: self.colorSets[stateIndex % self.colorSets.count])
             }
+            self.setNeedsUpdate()
         }
     }
     

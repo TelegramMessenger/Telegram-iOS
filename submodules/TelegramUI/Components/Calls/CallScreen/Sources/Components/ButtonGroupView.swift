@@ -1,20 +1,50 @@
 import Foundation
 import UIKit
 import Display
+import ComponentFlow
 
 final class ButtonGroupView: UIView, ContentOverlayView {
-    enum Key: Hashable {
-        case audio
-        case video
-        case mic
-        case close
+    final class Button {
+        enum Content: Equatable {
+            enum Key: Hashable {
+                case speaker
+                case video
+                case microphone
+                case end
+            }
+            
+            case speaker(isActive: Bool)
+            case video(isActive: Bool)
+            case microphone(isMuted: Bool)
+            case end
+            
+            var key: Key {
+                switch self {
+                case .speaker:
+                    return .speaker
+                case .video:
+                    return .video
+                case .microphone:
+                    return .microphone
+                case .end:
+                    return .end
+                }
+            }
+        }
+        
+        let content: Content
+        let action: () -> Void
+        
+        init(content: Content, action: @escaping () -> Void) {
+            self.content = content
+            self.action = action
+        }
     }
     
     let overlayMaskLayer: CALayer
-    private var buttons: [Key: ContentOverlayButton] = [:]
     
-    var audioPressed: (() -> Void)?
-    var toggleVideo: (() -> Void)?
+    private var buttons: [Button]?
+    private var buttonViews: [Button.Content.Key: ContentOverlayButton] = [:]
     
     override init(frame: CGRect) {
         self.overlayMaskLayer = SimpleLayer()
@@ -66,69 +96,74 @@ final class ButtonGroupView: UIView, ContentOverlayView {
         }
     }
     
-    func update(size: CGSize) {
-        var keys: [Key] = []
-        keys.append(.audio)
-        keys.append(.video)
-        keys.append(.mic)
-        keys.append(.close)
+    func update(size: CGSize, buttons: [Button], transition: Transition) {
+        self.buttons = buttons
         
         let buttonSize: CGFloat = 56.0
         let buttonSpacing: CGFloat = 36.0
         
         let buttonY: CGFloat = size.height - 86.0 - buttonSize
-        var buttonX: CGFloat = floor((size.width - buttonSize * CGFloat(keys.count) - buttonSpacing * CGFloat(keys.count - 1)) * 0.5)
+        var buttonX: CGFloat = floor((size.width - buttonSize * CGFloat(buttons.count) - buttonSpacing * CGFloat(buttons.count - 1)) * 0.5)
         
-        for key in keys {
-            let button: ContentOverlayButton
-            if let current = self.buttons[key] {
-                button = current
-            } else {
-                button = ContentOverlayButton(frame: CGRect())
-                self.addSubview(button)
-                self.buttons[key] = button
-                
-                let image: UIImage?
-                switch key {
-                case .audio:
-                    image = UIImage(named: "Call/Speaker")
-                    button.action = { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.audioPressed?()
-                    }
-                case .video:
-                    image = UIImage(named: "Call/Video")
-                    button.action = { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.toggleVideo?()
-                    }
-                case .mic:
-                    image = UIImage(named: "Call/Mute")
-                case .close:
-                    image = UIImage(named: "Call/End")
-                }
-                
-                button.setImage(image?.withRenderingMode(.alwaysTemplate), for: .normal)
-                button.imageView?.tintColor = .white
+        for button in buttons {
+            let title: String
+            let image: UIImage?
+            let isActive: Bool
+            var isDestructive: Bool = false
+            switch button.content {
+            case let .speaker(isActiveValue):
+                title = "speaker"
+                image = UIImage(named: "Call/Speaker")
+                isActive = isActiveValue
+            case let .video(isActiveValue):
+                title = "video"
+                image = UIImage(named: "Call/Video")
+                isActive = isActiveValue
+            case let .microphone(isActiveValue):
+                title = "mute"
+                image = UIImage(named: "Call/Mute")
+                isActive = isActiveValue
+            case .end:
+                title = "end"
+                image = UIImage(named: "Call/End")
+                isActive = false
+                isDestructive = true
             }
             
-            button.frame = CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize))
+            let buttonView: ContentOverlayButton
+            if let current = self.buttonViews[button.content.key] {
+                buttonView = current
+            } else {
+                buttonView = ContentOverlayButton(frame: CGRect())
+                self.addSubview(buttonView)
+                self.buttonViews[button.content.key] = buttonView
+                
+                let key = button.content.key
+                buttonView.action = { [weak self] in
+                    guard let self, let button = self.buttons?.first(where: { $0.content.key == key }) else {
+                        return
+                    }
+                    button.action()
+                }
+            }
+            
+            buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize))
+            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: transition)
             buttonX += buttonSize + buttonSpacing
         }
         
-        var removeKeys: [Key] = []
-        for (key, button) in self.buttons {
-            if !keys.contains(key) {
+        var removeKeys: [Button.Content.Key] = []
+        for (key, buttonView) in self.buttonViews {
+            if !buttons.contains(where: { $0.content.key == key }) {
                 removeKeys.append(key)
-                button.removeFromSuperview()
+                transition.setScale(view: buttonView, scale: 0.001)
+                transition.setAlpha(view: buttonView, alpha: 0.0, completion: { [weak buttonView] _ in
+                    buttonView?.removeFromSuperview()
+                })
             }
         }
         for key in removeKeys {
-            self.buttons.removeValue(forKey: key)
+            self.buttonViews.removeValue(forKey: key)
         }
     }
 }
