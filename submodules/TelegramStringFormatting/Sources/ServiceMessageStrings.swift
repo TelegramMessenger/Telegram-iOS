@@ -920,6 +920,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     let combinedString = NSMutableAttributedString(attributedString: winnersString)
                     combinedString.append(NSAttributedString(string: "\n"))
                     combinedString.append(unclaimedString)
+                    attributedString = combinedString
                 } else {
                     attributedString = parseMarkdownIntoAttributedString(strings.Notification_GiveawayResults(winners), attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }))
                 }
