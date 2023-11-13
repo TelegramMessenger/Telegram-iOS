@@ -4018,4 +4018,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
 
         self.view.layer.animatePosition(from: CGPoint(x: 0.0, y: self.view.bounds.height + snapshotTopInset), to: CGPoint(), duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: true, additive: true)
     }
+    
+    override public func customItemDeleteAnimationDuration(itemNode: ListViewItemNode) -> Double? {
+        if let currentDeleteAnimationCorrelationIds = self.currentDeleteAnimationCorrelationIds {
+            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                for (message, _) in item.content {
+                    if currentDeleteAnimationCorrelationIds.contains(message.id) {
+                        return 1.5
+                    }
+                }
+            }
+        }
+        return nil
+    }
 }

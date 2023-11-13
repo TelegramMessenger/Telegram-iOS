@@ -70,6 +70,7 @@ import ChatMessageWallpaperBubbleContentNode
 import ChatMessageGiftBubbleContentNode
 import ChatMessageGiveawayBubbleContentNode
 import ChatMessageJoinedChannelBubbleContentNode
+import UIKitRuntimeUtils
 
 private struct BubbleItemAttributes {
     var isAttachment: Bool
@@ -5387,9 +5388,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         UIGraphicsBeginImageContextWithOptions(self.backgroundNode.view.bounds.size, false, 0.0)
         let context = UIGraphicsGetCurrentContext()!
         
-        context.translateBy(x: -self.backgroundNode.frame.minX, y: -self.insets.top - self.backgroundNode.frame.minY)
-        
-        self.view.drawHierarchy(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: self.view.bounds.size), afterScreenUpdates: false)
+        context.translateBy(x: -self.backgroundNode.frame.minX, y: -self.backgroundNode.frame.minY)
+        self.view.layer.render(in: context)
         
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()

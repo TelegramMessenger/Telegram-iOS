@@ -2052,4 +2052,21 @@ public class ChatMessageStickerItemNode: ChatMessageItemView {
     override public func contentFrame() -> CGRect {
         return self.imageNode.frame
     }
+    
+    override public func makeContentSnapshot() -> (UIImage, CGRect)? {
+        UIGraphicsBeginImageContextWithOptions(self.imageNode.view.bounds.size, false, 0.0)
+        let context = UIGraphicsGetCurrentContext()!
+        
+        context.translateBy(x: -self.imageNode.frame.minX, y: -self.imageNode.frame.minY)
+        self.view.layer.render(in: context)
+        
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        guard let image else {
+            return nil
+        }
+        
+        return (image, self.imageNode.frame)
+    }
 }
