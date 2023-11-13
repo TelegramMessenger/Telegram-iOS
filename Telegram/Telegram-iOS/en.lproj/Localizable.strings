@@ -10468,16 +10468,16 @@ Sorry for the inconvenience.";
 "Conversation.FreeTranscriptionLimitTooltip_1" = "You have **%@** free voice transcription left this month.";
 "Conversation.FreeTranscriptionLimitTooltip_any" = "You have **%@** free voice transcriptions left this month.";
 
-"Notification.GiveawayResults_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received a private message with gift code.";
-"Notification.GiveawayResults_any" = "**%@** winners of the giveaway were randomly selected by Telegram and received private messages with gift codes.";
+"Notification.GiveawayResults_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received their gift link in a private message.";
+"Notification.GiveawayResults_any" = "**%@** winners of the giveaway were randomly selected by Telegram and received their gift links in private messages.";
 
-"Notification.GiveawayResultsNoWinners_1" = "Due to the giveaway terms, no winners could be selected by Telegram, a gift code was forwarded to channel administrators.";
-"Notification.GiveawayResultsNoWinners_any" = "Due to the giveaway terms, no winners could be selected by Telegram, all %@ gift codes were forwarded to channel administrators.";
+"Notification.GiveawayResultsNoWinners_1" = "Due to the giveaway terms, no winners could be selected by Telegram, a gift link was forwarded to channel administrators.";
+"Notification.GiveawayResultsNoWinners_any" = "Due to the giveaway terms, no winners could be selected by Telegram, all **%@** gift links were forwarded to channel administrators.";
 
-"Notification.GiveawayResultsMixedWinners_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received a private message with gift code.";
-"Notification.GiveawayResultsMixedWinners_any" = "Due to the giveaway terms, no winners could be selected by Telegram, all %@ gift codes were forwarded to channel administrators.";
-"Notification.GiveawayResultsMixedUnclaimed_1" = "%@ undistributed gift code was forwarded to channel administrators";
-"Notification.GiveawayResultsMixedUnclaimed_any" = "%@ undistributed gift codes were forwarded to channel administrators";
+"Notification.GiveawayResultsMixedWinners_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received their gift link in a private message.";
+"Notification.GiveawayResultsMixedWinners_any" = "**%@** winners of the giveaway were randomly selected by Telegram and received their gift links in private messages.";
+"Notification.GiveawayResultsMixedUnclaimed_1" = "**%@** undistributed gift link was forwarded to channel administrators";
+"Notification.GiveawayResultsMixedUnclaimed_any" = "**%@** undistributed gift links were forwarded to channel administrators";
 
 "Chat.Giveaway.DeleteConfirmation.Title" = "Do you want to delete the Giveaway Announcement?";
 "Chat.Giveaway.DeleteConfirmation.Text" = "Deleting this message won't cancel the giveaway - the winners will still be selected on **%@**.\n\nOnce deleted, the Giveaway Announcement cannot be recovered.";
