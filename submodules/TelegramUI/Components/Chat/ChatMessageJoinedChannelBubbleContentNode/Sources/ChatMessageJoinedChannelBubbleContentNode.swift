@@ -129,10 +129,14 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
     }
     
     @objc private func pressed() {
-        guard let item = self.item, let recommendedChannels = item.associatedData.recommendedChannels else {
+        guard let item = self.item else {
             return
         }
-        let _ = item.context.engine.peers.toggleRecommendedChannelsHidden(peerId: item.message.id.peerId, hidden: !recommendedChannels.isHidden).startStandalone()
+        if let recommendedChannels = item.associatedData.recommendedChannels {
+            let _ = item.context.engine.peers.toggleRecommendedChannelsHidden(peerId: item.message.id.peerId, hidden: !recommendedChannels.isHidden).startStandalone()
+        } else {
+            let _ = item.context.engine.peers.requestRecommendedChannels(peerId: item.message.id.peerId).startStandalone()
+        }
     }
     
     @objc private func closeButtonPressed() {
@@ -190,7 +194,7 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                 }
                 
                 let isExpanded: Bool
-                if let recommendedChannels = item.associatedData.recommendedChannels, !recommendedChannels.isHidden {
+                if let recommendedChannels = item.associatedData.recommendedChannels, !recommendedChannels.channels.isEmpty && !recommendedChannels.isHidden {
                     isExpanded = true
                 } else {
                     isExpanded = false
