@@ -170,6 +170,14 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             }
             return nil
         },
+        decodeDisplayPeerAsRegularChat: { cachedData in
+            if let cachedData = cachedData as? CachedChannelData {
+                if case let .known(value) = cachedData.viewForumAsMessages {
+                    return value
+                }
+            }
+            return false
+        },
         isPeerUpgradeMessage: { message in
             for media in message.media {
                 if let action = media as? TelegramMediaAction {

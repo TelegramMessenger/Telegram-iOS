@@ -7246,7 +7246,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let context = self.context
             let threadData: Signal<ChatPresentationInterfaceState.ThreadData?, NoError>
-            let isGeneralThreadClosed: Signal<Bool?, NoError>
+            let forumTopicData: Signal<ChatPresentationInterfaceState.ThreadData?, NoError>
             if let threadId = self.chatLocation.threadId {
                 let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: threadId)
                 threadData = context.account.postbox.combinedView(keys: [viewKey])
@@ -7260,10 +7260,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return ChatPresentationInterfaceState.ThreadData(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor, isOwnedByMe: data.isOwnedByMe, isClosed: data.isClosed)
                 }
                 |> distinctUntilChanged
-                isGeneralThreadClosed = .single(nil)
+                forumTopicData = .single(nil)
             } else {
-                isGeneralThreadClosed = isForum
-                |> mapToSignal { isForum -> Signal<Bool?, NoError> in
+                forumTopicData = isForum
+                |> mapToSignal { isForum -> Signal<ChatPresentationInterfaceState.ThreadData?, NoError> in
                     if isForum {
                         let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: 1)
                         return context.account.postbox.combinedView(keys: [viewKey])
@@ -7277,9 +7277,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return ChatPresentationInterfaceState.ThreadData(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor, isOwnedByMe: data.isOwnedByMe, isClosed: data.isClosed)
                         }
                         |> distinctUntilChanged
-                        |> map { threadData -> Bool? in
-                            return threadData?.isClosed
-                        }
                     } else {
                         return .single(nil)
                     }
@@ -7350,8 +7347,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 customEmojiAvailable,
                 isForum,
                 threadData,
-                isGeneralThreadClosed
-            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, isGeneralThreadClosed in
+                forumTopicData
+            ).startStrict(next: { [weak self] cachedDataAndMessages, hasPendingMessages, isTopReplyThreadMessageShown, topPinnedMessage, customEmojiAvailable, isForum, threadData, forumTopicData in
                 if let strongSelf = self {
                     let (cachedData, messages) = cachedDataAndMessages
                     
@@ -7530,7 +7527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                 
-                    if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo || customEmojiAvailable != strongSelf.presentationInterfaceState.customEmojiAvailable || threadData != strongSelf.presentationInterfaceState.threadData || isGeneralThreadClosed != strongSelf.presentationInterfaceState.isGeneralThreadClosed || premiumGiftOptions != strongSelf.presentationInterfaceState.premiumGiftOptions {
+                    if strongSelf.presentationInterfaceState.pinnedMessageId != pinnedMessageId || strongSelf.presentationInterfaceState.pinnedMessage != pinnedMessage || strongSelf.presentationInterfaceState.peerIsBlocked != peerIsBlocked || pinnedMessageUpdated || callsDataUpdated || voiceMessagesAvailableUpdated || strongSelf.presentationInterfaceState.slowmodeState != slowmodeState || strongSelf.presentationInterfaceState.activeGroupCallInfo != activeGroupCallInfo || customEmojiAvailable != strongSelf.presentationInterfaceState.customEmojiAvailable || threadData != strongSelf.presentationInterfaceState.threadData || forumTopicData != strongSelf.presentationInterfaceState.forumTopicData || premiumGiftOptions != strongSelf.presentationInterfaceState.premiumGiftOptions {
                         strongSelf.updateChatPresentationInterfaceState(animated: strongSelf.willAppear, interactive: strongSelf.willAppear, { state in
                             return state
                             .updatedPinnedMessageId(pinnedMessageId)
@@ -7542,7 +7539,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             .updatedVoiceMessagesAvailable(voiceMessagesAvailable)
                             .updatedCustomEmojiAvailable(customEmojiAvailable)
                             .updatedThreadData(threadData)
-                            .updatedIsGeneralThreadClosed(isGeneralThreadClosed)
+                            .updatedForumTopicData(forumTopicData)
+                            .updatedIsGeneralThreadClosed(forumTopicData?.isClosed)
                             .updatedPremiumGiftOptions(premiumGiftOptions)
                             .updatedTitlePanelContext({ context in
                                 if pinnedMessageId != nil {
@@ -8309,7 +8307,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     messageId: message.id,
                                     quote: nil
                                 ))
-                            }).updatedSearch(nil).updatedShowCommands(false) }, completion: { t in
+                            }).updatedReplyMessage(message).updatedSearch(nil).updatedShowCommands(false) }, completion: { t in
                                 completion(t, {})
                             })
                             strongSelf.updateItemNodesSearchTextHighlightStates()

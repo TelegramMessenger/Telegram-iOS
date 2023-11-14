@@ -2333,12 +2333,24 @@ final class PostboxImpl {
                 }
             }
         }
+        let updatedCachedPeerData = self.cachedPeerDataTable.transactionUpdatedPeers()
         let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self, transaction: currentTransaction)
         
         let updatedMessageThreadPeerIds = self.messageHistoryThreadIndexTable.replay(threadsTable: self.messageHistoryThreadsTable, namespaces: self.seedConfiguration.chatMessagesNamespaces, updatedIds: self.messageHistoryThreadsTable.updatedIds)
         let alteredInitialPeerThreadsSummaries = self.peerThreadsSummaryTable.update(peerIds: updatedMessageThreadPeerIds.union(self.currentUpdatedPeerThreadCombinedStates), indexTable: self.messageHistoryThreadIndexTable, combinedStateTable: self.peerThreadCombinedStateTable, tagsSummaryTable: self.messageHistoryTagsSummaryTable)
         
-        self.chatListIndexTable.commitWithTransaction(postbox: self, currentTransaction: currentTransaction, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, alteredInitialPeerThreadsSummaries: alteredInitialPeerThreadsSummaries, updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
+        self.chatListIndexTable.commitWithTransaction(
+            postbox: self,
+            currentTransaction: currentTransaction,
+            alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates,
+            updatedPeers: updatedPeers,
+            updatedCachedPeerData: updatedCachedPeerData,
+            transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates,
+            alteredInitialPeerThreadsSummaries: alteredInitialPeerThreadsSummaries,
+            updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates,
+            updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries,
+            currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations
+        )
         
         self.peerTable.commitDependentTables()
         
