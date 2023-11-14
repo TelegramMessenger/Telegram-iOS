@@ -175,7 +175,7 @@ final class ThemeAccentColorController: ViewController {
                 }
                 
                 if case let .peer(peer) = strongSelf.resultMode {
-                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper).start()
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peer.id, wallpaper: coloredWallpaper, forBoth: false).start()
                     strongSelf.completion?()
                     return
                 }

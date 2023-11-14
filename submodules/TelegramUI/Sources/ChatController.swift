@@ -18284,7 +18284,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let peerId else {
                         return
                     }
-                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: nil).startStandalone()
+                    let _ = strongSelf.context.engine.themes.setChatWallpaper(peerId: peerId, wallpaper: nil, forBoth: false).startStandalone()
                 },
                 completion: { [weak self] emoticon in
                     guard let strongSelf = self, let peerId else {
