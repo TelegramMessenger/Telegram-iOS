@@ -11,14 +11,12 @@ final class ContentView: UIView {
         var insets: UIEdgeInsets
         var screenCornerRadius: CGFloat
         var state: PrivateCallScreen.State
-        var remoteVideo: VideoSource?
         
-        init(size: CGSize, insets: UIEdgeInsets, screenCornerRadius: CGFloat, state: PrivateCallScreen.State, remoteVideo: VideoSource?) {
+        init(size: CGSize, insets: UIEdgeInsets, screenCornerRadius: CGFloat, state: PrivateCallScreen.State) {
             self.size = size
             self.insets = insets
             self.screenCornerRadius = screenCornerRadius
             self.state = state
-            self.remoteVideo = remoteVideo
         }
         
         static func ==(lhs: Params, rhs: Params) -> Bool {
@@ -32,9 +30,6 @@ final class ContentView: UIView {
                 return false
             }
             if lhs.state != rhs.state {
-                return false
-            }
-            if lhs.remoteVideo !== rhs.remoteVideo {
                 return false
             }
             return true
@@ -58,6 +53,13 @@ final class ContentView: UIView {
     private var activeRemoteVideoSource: VideoSource?
     private var waitingForFirstVideoFrameDisposable: Disposable?
     
+    private var processedInitialAudioLevelBump: Bool = false
+    private var audioLevelBump: Float = 0.0
+    
+    private var targetAudioLevel: Float = 0.0
+    private var audioLevel: Float = 0.0
+    private var audioLevelUpdateSubscription: SharedDisplayLinkDriver.Link?
+    
     override init(frame: CGRect) {
         self.blobLayer = CallBlobsLayer()
         self.avatarLayer = AvatarLayer()
@@ -78,6 +80,13 @@ final class ContentView: UIView {
         self.statusView.requestLayout = { [weak self] in
             self?.update(transition: .immediate)
         }
+        
+        self.audioLevelUpdateSubscription = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+            guard let self else {
+                return
+            }
+            self.attenuateAudioLevelStep()
+        })
     }
     
     required init?(coder: NSCoder) {
@@ -88,23 +97,43 @@ final class ContentView: UIView {
         self.waitingForFirstVideoFrameDisposable?.dispose()
     }
     
+    func addIncomingAudioLevel(value: Float) {
+        self.targetAudioLevel = value
+    }
+    
+    private func attenuateAudioLevelStep() {
+        self.audioLevel = self.audioLevel * 0.8 + (self.targetAudioLevel + self.audioLevelBump) * 0.2
+        if self.audioLevel <= 0.01 {
+            self.audioLevel = 0.0
+        }
+        self.updateAudioLevel()
+    }
+    
+    private func updateAudioLevel() {
+        if self.activeRemoteVideoSource == nil {
+            let additionalAvatarScale = CGFloat(max(0.0, min(self.audioLevel, 5.0)) * 0.05)
+            self.avatarLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale, 1.0 + additionalAvatarScale, 1.0)
+            let blobAmplificationFactor: CGFloat = 2.0
+            self.blobLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0)
+        }
+    }
+    
     func update(
         size: CGSize,
         insets: UIEdgeInsets,
         screenCornerRadius: CGFloat,
         state: PrivateCallScreen.State,
-        remoteVideo: VideoSource?,
         transition: Transition
     ) {
-        let params = Params(size: size, insets: insets, screenCornerRadius: screenCornerRadius, state: state, remoteVideo: remoteVideo)
+        let params = Params(size: size, insets: insets, screenCornerRadius: screenCornerRadius, state: state)
         if self.params == params {
             return
         }
         
-        if self.params?.remoteVideo !== params.remoteVideo {
+        if self.params?.state.remoteVideo !== params.state.remoteVideo {
             self.waitingForFirstVideoFrameDisposable?.dispose()
             
-            if let remoteVideo = params.remoteVideo {
+            if let remoteVideo = params.state.remoteVideo {
                 if remoteVideo.currentOutput != nil {
                     self.activeRemoteVideoSource = remoteVideo
                 } else {
@@ -123,7 +152,7 @@ final class ContentView: UIView {
                     }
                     var shouldUpdate = false
                     self.waitingForFirstVideoFrameDisposable = (firstVideoFrameSignal
-                    |> timeout(1.0, queue: .mainQueue(), alternate: .complete())
+                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let self else {
                             return
@@ -175,11 +204,6 @@ final class ContentView: UIView {
                 emojiView.removeFromSuperview()
             }
         }
-        
-        //self.phase += 3.0 / 60.0
-        //self.phase = self.phase.truncatingRemainder(dividingBy: 1.0)
-        //var avatarScale: CGFloat = 0.05 * sin(CGFloat(0.0) * CGFloat.pi)
-        //avatarScale *= 1.0 - self.videoDisplayFraction.value
         
         let collapsedAvatarSize: CGFloat = 136.0
         let blobSize: CGFloat = collapsedAvatarSize + 40.0
@@ -252,10 +276,17 @@ final class ContentView: UIView {
         let blobFrame = CGRect(origin: CGPoint(x: floor(avatarFrame.midX - blobSize * 0.5), y: floor(avatarFrame.midY - blobSize * 0.5)), size: CGSize(width: blobSize, height: blobSize))
         transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.midX, y: blobFrame.midY))
         transition.setBounds(layer: self.blobLayer, bounds: CGRect(origin: CGPoint(), size: blobFrame.size))
-        //self.blobLayer.transform = CATransform3DMakeScale(1.0 + avatarScale * 2.0, 1.0 + avatarScale * 2.0, 1.0)
+        
+        let titleString: String
+        switch params.state.lifecycleState {
+        case .terminated:
+            titleString = "Call Ended"
+        default:
+            titleString = params.state.name
+        }
         
         let titleSize = self.titleView.update(
-            string: params.state.name,
+            string: titleString,
             fontSize: self.activeRemoteVideoSource == nil ? 28.0 : 17.0,
             fontWeight: self.activeRemoteVideoSource == nil ? 0.0 : 0.25,
             color: .white,
@@ -281,6 +312,19 @@ final class ContentView: UIView {
             statusState = .waiting(.generatingKeys)
         case let .active(activeState):
             statusState = .active(StatusView.ActiveState(startTimestamp: activeState.startTime, signalStrength: activeState.signalInfo.quality))
+            
+            if !self.processedInitialAudioLevelBump {
+                self.processedInitialAudioLevelBump = true
+                self.audioLevelBump = 2.0
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.audioLevelBump = 0.0
+                })
+            }
+        case let .terminated(terminatedState):
+            statusState = .terminated(StatusView.TerminatedState(duration: terminatedState.duration))
         }
         
         if let previousState = self.statusView.state, previousState.key != statusState.key {

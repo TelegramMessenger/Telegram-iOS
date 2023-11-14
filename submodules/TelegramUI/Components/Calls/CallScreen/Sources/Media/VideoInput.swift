@@ -3,11 +3,11 @@ import Metal
 import CoreVideo
 
 public final class VideoSourceOutput {
-    let y: MTLTexture
-    let uv: MTLTexture
-    let rotationAngle: Float
+    public let y: MTLTexture
+    public let uv: MTLTexture
+    public let rotationAngle: Float
     
-    init(y: MTLTexture, uv: MTLTexture, rotationAngle: Float) {
+    public init(y: MTLTexture, uv: MTLTexture, rotationAngle: Float) {
         self.y = y
         self.uv = uv
         self.rotationAngle = rotationAngle

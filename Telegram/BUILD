@@ -373,6 +373,7 @@ swift_library(
         "//submodules/DrawingUI:DrawingUIResources",
         "//submodules/TelegramUI:TelegramUIResources",
         "//submodules/TelegramUI:TelegramUIAssets",
+        "//submodules/TelegramUI/Components/Calls/CallScreen:Assets",
         ":GeneratedPresentationStrings/Resources/PresentationStrings.data",
     ],
     deps = [

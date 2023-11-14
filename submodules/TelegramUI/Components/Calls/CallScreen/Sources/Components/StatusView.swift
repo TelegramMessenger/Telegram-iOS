@@ -179,14 +179,24 @@ final class StatusView: UIView {
         }
     }
     
+    struct TerminatedState: Equatable {
+        var duration: Double
+        
+        init(duration: Double) {
+            self.duration = duration
+        }
+    }
+    
     enum State: Equatable {
         enum Key: Equatable {
             case waiting(WaitingState)
             case active
+            case terminated
         }
         
         case waiting(WaitingState)
         case active(ActiveState)
+        case terminated(TerminatedState)
         
         var key: Key {
             switch self {
@@ -194,6 +204,8 @@ final class StatusView: UIView {
                 return .waiting(waitingState)
             case .active:
                 return .active
+            case .terminated:
+                return .terminated
             }
         }
     }
@@ -297,6 +309,8 @@ final class StatusView: UIView {
             let duration = timestamp - activeState.startTimestamp
             textString = stringForDuration(Int(duration))
             signalStrength = activeState.signalStrength
+        case let .terminated(terminatedState):
+            textString = stringForDuration(Int(terminatedState.duration))
         }
         
         var contentSize = CGSize()

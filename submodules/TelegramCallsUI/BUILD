@@ -106,6 +106,10 @@ swift_library(
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
         "//submodules/TelegramUI/Components/Calls/CallScreen",
+        "//submodules/Components/ComponentDisplayAdapters",
+        "//submodules/TinyThumbnail",
+        "//submodules/ImageBlur",
+        "//submodules/MetalEngine",
     ],
     visibility = [
         "//visibility:public",

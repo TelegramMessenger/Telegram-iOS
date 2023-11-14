@@ -253,7 +253,7 @@ final class LegacyCallControllerNode: ASDisplayNode, CallControllerNodeProtocol 
                     }
                 }, timestamp)
                 if self.keyTextData?.0 != keyVisualHash {
-                    let text = stringForEmojiHashOfData(keyVisualHash, 4)!
+                    let text = stringForEmojiHashOfData(keyVisualHash, 4)!.joined(separator: "")
                     self.keyTextData = (keyVisualHash, text)
                     
                     self.keyButtonNode.setAttributedTitle(NSAttributedString(string: text, attributes: [NSAttributedString.Key.font: Font.regular(22.0), NSAttributedString.Key.kern: 2.5 as NSNumber]), for: [])

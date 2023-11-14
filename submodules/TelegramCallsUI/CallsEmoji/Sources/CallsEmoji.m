@@ -16,20 +16,21 @@ NSString *randomCallsEmoji() {
     return emojis[arc4random() % emojis.count];
 }
 
-NSString *stringForEmojiHashOfData(NSData *data, NSInteger count) {
-    if (data.length != 32)
-        return @"";
+NSArray<NSString *> *stringForEmojiHashOfData(NSData *data, NSInteger count) {
+    if (data.length != 32) {
+        return @[];
+    }
     
     uint8_t bytes[32];
     [data getBytes:bytes length:32];
     
     NSArray *emojis = emojisArray();
-    NSString *result = @"";
+    NSMutableArray *result = [[NSMutableArray alloc] init];
     for (int32_t i = 0; i < count; i++)
     {
         int32_t position = positionExtractor(bytes, i, (int32_t)emojis.count);
         NSString *emoji = emojis[position];
-        result = [result stringByAppendingString:emoji];
+        [result addObject:emoji];
     }
     
     return result;

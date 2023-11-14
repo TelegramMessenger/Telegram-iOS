@@ -72,6 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case skipReadHistory(PresentationTheme, Bool)
     case unidirectionalSwipeToReply(Bool)
     case dustEffect(Bool)
+    case callUIV2(Bool)
     case crashOnSlowQueries(PresentationTheme, Bool)
     case crashOnMemoryPressure(PresentationTheme, Bool)
     case clearTips(PresentationTheme)
@@ -120,7 +121,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
-        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .dustEffect, .crashOnSlowQueries, .crashOnMemoryPressure:
+        case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .dustEffect, .callUIV2, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
@@ -171,70 +172,72 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .dustEffect:
             return 17
-        case .crashOnSlowQueries:
+        case .callUIV2:
             return 18
-        case .crashOnMemoryPressure:
+        case .crashOnSlowQueries:
             return 19
-        case .clearTips:
+        case .crashOnMemoryPressure:
             return 20
-        case .resetNotifications:
+        case .clearTips:
             return 21
-        case .crash:
+        case .resetNotifications:
             return 22
-        case .resetData:
+        case .crash:
             return 23
-        case .resetDatabase:
+        case .resetData:
             return 24
-        case .resetDatabaseAndCache:
+        case .resetDatabase:
             return 25
-        case .resetHoles:
+        case .resetDatabaseAndCache:
             return 26
-        case .reindexUnread:
+        case .resetHoles:
             return 27
-        case .resetCacheIndex:
+        case .reindexUnread:
             return 28
-        case .reindexCache:
+        case .resetCacheIndex:
             return 29
-        case .resetBiometricsData:
+        case .reindexCache:
             return 30
-        case .resetWebViewCache:
+        case .resetBiometricsData:
             return 31
-        case .optimizeDatabase:
+        case .resetWebViewCache:
             return 32
-        case .photoPreview:
+        case .optimizeDatabase:
             return 33
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 34
-        case .experimentalCompatibility:
+        case .knockoutWallpaper:
             return 35
-        case .enableDebugDataDisplay:
+        case .experimentalCompatibility:
             return 36
-        case .acceleratedStickers:
+        case .enableDebugDataDisplay:
             return 37
-        case .inlineForums:
+        case .acceleratedStickers:
             return 38
-        case .localTranscription:
+        case .inlineForums:
             return 39
-        case .enableReactionOverrides:
+        case .localTranscription:
             return 40
-        case .restorePurchases:
+        case .enableReactionOverrides:
             return 41
-        case .logTranslationRecognition:
+        case .restorePurchases:
             return 42
-        case .resetTranslationStates:
+        case .logTranslationRecognition:
             return 43
-        case .storiesExperiment:
+        case .resetTranslationStates:
             return 44
-        case .storiesJpegExperiment:
+        case .storiesExperiment:
             return 45
-        case .playlistPlayback:
+        case .storiesJpegExperiment:
             return 46
-        case .enableQuickReactionSwitch:
+        case .playlistPlayback:
             return 47
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 48
+        case .voiceConference:
+            return 49
         case let .preferredVideoCodec(index, _, _, _):
-            return 49 + index
+            return 50 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableNetworkFramework:
@@ -950,6 +953,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings
                 }).start()
             })
+        case let .callUIV2(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Call UI V2", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.callUIV2 = value
+                    return settings
+                }).start()
+            })
         case let .crashOnSlowQueries(_, value):
             return ItemListSwitchItem(presentationData: presentationData, title: "Crash when slow", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
@@ -1399,6 +1410,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         #endif
         entries.append(.unidirectionalSwipeToReply(experimentalSettings.unidirectionalSwipeToReply))
         entries.append(.dustEffect(experimentalSettings.dustEffect))
+        entries.append(.callUIV2(experimentalSettings.callUIV2))
     }
     entries.append(.crashOnSlowQueries(presentationData.theme, experimentalSettings.crashOnLongQueries))
     entries.append(.crashOnMemoryPressure(presentationData.theme, experimentalSettings.crashOnMemoryPressure))

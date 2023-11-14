@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import AppBundle
 
 final class ButtonGroupView: UIView, ContentOverlayView {
     final class Button {
@@ -113,19 +114,19 @@ final class ButtonGroupView: UIView, ContentOverlayView {
             switch button.content {
             case let .speaker(isActiveValue):
                 title = "speaker"
-                image = UIImage(named: "Call/Speaker")
+                image = UIImage(bundleImageName: "Call/Speaker")
                 isActive = isActiveValue
             case let .video(isActiveValue):
                 title = "video"
-                image = UIImage(named: "Call/Video")
+                image = UIImage(bundleImageName: "Call/Video")
                 isActive = isActiveValue
             case let .microphone(isActiveValue):
                 title = "mute"
-                image = UIImage(named: "Call/Mute")
+                image = UIImage(bundleImageName: "Call/Mute")
                 isActive = isActiveValue
             case .end:
                 title = "end"
-                image = UIImage(named: "Call/End")
+                image = UIImage(bundleImageName: "Call/End")
                 isActive = false
                 isDestructive = true
             }

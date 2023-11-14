@@ -1105,7 +1105,7 @@ final class CallControllerNode: ViewControllerTracingNode, CallControllerNodePro
                     isReconnecting = true
                 }
                 if self.keyTextData?.0 != keyVisualHash {
-                    let text = stringForEmojiHashOfData(keyVisualHash, 4)!
+                    let text = stringForEmojiHashOfData(keyVisualHash, 4)!.joined(separator: "")
                     self.keyTextData = (keyVisualHash, text)
 
                     self.keyButtonNode.key = text

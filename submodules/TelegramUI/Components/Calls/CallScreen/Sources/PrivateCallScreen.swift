@@ -26,25 +26,70 @@ public final class PrivateCallScreen: UIView {
             }
         }
         
+        public struct TerminatedState: Equatable {
+            public var duration: Double
+            
+            public init(duration: Double) {
+                self.duration = duration
+            }
+        }
+        
         public enum LifecycleState: Equatable {
             case connecting
             case ringing
             case exchangingKeys
             case active(ActiveState)
+            case terminated(TerminatedState)
+        }
+        
+        public enum AudioOutput: Equatable {
+            case internalSpeaker
+            case speaker
         }
         
         public var lifecycleState: LifecycleState
         public var name: String
         public var avatarImage: UIImage?
+        public var audioOutput: AudioOutput
+        public var isMicrophoneMuted: Bool
+        public var remoteVideo: VideoSource?
         
         public init(
             lifecycleState: LifecycleState,
             name: String,
-            avatarImage: UIImage?
+            avatarImage: UIImage?,
+            audioOutput: AudioOutput,
+            isMicrophoneMuted: Bool,
+            remoteVideo: VideoSource?
         ) {
             self.lifecycleState = lifecycleState
             self.name = name
             self.avatarImage = avatarImage
+            self.audioOutput = audioOutput
+            self.isMicrophoneMuted = isMicrophoneMuted
+            self.remoteVideo = remoteVideo
+        }
+        
+        public static func ==(lhs: State, rhs: State) -> Bool {
+            if lhs.lifecycleState != rhs.lifecycleState {
+                return false
+            }
+            if lhs.name != rhs.name {
+                return false
+            }
+            if lhs.avatarImage != rhs.avatarImage {
+                return false
+            }
+            if lhs.audioOutput != rhs.audioOutput {
+                return false
+            }
+            if lhs.isMicrophoneMuted != rhs.isMicrophoneMuted {
+                return false
+            }
+            if lhs.remoteVideo !== rhs.remoteVideo {
+                return false
+            }
+            return true
         }
     }
     
@@ -75,11 +120,12 @@ public final class PrivateCallScreen: UIView {
     
     private var params: Params?
     
-    private var remoteVideo: VideoSource?
-    
-    private var isSpeakerOn: Bool = false
-    private var isMicrophoneMuted: Bool = false
     private var isVideoOn: Bool = false
+    
+    public var speakerAction: (() -> Void)?
+    public var videoAction: (() -> Void)?
+    public var microhoneMuteAction: (() -> Void)?
+    public var endCallAction: (() -> Void)?
     
     public override init(frame: CGRect) {
         self.blurContentsLayer = SimpleLayer()
@@ -173,6 +219,10 @@ public final class PrivateCallScreen: UIView {
         return result
     }
     
+    public func addIncomingAudioLevel(value: Float) {
+        self.contentView.addIncomingAudioLevel(value: value)
+    }
+    
     public func update(size: CGSize, insets: UIEdgeInsets, screenCornerRadius: CGFloat, state: State, transition: Transition) {
         let params = Params(size: size, insets: insets, screenCornerRadius: screenCornerRadius, state: state)
         if self.params == params {
@@ -216,6 +266,8 @@ public final class PrivateCallScreen: UIView {
             } else {
                 backgroundStateIndex = 1
             }
+        case .terminated:
+            backgroundStateIndex = 0
         }
         self.backgroundLayer.update(stateIndex: backgroundStateIndex, transition: transition)
         
@@ -231,12 +283,13 @@ public final class PrivateCallScreen: UIView {
         self.buttonGroupView.frame = CGRect(origin: CGPoint(), size: params.size)
         
         let buttons: [ButtonGroupView.Button] = [
-            ButtonGroupView.Button(content: .speaker(isActive: self.isSpeakerOn), action: { [weak self] in
-                guard let self, var params = self.params else {
+            ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), action: { [weak self] in
+                guard let self else {
                     return
                 }
+                self.speakerAction?()
                 
-                self.isSpeakerOn = !self.isSpeakerOn
+                /*self.isSpeakerOn = !self.isSpeakerOn
                 
                 switch params.state.lifecycleState {
                 case .connecting:
@@ -259,13 +312,14 @@ public final class PrivateCallScreen: UIView {
                 }
                 
                 self.params = params
-                self.update(transition: .spring(duration: 0.3))
+                self.update(transition: .spring(duration: 0.3))*/
             }),
             ButtonGroupView.Button(content: .video(isActive: self.isVideoOn), action: { [weak self] in
                 guard let self else {
                     return
                 }
-                if self.remoteVideo == nil {
+                self.videoAction?()
+                /*if self.remoteVideo == nil {
                     if let url = Bundle.main.url(forResource: "test2", withExtension: "mp4") {
                         self.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: url)
                     }
@@ -275,12 +329,19 @@ public final class PrivateCallScreen: UIView {
                 
                 self.isVideoOn = !self.isVideoOn
                 
-                self.update(transition: .spring(duration: 0.3))
+                self.update(transition: .spring(duration: 0.3))*/
             }),
-            ButtonGroupView.Button(content: .microphone(isMuted: self.isMicrophoneMuted), action: {
-                
+            ButtonGroupView.Button(content: .microphone(isMuted: params.state.isMicrophoneMuted), action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.microhoneMuteAction?()
             }),
-            ButtonGroupView.Button(content: .end, action: {
+            ButtonGroupView.Button(content: .end, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.endCallAction?()
             })
         ]
         self.buttonGroupView.update(size: params.size, buttons: buttons, transition: transition)
@@ -291,7 +352,6 @@ public final class PrivateCallScreen: UIView {
             insets: params.insets,
             screenCornerRadius: params.screenCornerRadius,
             state: params.state,
-            remoteVideo: remoteVideo,
             transition: transition
         )
     }
