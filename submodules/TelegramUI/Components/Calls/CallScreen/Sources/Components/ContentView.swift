@@ -113,8 +113,12 @@ final class ContentView: UIView {
         if self.activeRemoteVideoSource == nil {
             let additionalAvatarScale = CGFloat(max(0.0, min(self.audioLevel, 5.0)) * 0.05)
             self.avatarLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale, 1.0 + additionalAvatarScale, 1.0)
-            let blobAmplificationFactor: CGFloat = 2.0
-            self.blobLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0)
+            
+            if let params = self.params, case .terminated = params.state.lifecycleState {
+            } else {
+                let blobAmplificationFactor: CGFloat = 2.0
+                self.blobLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0 + additionalAvatarScale * blobAmplificationFactor, 1.0)
+            }
         }
     }
     
@@ -281,6 +285,8 @@ final class ContentView: UIView {
         switch params.state.lifecycleState {
         case .terminated:
             titleString = "Call Ended"
+            transition.setScale(layer: self.blobLayer, scale: 0.001)
+            transition.setAlpha(layer: self.blobLayer, alpha: 0.0)
         default:
             titleString = params.state.name
         }

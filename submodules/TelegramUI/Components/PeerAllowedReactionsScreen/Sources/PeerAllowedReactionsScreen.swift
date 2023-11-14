@@ -18,6 +18,7 @@ import PremiumUI
 import UndoUI
 import BundleIconComponent
 import AnimatedTextComponent
+import TextFormat
 
 private final class ButtonSubtitleComponent: CombinedComponent {
     let count: Int
@@ -139,6 +140,8 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private var isApplyingSettings: Bool = false
         private var applyDisposable: Disposable?
         
+        private var resolveStickersBotDisposable: Disposable?
+        
         private weak var currentUndoController: UndoOverlayController?
         
         override init(frame: CGRect) {
@@ -165,6 +168,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             self.emojiContentDisposable?.dispose()
             self.applyDisposable?.dispose()
             self.boostStatusDisposable?.dispose()
+            self.resolveStickersBotDisposable?.dispose()
         }
 
         func scrollToTop() {
@@ -200,19 +204,28 @@ final class PeerAllowedReactionsScreenComponent: Component {
             }
             
             if self.appliedAllowedReactions != allowedReactions {
-                let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                //TODO:localize
-                self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Save Changes?", actions: [
-                    TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}),
-                    TextAlertAction(type: .defaultAction, title: "Save", action: { [weak self] in
-                        guard let self else {
-                            return
-                        }
-                        self.applySettings()
-                    })
-                ]), in: .window(.root))
-                
-                return false
+                if case .empty = allowedReactions {
+                    self.applySettings(standalone: true)
+                } else {
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                    //TODO:localize
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Save Changes?", actions: [
+                        TextAlertAction(type: .genericAction, title: "Discard", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.environment?.controller()?.dismiss()
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "Save", action: { [weak self] in
+                            guard let self else {
+                                return
+                            }
+                            self.applySettings(standalone: false)
+                        })
+                    ]), in: .window(.root))
+                    
+                    return false
+                }
             }
             
             return true
@@ -231,7 +244,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
             }
         }
         
-        private func applySettings() {
+        private func applySettings(standalone: Bool) {
             guard let component = self.component else {
                 return
             }
@@ -272,13 +285,15 @@ final class PeerAllowedReactionsScreenComponent: Component {
             if self.isEnabled {
                 if Set(availableReactions.reactions.map(\.value)) == Set(enabledReactions.map(\.reaction)) {
                     allowedReactions = .all
+                } else if enabledReactions.isEmpty {
+                    allowedReactions = .empty
                 } else {
                     allowedReactions = .limited(enabledReactions.map(\.reaction))
                 }
             } else {
                 allowedReactions = .empty
             }
-            self.applyDisposable = (component.context.engine.peers.updatePeerAllowedReactions(peerId: component.peerId, allowedReactions: allowedReactions)
+            let applyDisposable = (component.context.engine.peers.updatePeerAllowedReactions(peerId: component.peerId, allowedReactions: allowedReactions)
             |> deliverOnMainQueue).start(error: { [weak self] error in
                 guard let self, let component = self.component else {
                     return
@@ -286,21 +301,31 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 self.isApplyingSettings = false
                 self.state?.updated(transition: .immediate)
                 
-                switch error {
-                case .boostRequired:
-                    self.displayPremiumScreen()
-                case .generic:
-                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
-                    //TODO:localize
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                if !standalone {
+                    switch error {
+                    case .boostRequired:
+                        self.displayPremiumScreen()
+                    case .generic:
+                        let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                        //TODO:localize
+                        self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "An error occurred", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }
                 }
             }, completed: { [weak self] in
                 guard let self else {
                     return
                 }
                 self.appliedAllowedReactions = allowedReactions
-                self.environment?.controller()?.dismiss()
+                if !standalone {
+                    self.environment?.controller()?.dismiss()
+                }
             })
+            
+            if standalone {
+                let _ = applyDisposable
+            } else {
+                self.applyDisposable = applyDisposable
+            }
         }
         
         private func displayPremiumScreen() {
@@ -738,15 +763,49 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 
                 //TODO:localize
                 let body = MarkdownAttributeSet(font: UIFont.systemFont(ofSize: 13.0), textColor: environment.theme.list.freeTextColor)
-                let link = MarkdownAttributeSet(font: UIFont.systemFont(ofSize: 13.0), textColor: environment.theme.list.itemAccentColor, additionalAttributes: ["URL": true as NSNumber])
-                let attributes = MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in
-                    return nil
+                let link = MarkdownAttributeSet(font: UIFont.systemFont(ofSize: 13.0), textColor: environment.theme.list.itemAccentColor, additionalAttributes: [:])
+                let attributes = MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { contents in
+                    return (TelegramTextAttributes.URL, contents)
                 })
                 let reactionsInfoTextSize = reactionsInfoText.update(
                     transition: .immediate,
                     component: AnyComponent(MultilineTextComponent(
                         text: .markdown(text: "You can also [create your own]() emoji packs and use them.", attributes: attributes),
-                        maximumNumberOfLines: 0
+                        maximumNumberOfLines: 0,
+                        highlightAction: { attributes in
+                            if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
+                                return NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)
+                            } else {
+                                return nil
+                            }
+                        },
+                        tapAction: { [weak self] attributes, _ in
+                            guard let self, let component = self.component, attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] != nil else {
+                                return
+                            }
+                            self.resolveStickersBotDisposable?.dispose()
+                            self.resolveStickersBotDisposable = (component.context.engine.peers.resolvePeerByName(name: "stickers")
+                            |> mapToSignal { result -> Signal<EnginePeer?, NoError> in
+                                guard case let .result(result) = result else {
+                                    return .complete()
+                                }
+                                return .single(result)
+                            }
+                            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                guard let self, let component = self.component, let peer else {
+                                    return
+                                }
+                                guard let navigationController = self.environment?.controller()?.navigationController as? NavigationController else {
+                                    return
+                                }
+                                component.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                    navigationController: navigationController,
+                                    context: component.context,
+                                    chatLocation: .peer(peer),
+                                    keepStack: .always
+                                ))
+                            })
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: availableSize.width - sideInset * 2.0 - textSideInset * 2.0, height: .greatestFiniteMagnitude)
@@ -851,7 +910,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                         guard let self else {
                             return
                         }
-                        self.applySettings()
+                        self.applySettings(standalone: false)
                     }
                 )),
                 environment: {},

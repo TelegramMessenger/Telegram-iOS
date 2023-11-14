@@ -30,6 +30,7 @@ swift_library(
         "//submodules/Components/PagerComponent",
         "//submodules/PremiumUI",
         "//submodules/UndoUI",
+        "//submodules/TextFormat",
     ],
     visibility = [
         "//visibility:public",
