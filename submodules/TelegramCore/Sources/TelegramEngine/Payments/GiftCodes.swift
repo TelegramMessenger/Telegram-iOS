@@ -122,10 +122,10 @@ func _internal_getPremiumGiveawayInfo(account: Account, peerId: EnginePeer.Id, m
                     }
                 case let .giveawayInfoResults(flags, startDate, giftCodeSlug, finishDate, winnersCount, activatedCount):
                     let status: PremiumGiveawayInfo.ResultStatus
-                    if let giftCodeSlug = giftCodeSlug {
-                        status = .won(slug: giftCodeSlug)
-                    } else if (flags & (1 << 1)) != 0 {
+                    if (flags & (1 << 1)) != 0 {
                         status = .refunded
+                    } else if let giftCodeSlug = giftCodeSlug {
+                        status = .won(slug: giftCodeSlug)
                     } else {
                         status = .notWon
                     }
