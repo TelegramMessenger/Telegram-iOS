@@ -28,7 +28,16 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
     controller.loginWithNumber = { [weak controller] phoneNumber, _ in
         controller?.inProgress = true
         
-        requestDisposable.set((context.engine.accountData.requestChangeAccountPhoneNumberVerification(phoneNumber: phoneNumber)
+        let authorizationPushConfiguration = context.sharedContext.authorizationPushConfiguration
+        |> take(1)
+        |> timeout(2.0, queue: .mainQueue(), alternate: .single(nil))
+            
+        requestDisposable.set((
+            authorizationPushConfiguration
+            |> castError(RequestChangeAccountPhoneNumberVerificationError.self)
+            |> mapToSignal { authorizationPushConfiguration in
+                return context.engine.accountData.requestChangeAccountPhoneNumberVerification(phoneNumber: phoneNumber, pushNotificationConfiguration: authorizationPushConfiguration, firebaseSecretStream: context.sharedContext.firebaseSecretStream)
+            }
         |> deliverOnMainQueue).start(next: { [weak controller] next in
             controller?.inProgress = false
             
@@ -85,6 +94,12 @@ public func ChangePhoneNumberController(context: AccountContext) -> ViewControll
                         navigationController.setViewControllers(viewControllers, animated: true)
                     }
                 }))
+            }
+            codeController.requestNextOption = { [weak codeController] in
+                guard let codeController else {
+                    return
+                }
+                AuthorizationSequenceController.presentDidNotGetCodeUI(controller: codeController, presentationData: context.sharedContext.currentPresentationData.with({ $0 }), number: phoneNumber)
             }
             codeController.openFragment = { url in
                 context.sharedContext.applicationBindings.openUrl(url)

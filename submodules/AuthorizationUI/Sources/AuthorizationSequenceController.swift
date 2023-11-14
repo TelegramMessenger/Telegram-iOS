@@ -20,13 +20,16 @@ import TelegramNotices
 import AuthenticationServices
 import Markdown
 import AlertUI
+import ObjectiveC
+
+private var ObjCKey_Delegate: Int?
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
     case authorized
 }
 
-public final class AuthorizationSequenceController: NavigationController, MFMailComposeViewControllerDelegate, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+public final class AuthorizationSequenceController: NavigationController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
     static func navigationBarTheme(_ theme: PresentationTheme) -> NavigationBarTheme {
         return NavigationBarTheme(buttonColor: theme.intro.accentTextColor, disabledButtonColor: theme.intro.disabledTextColor, primaryTextColor: theme.intro.primaryTextColor, backgroundColor: .clear, enableBackgroundBlur: false, separatorColor: .clear, badgeBackgroundColor: theme.rootController.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.rootController.navigationBar.badgeStrokeColor, badgeTextColor: theme.rootController.navigationBar.badgeTextColor)
     }
@@ -216,7 +219,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             let carrier = CTCarrier()
                                             let mnc = carrier.mobileNetworkCode ?? "none"
                                             
-                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                            AuthorizationSequenceController.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_InvalidPhoneEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_InvalidPhoneEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller, presentationData: strongSelf.presentationData)
                                         }))
                                     case .phoneLimitExceeded:
                                         text = strongSelf.presentationData.strings.Login_PhoneFloodError
@@ -242,7 +245,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                             let carrier = CTCarrier()
                                             let mnc = carrier.mobileNetworkCode ?? "none"
                                             
-                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                            AuthorizationSequenceController.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneBannedEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneBannedEmailBody(formattedNumber, appVersion, systemVersion, locale, mnc).string, from: controller, presentationData: strongSelf.presentationData)
                                         }))
                                     case let .generic(info):
                                         text = strongSelf.presentationData.strings.Login_UnknownError
@@ -264,7 +267,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                 errorString = "unknown"
                                             }
                                             
-                                            strongSelf.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).string, from: controller)
+                                            AuthorizationSequenceController.presentEmailComposeController(address: "login@stel.com", subject: strongSelf.presentationData.strings.Login_PhoneGenericEmailSubject(formattedNumber).string, body: strongSelf.presentationData.strings.Login_PhoneGenericEmailBody(formattedNumber, errorString, appVersion, systemVersion, locale, mnc).string, from: controller, presentationData: strongSelf.presentationData)
                                         }))
                                     case .timeout:
                                         text = strongSelf.presentationData.strings.Login_NetworkError
@@ -558,26 +561,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         controller.requestNextOption = { [weak self, weak controller] in
             if let strongSelf = self {
                 if nextType == nil {
-                    if MFMailComposeViewController.canSendMail(), let controller = controller {
-                        let formattedNumber = formatPhoneNumber(number)
-                        
-                        var emailBody = ""
-                        emailBody.append(strongSelf.presentationData.strings.Login_EmailCodeBody(formattedNumber).string)
-                        emailBody.append("\n\n")
-                        
-                        let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
-                        let systemVersion = UIDevice.current.systemVersion
-                        let locale = Locale.current.identifier
-                        let carrier = CTCarrier()
-                        let mnc = carrier.mobileNetworkCode ?? "none"
-                        emailBody.append("Telegram: \(appVersion)\n")
-                        emailBody.append("OS: \(systemVersion)\n")
-                        emailBody.append("Locale: \(locale)\n")
-                        emailBody.append("MNC: \(mnc)")
-                        
-                        strongSelf.presentEmailComposeController(address: "sms@telegram.org", subject: strongSelf.presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: emailBody, from: controller)
-                    } else {
-                        controller?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: strongSelf.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    if let controller {
+                        AuthorizationSequenceController.presentDidNotGetCodeUI(controller: controller, presentationData: strongSelf.presentationData, number: number)
                     }
                 } else {
                     controller?.inProgress = true
@@ -1250,22 +1235,27 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         }
     }
     
-    private func presentEmailComposeController(address: String, subject: String, body: String, from controller: ViewController) {
+    private static func presentEmailComposeController(address: String, subject: String, body: String, from controller: ViewController, presentationData: PresentationData) {
         if MFMailComposeViewController.canSendMail() {
+            final class ComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
+                @objc func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
+                    controller.dismiss(animated: true, completion: nil)
+                }
+            }
+        
             let composeController = MFMailComposeViewController()
             composeController.setToRecipients([address])
             composeController.setSubject(subject)
             composeController.setMessageBody(body, isHTML: false)
-            composeController.mailComposeDelegate = self
+            
+            let composeDelegate = ComposeDelegate()
+            objc_setAssociatedObject(composeDelegate, &ObjCKey_Delegate, composeDelegate, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            composeController.mailComposeDelegate = composeDelegate
             
             controller.view.window?.rootViewController?.present(composeController, animated: true, completion: nil)
         } else {
-            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
         }
-    }
-    
-    public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
-        controller.dismiss(animated: true, completion: nil)
     }
     
     private func animateIn() {
@@ -1323,5 +1313,29 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         }
         
         return countryCode
+    }
+    
+    public static func presentDidNotGetCodeUI(controller: ViewController, presentationData: PresentationData, number: String) {
+        if MFMailComposeViewController.canSendMail() {
+            let formattedNumber = formatPhoneNumber(number)
+            
+            var emailBody = ""
+            emailBody.append(presentationData.strings.Login_EmailCodeBody(formattedNumber).string)
+            emailBody.append("\n\n")
+            
+            let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
+            let systemVersion = UIDevice.current.systemVersion
+            let locale = Locale.current.identifier
+            let carrier = CTCarrier()
+            let mnc = carrier.mobileNetworkCode ?? "none"
+            emailBody.append("Telegram: \(appVersion)\n")
+            emailBody.append("OS: \(systemVersion)\n")
+            emailBody.append("Locale: \(locale)\n")
+            emailBody.append("MNC: \(mnc)")
+            
+            AuthorizationSequenceController.presentEmailComposeController(address: "sms@telegram.org", subject: presentationData.strings.Login_EmailCodeSubject(formattedNumber).string, body: emailBody, from: controller, presentationData: presentationData)
+        } else {
+            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_EmailNotConfiguredError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }
     }
 }

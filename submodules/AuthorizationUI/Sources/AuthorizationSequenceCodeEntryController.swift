@@ -22,7 +22,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     public var openFragment: ((String) -> Void)?
     
     var reset: (() -> Void)?
-    var requestNextOption: (() -> Void)?
+    public var requestNextOption: (() -> Void)?
     var resetEmail: (() -> Void)?
     var retryResetEmail: (() -> Void)?
     

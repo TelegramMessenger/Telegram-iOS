@@ -36,8 +36,21 @@ public enum RequestChangeAccountPhoneNumberVerificationError {
     case generic
 }
 
-func _internal_requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
-    return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: 0, logoutTokens: nil, token: nil, appSandbox: nil)), automaticFloodWait: false)
+func _internal_requestChangeAccountPhoneNumberVerification(account: Account, phoneNumber: String, pushNotificationConfiguration: AuthorizationCodePushNotificationConfiguration?, firebaseSecretStream: Signal<[String: String], NoError>) -> Signal<ChangeAccountPhoneNumberData, RequestChangeAccountPhoneNumberVerificationError> {
+    var flags: Int32 = 0
+    
+    flags |= 1 << 5 //allowMissedCall
+    
+    var token: String?
+    var appSandbox: Api.Bool?
+    if let pushNotificationConfiguration = pushNotificationConfiguration {
+        flags |= 1 << 7
+        flags |= 1 << 8
+        token = pushNotificationConfiguration.token
+        appSandbox = pushNotificationConfiguration.isSandbox ? .boolTrue : .boolFalse
+    }
+    
+    return account.network.request(Api.functions.account.sendChangePhoneCode(phoneNumber: phoneNumber, settings: .codeSettings(flags: flags, logoutTokens: nil, token: token, appSandbox: appSandbox)), automaticFloodWait: false)
         |> mapError { error -> RequestChangeAccountPhoneNumberVerificationError in
             if error.errorDescription.hasPrefix("FLOOD_WAIT") {
                 return .limitExceeded
