@@ -156,8 +156,9 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
             }
             self.doneButtonSolidBackgroundNode.frame = bounds
             
+            let constrainedSize = CGSize(width: size.width - 44.0, height: size.height)
             let iconSize = CGSize(width: 30.0, height: 30.0)
-            let doneTitleSize = self.doneButtonTitleNode.updateLayout(size)
+            let doneTitleSize = self.doneButtonTitleNode.updateLayout(constrainedSize)
             
             var totalWidth = doneTitleSize.width
             if self.isLocked {
@@ -168,7 +169,7 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode, WallpaperGalleryToolbar 
             self.animationNode.frame = CGRect(origin: CGPoint(x: titleOriginX, y: floorToScreenPixels((bounds.height - iconSize.height) / 2.0)), size: iconSize)
             self.doneButtonTitleNode.frame = CGRect(origin: CGPoint(x: titleOriginX + totalWidth - doneTitleSize.width, y: floorToScreenPixels((bounds.height - doneTitleSize.height) / 2.0)), size: doneTitleSize).offsetBy(dx: bounds.minX, dy: bounds.minY)
             
-            let _ = self.doneButtonSolidTitleNode.updateLayout(size)
+            let _ = self.doneButtonSolidTitleNode.updateLayout(constrainedSize)
             self.doneButtonSolidTitleNode.frame = self.doneButtonTitleNode.frame
             
             self.doneButton.frame = bounds

@@ -1832,6 +1832,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
             guard let self else {
                 return
             }
+            let items = items.filter { $0.count > 0 }
             var dismissImpl: (() -> Void)?
             let content: ContextControllerItemsContent = MediaGroupsContextMenuContent(
                 context: self.context,

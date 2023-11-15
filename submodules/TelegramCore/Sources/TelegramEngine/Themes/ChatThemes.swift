@@ -184,12 +184,29 @@ func _internal_revertChatWallpaper(account: Account, peerId: EnginePeer.Id) -> S
         }
         let flags: Int32 = 1 << 4
         return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: nil, id: nil), automaticFloodWait: false)
-        |> `catch` { _ -> Signal<Api.Updates, RevertChatWallpaperError> in
+        |> map(Optional.init)
+        |> `catch` { error -> Signal<Api.Updates?, RevertChatWallpaperError> in
+            if error.description == "WALLPAPER_NOT_FOUND" {
+                return .single(nil)
+            }
             return .fail(.generic)
         }
         |> mapToSignal { updates -> Signal<Void, RevertChatWallpaperError> in
-            account.stateManager.addUpdates(updates)
-            return .complete()
+            if let updates = updates {
+                account.stateManager.addUpdates(updates)
+                return .complete()
+            } else {
+                return account.postbox.transaction { transaction in
+                    transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                        if let current = current as? CachedUserData {
+                            return current.withUpdatedWallpaper(nil)
+                        } else {
+                            return current
+                        }
+                    })
+                }
+                |> castError(RevertChatWallpaperError.self)
+            }
         }
     }
 }
