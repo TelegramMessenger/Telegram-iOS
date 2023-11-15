@@ -4,7 +4,7 @@ import Display
 import ComponentFlow
 import AppBundle
 
-final class ButtonGroupView: UIView, ContentOverlayView {
+final class ButtonGroupView: OverlayMaskContainerView {
     final class Button {
         enum Content: Equatable {
             enum Key: Hashable {
@@ -42,59 +42,15 @@ final class ButtonGroupView: UIView, ContentOverlayView {
         }
     }
     
-    let overlayMaskLayer: CALayer
-    
     private var buttons: [Button]?
     private var buttonViews: [Button.Content.Key: ContentOverlayButton] = [:]
     
     override init(frame: CGRect) {
-        self.overlayMaskLayer = SimpleLayer()
-        
         super.init(frame: frame)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, at index: Int) {
-        super.insertSubview(view, at: index)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, aboveSubview siblingSubview: UIView) {
-        super.insertSubview(view, aboveSubview: siblingSubview)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, belowSubview siblingSubview: UIView) {
-        super.insertSubview(view, belowSubview: siblingSubview)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func willRemoveSubview(_ subview: UIView) {
-        super.willRemoveSubview(subview)
-        
-        if let view = subview as? ContentOverlayView {
-            view.overlayMaskLayer.removeFromSuperlayer()
-        }
     }
     
     func update(size: CGSize, buttons: [Button], transition: Transition) {

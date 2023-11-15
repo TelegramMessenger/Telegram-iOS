@@ -78,7 +78,8 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
         SIMD2<Float>(x: 0.75, y: 0.40)
     ]
     
-    private var isBlur: Bool = false
+    let blurredLayer: MetalEngineSubjectLayer
+    
     private var phase: Float = 0.0
     
     private var displayLinkSubscription: SharedDisplayLink.Subscription?
@@ -96,8 +97,8 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     private var stateIndex: Int = 0
     private let phaseAcceleration = AnimatedProperty<CGFloat>(0.0)
     
-    init(isBlur: Bool) {
-        self.isBlur = isBlur
+    override init() {
+        self.blurredLayer = MetalEngineSubjectLayer()
         
         self.colorSets = [
             ColorSet(colors: [
@@ -151,6 +152,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     }
     
     override init(layer: Any) {
+        self.blurredLayer = MetalEngineSubjectLayer()
         self.colorSets = []
         self.colorTransition = AnimatedProperty<ColorSet>(ColorSet(colors: []))
         
@@ -179,35 +181,37 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             return
         }
         
-        let isBlur = self.isBlur
         let phase = self.phase
         
-        context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: self, commands: { encoder, placement in
-            let effectiveRect = placement.effectiveRect
-            
-            var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
-            encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
-            
-            let baseStep = floor(phase)
-            let nextStepInterpolation = phase - floor(phase)
-            
-            let positions0 = gatherPositions(shiftArray(array: CallBackgroundLayer.basePositions, offset: Int(baseStep)))
-            let positions1 = gatherPositions(shiftArray(array: CallBackgroundLayer.basePositions, offset: Int(baseStep) + 1))
-            var positions = Array<SIMD2<Float>>(repeating: SIMD2<Float>(), count: 4)
-            for i in 0 ..< 4 {
-                positions[i] = interpolatePoints(positions0[i], positions1[i], at: nextStepInterpolation)
-            }
-            encoder.setFragmentBytes(&positions, length: 4 * MemoryLayout<SIMD2<Float>>.size, index: 0)
-            
-            var colors: [SIMD4<Float>] = self.colorTransition.value.colors
-            
-            encoder.setFragmentBytes(&colors, length: 4 * MemoryLayout<SIMD4<Float>>.size, index: 1)
-            var brightness: Float = isBlur ? 1.1 : 1.0
-            var saturation: Float = isBlur ? 1.2 : 1.0
-            encoder.setFragmentBytes(&brightness, length: 4, index: 2)
-            encoder.setFragmentBytes(&saturation, length: 4, index: 3)
-            
-            encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
-        })
+        for i in 0 ..< 2 {
+            let isBlur = i == 1
+            context.renderToLayer(spec: renderSpec, state: RenderState.self, layer: i == 0 ? self : self.blurredLayer, commands: { encoder, placement in
+                let effectiveRect = placement.effectiveRect
+                
+                var rect = SIMD4<Float>(Float(effectiveRect.minX), Float(effectiveRect.minY), Float(effectiveRect.width), Float(effectiveRect.height))
+                encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
+                
+                let baseStep = floor(phase)
+                let nextStepInterpolation = phase - floor(phase)
+                
+                let positions0 = gatherPositions(shiftArray(array: CallBackgroundLayer.basePositions, offset: Int(baseStep)))
+                let positions1 = gatherPositions(shiftArray(array: CallBackgroundLayer.basePositions, offset: Int(baseStep) + 1))
+                var positions = Array<SIMD2<Float>>(repeating: SIMD2<Float>(), count: 4)
+                for i in 0 ..< 4 {
+                    positions[i] = interpolatePoints(positions0[i], positions1[i], at: nextStepInterpolation)
+                }
+                encoder.setFragmentBytes(&positions, length: 4 * MemoryLayout<SIMD2<Float>>.size, index: 0)
+                
+                var colors: [SIMD4<Float>] = self.colorTransition.value.colors
+                
+                encoder.setFragmentBytes(&colors, length: 4 * MemoryLayout<SIMD4<Float>>.size, index: 1)
+                var brightness: Float = isBlur ? 1.1 : 1.0
+                var saturation: Float = isBlur ? 1.2 : 1.0
+                encoder.setFragmentBytes(&brightness, length: 4, index: 2)
+                encoder.setFragmentBytes(&saturation, length: 4, index: 3)
+                
+                encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
+            })
+        }
     }
 }

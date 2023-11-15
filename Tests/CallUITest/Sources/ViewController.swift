@@ -10,7 +10,11 @@ public final class ViewController: UIViewController {
     private var callState: PrivateCallScreen.State = PrivateCallScreen.State(
         lifecycleState: .connecting,
         name: "Emma Walters",
-        avatarImage: UIImage(named: "test")
+        avatarImage: UIImage(named: "test"),
+        audioOutput: .internalSpeaker,
+        isMicrophoneMuted: false,
+        localVideo: nil,
+        remoteVideo: nil
     )
     
     override public func viewDidLoad() {
@@ -27,7 +31,59 @@ public final class ViewController: UIViewController {
         self.callScreenView = callScreenView
         self.view.addSubview(callScreenView)
         
-        self.update(size: self.view.bounds.size, transition: .immediate)
+        callScreenView.speakerAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            
+            switch self.callState.lifecycleState {
+            case .connecting:
+                self.callState.lifecycleState = .ringing
+            case .ringing:
+                self.callState.lifecycleState = .exchangingKeys
+            case .exchangingKeys:
+                self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: Date().timeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
+                    emojiKey: ["A", "B", "C", "D"]
+                ))
+            case var .active(activeState):
+                activeState.signalInfo.quality = activeState.signalInfo.quality == 1.0 ? 0.1 : 1.0
+                self.callState.lifecycleState = .active(activeState)
+            case .terminated:
+                break
+            }
+            
+            self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.videoAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            if self.callState.remoteVideo == nil {
+                self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test2", withExtension: "mp4")!)
+            } else {
+                self.callState.remoteVideo = nil
+            }
+            self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.microhoneMuteAction = {
+            self.callState.isMicrophoneMuted = !self.callState.isMicrophoneMuted
+            self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.endCallAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
+            self.update(transition: .spring(duration: 0.4))
+        }
+        
+        self.update(transition: .immediate)
+    }
+    
+    private func update(transition: Transition) {
+        self.update(size: self.view.bounds.size, transition: transition)
     }
     
     private func update(size: CGSize, transition: Transition) {

@@ -3,7 +3,7 @@ import UIKit
 import Display
 import ComponentFlow
 
-final class ContentOverlayButton: HighlightTrackingButton, ContentOverlayView {
+final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerViewProtocol {
     private struct ContentParams: Equatable {
         var size: CGSize
         var image: UIImage?
@@ -18,17 +18,13 @@ final class ContentOverlayButton: HighlightTrackingButton, ContentOverlayView {
         }
     }
     
-    var overlayMaskLayer: CALayer {
-        return self.overlayBackgroundLayer
-    }
+    let maskContents: UIView
     
     override static var layerClass: AnyClass {
         return MirroringLayer.self
     }
     
     var action: (() -> Void)?
-    
-    private let overlayBackgroundLayer: SimpleLayer
     
     private let contentView: UIImageView
     private var currentContentViewIsSelected: Bool?
@@ -38,7 +34,8 @@ final class ContentOverlayButton: HighlightTrackingButton, ContentOverlayView {
     private var contentParams: ContentParams?
     
     override init(frame: CGRect) {
-        self.overlayBackgroundLayer = SimpleLayer()
+        self.maskContents = UIView()
+        
         self.contentView = UIImageView()
         self.textView = TextView()
         
@@ -48,14 +45,14 @@ final class ContentOverlayButton: HighlightTrackingButton, ContentOverlayView {
         
         let size: CGFloat = 56.0
         let renderer = UIGraphicsImageRenderer(bounds: CGRect(origin: CGPoint(), size: CGSize(width: size, height: size)))
-        self.overlayBackgroundLayer.contents = renderer.image { context in
+        self.maskContents.layer.contents = renderer.image { context in
             UIGraphicsPushContext(context.cgContext)
             context.cgContext.setFillColor(UIColor.white.cgColor)
             context.cgContext.fillEllipse(in: CGRect(origin: CGPoint(), size: CGSize(width: size, height: size)))
             UIGraphicsPopContext()
         }.cgImage
         
-        (self.layer as? MirroringLayer)?.targetLayer = self.overlayBackgroundLayer
+        (self.layer as? MirroringLayer)?.targetLayer = self.maskContents.layer
         
         self.addSubview(self.contentView)
         self.addSubview(self.textView)
