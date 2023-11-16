@@ -8579,6 +8579,23 @@ public extension Api.functions.stats {
                 }
 }
 public extension Api.functions.stats {
+                static func getStoryStats(flags: Int32, peer: Api.InputPeer, id: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.stats.StoryStats>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(927985472)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "stats.getStoryStats", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("id", String(describing: id))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.stats.StoryStats? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.stats.StoryStats?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.stats.StoryStats
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.stats {
                 static func loadAsyncGraph(flags: Int32, token: String, x: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.StatsGraph>) {
                     let buffer = Buffer()
                     buffer.appendInt32(1646092192)
@@ -9116,9 +9133,9 @@ public extension Api.functions.stories {
                 }
 }
 public extension Api.functions.stories {
-                static func sendStory(flags: Int32, peer: Api.InputPeer, media: Api.InputMedia, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendStory(flags: Int32, peer: Api.InputPeer, media: Api.InputMedia, mediaAreas: [Api.MediaArea]?, caption: String?, entities: [Api.MessageEntity]?, privacyRules: [Api.InputPrivacyRule], randomId: Int64, period: Int32?, fwdFromId: Api.InputPeer?, fwdFromStory: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1128843708)
+                    buffer.appendInt32(-454661813)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     media.serialize(buffer, true)
@@ -9140,7 +9157,9 @@ public extension Api.functions.stories {
                     }
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {serializeInt32(period!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("media", String(describing: media)), ("mediaAreas", String(describing: mediaAreas)), ("caption", String(describing: caption)), ("entities", String(describing: entities)), ("privacyRules", String(describing: privacyRules)), ("randomId", String(describing: randomId)), ("period", String(describing: period))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 6) != 0 {fwdFromId!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 6) != 0 {serializeInt32(fwdFromStory!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "stories.sendStory", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("media", String(describing: media)), ("mediaAreas", String(describing: mediaAreas)), ("caption", String(describing: caption)), ("entities", String(describing: entities)), ("privacyRules", String(describing: privacyRules)), ("randomId", String(describing: randomId)), ("period", String(describing: period)), ("fwdFromId", String(describing: fwdFromId)), ("fwdFromStory", String(describing: fwdFromStory))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

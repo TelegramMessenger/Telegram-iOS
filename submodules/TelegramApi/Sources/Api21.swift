@@ -407,20 +407,71 @@ public extension Api {
     }
 }
 public extension Api {
+    enum StoryFwdHeader: TypeConstructorDescription {
+        case storyFwdHeader(flags: Int32, from: Api.Peer?, fromName: String?, storyId: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .storyFwdHeader(let flags, let from, let fromName, let storyId):
+                    if boxed {
+                        buffer.appendInt32(-1205411504)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {from!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(fromName!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(storyId!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .storyFwdHeader(let flags, let from, let fromName, let storyId):
+                return ("storyFwdHeader", [("flags", flags as Any), ("from", from as Any), ("fromName", fromName as Any), ("storyId", storyId as Any)])
+    }
+    }
+    
+        public static func parse_storyFwdHeader(_ reader: BufferReader) -> StoryFwdHeader? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            } }
+            var _3: String?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = parseString(reader) }
+            var _4: Int32?
+            if Int(_1!) & Int(1 << 2) != 0 {_4 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StoryFwdHeader.storyFwdHeader(flags: _1!, from: _2, fromName: _3, storyId: _4)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     indirect enum StoryItem: TypeConstructorDescription {
-        case storyItem(flags: Int32, id: Int32, date: Int32, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, mediaAreas: [Api.MediaArea]?, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?, sentReaction: Api.Reaction?)
+        case storyItem(flags: Int32, id: Int32, date: Int32, fwdFrom: Api.StoryFwdHeader?, expireDate: Int32, caption: String?, entities: [Api.MessageEntity]?, media: Api.MessageMedia, mediaAreas: [Api.MediaArea]?, privacy: [Api.PrivacyRule]?, views: Api.StoryViews?, sentReaction: Api.Reaction?)
         case storyItemDeleted(id: Int32)
         case storyItemSkipped(flags: Int32, id: Int32, date: Int32, expireDate: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views, let sentReaction):
+                case .storyItem(let flags, let id, let date, let fwdFrom, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views, let sentReaction):
                     if boxed {
-                        buffer.appendInt32(1153718222)
+                        buffer.appendInt32(-1352440415)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 17) != 0 {fwdFrom!.serialize(buffer, true)}
                     serializeInt32(expireDate, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(caption!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
@@ -462,8 +513,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .storyItem(let flags, let id, let date, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views, let sentReaction):
-                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("mediaAreas", mediaAreas as Any), ("privacy", privacy as Any), ("views", views as Any), ("sentReaction", sentReaction as Any)])
+                case .storyItem(let flags, let id, let date, let fwdFrom, let expireDate, let caption, let entities, let media, let mediaAreas, let privacy, let views, let sentReaction):
+                return ("storyItem", [("flags", flags as Any), ("id", id as Any), ("date", date as Any), ("fwdFrom", fwdFrom as Any), ("expireDate", expireDate as Any), ("caption", caption as Any), ("entities", entities as Any), ("media", media as Any), ("mediaAreas", mediaAreas as Any), ("privacy", privacy as Any), ("views", views as Any), ("sentReaction", sentReaction as Any)])
                 case .storyItemDeleted(let id):
                 return ("storyItemDeleted", [("id", id as Any)])
                 case .storyItemSkipped(let flags, let id, let date, let expireDate):
@@ -478,47 +529,52 @@ public extension Api {
             _2 = reader.readInt32()
             var _3: Int32?
             _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: String?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = parseString(reader) }
-            var _6: [Api.MessageEntity]?
+            var _4: Api.StoryFwdHeader?
+            if Int(_1!) & Int(1 << 17) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.StoryFwdHeader
+            } }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            var _6: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_6 = parseString(reader) }
+            var _7: [Api.MessageEntity]?
             if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _6 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+                _7 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
             } }
-            var _7: Api.MessageMedia?
+            var _8: Api.MessageMedia?
             if let signature = reader.readInt32() {
-                _7 = Api.parse(reader, signature: signature) as? Api.MessageMedia
+                _8 = Api.parse(reader, signature: signature) as? Api.MessageMedia
             }
-            var _8: [Api.MediaArea]?
+            var _9: [Api.MediaArea]?
             if Int(_1!) & Int(1 << 14) != 0 {if let _ = reader.readInt32() {
-                _8 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MediaArea.self)
+                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MediaArea.self)
             } }
-            var _9: [Api.PrivacyRule]?
+            var _10: [Api.PrivacyRule]?
             if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _9 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
+                _10 = Api.parseVector(reader, elementSignature: 0, elementType: Api.PrivacyRule.self)
             } }
-            var _10: Api.StoryViews?
+            var _11: Api.StoryViews?
             if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _10 = Api.parse(reader, signature: signature) as? Api.StoryViews
+                _11 = Api.parse(reader, signature: signature) as? Api.StoryViews
             } }
-            var _11: Api.Reaction?
+            var _12: Api.Reaction?
             if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
-                _11 = Api.parse(reader, signature: signature) as? Api.Reaction
+                _12 = Api.parse(reader, signature: signature) as? Api.Reaction
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = _7 != nil
-            let _c8 = (Int(_1!) & Int(1 << 14) == 0) || _8 != nil
-            let _c9 = (Int(_1!) & Int(1 << 2) == 0) || _9 != nil
-            let _c10 = (Int(_1!) & Int(1 << 3) == 0) || _10 != nil
-            let _c11 = (Int(_1!) & Int(1 << 15) == 0) || _11 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
-                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, expireDate: _4!, caption: _5, entities: _6, media: _7!, mediaAreas: _8, privacy: _9, views: _10, sentReaction: _11)
+            let _c4 = (Int(_1!) & Int(1 << 17) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = (Int(_1!) & Int(1 << 0) == 0) || _6 != nil
+            let _c7 = (Int(_1!) & Int(1 << 1) == 0) || _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = (Int(_1!) & Int(1 << 14) == 0) || _9 != nil
+            let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
+            let _c11 = (Int(_1!) & Int(1 << 3) == 0) || _11 != nil
+            let _c12 = (Int(_1!) & Int(1 << 15) == 0) || _12 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 {
+                return Api.StoryItem.storyItem(flags: _1!, id: _2!, date: _3!, fwdFrom: _4, expireDate: _5!, caption: _6, entities: _7, media: _8!, mediaAreas: _9, privacy: _10, views: _11, sentReaction: _12)
             }
             else {
                 return nil
