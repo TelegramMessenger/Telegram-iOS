@@ -180,6 +180,7 @@ class StatsGraphItemNode: ListViewItemNode {
             if let visibilityHeight = visibilityHeight {
                 contentSize.height += visibilityHeight
             }
+            contentSize.height += 7.0
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             return (ListViewItemNodeLayout(contentSize: contentSize, insets: insets), { [weak self] in

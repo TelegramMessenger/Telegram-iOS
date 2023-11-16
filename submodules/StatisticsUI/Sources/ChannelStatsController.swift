@@ -62,8 +62,11 @@ private enum StatsSection: Int32 {
     case followersBySource
     case languages
     case postInteractions
-    case recentPosts
     case instantPageInteractions
+    case reactionsByEmotion
+    case storyInteractions
+    case storyReactionsByEmotion
+    case recentPosts
     case boostLevel
     case boostOverview
     case boostPrepaid
@@ -99,13 +102,22 @@ private enum StatsEntry: ItemListNodeEntry {
     
     case postInteractionsTitle(PresentationTheme, String)
     case postInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+
+    case reactionsByEmotionTitle(PresentationTheme, String)
+    case reactionsByEmotionGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
-    case postsTitle(PresentationTheme, String)
-    case post(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Message, ChannelStatsMessageInteractions)
+    case storyInteractionsTitle(PresentationTheme, String)
+    case storyInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    
+    case storyReactionsByEmotionTitle(PresentationTheme, String)
+    case storyReactionsByEmotionGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case instantPageInteractionsTitle(PresentationTheme, String)
     case instantPageInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
+    case postsTitle(PresentationTheme, String)
+    case post(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Message, ChannelStatsMessageInteractions)
+
     case boostLevel(PresentationTheme, Int32, Int32, CGFloat)
     
     case boostOverviewTitle(PresentationTheme, String)
@@ -149,10 +161,16 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.languages.rawValue
             case .postInteractionsTitle, .postInteractionsGraph:
                 return StatsSection.postInteractions.rawValue
-            case .postsTitle, .post:
-                return StatsSection.recentPosts.rawValue
             case .instantPageInteractionsTitle, .instantPageInteractionsGraph:
                 return StatsSection.instantPageInteractions.rawValue
+            case .reactionsByEmotionTitle, .reactionsByEmotionGraph:
+                return StatsSection.reactionsByEmotion.rawValue
+            case .storyInteractionsTitle, .storyInteractionsGraph:
+                return StatsSection.storyInteractions.rawValue
+            case .storyReactionsByEmotionTitle, .storyReactionsByEmotionGraph:
+                return StatsSection.storyReactionsByEmotion.rawValue
+            case .postsTitle, .post:
+                return StatsSection.recentPosts.rawValue
             case .boostLevel:
                 return StatsSection.boostLevel.rawValue
             case .boostOverviewTitle, .boostOverview:
@@ -207,13 +225,25 @@ private enum StatsEntry: ItemListNodeEntry {
             case .postInteractionsGraph:
                 return 17
             case .instantPageInteractionsTitle:
-                 return 18
-             case .instantPageInteractionsGraph:
-                 return 19
-            case .postsTitle:
+                return 18
+            case .instantPageInteractionsGraph:
+                return 19
+            case .reactionsByEmotionTitle:
                 return 20
+            case .reactionsByEmotionGraph:
+                return 21
+            case .storyInteractionsTitle:
+                return 22
+            case .storyInteractionsGraph:
+                return 23
+            case .storyReactionsByEmotionTitle:
+                return 24
+            case .storyReactionsByEmotionGraph:
+                return 25
+            case .postsTitle:
+                return 26
             case let .post(index, _, _, _, _, _):
-                return 21 + index
+                return 27 + index
             case .boostLevel:
                 return 2000
             case .boostOverviewTitle:
@@ -367,12 +397,6 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .post(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessage, lhsInteractions):
-                if case let .post(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage, rhsInteractions) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsMessage.id == rhsMessage.id, lhsInteractions == rhsInteractions {
-                    return true
-                } else {
-                    return false
-                }
             case let .instantPageInteractionsTitle(lhsTheme, lhsText):
                 if case let .instantPageInteractionsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -381,6 +405,48 @@ private enum StatsEntry: ItemListNodeEntry {
                 }
             case let .instantPageInteractionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
                 if case let .instantPageInteractionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reactionsByEmotionTitle(lhsTheme, lhsText):
+                if case let .reactionsByEmotionTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reactionsByEmotionGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .reactionsByEmotionGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+                    return true
+                } else {
+                    return false
+                }
+            case let .storyInteractionsTitle(lhsTheme, lhsText):
+                if case let .storyInteractionsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .storyInteractionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .storyInteractionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+                    return true
+                } else {
+                    return false
+                }
+            case let .storyReactionsByEmotionTitle(lhsTheme, lhsText):
+                if case let .storyReactionsByEmotionTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .storyReactionsByEmotionGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .storyReactionsByEmotionGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+                    return true
+                } else {
+                    return false
+                }
+            case let .post(lhsIndex, lhsTheme, lhsStrings, lhsDateTimeFormat, lhsMessage, lhsInteractions):
+                if case let .post(rhsIndex, rhsTheme, rhsStrings, rhsDateTimeFormat, rhsMessage, rhsInteractions) = rhs, lhsIndex == rhsIndex, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsMessage.id == rhsMessage.id, lhsInteractions == rhsInteractions {
                     return true
                 } else {
                     return false
@@ -507,8 +573,11 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .followersBySourceTitle(_, text),
                  let .languagesTitle(_, text),
                  let .postInteractionsTitle(_, text),
-                 let .postsTitle(_, text),
                  let .instantPageInteractionsTitle(_, text),
+                 let .reactionsByEmotionTitle(_, text),
+                 let .storyInteractionsTitle(_, text),
+                 let .storyReactionsByEmotionTitle(_, text),
+                 let .postsTitle(_, text),
                  let .boostOverviewTitle(_, text),
                  let .boostPrepaidTitle(_, text),
                  let .boostersTitle(_, text),
@@ -527,10 +596,13 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .viewsByHourGraph(_, _, _, graph, type),
                  let .viewsBySourceGraph(_, _, _, graph, type),
                  let .followersBySourceGraph(_, _, _, graph, type),
-                 let .languagesGraph(_, _, _, graph, type):
+                 let .languagesGraph(_, _, _, graph, type),
+                 let .reactionsByEmotionGraph(_, _, _, graph, type),
+                 let .storyReactionsByEmotionGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, sectionId: self.section, style: .blocks)
             case let .postInteractionsGraph(_, _, _, graph, type),
-                 let .instantPageInteractionsGraph(_, _, _, graph, type):
+                 let .instantPageInteractionsGraph(_, _, _, graph, type),
+                 let .storyInteractionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
@@ -760,6 +832,21 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
                 entries.append(.instantPageInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.instantPageInteractionsGraph, .twoAxisStep))
             }
             
+            if !data.reactionsByEmotionGraph.isEmpty {
+                entries.append(.reactionsByEmotionTitle(presentationData.theme, presentationData.strings.Stats_ReactionsByEmotionTitle))
+                entries.append(.reactionsByEmotionGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsByEmotionGraph, .bars))
+            }
+            
+            if !data.storyInteractionsGraph.isEmpty {
+                entries.append(.storyInteractionsTitle(presentationData.theme, presentationData.strings.Stats_StoryInteractionsTitle))
+                entries.append(.storyInteractionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.storyInteractionsGraph, .twoAxisStep))
+            }
+            
+            if !data.storyReactionsByEmotionGraph.isEmpty {
+                entries.append(.storyReactionsByEmotionTitle(presentationData.theme, presentationData.strings.Stats_StoryReactionsByEmotionTitle))
+                entries.append(.storyReactionsByEmotionGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.storyReactionsByEmotionGraph, .bars))
+            }
+            
             if let messages = messages, !messages.isEmpty, let interactions = interactions, !interactions.isEmpty {
                 entries.append(.postsTitle(presentationData.theme, presentationData.strings.Stats_PostsTitle))
                 var index: Int32 = 0
@@ -915,6 +1002,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
                 statsContext.loadViewsBySourceGraph()
                 statsContext.loadLanguagesGraph()
                 statsContext.loadInstantPageInteractionsGraph()
+                statsContext.loadReactionsByEmotionGraph()
+                statsContext.loadStoryInteractionsGraph()
+                statsContext.loadStoryReactionsByEmotionGraph()
             }
         }
     })

@@ -468,6 +468,51 @@ private final class ChannelStatsContextImpl {
         }
     }
     
+    func loadReactionsByEmotionGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.reactionsByEmotionGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+            |> deliverOnMainQueue).start(next: { [weak self] graph in
+                if let strongSelf = self, let graph = graph {
+                    strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedReactionsByEmotionGraph(graph))
+                    strongSelf._statePromise.set(.single(strongSelf._state))
+                }
+            }), forKey: token)
+        }
+    }
+    
+    func loadStoryInteractionsGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.storyInteractionsGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+            |> deliverOnMainQueue).start(next: { [weak self] graph in
+                if let strongSelf = self, let graph = graph {
+                    strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedStoryInteractionsGraph(graph))
+                    strongSelf._statePromise.set(.single(strongSelf._state))
+                }
+            }), forKey: token)
+        }
+    }
+    
+    func loadStoryReactionsByEmotionGraph() {
+        guard let stats = self._state.stats else {
+            return
+        }
+        if case let .OnDemand(token) = stats.storyReactionsByEmotionGraph {
+            self.disposables.set((requestGraph(network: self.network, datacenterId: self.datacenterId, token: token)
+            |> deliverOnMainQueue).start(next: { [weak self] graph in
+                if let strongSelf = self, let graph = graph {
+                    strongSelf._state = ChannelStatsContextState(stats: strongSelf._state.stats?.withUpdatedStoryReactionsByEmotionGraph(graph))
+                    strongSelf._statePromise.set(.single(strongSelf._state))
+                }
+            }), forKey: token)
+        }
+    }
+    
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
             return requestGraph(network: self.network, datacenterId: self.datacenterId, token: token, x: x)
@@ -549,6 +594,21 @@ public final class ChannelStatsContext {
     public func loadLanguagesGraph() {
         self.impl.with { impl in
             impl.loadLanguagesGraph()
+        }
+    }
+    public func loadReactionsByEmotionGraph() {
+        self.impl.with { impl in
+            impl.loadReactionsByEmotionGraph()
+        }
+    }
+    public func loadStoryInteractionsGraph() {
+        self.impl.with { impl in
+            impl.loadStoryInteractionsGraph()
+        }
+    }
+    public func loadStoryReactionsByEmotionGraph() {
+        self.impl.with { impl in
+            impl.loadStoryReactionsByEmotionGraph()
         }
     }
     

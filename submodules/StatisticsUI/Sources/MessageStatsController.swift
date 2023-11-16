@@ -29,6 +29,7 @@ private final class MessageStatsControllerArguments {
 private enum StatsSection: Int32 {
     case overview
     case interactions
+    case reactions
     case publicForwards
 }
 
@@ -39,6 +40,9 @@ private enum StatsEntry: ItemListNodeEntry {
     case interactionsTitle(PresentationTheme, String)
     case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
+    case reactionsTitle(PresentationTheme, String)
+    case reactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    
     case publicForwardsTitle(PresentationTheme, String)
     case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EngineMessage)
     
@@ -48,6 +52,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.overview.rawValue
             case .interactionsTitle, .interactionsGraph:
                 return StatsSection.interactions.rawValue
+        case .reactionsTitle, .reactionsGraph:
+                return StatsSection.reactions.rawValue
             case .publicForwardsTitle, .publicForward:
                 return StatsSection.publicForwards.rawValue
         }
@@ -63,10 +69,14 @@ private enum StatsEntry: ItemListNodeEntry {
                 return 2
             case .interactionsGraph:
                 return 3
-            case .publicForwardsTitle:
+            case .reactionsTitle:
                 return 4
+            case .reactionsGraph:
+                return 5
+            case .publicForwardsTitle:
+                return 6
             case let .publicForward(index, _, _, _, _):
-                return 5 + index
+                return 7 + index
         }
     }
     
@@ -96,6 +106,18 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .reactionsTitle(lhsTheme, lhsText):
+                if case let .reactionsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .reactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
+                if case let .reactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+                    return true
+                } else {
+                    return false
+                }
             case let .publicForwardsTitle(lhsTheme, lhsText):
                 if case let .publicForwardsTitle(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -120,11 +142,12 @@ private enum StatsEntry: ItemListNodeEntry {
         switch self {
             case let .overviewTitle(_, text),
                  let .interactionsTitle(_, text),
+                 let .reactionsTitle(_, text),
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, publicShares):
                 return MessageStatsOverviewItem(presentationData: presentationData, stats: stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
-            case let .interactionsGraph(_, _, _, graph, type):
+            case let .interactionsGraph(_, _, _, graph, type), let .reactionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
@@ -169,6 +192,11 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
             }
             
             entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType))
+        }
+        
+        if !data.reactionsGraph.isEmpty {
+            entries.append(.reactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageReactionsTitle.uppercased()))
+            entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars))
         }
 
         if let messages = messages, !messages.messages.isEmpty {

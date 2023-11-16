@@ -9,12 +9,14 @@ public struct MessageStats: Equatable {
     public let forwards: Int
     public let interactionsGraph: StatsGraph
     public let interactionsGraphDelta: Int64
+    public let reactionsGraph: StatsGraph
     
-    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64) {
+    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
         self.views = views
         self.forwards = forwards
         self.interactionsGraph = interactionsGraph
         self.interactionsGraphDelta = interactionsGraphDelta
+        self.reactionsGraph = reactionsGraph
     }
     
     public static func == (lhs: MessageStats, rhs: MessageStats) -> Bool {
@@ -30,11 +32,14 @@ public struct MessageStats: Equatable {
         if lhs.interactionsGraphDelta != rhs.interactionsGraphDelta {
             return false
         }
+        if lhs.reactionsGraph != rhs.reactionsGraph {
+            return false
+        }
         return true
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> MessageStats {
-        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta)
+        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
     }
 }
 
@@ -83,8 +88,8 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
         
         return signal
         |> mapToSignal { result -> Signal<MessageStats?, MTRpcError> in
-            if case let .messageStats(apiViewsGraph, _) = result {
-                let interactionsGraph = StatsGraph(apiStatsGraph: apiViewsGraph)
+            if case let .messageStats(apiInteractionsGraph, apiReactionsGraph) = result {
+                let interactionsGraph = StatsGraph(apiStatsGraph: apiInteractionsGraph)
                 var interactionsGraphDelta: Int64 = 86400
                 if case let .Loaded(_, data) = interactionsGraph {
                     if let start = data.range(of: "[\"x\",") {
@@ -101,8 +106,14 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
                         }
                     }
                 }
-                
-                return .single(MessageStats(views: views, forwards: forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: interactionsGraphDelta))
+                let reactionsGraph = StatsGraph(apiStatsGraph: apiReactionsGraph)
+                return .single(MessageStats(
+                    views: views, 
+                    forwards: forwards,
+                    interactionsGraph: interactionsGraph,
+                    interactionsGraphDelta: interactionsGraphDelta,
+                    reactionsGraph: reactionsGraph
+                ))
             } else {
                 return .single(nil)
             }
