@@ -817,7 +817,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[2008112412] = { return Api.StickerSetCovered.parse_stickerSetNoCovered($0) }
     dict[1898850301] = { return Api.StoriesStealthMode.parse_storiesStealthMode($0) }
-    dict[1153718222] = { return Api.StoryItem.parse_storyItem($0) }
+    dict[-1205411504] = { return Api.StoryFwdHeader.parse_storyFwdHeader($0) }
+    dict[-1352440415] = { return Api.StoryItem.parse_storyItem($0) }
     dict[1374088783] = { return Api.StoryItem.parse_storyItemDeleted($0) }
     dict[-5388013] = { return Api.StoryItem.parse_storyItemSkipped($0) }
     dict[-1329730875] = { return Api.StoryView.parse_storyView($0) }
@@ -1186,9 +1187,10 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2030542532] = { return Api.premium.BoostsList.parse_boostsList($0) }
     dict[1230586490] = { return Api.premium.BoostsStatus.parse_boostsStatus($0) }
     dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
-    dict[-1107852396] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
+    dict[-886032030] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
-    dict[-1986399595] = { return Api.stats.MessageStats.parse_messageStats($0) }
+    dict[2145983508] = { return Api.stats.MessageStats.parse_messageStats($0) }
+    dict[1355613820] = { return Api.stats.StoryStats.parse_storyStats($0) }
     dict[-2046910401] = { return Api.stickers.SuggestedShortName.parse_suggestedShortName($0) }
     dict[-891180321] = { return Api.storage.FileType.parse_fileGif($0) }
     dict[8322574] = { return Api.storage.FileType.parse_fileJpeg($0) }
@@ -1779,6 +1781,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoriesStealthMode:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.StoryFwdHeader:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.StoryItem:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StoryView:
@@ -2094,6 +2098,8 @@ public extension Api {
             case let _1 as Api.stats.MegagroupStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stats.MessageStats:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.stats.StoryStats:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.stickers.SuggestedShortName:
                 _1.serialize(buffer, boxed)
