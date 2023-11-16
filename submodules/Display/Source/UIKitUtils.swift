@@ -172,6 +172,12 @@ public extension UIColor {
         }
     }
     
+    func contrastRatio(with other: UIColor) -> CGFloat {
+        let l1 = self.lightness
+        let l2 = other.lightness
+        return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
+    }
+    
     var brightness: CGFloat {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0

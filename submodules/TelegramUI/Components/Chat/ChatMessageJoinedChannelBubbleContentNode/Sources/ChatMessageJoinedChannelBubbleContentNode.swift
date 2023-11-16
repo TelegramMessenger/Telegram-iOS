@@ -22,6 +22,7 @@ import ChatMessageItemCommon
 import RoundedRectWithTailPath
 import AvatarNode
 import MultilineTextComponent
+import BundleIconComponent
 import ChatMessageBackground
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id) -> NSAttributedString? {
@@ -545,6 +546,8 @@ private final class ChannelItemComponent: Component {
         private let title = ComponentView<Empty>()
         private let subtitle = ComponentView<Empty>()
         private let avatarNode: AvatarNode
+        private let avatarBadge: AvatarBadgeView
+        private let subtitleIcon = ComponentView<Empty>()
                 
         private var component: ChannelItemComponent?
         private weak var state: EmptyComponentState?
@@ -553,12 +556,17 @@ private final class ChannelItemComponent: Component {
             self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.avatarNode.isUserInteractionEnabled = false
             
+            self.avatarBadge = AvatarBadgeView(frame: CGRect())
+            
             self.containerButton = HighlightTrackingButton()
             
             super.init(frame: frame)
             
             self.addSubview(self.containerButton)
             self.addSubnode(self.avatarNode)
+            self.avatarNode.view.addSubview(self.avatarBadge)
+            
+            self.avatarNode.badgeView = self.avatarBadge
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
         }
@@ -581,17 +589,26 @@ private final class ChannelItemComponent: Component {
             let titleSize = self.title.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.regular(11.0), textColor: component.theme.chat.message.incoming.primaryTextColor))
+                    text: .plain(NSAttributedString(string: component.peer.compactDisplayTitle, font: Font.regular(11.0), textColor: component.theme.chat.message.incoming.primaryTextColor)),
+                    horizontalAlignment: .center,
+                    maximumNumberOfLines: 2
                 )),
                 environment: {},
-                containerSize: CGSize(width: itemSize.width - 20.0, height: 100.0)
+                containerSize: CGSize(width: itemSize.width - 16.0, height: 100.0)
             )
             
             let subtitleSize = self.subtitle.update(
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
-                    text: .plain(NSAttributedString(string: component.subtitle, font: Font.regular(10.0), textColor: component.theme.chat.message.incoming.secondaryTextColor))
+                    text: .plain(NSAttributedString(string: component.subtitle, font: Font.with(size: 9.0, design: .round, weight: .bold), textColor: .white))
                 )),
+                environment: {},
+                containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
+            )
+            
+            let subtitleIconSize = self.subtitleIcon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(name: "Chat/Message/Subscriber", tintColor: .white)),
                 environment: {},
                 containerSize: CGSize(width: itemSize.width - 6.0, height: 100.0)
             )
@@ -599,7 +616,11 @@ private final class ChannelItemComponent: Component {
             let avatarSize = CGSize(width: 60.0, height: 60.0)
             let avatarFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - avatarSize.width) / 2.0), y: 0.0), size: avatarSize)
             let titleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - titleSize.width) / 2.0), y: avatarFrame.maxY + 4.0), size: titleSize)
-            let subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
+            
+            let subtitleSpacing: CGFloat = 1.0 + UIScreenPixel
+            let subtitleTotalWidth = subtitleIconSize.width + subtitleSize.width + subtitleSpacing
+            let subtitleIconFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((itemSize.width - subtitleTotalWidth) / 2.0) + 1.0 - UIScreenPixel, y: avatarFrame.maxY - subtitleSize.height + 1.0 - UIScreenPixel), size: subtitleIconSize)
+            let subtitleFrame = CGRect(origin: CGPoint(x: subtitleIconFrame.maxX + subtitleSpacing, y: avatarFrame.maxY - subtitleSize.height - UIScreenPixel), size: subtitleSize)
             
             self.avatarNode.frame = avatarFrame
             self.avatarNode.setPeer(context: component.context, theme: component.theme, peer: component.peer)
@@ -607,18 +628,32 @@ private final class ChannelItemComponent: Component {
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
-                    self.containerButton.addSubview(titleView)
+                    self.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
             }
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     subtitleView.isUserInteractionEnabled = false
-                    self.containerButton.addSubview(subtitleView)
+                    self.addSubview(subtitleView)
                 }
                 subtitleView.frame = subtitleFrame
             }
+            if let subtitleIconView = self.subtitleIcon.view {
+                if subtitleIconView.superview == nil {
+                    subtitleIconView.isUserInteractionEnabled = false
+                    self.addSubview(subtitleIconView)
+                }
+                subtitleIconView.frame = subtitleIconFrame
+            }
             
+            let strokeWidth: CGFloat = 1.0 + UIScreenPixel
+            let avatarBadgeSize = CGSize(width: subtitleSize.width + 4.0 + 4.0 + 6.0, height: 15.0)
+            self.avatarBadge.update(size: avatarBadgeSize, text: "", hasTimeoutIcon: false, useSolidColor: true, strokeColor: component.theme.chat.message.incoming.bubble.withoutWallpaper.fill.first!)
+
+            let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((avatarFrame.width - avatarBadgeSize.width) / 2.0), y: avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
+            self.avatarBadge.frame = avatarBadgeFrame
+    
             self.containerButton.frame = CGRect(origin: .zero, size: itemSize)
             
             return itemSize
