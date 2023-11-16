@@ -6,11 +6,13 @@ public final class VideoSourceOutput {
     public let y: MTLTexture
     public let uv: MTLTexture
     public let rotationAngle: Float
+    public let sourceId: Int
     
-    public init(y: MTLTexture, uv: MTLTexture, rotationAngle: Float) {
+    public init(y: MTLTexture, uv: MTLTexture, rotationAngle: Float, sourceId: Int) {
         self.y = y
         self.uv = uv
         self.rotationAngle = rotationAngle
+        self.sourceId = sourceId
     }
 }
 
@@ -35,6 +37,8 @@ public final class FileVideoSource: VideoSource {
     public var updated: (() -> Void)?
     
     private var displayLink: SharedDisplayLink.Subscription?
+    
+    public var sourceId: Int = 0
     
     public init?(device: MTLDevice, url: URL) {
         self.device = device
@@ -114,7 +118,7 @@ public final class FileVideoSource: VideoSource {
         
         rotationAngle = Float.pi * 0.5
         
-        self.currentOutput = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle)
+        self.currentOutput = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: self.sourceId)
         return true
     }
 }

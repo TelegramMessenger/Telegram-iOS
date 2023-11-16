@@ -223,10 +223,12 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 encoder.setVertexBytes(&rect, length: 4 * 4, index: 0)
                 encoder.setFragmentTexture(blurredTexture, index: 0)
                 
-                var brightness: Float = 1.4
-                var saturation: Float = 1.1
+                var brightness: Float = 1.0
+                var saturation: Float = 1.2
+                var overlay: SIMD4<Float> = SIMD4<Float>(1.0, 1.0, 1.0, 0.2)
                 encoder.setFragmentBytes(&brightness, length: 4, index: 0)
                 encoder.setFragmentBytes(&saturation, length: 4, index: 1)
+                encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
                 
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
             })
@@ -245,8 +247,10 @@ final class PrivateCallVideoLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             
             var brightness: Float = 1.0
             var saturation: Float = 1.0
+            var overlay: SIMD4<Float> = SIMD4<Float>()
             encoder.setFragmentBytes(&brightness, length: 4, index: 0)
             encoder.setFragmentBytes(&saturation, length: 4, index: 1)
+            encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 2)
             
             encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
         })

@@ -3,7 +3,7 @@ import UIKit
 import Display
 
 final class MirroringLayer: SimpleLayer {
-    var targetLayer: SimpleLayer?
+    var targetLayer: CALayer?
     
     override init() {
         super.init()

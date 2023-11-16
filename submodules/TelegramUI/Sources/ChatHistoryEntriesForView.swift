@@ -399,7 +399,7 @@ func chatHistoryEntriesForView(
             if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], let message = adMessage {
                 var nextAdMessageId: Int32 = 10000
                 let updatedMessage = Message(
-                    stableId: ChatHistoryListNode.fixedAdMessageStableId,
+                    stableId: ChatHistoryListNodeImpl.fixedAdMessageStableId,
                     stableVersion: message.stableVersion,
                     id: MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: nextAdMessageId),
                     globallyUniqueId: nil,

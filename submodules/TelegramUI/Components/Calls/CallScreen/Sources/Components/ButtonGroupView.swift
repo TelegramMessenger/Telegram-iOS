@@ -4,17 +4,19 @@ import Display
 import ComponentFlow
 import AppBundle
 
-final class ButtonGroupView: UIView, ContentOverlayView {
+final class ButtonGroupView: OverlayMaskContainerView {
     final class Button {
         enum Content: Equatable {
             enum Key: Hashable {
                 case speaker
+                case flipCamera
                 case video
                 case microphone
                 case end
             }
             
             case speaker(isActive: Bool)
+            case flipCamera
             case video(isActive: Bool)
             case microphone(isMuted: Bool)
             case end
@@ -23,6 +25,8 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                 switch self {
                 case .speaker:
                     return .speaker
+                case .flipCamera:
+                    return .flipCamera
                 case .video:
                     return .video
                 case .microphone:
@@ -42,59 +46,15 @@ final class ButtonGroupView: UIView, ContentOverlayView {
         }
     }
     
-    let overlayMaskLayer: CALayer
-    
     private var buttons: [Button]?
     private var buttonViews: [Button.Content.Key: ContentOverlayButton] = [:]
     
     override init(frame: CGRect) {
-        self.overlayMaskLayer = SimpleLayer()
-        
         super.init(frame: frame)
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    override func addSubview(_ view: UIView) {
-        super.addSubview(view)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, at index: Int) {
-        super.insertSubview(view, at: index)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, aboveSubview siblingSubview: UIView) {
-        super.insertSubview(view, aboveSubview: siblingSubview)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func insertSubview(_ view: UIView, belowSubview siblingSubview: UIView) {
-        super.insertSubview(view, belowSubview: siblingSubview)
-        
-        if let view = view as? ContentOverlayView {
-            self.overlayMaskLayer.addSublayer(view.overlayMaskLayer)
-        }
-    }
-    
-    override func willRemoveSubview(_ subview: UIView) {
-        super.willRemoveSubview(subview)
-        
-        if let view = subview as? ContentOverlayView {
-            view.overlayMaskLayer.removeFromSuperlayer()
-        }
     }
     
     func update(size: CGSize, buttons: [Button], transition: Transition) {
@@ -116,6 +76,10 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                 title = "speaker"
                 image = UIImage(bundleImageName: "Call/Speaker")
                 isActive = isActiveValue
+            case .flipCamera:
+                title = "flip"
+                image = UIImage(bundleImageName: "Call/Flip")
+                isActive = false
             case let .video(isActiveValue):
                 title = "video"
                 image = UIImage(bundleImageName: "Call/Video")
@@ -131,10 +95,12 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                 isDestructive = true
             }
             
+            var buttonTransition = transition
             let buttonView: ContentOverlayButton
             if let current = self.buttonViews[button.content.key] {
                 buttonView = current
             } else {
+                buttonTransition = transition.withAnimation(.none)
                 buttonView = ContentOverlayButton(frame: CGRect())
                 self.addSubview(buttonView)
                 self.buttonViews[button.content.key] = buttonView
@@ -146,10 +112,15 @@ final class ButtonGroupView: UIView, ContentOverlayView {
                     }
                     button.action()
                 }
+                
+                Transition.immediate.setScale(view: buttonView, scale: 0.001)
+                buttonView.alpha = 0.0
+                transition.setScale(view: buttonView, scale: 1.0)
+                transition.setAlpha(view: buttonView, alpha: 1.0)
             }
             
-            buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize))
-            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: transition)
+            buttonTransition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize)))
+            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: buttonTransition)
             buttonX += buttonSize + buttonSpacing
         }
         

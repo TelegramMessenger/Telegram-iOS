@@ -286,11 +286,6 @@ public struct ChatPresentationImportState: Equatable {
     }
 }
 
-public enum ChatHistoryNodeHistoryState: Equatable {
-    case loading
-    case loaded(isEmpty: Bool)
-}
-
 public struct ChatPresentationTranslationState: Equatable {
     public var isEnabled: Bool
     public var fromLang: String

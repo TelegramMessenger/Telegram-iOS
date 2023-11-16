@@ -18,29 +18,38 @@ private final class MultiScaleTextStateNode: ASDisplayNode {
     }
 }
 
-final class MultiScaleTextState {
-    struct Attributes {
-        var font: UIFont
-        var color: UIColor
+public final class MultiScaleTextState {
+    public struct Attributes {
+        public var font: UIFont
+        public var color: UIColor
+
+        public init(font: UIFont, color: UIColor) {
+            self.font = font
+            self.color = color
+        }
     }
     
-    let attributes: Attributes
-    let constrainedSize: CGSize
+    public let attributes: Attributes
+    public let constrainedSize: CGSize
     
-    init(attributes: Attributes, constrainedSize: CGSize) {
+    public init(attributes: Attributes, constrainedSize: CGSize) {
         self.attributes = attributes
         self.constrainedSize = constrainedSize
     }
 }
 
-struct MultiScaleTextLayout {
-    var size: CGSize
+public struct MultiScaleTextLayout {
+    public var size: CGSize
+
+    public init(size: CGSize) {
+        self.size = size
+    }
 }
 
-final class MultiScaleTextNode: ASDisplayNode {
+public final class MultiScaleTextNode: ASDisplayNode {
     private let stateNodes: [AnyHashable: MultiScaleTextStateNode]
     
-    init(stateKeys: [AnyHashable]) {
+    public init(stateKeys: [AnyHashable]) {
         self.stateNodes = Dictionary(stateKeys.map { ($0, MultiScaleTextStateNode()) }, uniquingKeysWith: { lhs, _ in lhs })
         
         super.init()
@@ -50,11 +59,11 @@ final class MultiScaleTextNode: ASDisplayNode {
         }
     }
     
-    func stateNode(forKey key: AnyHashable) -> ASDisplayNode? {
+    public func stateNode(forKey key: AnyHashable) -> ASDisplayNode? {
         return self.stateNodes[key]?.textNode
     }
     
-    func updateLayout(text: String, states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
+    public func updateLayout(text: String, states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
         assert(Set(states.keys) == Set(self.stateNodes.keys))
         assert(states[mainState] != nil)
         
@@ -85,7 +94,7 @@ final class MultiScaleTextNode: ASDisplayNode {
         return result
     }
     
-    func update(stateFractions: [AnyHashable: CGFloat], alpha: CGFloat = 1.0, transition: ContainedViewLayoutTransition) {
+    public func update(stateFractions: [AnyHashable: CGFloat], alpha: CGFloat = 1.0, transition: ContainedViewLayoutTransition) {
         var fractionSum: CGFloat = 0.0
         for (_, fraction) in stateFractions {
             fractionSum += fraction

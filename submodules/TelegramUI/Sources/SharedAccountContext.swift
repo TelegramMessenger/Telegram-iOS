@@ -47,6 +47,8 @@ import ChatHistoryEntry
 import ChatMessageItem
 import ChatMessageItemImpl
 import ChatRecentActionsController
+import PeerInfoScreen
+import ChatQrCodeScreen
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -1432,6 +1434,33 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
     }
     
+    public func makeChatHistoryListNode(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
+        chatLocation: ChatLocation,
+        chatLocationContextHolder: Atomic<ChatLocationContextHolder?>,
+        tagMask: MessageTags?,
+        source: ChatHistoryListSource,
+        subject: ChatControllerSubject?,
+        controllerInteraction: ChatControllerInteractionProtocol,
+        selectedMessages: Signal<Set<MessageId>?, NoError>,
+        mode: ChatHistoryListMode
+    ) -> ChatHistoryListNode {
+        return ChatHistoryListNodeImpl(
+            context: context,
+            updatedPresentationData: updatedPresentationData,
+            chatLocation: chatLocation,
+            chatLocationContextHolder: chatLocationContextHolder,
+            tagMask: tagMask,
+            source: source,
+            subject: subject,
+            controllerInteraction: controllerInteraction as! ChatControllerInteraction,
+            selectedMessages: selectedMessages,
+            mode: mode,
+            messageTransitionNode: { return nil }
+        )
+    }
+    
     public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
         return nil
     }
@@ -1633,8 +1662,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: context.engine.privacy.webSessions(), websitesOnly: false)
     }
     
-    public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController {
-        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: false))
+    public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?, temporary: Bool) -> ViewController {
+        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {

@@ -875,6 +875,8 @@ public protocol ChatController: ViewController {
     
     var isSelectingMessagesUpdated: ((Bool) -> Void)? { get set }
     func cancelSelectingMessages()
+    func activateSearch(domain: ChatSearchDomain, query: String)
+    func beginClearHistory(type: InteractiveHistoryClearingType)
 }
 
 public protocol ChatMessagePreviewItemNode: AnyObject {
@@ -905,4 +907,81 @@ public protocol ChatMessageItemNodeProtocol: ListViewItemNode {
     func targetReactionView(value: MessageReaction.Reaction) -> UIView?
     func targetForStoryTransition(id: StoryId) -> UIView?
     func contentFrame() -> CGRect
+}
+
+public final class ChatControllerNavigationData: CustomViewControllerNavigationData {
+    public let peerId: PeerId
+    public let threadId: Int64?
+    
+    public init(peerId: PeerId, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
+    
+    public func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary? {
+        if let summary = summary as? ChatControllerNavigationDataSummary {
+            return summary.adding(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
+        } else {
+            return ChatControllerNavigationDataSummary(peerNavigationItems: [ChatNavigationStackItem(peerId: self.peerId, threadId: threadId)])
+        }
+    }
+}
+
+public final class ChatControllerNavigationDataSummary: CustomViewControllerNavigationDataSummary {
+    public let peerNavigationItems: [ChatNavigationStackItem]
+    
+    public init(peerNavigationItems: [ChatNavigationStackItem]) {
+        self.peerNavigationItems = peerNavigationItems
+    }
+    
+    public func adding(peerNavigationItem: ChatNavigationStackItem) -> ChatControllerNavigationDataSummary {
+        var peerNavigationItems = self.peerNavigationItems
+        if let index = peerNavigationItems.firstIndex(of: peerNavigationItem) {
+            peerNavigationItems.removeSubrange(0 ... index)
+        }
+        peerNavigationItems.insert(peerNavigationItem, at: 0)
+        return ChatControllerNavigationDataSummary(peerNavigationItems: peerNavigationItems)
+    }
+}
+
+public enum ChatHistoryListSource {
+    public struct Quote {
+        public var text: String
+        public var offset: Int?
+        
+        public init(text: String, offset: Int?) {
+            self.text = text
+            self.offset = offset
+        }
+    }
+    
+    case `default`
+    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, quote: Quote?, loadMore: (() -> Void)?)
+}
+
+public enum ChatHistoryListDisplayHeaders {
+    case none
+    case all
+    case allButLast
+}
+
+public enum ChatHistoryListMode: Equatable {
+    case bubbles
+    case list(search: Bool, reversed: Bool, reverseGroups: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
+}
+
+public protocol ChatControllerInteractionProtocol: AnyObject {
+}
+
+public enum ChatHistoryNodeHistoryState: Equatable {
+    case loading
+    case loaded(isEmpty: Bool)
+}
+
+public protocol ChatHistoryListNode: ListView {
+    var historyState: ValuePromise<ChatHistoryNodeHistoryState> { get }
+    
+    func scrollToEndOfHistory()
+    func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets)
+    func messageInCurrentHistoryView(_ id: MessageId) -> Message?
 }

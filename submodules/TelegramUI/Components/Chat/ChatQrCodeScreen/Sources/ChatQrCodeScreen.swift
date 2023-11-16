@@ -34,6 +34,7 @@ import GalleryUI
 import SaveToCameraRoll
 import SegmentedControlNode
 import AnimatedCountLabelNode
+import HexColor
 
 private func closeButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
@@ -560,15 +561,15 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
     }
 }
 
-final class ChatQrCodeScreen: ViewController {
-    static let themeCrossfadeDuration: Double = 0.3
-    static let themeCrossfadeDelay: Double = 0.05
+public final class ChatQrCodeScreen: ViewController {
+    public static let themeCrossfadeDuration: Double = 0.3
+    public static let themeCrossfadeDelay: Double = 0.05
     
-    enum Subject {
+    public enum Subject {
         case peer(peer: Peer, threadId: Int64?, temporary: Bool)
         case messages([Message])
         
-        var fileName: String {
+        public var fileName: String {
             switch self {
             case let .peer(peer, threadId, _):
                 var result: String
@@ -608,9 +609,9 @@ final class ChatQrCodeScreen: ViewController {
     private var presentationThemePromise = Promise<PresentationTheme?>()
     private var presentationDataDisposable: Disposable?
     
-    var dismissed: (() -> Void)?
+    public var dismissed: (() -> Void)?
     
-    init(context: AccountContext, subject: ChatQrCodeScreen.Subject) {
+    public init(context: AccountContext, subject: ChatQrCodeScreen.Subject) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.subject = subject
@@ -641,7 +642,7 @@ final class ChatQrCodeScreen: ViewController {
         self.ready.set(self.controllerNode.ready.get())
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -1265,8 +1266,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let newIconColors = iconColors(theme: self.presentationData.theme)
         
         if !self.switchThemeButton.isUserInteractionEnabled {
-            Queue.mainQueue().after(ChatThemeScreen.themeCrossfadeDelay) {
-                self.switchThemeIconAnimator = DisplayLinkAnimator(duration: ChatThemeScreen.themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
+            let themeCrossfadeDuration: Double = 0.3
+            let themeCrossfadeDelay: Double = 0.25
+            
+            Queue.mainQueue().after(themeCrossfadeDelay) {
+                self.switchThemeIconAnimator = DisplayLinkAnimator(duration: themeCrossfadeDuration * UIView.animationDurationFactor(), from: 0.0, to: 1.0, update: { [weak self] value in
                     self?.animationNode.setColors(colors: interpolateColors(from: previousIconColors, to: newIconColors, fraction: value))
                 }, completion: { [weak self] in
                     self?.switchThemeIconAnimator?.invalidate()
@@ -1278,7 +1282,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         }
     }
         
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.wrappingScrollNode.view.delegate = self
@@ -1289,11 +1293,11 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.listNode.view.disablesInteractiveTransitionGestureRecognizer = true
     }
     
-    @objc func cancelButtonPressed() {
+    @objc private func cancelButtonPressed() {
         self.cancel?()
     }
 
-    @objc func switchThemePressed() {
+    @objc private func switchThemePressed() {
         self.switchThemeButton.isUserInteractionEnabled = false
         Queue.mainQueue().after(0.5) {
             self.switchThemeButton.isUserInteractionEnabled = true
@@ -1376,7 +1380,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
     }
     
     private var animatedOut = false
-    func animateIn() {
+    public func animateIn() {
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .spring)
@@ -1387,7 +1391,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         })
     }
     
-    func animateOut(completion: (() -> Void)? = nil) {
+    public func animateOut(completion: (() -> Void)? = nil) {
         self.animatedOut = true
         
         let offset = self.bounds.size.height - self.contentBackgroundNode.frame.minY
@@ -1399,7 +1403,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         })
     }
     
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         let contentOffset = scrollView.contentOffset
         let additionalTopHeight = max(0.0, -contentOffset.y)
         
@@ -1408,7 +1412,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         }
     }
     
-    func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (layout, navigationBarHeight)
         
         var insets = layout.insets(options: [.statusBar, .input])
