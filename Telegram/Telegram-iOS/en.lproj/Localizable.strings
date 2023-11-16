@@ -10497,3 +10497,8 @@ Sorry for the inconvenience.";
 "Stats.StoryReactionsByEmotionTitle" = "STORIES REACTIONS BY EMOTION";
 
 "Stats.MessageReactionsTitle" = "REACTIONS";
+
+"Conversation.LaunchApp" = "LAUNCH APP";
+
+"Message.AdSponsoredLabel" = "Sponsored";
+"Message.AdRecommendedLabel" = "Recommended";

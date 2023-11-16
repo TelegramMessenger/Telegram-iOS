@@ -767,12 +767,23 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
                         appFlags.insert(.hasSettings)
                     }
                     return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))
-            case .botAppNotModified:
-                return .complete()
-            }
+                case .botAppNotModified:
+                    return .complete()
+                }
             }
         }
     }
     |> castError(GetBotAppError.self)
     |> switchToLatest
+}
+
+extension BotApp {
+    convenience init?(apiBotApp: Api.BotApp) {
+        switch apiBotApp {
+        case let .botApp(_, id, accessHash, shortName, title, description, photo, document, hash):
+            self.init(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: [])
+        case .botAppNotModified:
+            return nil
+        }
+    }
 }
