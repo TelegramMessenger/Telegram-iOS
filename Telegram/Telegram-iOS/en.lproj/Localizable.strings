@@ -10491,3 +10491,9 @@ Sorry for the inconvenience.";
 "Premium.Wallpaper.Proceed" = "About Telegram Premium";
 
 "Notification.YouChangedWallpaperBoth" = "You set a new wallpaper for %@ and you.";
+
+"Stats.ReactionsByEmotionTitle" = "REACTIONS BY EMOTION";
+"Stats.StoryInteractionsTitle" = "STORIES INTERACTIONS";
+"Stats.StoryReactionsByEmotionTitle" = "STORIES REACTIONS BY EMOTION";
+
+"Stats.MessageReactionsTitle" = "REACTIONS";
