@@ -114,7 +114,7 @@ final class ContentOverlayButton: HighlightTrackingButton, OverlayMaskContainerV
             if contentParams.isDestructive {
                 context.setFillColor(UIColor(rgb: 0xFF3B30).cgColor)
             } else {
-                context.setFillColor(UIColor(white: 1.0, alpha: contentParams.isSelected ? 1.0 : 0.2).cgColor)
+                context.setFillColor(UIColor(white: 1.0, alpha: contentParams.isSelected ? 1.0 : 0.0).cgColor)
             }
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             

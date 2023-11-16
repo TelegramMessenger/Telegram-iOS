@@ -9,12 +9,14 @@ final class ButtonGroupView: OverlayMaskContainerView {
         enum Content: Equatable {
             enum Key: Hashable {
                 case speaker
+                case flipCamera
                 case video
                 case microphone
                 case end
             }
             
             case speaker(isActive: Bool)
+            case flipCamera
             case video(isActive: Bool)
             case microphone(isMuted: Bool)
             case end
@@ -23,6 +25,8 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 switch self {
                 case .speaker:
                     return .speaker
+                case .flipCamera:
+                    return .flipCamera
                 case .video:
                     return .video
                 case .microphone:
@@ -72,6 +76,10 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 title = "speaker"
                 image = UIImage(bundleImageName: "Call/Speaker")
                 isActive = isActiveValue
+            case .flipCamera:
+                title = "flip"
+                image = UIImage(bundleImageName: "Call/Flip")
+                isActive = false
             case let .video(isActiveValue):
                 title = "video"
                 image = UIImage(bundleImageName: "Call/Video")
@@ -87,10 +95,12 @@ final class ButtonGroupView: OverlayMaskContainerView {
                 isDestructive = true
             }
             
+            var buttonTransition = transition
             let buttonView: ContentOverlayButton
             if let current = self.buttonViews[button.content.key] {
                 buttonView = current
             } else {
+                buttonTransition = transition.withAnimation(.none)
                 buttonView = ContentOverlayButton(frame: CGRect())
                 self.addSubview(buttonView)
                 self.buttonViews[button.content.key] = buttonView
@@ -102,10 +112,15 @@ final class ButtonGroupView: OverlayMaskContainerView {
                     }
                     button.action()
                 }
+                
+                Transition.immediate.setScale(view: buttonView, scale: 0.001)
+                buttonView.alpha = 0.0
+                transition.setScale(view: buttonView, scale: 1.0)
+                transition.setAlpha(view: buttonView, alpha: 1.0)
             }
             
-            buttonView.frame = CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize))
-            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: transition)
+            buttonTransition.setFrame(view: buttonView, frame: CGRect(origin: CGPoint(x: buttonX, y: buttonY), size: CGSize(width: buttonSize, height: buttonSize)))
+            buttonView.update(size: CGSize(width: buttonSize, height: buttonSize), image: image, isSelected: isActive, isDestructive: isDestructive, title: title, transition: buttonTransition)
             buttonX += buttonSize + buttonSpacing
         }
         

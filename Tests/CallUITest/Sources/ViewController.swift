@@ -51,15 +51,35 @@ public final class ViewController: UIViewController {
                 activeState.signalInfo.quality = activeState.signalInfo.quality == 1.0 ? 0.1 : 1.0
                 self.callState.lifecycleState = .active(activeState)
             case .terminated:
-                break
+                self.callState.lifecycleState = .active(PrivateCallScreen.State.ActiveState(
+                    startTime: Date().timeIntervalSince1970,
+                    signalInfo: PrivateCallScreen.State.SignalInfo(quality: 1.0),
+                    emojiKey: ["A", "B", "C", "D"]
+                ))
             }
             
             self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.flipCameraAction = { [weak self] in
+            guard let self else {
+                return
+            }
+            if let input = self.callState.localVideo as? FileVideoSource {
+                input.sourceId = input.sourceId == 0 ? 1 : 0
+            }
         }
         callScreenView.videoAction = { [weak self] in
             guard let self else {
                 return
             }
+            if self.callState.localVideo == nil {
+                self.callState.localVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test2", withExtension: "mp4")!)
+            } else {
+                self.callState.localVideo = nil
+            }
+            self.update(transition: .spring(duration: 0.4))
+        }
+        callScreenView.microhoneMuteAction = {
             if self.callState.remoteVideo == nil {
                 self.callState.remoteVideo = FileVideoSource(device: MetalEngine.shared.device, url: Bundle.main.url(forResource: "test2", withExtension: "mp4")!)
             } else {
@@ -67,15 +87,13 @@ public final class ViewController: UIViewController {
             }
             self.update(transition: .spring(duration: 0.4))
         }
-        callScreenView.microhoneMuteAction = {
-            self.callState.isMicrophoneMuted = !self.callState.isMicrophoneMuted
-            self.update(transition: .spring(duration: 0.4))
-        }
         callScreenView.endCallAction = { [weak self] in
             guard let self else {
                 return
             }
             self.callState.lifecycleState = .terminated(PrivateCallScreen.State.TerminatedState(duration: 82.0))
+            self.callState.remoteVideo = nil
+            self.callState.localVideo = nil
             self.update(transition: .spring(duration: 0.4))
         }
         

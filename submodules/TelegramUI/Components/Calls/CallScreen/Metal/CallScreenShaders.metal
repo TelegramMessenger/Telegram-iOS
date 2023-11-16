@@ -59,7 +59,8 @@ fragment half4 callBackgroundFragment(
     const device float2 *positions [[ buffer(0) ]],
     const device float4 *colors [[ buffer(1) ]],
     const device float &brightness [[ buffer(2) ]],
-    const device float &saturation [[ buffer(3) ]]
+    const device float &saturation [[ buffer(3) ]],
+    const device float4 &overlay [[ buffer(4) ]]
 ) {
     half centerDistanceX = in.uv.x - 0.5;
     half centerDistanceY = in.uv.y - 0.5;
@@ -106,6 +107,8 @@ fragment half4 callBackgroundFragment(
     color.b = clamp(color.b * brightness, 0.0, 1.0);
     color.g = clamp(color.g * saturation, 0.0, 1.0);
     color = hsv2rgb(color);
+    color.rgb += half3(overlay.rgb * overlay.a);
+    color.rgb = min(color.rgb, half3(1.0, 1.0, 1.0));
     
     return color;
 }
@@ -267,7 +270,8 @@ fragment half4 mainVideoFragment(
     QuadVertexOut in [[stage_in]],
     texture2d<half> texture [[ texture(0) ]],
     const device float &brightness [[ buffer(0) ]],
-    const device float &saturation [[ buffer(1) ]]
+    const device float &saturation [[ buffer(1) ]],
+    const device float4 &overlay [[ buffer(2) ]]
 ) {
     constexpr sampler sampler(coord::normalized, address::repeat, filter::linear);
     half4 color = texture.sample(sampler, in.uv);
@@ -275,6 +279,8 @@ fragment half4 mainVideoFragment(
     color.b = clamp(color.b * brightness, 0.0, 1.0);
     color.g = clamp(color.g * saturation, 0.0, 1.0);
     color = hsv2rgb(color);
+    color.rgb += half3(overlay.rgb * overlay.a);
+    color.rgb = min(color.rgb, half3(1.0, 1.0, 1.0));
     
     return half4(color.r, color.g, color.b, color.a);
 }

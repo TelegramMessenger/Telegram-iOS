@@ -780,7 +780,7 @@ public final class MetalEngine {
                     
                     if previousSurfaceId != nil {
                         #if DEBUG
-                        print("Changing surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight)")
+                        print("Changing surface for layer \(layer) (\(renderSpec.allocationWidth)x\(renderSpec.allocationHeight))")
                         #endif
                     }
                 } else {

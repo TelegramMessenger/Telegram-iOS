@@ -205,10 +205,12 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 var colors: [SIMD4<Float>] = self.colorTransition.value.colors
                 
                 encoder.setFragmentBytes(&colors, length: 4 * MemoryLayout<SIMD4<Float>>.size, index: 1)
-                var brightness: Float = isBlur ? 1.1 : 1.0
-                var saturation: Float = isBlur ? 1.2 : 1.0
+                var brightness: Float = isBlur ? 0.9 : 1.0
+                var saturation: Float = isBlur ? 1.1 : 1.0
+                var overlay: SIMD4<Float> = isBlur ? SIMD4<Float>(1.0, 1.0, 1.0, 0.2) : SIMD4<Float>()
                 encoder.setFragmentBytes(&brightness, length: 4, index: 2)
                 encoder.setFragmentBytes(&saturation, length: 4, index: 3)
+                encoder.setFragmentBytes(&overlay, length: 4 * 4, index: 4)
                 
                 encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 6)
             })

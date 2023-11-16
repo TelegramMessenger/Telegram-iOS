@@ -22,19 +22,16 @@ final class WeakSignalView: OverlayMaskContainerView {
     
     private let titleView: TextView
     private let overlayBackgroundView: UIImageView
-    private let backgroundView: UIImageView
     
     private var currentLayout: Layout?
     
     override init(frame: CGRect) {
         self.titleView = TextView()
         self.overlayBackgroundView = UIImageView()
-        self.backgroundView = UIImageView()
         
         super.init(frame: frame)
         
         self.maskContents.addSubview(self.overlayBackgroundView)
-        self.addSubview(self.backgroundView)
         self.addSubview(self.titleView)
     }
     
@@ -48,7 +45,7 @@ final class WeakSignalView: OverlayMaskContainerView {
             return currentLayout.size
         }
         
-        let sideInset: CGFloat = 8.0
+        let sideInset: CGFloat = 11.0
         let height: CGFloat = 30.0
         
         let titleSize = self.titleView.update(string: "Weak network signal", fontSize: 16.0, fontWeight: 0.0, color: .white, constrainedWidth: constrainedSize.width - sideInset * 2.0, transition: .immediate)
@@ -57,10 +54,8 @@ final class WeakSignalView: OverlayMaskContainerView {
         
         if self.overlayBackgroundView.image?.size.height != height {
             self.overlayBackgroundView.image = generateStretchableFilledCircleImage(diameter: height, color: .white)
-            self.backgroundView.image = generateStretchableFilledCircleImage(diameter: height, color: UIColor(white: 1.0, alpha: 0.2))
         }
         self.overlayBackgroundView.frame = CGRect(origin: CGPoint(), size: size)
-        self.backgroundView.frame = CGRect(origin: CGPoint(), size: size)
         
         self.currentLayout = Layout(params: params, size: size)
         return size

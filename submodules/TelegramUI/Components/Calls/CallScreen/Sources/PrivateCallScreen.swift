@@ -128,10 +128,14 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     
     private var emojiView: KeyEmojiView?
     
-    private var videoContainerView: VideoContainerView?
+    private var localVideoContainerView: VideoContainerView?
+    private var remoteVideoContainerView: VideoContainerView?
     
     private var activeRemoteVideoSource: VideoSource?
-    private var waitingForFirstVideoFrameDisposable: Disposable?
+    private var waitingForFirstRemoteVideoFrameDisposable: Disposable?
+    
+    private var activeLocalVideoSource: VideoSource?
+    private var waitingForFirstLocalVideoFrameDisposable: Disposable?
     
     private var processedInitialAudioLevelBump: Bool = false
     private var audioLevelBump: Float = 0.0
@@ -141,6 +145,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     private var audioLevelUpdateSubscription: SharedDisplayLinkDriver.Link?
     
     public var speakerAction: (() -> Void)?
+    public var flipCameraAction: (() -> Void)?
     public var videoAction: (() -> Void)?
     public var microhoneMuteAction: (() -> Void)?
     public var endCallAction: (() -> Void)?
@@ -164,13 +169,13 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         self.layer.addSublayer(self.backgroundLayer)
         self.overlayContentsView.layer.addSublayer(self.backgroundLayer.blurredLayer)
         
+        self.layer.addSublayer(self.blobLayer)
+        self.layer.addSublayer(self.avatarLayer)
+        
         self.overlayContentsView.mask = self.maskContents
         self.addSubview(self.overlayContentsView)
         
         self.addSubview(self.buttonGroupView)
-        
-        self.layer.addSublayer(self.blobLayer)
-        self.layer.addSublayer(self.avatarLayer)
         
         self.addSubview(self.titleView)
         
@@ -179,12 +184,23 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             self?.update(transition: .immediate)
         }
         
-        self.audioLevelUpdateSubscription = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+        (self.layer as? SimpleLayer)?.didEnterHierarchy = { [weak self] in
             guard let self else {
                 return
             }
-            self.attenuateAudioLevelStep()
-        })
+            self.audioLevelUpdateSubscription = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.attenuateAudioLevelStep()
+            })
+        }
+        (self.layer as? SimpleLayer)?.didExitHierarchy = { [weak self] in
+            guard let self else {
+                return
+            }
+            self.audioLevelUpdateSubscription = nil
+        }
     }
     
     public required init?(coder: NSCoder) {
@@ -192,7 +208,8 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     }
     
     deinit {
-        self.waitingForFirstVideoFrameDisposable?.dispose()
+        self.waitingForFirstRemoteVideoFrameDisposable?.dispose()
+        self.waitingForFirstLocalVideoFrameDisposable?.dispose()
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
@@ -216,7 +233,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
     }
     
     private func updateAudioLevel() {
-        if self.activeRemoteVideoSource == nil {
+        if self.activeRemoteVideoSource == nil && self.activeLocalVideoSource == nil {
             let additionalAvatarScale = CGFloat(max(0.0, min(self.audioLevel, 5.0)) * 0.05)
             self.avatarLayer.transform = CATransform3DMakeScale(1.0 + additionalAvatarScale, 1.0 + additionalAvatarScale, 1.0)
             
@@ -235,7 +252,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         
         if self.params?.state.remoteVideo !== params.state.remoteVideo {
-            self.waitingForFirstVideoFrameDisposable?.dispose()
+            self.waitingForFirstRemoteVideoFrameDisposable?.dispose()
             
             if let remoteVideo = params.state.remoteVideo {
                 if remoteVideo.currentOutput != nil {
@@ -255,7 +272,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                         return EmptyDisposable
                     }
                     var shouldUpdate = false
-                    self.waitingForFirstVideoFrameDisposable = (firstVideoFrameSignal
+                    self.waitingForFirstRemoteVideoFrameDisposable = (firstVideoFrameSignal
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                     |> deliverOnMainQueue).startStrict(completed: { [weak self] in
                         guard let self else {
@@ -270,6 +287,44 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 }
             } else {
                 self.activeRemoteVideoSource = nil
+            }
+        }
+        if self.params?.state.localVideo !== params.state.localVideo {
+            self.waitingForFirstLocalVideoFrameDisposable?.dispose()
+            
+            if let localVideo = params.state.localVideo {
+                if localVideo.currentOutput != nil {
+                    self.activeLocalVideoSource = localVideo
+                } else {
+                    let firstVideoFrameSignal = Signal<Never, NoError> { subscriber in
+                        localVideo.updated = { [weak localVideo] in
+                            guard let localVideo else {
+                                subscriber.putCompletion()
+                                return
+                            }
+                            if localVideo.currentOutput != nil {
+                                subscriber.putCompletion()
+                            }
+                        }
+                        
+                        return EmptyDisposable
+                    }
+                    var shouldUpdate = false
+                    self.waitingForFirstLocalVideoFrameDisposable = (firstVideoFrameSignal
+                    |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
+                    |> deliverOnMainQueue).startStrict(completed: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.activeLocalVideoSource = localVideo
+                        if shouldUpdate {
+                            self.update(transition: .spring(duration: 0.3))
+                        }
+                    })
+                    shouldUpdate = true
+                }
+            } else {
+                self.activeLocalVideoSource = nil
             }
         }
         
@@ -291,6 +346,24 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         let sizeNorm: CGFloat = 64.0
         let renderingSize = CGSize(width: floor(sizeNorm * aspect), height: sizeNorm)
         let edgeSize: Int = 2
+        
+        let primaryVideoSource: VideoSource?
+        let secondaryVideoSource: VideoSource?
+        if let activeRemoteVideoSource = self.activeRemoteVideoSource, let activeLocalVideoSource = self.activeLocalVideoSource {
+            primaryVideoSource = activeRemoteVideoSource
+            secondaryVideoSource = activeLocalVideoSource
+        } else if let activeRemoteVideoSource = self.activeRemoteVideoSource {
+            primaryVideoSource = activeRemoteVideoSource
+            secondaryVideoSource = nil
+        } else if let activeLocalVideoSource = self.activeLocalVideoSource {
+            primaryVideoSource = activeLocalVideoSource
+            secondaryVideoSource = nil
+        } else {
+            primaryVideoSource = nil
+            secondaryVideoSource = nil
+        }
+        
+        let havePrimaryVideo = self.activeRemoteVideoSource != nil || self.activeLocalVideoSource != nil
         
         let visualBackgroundFrame = backgroundFrame.insetBy(dx: -CGFloat(edgeSize) / renderingSize.width * backgroundFrame.width, dy: -CGFloat(edgeSize) / renderingSize.height * backgroundFrame.height)
         
@@ -319,13 +392,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         transition.setFrame(view: self.buttonGroupView, frame: CGRect(origin: CGPoint(), size: params.size))
         
-        let buttons: [ButtonGroupView.Button] = [
-            ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), action: { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.speakerAction?()
-            }),
+        var buttons: [ButtonGroupView.Button] = [
             ButtonGroupView.Button(content: .video(isActive: params.state.localVideo != nil), action: { [weak self] in
                 guard let self else {
                     return
@@ -345,6 +412,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 self.endCallAction?()
             })
         ]
+        if self.activeLocalVideoSource != nil {
+            buttons.insert(ButtonGroupView.Button(content: .flipCamera, action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.flipCameraAction?()
+            }), at: 0)
+        } else {
+            buttons.insert(ButtonGroupView.Button(content: .speaker(isActive: params.state.audioOutput != .internalSpeaker), action: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.speakerAction?()
+            }), at: 0)
+        }
         self.buttonGroupView.update(size: params.size, buttons: buttons, transition: transition)
         
         if case let .active(activeState) = params.state.lifecycleState {
@@ -367,7 +449,9 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         } else {
             if let emojiView = self.emojiView {
                 self.emojiView = nil
-                emojiView.removeFromSuperview()
+                transition.setAlpha(view: emojiView, alpha: 0.0, completion: { [weak emojiView] _ in
+                    emojiView?.removeFromSuperview()
+                })
             }
         }
         
@@ -376,56 +460,112 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         
         let collapsedAvatarFrame = CGRect(origin: CGPoint(x: floor((params.size.width - collapsedAvatarSize) * 0.5), y: 222.0), size: CGSize(width: collapsedAvatarSize, height: collapsedAvatarSize))
         let expandedAvatarFrame = CGRect(origin: CGPoint(), size: params.size)
-        let avatarFrame = self.activeRemoteVideoSource != nil ? expandedAvatarFrame : collapsedAvatarFrame
-        let avatarCornerRadius = self.activeRemoteVideoSource != nil ? params.screenCornerRadius : collapsedAvatarSize * 0.5
+        let expandedVideoFrame = CGRect(origin: CGPoint(), size: params.size)
+        let avatarFrame = havePrimaryVideo ? expandedAvatarFrame : collapsedAvatarFrame
+        let avatarCornerRadius = havePrimaryVideo ? params.screenCornerRadius : collapsedAvatarSize * 0.5
         
-        if let activeRemoteVideoSource = self.activeRemoteVideoSource {
-            let videoContainerView: VideoContainerView
-            if let current = self.videoContainerView {
-                videoContainerView = current
+        let minimizedVideoInsets = UIEdgeInsets(top: 124.0, left: 12.0, bottom: 178.0, right: 12.0)
+        
+        if let primaryVideoSource {
+            let remoteVideoContainerView: VideoContainerView
+            if let current = self.remoteVideoContainerView {
+                remoteVideoContainerView = current
             } else {
-                videoContainerView = VideoContainerView(frame: CGRect())
-                self.videoContainerView = videoContainerView
-                self.insertSubview(videoContainerView, belowSubview: self.titleView)
-                self.overlayContentsView.layer.addSublayer(videoContainerView.blurredContainerLayer)
+                remoteVideoContainerView = VideoContainerView(frame: CGRect())
+                self.remoteVideoContainerView = remoteVideoContainerView
+                self.insertSubview(remoteVideoContainerView, belowSubview: self.overlayContentsView)
+                self.overlayContentsView.layer.addSublayer(remoteVideoContainerView.blurredContainerLayer)
                 
-                videoContainerView.layer.position = self.avatarLayer.position
-                videoContainerView.layer.bounds = self.avatarLayer.bounds
-                videoContainerView.alpha = 0.0
-                videoContainerView.blurredContainerLayer.position = self.avatarLayer.position
-                videoContainerView.blurredContainerLayer.bounds = self.avatarLayer.bounds
-                videoContainerView.blurredContainerLayer.opacity = 0.0
-                videoContainerView.update(size: self.avatarLayer.bounds.size, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, isExpanded: false, transition: .immediate)
+                remoteVideoContainerView.layer.position = self.avatarLayer.position
+                remoteVideoContainerView.layer.bounds = self.avatarLayer.bounds
+                remoteVideoContainerView.alpha = 0.0
+                remoteVideoContainerView.blurredContainerLayer.position = self.avatarLayer.position
+                remoteVideoContainerView.blurredContainerLayer.bounds = self.avatarLayer.bounds
+                remoteVideoContainerView.blurredContainerLayer.opacity = 0.0
+                remoteVideoContainerView.update(size: self.avatarLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, isMinimized: false, isAnimatingOut: false, transition: .immediate)
             }
             
-            if videoContainerView.video !== activeRemoteVideoSource {
-                videoContainerView.video = activeRemoteVideoSource
+            if remoteVideoContainerView.video !== primaryVideoSource {
+                remoteVideoContainerView.video = primaryVideoSource
             }
             
-            transition.setPosition(view: videoContainerView, position: avatarFrame.center)
-            transition.setBounds(view: videoContainerView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
-            transition.setAlpha(view: videoContainerView, alpha: 1.0)
-            transition.setPosition(layer: videoContainerView.blurredContainerLayer, position: avatarFrame.center)
-            transition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
-            transition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 1.0)
-            videoContainerView.update(size: avatarFrame.size, cornerRadius: avatarCornerRadius, isExpanded: self.activeRemoteVideoSource != nil, transition: transition)
+            transition.setPosition(view: remoteVideoContainerView, position: expandedVideoFrame.center)
+            transition.setBounds(view: remoteVideoContainerView, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            transition.setAlpha(view: remoteVideoContainerView, alpha: 1.0)
+            transition.setPosition(layer: remoteVideoContainerView.blurredContainerLayer, position: expandedVideoFrame.center)
+            transition.setBounds(layer: remoteVideoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            transition.setAlpha(layer: remoteVideoContainerView.blurredContainerLayer, alpha: 1.0)
+            remoteVideoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, isMinimized: false, isAnimatingOut: false, transition: transition)
         } else {
-            if let videoContainerView = self.videoContainerView {
-                videoContainerView.update(size: avatarFrame.size, cornerRadius: avatarCornerRadius, isExpanded: self.activeRemoteVideoSource != nil, transition: transition)
-                transition.setPosition(layer: videoContainerView.blurredContainerLayer, position: avatarFrame.center)
-                transition.setBounds(layer: videoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
-                transition.setAlpha(layer: videoContainerView.blurredContainerLayer, alpha: 0.0)
-                transition.setPosition(view: videoContainerView, position: avatarFrame.center)
-                transition.setBounds(view: videoContainerView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
-                if videoContainerView.alpha != 0.0 {
-                    transition.setAlpha(view: videoContainerView, alpha: 0.0, completion: { [weak self, weak videoContainerView] completed in
-                        guard let self, let videoContainerView, completed else {
+            if let remoteVideoContainerView = self.remoteVideoContainerView {
+                remoteVideoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, cornerRadius: avatarCornerRadius, isMinimized: false, isAnimatingOut: true, transition: transition)
+                transition.setPosition(layer: remoteVideoContainerView.blurredContainerLayer, position: avatarFrame.center)
+                transition.setBounds(layer: remoteVideoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                transition.setAlpha(layer: remoteVideoContainerView.blurredContainerLayer, alpha: 0.0)
+                transition.setPosition(view: remoteVideoContainerView, position: avatarFrame.center)
+                transition.setBounds(view: remoteVideoContainerView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                if remoteVideoContainerView.alpha != 0.0 {
+                    transition.setAlpha(view: remoteVideoContainerView, alpha: 0.0, completion: { [weak self, weak remoteVideoContainerView] completed in
+                        guard let self, let remoteVideoContainerView, completed else {
                             return
                         }
-                        videoContainerView.removeFromSuperview()
-                        videoContainerView.blurredContainerLayer.removeFromSuperlayer()
-                        if self.videoContainerView === videoContainerView {
-                            self.videoContainerView = nil
+                        remoteVideoContainerView.removeFromSuperview()
+                        remoteVideoContainerView.blurredContainerLayer.removeFromSuperlayer()
+                        if self.remoteVideoContainerView === remoteVideoContainerView {
+                            self.remoteVideoContainerView = nil
+                        }
+                    })
+                }
+            }
+        }
+        
+        if let secondaryVideoSource {
+            let localVideoContainerView: VideoContainerView
+            if let current = self.localVideoContainerView {
+                localVideoContainerView = current
+            } else {
+                localVideoContainerView = VideoContainerView(frame: CGRect())
+                self.localVideoContainerView = localVideoContainerView
+                self.insertSubview(localVideoContainerView, belowSubview: self.overlayContentsView)
+                self.overlayContentsView.layer.addSublayer(localVideoContainerView.blurredContainerLayer)
+                
+                localVideoContainerView.layer.position = self.avatarLayer.position
+                localVideoContainerView.layer.bounds = self.avatarLayer.bounds
+                localVideoContainerView.alpha = 0.0
+                localVideoContainerView.blurredContainerLayer.position = self.avatarLayer.position
+                localVideoContainerView.blurredContainerLayer.bounds = self.avatarLayer.bounds
+                localVideoContainerView.blurredContainerLayer.opacity = 0.0
+                localVideoContainerView.update(size: self.avatarLayer.bounds.size, insets: minimizedVideoInsets, cornerRadius: self.avatarLayer.params?.cornerRadius ?? 0.0, isMinimized: true, isAnimatingOut: false, transition: .immediate)
+            }
+            
+            if localVideoContainerView.video !== secondaryVideoSource {
+                localVideoContainerView.video = secondaryVideoSource
+            }
+            
+            transition.setPosition(view: localVideoContainerView, position: expandedVideoFrame.center)
+            transition.setBounds(view: localVideoContainerView, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            transition.setAlpha(view: localVideoContainerView, alpha: 1.0)
+            transition.setPosition(layer: localVideoContainerView.blurredContainerLayer, position: expandedVideoFrame.center)
+            transition.setBounds(layer: localVideoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: expandedVideoFrame.size))
+            transition.setAlpha(layer: localVideoContainerView.blurredContainerLayer, alpha: 1.0)
+            localVideoContainerView.update(size: expandedVideoFrame.size, insets: minimizedVideoInsets, cornerRadius: params.screenCornerRadius, isMinimized: true, isAnimatingOut: false, transition: transition)
+        } else {
+            if let localVideoContainerView = self.localVideoContainerView {
+                localVideoContainerView.update(size: avatarFrame.size, insets: minimizedVideoInsets, cornerRadius: avatarCornerRadius, isMinimized: false, isAnimatingOut: true, transition: transition)
+                transition.setPosition(layer: localVideoContainerView.blurredContainerLayer, position: avatarFrame.center)
+                transition.setBounds(layer: localVideoContainerView.blurredContainerLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                transition.setAlpha(layer: localVideoContainerView.blurredContainerLayer, alpha: 0.0)
+                transition.setPosition(view: localVideoContainerView, position: avatarFrame.center)
+                transition.setBounds(view: localVideoContainerView, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
+                if localVideoContainerView.alpha != 0.0 {
+                    transition.setAlpha(view: localVideoContainerView, alpha: 0.0, completion: { [weak self, weak localVideoContainerView] completed in
+                        guard let self, let localVideoContainerView, completed else {
+                            return
+                        }
+                        localVideoContainerView.removeFromSuperview()
+                        localVideoContainerView.blurredContainerLayer.removeFromSuperlayer()
+                        if self.localVideoContainerView === localVideoContainerView {
+                            self.localVideoContainerView = nil
                         }
                     })
                 }
@@ -437,7 +577,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         }
         transition.setPosition(layer: self.avatarLayer, position: avatarFrame.center)
         transition.setBounds(layer: self.avatarLayer, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
-        self.avatarLayer.update(size: collapsedAvatarFrame.size, isExpanded: self.activeRemoteVideoSource != nil, cornerRadius: avatarCornerRadius, transition: transition)
+        self.avatarLayer.update(size: collapsedAvatarFrame.size, isExpanded:havePrimaryVideo, cornerRadius: avatarCornerRadius, transition: transition)
         
         let blobFrame = CGRect(origin: CGPoint(x: floor(avatarFrame.midX - blobSize * 0.5), y: floor(avatarFrame.midY - blobSize * 0.5)), size: CGSize(width: blobSize, height: blobSize))
         transition.setPosition(layer: self.blobLayer, position: CGPoint(x: blobFrame.midX, y: blobFrame.midY))
@@ -447,16 +587,21 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         switch params.state.lifecycleState {
         case .terminated:
             titleString = "Call Ended"
-            transition.setScale(layer: self.blobLayer, scale: 0.001)
+            if !transition.animation.isImmediate {
+                transition.withAnimation(.curve(duration: 0.3, curve: .easeInOut)).setScale(layer: self.blobLayer, scale: 0.3)
+            } else {
+                transition.setScale(layer: self.blobLayer, scale: 0.3)
+            }
             transition.setAlpha(layer: self.blobLayer, alpha: 0.0)
         default:
             titleString = params.state.name
+            transition.setAlpha(layer: self.blobLayer, alpha: 1.0)
         }
         
         let titleSize = self.titleView.update(
             string: titleString,
-            fontSize: self.activeRemoteVideoSource == nil ? 28.0 : 17.0,
-            fontWeight: self.activeRemoteVideoSource == nil ? 0.0 : 0.25,
+            fontSize: !havePrimaryVideo ? 28.0 : 17.0,
+            fontWeight: !havePrimaryVideo ? 0.0 : 0.25,
             color: .white,
             constrainedWidth: params.size.width - 16.0 * 2.0,
             transition: transition
@@ -464,7 +609,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         let titleFrame = CGRect(
             origin: CGPoint(
                 x: (params.size.width - titleSize.width) * 0.5,
-                y: self.activeRemoteVideoSource == nil ? collapsedAvatarFrame.maxY + 39.0 : params.insets.top + 17.0
+                y: !havePrimaryVideo ? collapsedAvatarFrame.maxY + 39.0 : params.insets.top + 17.0
             ),
             size: titleSize
         )
@@ -492,6 +637,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 })
             }
         case let .terminated(terminatedState):
+            self.processedInitialAudioLevelBump = false
             statusState = .terminated(StatusView.TerminatedState(duration: terminatedState.duration))
         }
         
@@ -518,7 +664,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
         let statusFrame = CGRect(
             origin: CGPoint(
                 x: (params.size.width - statusSize.width) * 0.5,
-                y: titleFrame.maxY + (self.activeRemoteVideoSource != nil ? 0.0 : 4.0)
+                y: titleFrame.maxY + (havePrimaryVideo ? 0.0 : 4.0)
             ),
             size: statusSize
         )
@@ -534,7 +680,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             transition.setFrame(view: self.statusView, frame: statusFrame)
         }
         
-        if "".isEmpty {//} case let .active(activeState) = params.state.lifecycleState, activeState.signalInfo.quality <= 0.2 {
+        if case let .active(activeState) = params.state.lifecycleState, activeState.signalInfo.quality <= 0.2 {
             let weakSignalView: WeakSignalView
             if let current = self.weakSignalView {
                 weakSignalView = current
@@ -544,7 +690,7 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
                 self.addSubview(weakSignalView)
             }
             let weakSignalSize = weakSignalView.update(constrainedSize: CGSize(width: params.size.width - 32.0, height: 100.0))
-            let weakSignalFrame = CGRect(origin: CGPoint(x: floor((params.size.width - weakSignalSize.width) * 0.5), y: statusFrame.maxY + (self.activeRemoteVideoSource != nil ? 4.0 : 4.0)), size: weakSignalSize)
+            let weakSignalFrame = CGRect(origin: CGPoint(x: floor((params.size.width - weakSignalSize.width) * 0.5), y: statusFrame.maxY + (havePrimaryVideo ? 12.0 : 12.0)), size: weakSignalSize)
             if weakSignalView.bounds.isEmpty {
                 weakSignalView.frame = weakSignalFrame
                 if !transition.animation.isImmediate {
