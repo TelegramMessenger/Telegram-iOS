@@ -244,7 +244,16 @@ public final class AvatarBadgeView: UIImageView {
                         var brightness: CGFloat = 0
                         var alpha: CGFloat = 0
                         backgroundColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-                        return UIColor(hue: hue, saturation: saturation, brightness: brightness * 0.9, alpha: alpha)
+                        
+                        if brightness > 0.5 {
+                            brightness = max(brightness - 0.2, 0)
+                            saturation = min(saturation + 0.2, 1)
+                        } else {
+                            brightness = min(brightness + 0.3, 1)
+                            saturation = max(saturation - 0.2, 0)
+                        }
+                        
+                        return UIColor(hue: hue, saturation: saturation, brightness: brightness, alpha: alpha)
                     } else {
                         return backgroundColor
                     }
