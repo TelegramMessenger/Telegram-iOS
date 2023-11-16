@@ -27,6 +27,7 @@ import LocalMediaResources
 import ImageCompression
 import TextFormat
 import MediaEditor
+import PeerInfoScreen
 
 private class DetailsChatPlaceholderNode: ASDisplayNode, NavigationDetailsPlaceholderNode {
     private var presentationData: PresentationData

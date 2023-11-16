@@ -115,6 +115,8 @@ import ChatMessageAnimatedStickerItemNode
 import ChatMessageBubbleItemNode
 import ChatNavigationButton
 import WebsiteType
+import ChatQrCodeScreen
+import PeerInfoScreen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -11814,7 +11816,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
     
-    func beginClearHistory(type: InteractiveHistoryClearingType) {
+    public func beginClearHistory(type: InteractiveHistoryClearingType) {
         guard case let .peer(peerId) = self.chatLocation else {
             return
         }
@@ -18404,7 +18406,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
-    func activateSearch(domain: ChatSearchDomain = .everything, query: String = "") {
+    public func activateSearch(domain: ChatSearchDomain = .everything, query: String = "") {
         self.focusOnSearchAfterAppearance = (domain, query)
         self.interfaceInteraction?.beginMessageSearch(domain, query)
     }
@@ -18671,40 +18673,5 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
         }
         
         return (reactions, result)
-    }
-}
-
-final class ChatControllerNavigationData: CustomViewControllerNavigationData {
-    let peerId: PeerId
-    let threadId: Int64?
-    
-    init(peerId: PeerId, threadId: Int64?) {
-        self.peerId = peerId
-        self.threadId = threadId
-    }
-    
-    func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary? {
-        if let summary = summary as? ChatControllerNavigationDataSummary {
-            return summary.adding(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
-        } else {
-            return ChatControllerNavigationDataSummary(peerNavigationItems: [ChatNavigationStackItem(peerId: self.peerId, threadId: threadId)])
-        }
-    }
-}
-
-final class ChatControllerNavigationDataSummary: CustomViewControllerNavigationDataSummary {
-    let peerNavigationItems: [ChatNavigationStackItem]
-    
-    init(peerNavigationItems: [ChatNavigationStackItem]) {
-        self.peerNavigationItems = peerNavigationItems
-    }
-    
-    func adding(peerNavigationItem: ChatNavigationStackItem) -> ChatControllerNavigationDataSummary {
-        var peerNavigationItems = self.peerNavigationItems
-        if let index = peerNavigationItems.firstIndex(of: peerNavigationItem) {
-            peerNavigationItems.removeSubrange(0 ... index)
-        }
-        peerNavigationItems.insert(peerNavigationItem, at: 0)
-        return ChatControllerNavigationDataSummary(peerNavigationItems: peerNavigationItems)
     }
 }

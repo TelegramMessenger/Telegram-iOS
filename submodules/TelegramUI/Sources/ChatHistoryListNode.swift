@@ -42,17 +42,6 @@ struct ChatTopVisibleMessageRange: Equatable {
 
 private let historyMessageCount: Int = 44
 
-public enum ChatHistoryListDisplayHeaders {
-    case none
-    case all
-    case allButLast
-}
-
-public enum ChatHistoryListMode: Equatable {
-    case bubbles
-    case list(search: Bool, reversed: Bool, reverseGroups: Bool, displayHeaders: ChatHistoryListDisplayHeaders, hintLinks: Bool, isGlobalSearch: Bool)
-}
-
 enum ChatHistoryViewScrollPosition {
     case unread(index: MessageIndex)
     case positionRestoration(index: MessageIndex, relativeOffset: CGFloat)
@@ -436,22 +425,7 @@ private struct ChatHistoryAnimatedEmojiConfiguration {
 
 private var nextClientId: Int32 = 1
 
-public enum ChatHistoryListSource {
-    public struct Quote {
-        public var text: String
-        public var offset: Int?
-        
-        public init(text: String, offset: Int?) {
-            self.text = text
-            self.offset = offset
-        }
-    }
-    
-    case `default`
-    case custom(messages: Signal<([Message], Int32, Bool), NoError>, messageId: MessageId, quote: Quote?, loadMore: (() -> Void)?)
-}
-
-public final class ChatHistoryListNode: ListView, ChatHistoryNode {
+public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHistoryListNode {
     static let fixedAdMessageStableId: UInt32 = UInt32.max - 5000
     
     private let context: AccountContext
@@ -702,7 +676,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var dustEffectLayer: DustEffectLayer?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource = .default, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl? = { nil }) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>), chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags?, source: ChatHistoryListSource, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, selectedMessages: Signal<Set<MessageId>?, NoError>, mode: ChatHistoryListMode = .bubbles, messageTransitionNode: @escaping () -> ChatMessageTransitionNodeImpl?) {
         var tagMask = tagMask
         if case .pinnedMessages = subject {
             tagMask = .pinned
@@ -2184,7 +2158,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             } else if let attribute = attribute as? ReactionsMessageAttribute, attribute.hasUnseen {
                                 hasUnseenReactions = true
                             } else if let attribute = attribute as? AdMessageAttribute {
-                                if message.stableId != ChatHistoryListNode.fixedAdMessageStableId {
+                                if message.stableId != ChatHistoryListNodeImpl.fixedAdMessageStableId {
                                     visibleAdOpaqueIds.append(attribute.opaqueId)
                                 }
                             } else if let _ = attribute as? ReplyStoryAttribute {

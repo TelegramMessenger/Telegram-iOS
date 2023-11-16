@@ -14,6 +14,26 @@ import ListMessageItem
 import ChatControllerInteraction
 import ChatMessageItemView
 
+private extension ListMessageItemInteraction {
+    convenience init(controllerInteraction: ChatControllerInteraction) {
+        self.init(openMessage: { message, mode -> Bool in
+            return controllerInteraction.openMessage(message, OpenMessageParams(mode: mode))
+        }, openMessageContextMenu: { message, bool, node, rect, gesture in
+            controllerInteraction.openMessageContextMenu(message, bool, node, rect, gesture, nil)
+        }, toggleMessagesSelection: { messageId, selected in
+            controllerInteraction.toggleMessagesSelection(messageId, selected)
+        }, openUrl: { url, param1, param2, message in
+            controllerInteraction.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: param1, external: param2, message: message))
+        }, openInstantPage: { message, data in
+            controllerInteraction.openInstantPage(message, data)
+        }, longTap: { action, message in
+            controllerInteraction.longTap(action, message)
+        }, getHiddenMedia: {
+            return controllerInteraction.hiddenMedia
+        })
+    }
+}
+
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)
 }
@@ -94,7 +114,7 @@ private func chatHistorySearchContainerPreparedTransition(from fromEntries: [Cha
     return ChatHistorySearchContainerTransition(deletions: deletions, insertions: insertions, updates: updates, query: query, displayingResults: displayingResults)
 }
 
-final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
+public final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     
     private let dimNode: ASDisplayNode
@@ -106,7 +126,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     private var containerLayout: (ContainerViewLayout, CGFloat)?
     
     private var currentEntries: [ChatHistorySearchEntry]?
-    var currentMessages: [MessageId: Message]?
+    public var currentMessages: [MessageId: Message]?
     
     private var currentQuery: String?
     private let searchQuery = Promise<String?>()
@@ -114,7 +134,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     private let searchDisposable = MetaDisposable()
     
     private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
-    override var isSearching: Signal<Bool, NoError> {
+    override public var isSearching: Signal<Bool, NoError> {
         return self._isSearching.get()
     }
     
@@ -125,11 +145,11 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
     
     private var enqueuedTransitions: [(ChatHistorySearchContainerTransition, Bool)] = []
     
-    public override var hasDim: Bool {
+    override public var hasDim: Bool {
         return true
     }
     
-    init(context: AccountContext, peerId: PeerId, threadId: Int64?, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
+    public init(context: AccountContext, peerId: PeerId, threadId: Int64?, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
         self.context = context
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -236,13 +256,13 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         self.searchDisposable.dispose()
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
-    override func searchTextUpdated(text: String) {
+    override public func searchTextUpdated(text: String) {
         if text.isEmpty {
             self.searchQuery.set(.single(nil))
         } else {
@@ -250,7 +270,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let firstValidLayout = self.containerLayout == nil
         self.containerLayout = (layout, navigationBarHeight)
         
@@ -327,13 +347,13 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancel?()
         }
     }
     
-    func messageForGallery(_ id: MessageId) -> Message? {
+    public func messageForGallery(_ id: MessageId) -> Message? {
         if let currentEntries = self.currentEntries {
             for entry in currentEntries {
                 switch entry {
@@ -347,7 +367,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         return nil
     }
     
-    func updateHiddenMedia() {
+    public func updateHiddenMedia() {
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {
                 itemNode.updateHiddenMedia()
@@ -357,7 +377,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+    public func transitionNodeForGallery(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
         var transitionNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
         self.listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ChatMessageItemView {

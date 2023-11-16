@@ -5,6 +5,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import ChatPresentationInterfaceState
+import AccountContext
 
 public enum ChatHistoryNodeLoadState: Equatable {
     public enum EmptyType: Equatable {

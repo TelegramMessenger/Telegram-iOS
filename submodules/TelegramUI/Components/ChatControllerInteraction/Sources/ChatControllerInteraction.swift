@@ -115,7 +115,7 @@ public struct OpenMessageParams {
     }
 }
 
-public final class ChatControllerInteraction {
+public final class ChatControllerInteraction: ChatControllerInteractionProtocol {
     public enum OpenPeerSource {
         case `default`
         case reaction

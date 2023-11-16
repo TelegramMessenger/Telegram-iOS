@@ -807,7 +807,8 @@ public protocol TelegramRootControllerInterface: NavigationController {
     func openStoryCamera(customTarget: EnginePeer.Id?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
     
     func getContactsController() -> ViewController?
-    func getChatsController() -> ViewController?    
+    func getChatsController() -> ViewController?
+    func openSettings()
 }
 
 public protocol SharedAccountContext: AnyObject {
@@ -864,6 +865,18 @@ public protocol SharedAccountContext: AnyObject {
     func makeComposeController(context: AccountContext) -> ViewController
     func makeChatListController(context: AccountContext, location: ChatListControllerLocation, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, previewing: Bool, enableDebugActions: Bool) -> ChatListController
     func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController
+    func makeChatHistoryListNode(
+        context: AccountContext,
+        updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>),
+        chatLocation: ChatLocation,
+        chatLocationContextHolder: Atomic<ChatLocationContextHolder?>,
+        tagMask: MessageTags?,
+        source: ChatHistoryListSource,
+        subject: ChatControllerSubject?,
+        controllerInteraction: ChatControllerInteractionProtocol,
+        selectedMessages: Signal<Set<MessageId>?, NoError>,
+        mode: ChatHistoryListMode
+    ) -> ChatHistoryListNode
     func makeChatMessagePreviewItem(context: AccountContext, messages: [Message], theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?, tapMessage: ((Message) -> Void)?, clickThroughMessage: (() -> Void)?, backgroundNode: ASDisplayNode?, availableReactions: AvailableReactions?, isCentered: Bool) -> ListViewItem
     func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader
     func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController?
@@ -904,7 +917,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
-    func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
+    func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?, temporary: Bool) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource, forceDark: Bool, dismissed: (() -> Void)?) -> ViewController
     func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController

@@ -115,6 +115,7 @@ final class CallControllerNodeV2: ViewControllerTracingNode, CallControllerNodeP
             avatarImage: nil,
             audioOutput: .internalSpeaker,
             isMicrophoneMuted: false,
+            localVideo: nil,
             remoteVideo: nil
         )
         if let peer = call.peer {
@@ -424,7 +425,7 @@ private final class AdaptedCallVideoSource: VideoSource {
                         return
                     }
                     
-                    output = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle)
+                    output = Output(y: yTexture, uv: uvTexture, rotationAngle: rotationAngle, sourceId: videoFrameData.mirrorHorizontally || videoFrameData.mirrorVertically ? 1 : 0)
                 default:
                     return
                 }

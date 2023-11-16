@@ -11,7 +11,7 @@ import AppBundle
 import ChatPresentationInterfaceState
 import ChatInputPanelNode
 
-final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
+public final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
     private let reportButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
@@ -27,7 +27,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     
     private let canDeleteMessagesDisposable = MetaDisposable()
     
-    var selectedMessages = Set<MessageId>() {
+    public var selectedMessages = Set<MessageId>() {
         didSet {
             if oldValue != self.selectedMessages {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
@@ -53,7 +53,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    init(theme: PresentationTheme, strings: PresentationStrings, peerMedia: Bool = false) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, peerMedia: Bool = false) {
         self.theme = theme
         self.peerMedia = peerMedia
         
@@ -108,7 +108,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.canDeleteMessagesDisposable.dispose()
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    public func updateTheme(theme: PresentationTheme) {
         if self.theme !== theme {
             self.theme = theme
             
@@ -125,15 +125,15 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    @objc func deleteButtonPressed() {
+    @objc private func deleteButtonPressed() {
         self.interfaceInteraction?.deleteSelectedMessages()
     }
     
-    @objc func reportButtonPressed() {
+    @objc private func reportButtonPressed() {
         self.interfaceInteraction?.reportSelectedMessages()
     }
     
-    @objc func forwardButtonPressed() {
+    @objc private func forwardButtonPressed() {
         if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
             return
         }
@@ -144,7 +144,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    @objc func shareButtonPressed() {
+    @objc private func shareButtonPressed() {
         if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
             return
         }
@@ -155,7 +155,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+    override public func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
         
         let panelHeight = defaultHeight(metrics: metrics)
@@ -242,7 +242,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         return panelHeight
     }
     
-    override func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    override public func minimalHeight(interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
         return defaultHeight(metrics: metrics)
     }
 }

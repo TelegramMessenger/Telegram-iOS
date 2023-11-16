@@ -412,6 +412,9 @@ swift_library(
         "//submodules/TelegramUI/Components/PeerAllowedReactionsScreen",
         "//submodules/MetalEngine",
         "//submodules/TelegramUI/Components/DustEffect",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoScreen",
+        "//submodules/TelegramUI/Components/Chat/ChatMessageSelectionInputPanelNode",
+        "//submodules/TelegramUI/Components/Chat/ChatQrCodeScreen",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,
         "//build-system:ios_sim_arm64": [],

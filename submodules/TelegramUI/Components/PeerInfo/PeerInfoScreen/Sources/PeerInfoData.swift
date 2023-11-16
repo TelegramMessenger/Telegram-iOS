@@ -403,7 +403,7 @@ private func peerInfoScreenInputData(context: AccountContext, peerId: EnginePeer
     }
 }
 
-func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Never, NoError> {
+public func keepPeerInfoScreenDataHot(context: AccountContext, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Never, NoError> {
     return peerInfoScreenInputData(context: context, peerId: peerId, isSettings: false)
     |> mapToSignal { inputData -> Signal<Never, NoError> in
         switch inputData {

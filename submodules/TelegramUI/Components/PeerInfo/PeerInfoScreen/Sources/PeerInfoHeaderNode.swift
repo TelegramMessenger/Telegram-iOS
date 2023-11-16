@@ -34,6 +34,7 @@ import PeerInfoVisualMediaPaneNode
 import AvatarStoryIndicatorComponent
 import ComponentDisplayAdapters
 import ChatAvatarNavigationNode
+import MultiScaleTextNode
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message

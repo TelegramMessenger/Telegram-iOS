@@ -154,7 +154,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let contentContainerNode: ASDisplayNode
     let contentDimNode: ASDisplayNode
     let backgroundNode: WallpaperBackgroundNode
-    let historyNode: ChatHistoryListNode
+    let historyNode: ChatHistoryListNodeImpl
     var blurredHistoryNode: ASImageNode?
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
@@ -604,7 +604,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
 
         var getMessageTransitionNode: (() -> ChatMessageTransitionNodeImpl?)?
-        self.historyNode = ChatHistoryListNode(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
+        self.historyNode = ChatHistoryListNodeImpl(context: context, updatedPresentationData: controller?.updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: nil, source: source, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), messageTransitionNode: {
             return getMessageTransitionNode?()
         })
         self.historyNode.rotated = true
@@ -3725,7 +3725,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
     final class SnapshotState {
         let backgroundNode: WallpaperBackgroundNode
-        fileprivate let historySnapshotState: ChatHistoryListNode.SnapshotState
+        fileprivate let historySnapshotState: ChatHistoryListNodeImpl.SnapshotState
         let titleViewSnapshotState: ChatTitleView.SnapshotState?
         let avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?
         let navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState
@@ -3736,7 +3736,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
 
         fileprivate init(
             backgroundNode: WallpaperBackgroundNode,
-            historySnapshotState: ChatHistoryListNode.SnapshotState,
+            historySnapshotState: ChatHistoryListNodeImpl.SnapshotState,
             titleViewSnapshotState: ChatTitleView.SnapshotState?,
             avatarSnapshotState: ChatAvatarNavigationNode.SnapshotState?,
             navigationButtonsSnapshotState: ChatHistoryNavigationButtons.SnapshotState,
