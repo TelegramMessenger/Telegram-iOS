@@ -355,7 +355,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     }
                 }
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
-                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     context: context,
                     title: title,
                     image: image,
@@ -569,7 +569,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         }
 
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
@@ -608,7 +608,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                     let status: ContactsPeerItemStatus = .none
                     
                     return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                        presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                        presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                         sortOrder: presentationData.nameSortOrder,
                         displayOrder: presentationData.nameDisplayOrder,
                         context: context,
@@ -670,7 +670,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                 let peerContent: ContactsPeerItemPeer = .peer(peer: contactEntry.peer, chatPeer: contactEntry.peer)
 
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
@@ -889,7 +889,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         }
                     
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
@@ -928,7 +928,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         let status: ContactsPeerItemStatus = .none
                         
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                            presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                             sortOrder: presentationData.nameSortOrder,
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
@@ -990,7 +990,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                 let peerContent: ContactsPeerItemPeer = .peer(peer: contactEntry.peer, chatPeer: contactEntry.peer)
 
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
-                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     sortOrder: presentationData.nameSortOrder,
                     displayOrder: presentationData.nameDisplayOrder,
                     context: context,
@@ -1057,7 +1057,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                     }
                 }
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListAdditionalCategoryItem(
-                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     context: context,
                     title: title,
                     image: image,

@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/Chat/ChatMessageItemCommon",
         "//submodules/TelegramUI/Components/Utils/RoundedRectWithTailPath",
         "//submodules/Components/MultilineTextComponent",
+        "//submodules/Components/BundleIconComponent",
         "//submodules/ChatMessageBackground",
     ],
     visibility = [

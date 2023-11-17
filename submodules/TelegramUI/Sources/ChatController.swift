@@ -3697,7 +3697,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let (id, statsDatacenterId) = messageIdAndStatsDatacenterId, let statsDatacenterId = statsDatacenterId else {
                         return
                     }
-                    strongSelf.push(messageStatsController(context: context, messageId: id, statsDatacenterId: statsDatacenterId))
+                    strongSelf.push(messageStatsController(context: context, subject: .message(id: id), statsDatacenterId: statsDatacenterId))
                 })
             }, delay: true)
         }, editMessageMedia: { [weak self] messageId, draw in
@@ -4105,6 +4105,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.controllerInteraction?.openJoinLink(joinHash)
             case let .webPage(_, url):
                 self.controllerInteraction?.openUrl(ChatControllerInteraction.OpenUrl(url: url, concealed: false, external: false))
+            case let .botApp(peerId, botApp, startParam):
+                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] peer in
+                    if let self, let peer {
+                        self.presentBotApp(botApp: botApp, botPeer: peer, payload: startParam)
+                    }
+                })
             }
         }, openRequestedPeerSelection: { [weak self] messageId, peerType, buttonId in
             guard let self else {

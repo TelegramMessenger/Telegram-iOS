@@ -1123,7 +1123,7 @@ private final class CameraScreenComponent: CombinedComponent {
                     component: MultilineTextComponent(
                         text: .plain(NSAttributedString(string: durationString, font: Font.with(size: 21.0, design: .camera), textColor: controlsTintColor)),
                         horizontalAlignment: .center,
-                        textShadowColor: UIColor(rgb: 0x000000, alpha: 0.2)
+                        textShadowColor: controlsTintColor == .black ? .clear : UIColor(rgb: 0x000000, alpha: 0.2)
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition

@@ -479,9 +479,12 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
             } else if let adAttribute = item.message.adAttribute {
-                //TODO:localize
-                //Recommended?
-                title = "Sponsored"
+                switch adAttribute.messageType {
+                case .sponsored:
+                    title = item.presentationData.strings.Message_AdSponsoredLabel
+                case .recommended:
+                    title = item.presentationData.strings.Message_AdRecommendedLabel
+                }
                 subtitle = item.message.author.flatMap {
                     NSAttributedString(string: EnginePeer($0).compactDisplayTitle, font: titleFont)
                 }
@@ -500,8 +503,14 @@ public final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContent
                     }
                 }
 
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-                    actionTitle = item.presentationData.strings.Conversation_ViewBot
+                if let buttonText = adAttribute.buttonText {
+                    actionTitle = buttonText.uppercased()
+                } else if let author = item.message.author as? TelegramUser, author.botInfo != nil {
+                    if case .botApp = adAttribute.target {
+                        actionTitle = item.presentationData.strings.Conversation_LaunchApp
+                    } else {
+                        actionTitle = item.presentationData.strings.Conversation_ViewBot
+                    }
                 } else if let author = item.message.author as? TelegramChannel, case .group = author.info {
                     if case let .peer(_, messageId, _) = adAttribute.target, messageId != nil {
                         actionTitle = item.presentationData.strings.Conversation_ViewPost

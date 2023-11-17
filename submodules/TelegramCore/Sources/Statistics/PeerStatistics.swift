@@ -52,6 +52,14 @@ public struct ChannelStatsMessageInteractions: Equatable {
     public let messageId: MessageId
     public let views: Int32
     public let forwards: Int32
+    public let reactions: Int32
+    
+    public init(messageId: MessageId, views: Int32, forwards: Int32, reactions: Int32) {
+        self.messageId = messageId
+        self.views = views
+        self.forwards = forwards
+        self.reactions = reactions
+    }
 }
 
 public final class ChannelStats: Equatable {
@@ -1143,7 +1151,7 @@ extension ChannelStatsMessageInteractions {
     init(apiMessageInteractionCounters: Api.MessageInteractionCounters, peerId: PeerId) {
         switch apiMessageInteractionCounters {
             case let .messageInteractionCounters(msgId, views, forwards):
-                self = ChannelStatsMessageInteractions(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: msgId), views: views, forwards: forwards)
+                self = ChannelStatsMessageInteractions(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: msgId), views: views, forwards: forwards, reactions: 0)
         }
     }
 }

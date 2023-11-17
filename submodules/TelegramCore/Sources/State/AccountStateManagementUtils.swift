@@ -3344,7 +3344,7 @@ func replayFinalState(
     var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
     var pollLangPacks = Set<String>()
     var updatedThemes: [Int64: TelegramTheme] = [:]
-    var updatedWallpapers: [PeerId: TelegramWallpaper] = [:]
+    var updatedWallpapers: [PeerId: TelegramWallpaper?] = [:]
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     var syncChatListFilters = false
@@ -4382,7 +4382,7 @@ func replayFinalState(
             case let .UpdateTheme(theme):
                 updatedThemes[theme.id] = theme
             case let .UpdateWallpaper(peerId, wallpaper):
-                updatedWallpapers[peerId] = wallpaper
+                updatedWallpapers.updateValue(wallpaper, forKey: peerId)
             case .SyncChatListFilters:
                 syncChatListFilters = true
             case let .UpdateChatListFilterOrder(order):

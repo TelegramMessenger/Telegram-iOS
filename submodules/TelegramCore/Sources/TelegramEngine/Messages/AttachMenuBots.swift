@@ -666,19 +666,8 @@ public final class BotApp: Equatable, Codable {
         self.shortName = try container.decode(String.self, forKey: .shortName)
         self.title = try container.decode(String.self, forKey: .title)
         self.description = try container.decode(String.self, forKey: .description)
-        
-        if let data = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .photo) {
-            self.photo = TelegramMediaImage(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data.data)))
-        } else {
-            self.photo = nil
-        }
-        
-        if let data = try container.decodeIfPresent(AdaptedPostboxDecoder.RawObjectData.self, forKey: .document) {
-            self.document = TelegramMediaFile(decoder: PostboxDecoder(buffer: MemoryBuffer(data: data.data)))
-        } else {
-            self.document = nil
-        }
-        
+        self.photo = try container.decodeIfPresent(TelegramMediaImage.self, forKey: .photo)
+        self.document = try container.decodeIfPresent(TelegramMediaFile.self, forKey: .document)
         self.hash = try container.decode(Int64.self, forKey: .hash)
         self.flags = Flags(rawValue: try container.decode(Int32.self, forKey: .flags))
     }
@@ -767,12 +756,23 @@ func _internal_getBotApp(account: Account, reference: BotAppReference) -> Signal
                         appFlags.insert(.hasSettings)
                     }
                     return .single(BotApp(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: appFlags))
-            case .botAppNotModified:
-                return .complete()
-            }
+                case .botAppNotModified:
+                    return .complete()
+                }
             }
         }
     }
     |> castError(GetBotAppError.self)
     |> switchToLatest
+}
+
+extension BotApp {
+    convenience init?(apiBotApp: Api.BotApp) {
+        switch apiBotApp {
+        case let .botApp(_, id, accessHash, shortName, title, description, photo, document, hash):
+            self.init(id: id, accessHash: accessHash, shortName: shortName, title: title, description: description, photo: telegramMediaImageFromApiPhoto(photo), document: document.flatMap(telegramMediaFileFromApiDocument), hash: hash, flags: [])
+        case .botAppNotModified:
+            return nil
+        }
+    }
 }

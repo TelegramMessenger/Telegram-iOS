@@ -211,9 +211,9 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 if peer.unreadCount > 0 {
                     badge = ContactsPeerItemBadge(count: peer.unreadCount, type: isMuted ? .inactive : .active)
                 }
-                
+            
                 return ContactsPeerItem(
-                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
+                    presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat),
                     sortOrder: nameSortOrder,
                     displayOrder: nameDisplayOrder,
                     context: context,
