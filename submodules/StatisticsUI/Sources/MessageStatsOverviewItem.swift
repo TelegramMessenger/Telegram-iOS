@@ -10,12 +10,12 @@ import PresentationDataUtils
 
 class MessageStatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
-    let stats: MessageStats
+    let stats: PostStats
     let publicShares: Int32?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, stats: MessageStats, publicShares: Int32?, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, stats: PostStats, publicShares: Int32?, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.stats = stats
         self.publicShares = publicShares

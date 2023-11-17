@@ -561,6 +561,7 @@ private final class PeerInfoInteraction {
     let displayTopicsLimited: (TopicsLimitedReason) -> Void
     let openPeerMention: (String, ChatControllerInteractionNavigateToPeer) -> Void
     let openBotApp: (AttachMenuBot) -> Void
+    let openEditing: () -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -614,7 +615,8 @@ private final class PeerInfoInteraction {
         toggleForumTopics: @escaping (Bool) -> Void,
         displayTopicsLimited: @escaping (TopicsLimitedReason) -> Void,
         openPeerMention: @escaping (String, ChatControllerInteractionNavigateToPeer) -> Void,
-        openBotApp: @escaping (AttachMenuBot) -> Void
+        openBotApp: @escaping (AttachMenuBot) -> Void,
+        openEditing: @escaping () -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -668,6 +670,7 @@ private final class PeerInfoInteraction {
         self.displayTopicsLimited = displayTopicsLimited
         self.openPeerMention = openPeerMention
         self.openBotApp = openBotApp
+        self.openEditing = openEditing
     }
 }
 
@@ -1208,6 +1211,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         let ItemAdmins = 6
         let ItemMembers = 7
         let ItemMemberRequests = 8
+        let ItemEdit = 9
         
         if let _ = data.threadData {
             let mainUsername: String
@@ -1358,6 +1362,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                                     interaction.openParticipantsSection(.memberRequests)
                                 }))
                             }
+                            
+                            items[.peerMembers]!.append(PeerInfoScreenDisclosureItem(id: ItemEdit, label: .none, text: presentationData.strings.Channel_Info_Settings, icon: UIImage(bundleImageName: "Chat/Info/SettingsIcon"), action: {
+                                interaction.openEditing()
+                            }))
                         }
                     }
                 }
@@ -2425,6 +2433,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             },
             openBotApp: { [weak self] bot in
                 self?.openBotApp(bot)
+            },
+            openEditing: { [weak self] in
+                self?.headerNode.navigationButtonContainer.performAction?(.edit, nil, nil)
             }
         )
         

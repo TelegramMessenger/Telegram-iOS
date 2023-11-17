@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import SwiftSignalKit
+import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
@@ -35,7 +36,7 @@ private enum StatsSection: Int32 {
 
 private enum StatsEntry: ItemListNodeEntry {
     case overviewTitle(PresentationTheme, String)
-    case overview(PresentationTheme, MessageStats, Int32?)
+    case overview(PresentationTheme, PostStats, Int32?)
     
     case interactionsTitle(PresentationTheme, String)
     case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
@@ -89,8 +90,14 @@ private enum StatsEntry: ItemListNodeEntry {
                     return false
                 }
             case let .overview(lhsTheme, lhsStats, lhsPublicShares):
-                if case let .overview(rhsTheme, rhsStats, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsStats == rhsStats, lhsPublicShares == rhsPublicShares {
-                    return true
+                if case let .overview(rhsTheme, rhsStats, rhsPublicShares) = rhs, lhsTheme === rhsTheme, lhsPublicShares == rhsPublicShares {
+                    if let lhsMessageStats = lhsStats as? MessageStats, let rhsMessageStats = rhsStats as? MessageStats {
+                        return lhsMessageStats == rhsMessageStats
+                    } else if let lhsStoryStats = lhsStats as? StoryStats, let rhsStoryStats = rhsStats as? StoryStats {
+                        return lhsStoryStats == rhsStoryStats
+                    } else {
+                        return false
+                    }
                 } else {
                     return false
                 }
@@ -172,7 +179,7 @@ private enum StatsEntry: ItemListNodeEntry {
     }
 }
 
-private func messageStatsControllerEntries(data: MessageStats?, messages: SearchMessagesResult?, presentationData: PresentationData) -> [StatsEntry] {
+private func messageStatsControllerEntries(data: PostStats?, messages: SearchMessagesResult?, presentationData: PresentationData) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     if let data = data {
@@ -212,44 +219,98 @@ private func messageStatsControllerEntries(data: MessageStats?, messages: Search
     return entries
 }
 
-public func messageStatsController(context: AccountContext, messageId: EngineMessage.Id, statsDatacenterId: Int32?) -> ViewController {
+public enum StatsSubject {
+    case message(id: EngineMessage.Id)
+    case story(peer: EnginePeer, storyItem: EngineStoryItem)
+}
+
+protocol PostStats {
+    var views: Int { get }
+    var forwards: Int { get }
+    var interactionsGraph: StatsGraph { get }
+    var interactionsGraphDelta: Int64 { get }
+    var reactionsGraph: StatsGraph { get }
+}
+
+extension MessageStats: PostStats {
+    
+}
+
+extension StoryStats: PostStats {
+    
+}
+
+public func messageStatsController(context: AccountContext, subject: StatsSubject, statsDatacenterId: Int32?) -> ViewController {
     var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     
     let actionsDisposable = DisposableSet()
-    let dataPromise = Promise<MessageStats?>(nil)
+    let dataPromise = Promise<PostStats?>(nil)
     let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
     
     let datacenterId: Int32 = statsDatacenterId ?? 0
         
-    let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, messageId: messageId)
-    let dataSignal: Signal<MessageStats?, NoError> = statsContext.state
-    |> map { state in
-        return state.stats
+    let anyStatsContext: Any
+    let dataSignal: Signal<PostStats?, NoError>
+    var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
+    switch subject {
+    case let .message(id):
+        let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, messageId: id)
+        loadDetailedGraphImpl = { [weak statsContext] graph, x in
+            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
+        }
+        dataSignal = statsContext.state
+        |> map { state in
+            return state.stats
+        }
+        dataPromise.set(.single(nil) |> then(dataSignal))
+        anyStatsContext = statsContext
+    case let .story(peer, storyItem):
+        let statsContext = StoryStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peer.id, storyId: storyItem.id)
+        loadDetailedGraphImpl = { [weak statsContext] graph, x in
+            return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
+        }
+        dataSignal = statsContext.state
+        |> map { state in
+            return state.stats
+        }
+        dataPromise.set(.single(nil) |> then(dataSignal))
+        anyStatsContext = statsContext
     }
-    dataPromise.set(.single(nil) |> then(dataSignal))
     
     let arguments = MessageStatsControllerArguments(context: context, loadDetailedGraph: { graph, x -> Signal<StatsGraph?, NoError> in
-        return statsContext.loadDetailedGraph(graph, x: x)
+        return loadDetailedGraphImpl?(graph, x) ?? .single(nil)
     }, openMessage: { messageId in
         navigateToMessageImpl?(messageId)
     })
     
     let longLoadingSignal: Signal<Bool, NoError> = .single(false) |> then(.single(true) |> delay(2.0, queue: Queue.mainQueue()))
     
-    let previousData = Atomic<MessageStats?>(value: nil)
+    let previousData = Atomic<PostStats?>(value: nil)
     
-    let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: messageId, datacenterId: Int(datacenterId)), query: "", state: nil)
-    |> map(Optional.init)
-    |> afterNext { result in
-        if let result = result {
-            for message in result.0.messages {
-                if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
-                    let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
+    if case let .message(id) = subject {
+        let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id, datacenterId: Int(datacenterId)), query: "", state: nil)
+        |> map(Optional.init)
+        |> afterNext { result in
+            if let result = result {
+                for message in result.0.messages {
+                    if let peer = message.peers[message.id.peerId], let peerReference = PeerReference(peer) {
+                        let _ = context.engine.peers.updatedRemotePeer(peer: peerReference).start()
+                    }
                 }
             }
         }
+        messagesPromise.set(.single(nil) |> then(searchSignal))
+    } else {
+        messagesPromise.set(.single(nil))
     }
-    messagesPromise.set(.single(nil) |> then(searchSignal))
+    
+    let iconNode: ASDisplayNode?
+    if case let .story(peer, storyItem) = subject {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        iconNode = StoryIconNode(context: context, theme: presentationData.theme, peer: peer._asPeer(), storyItem: storyItem)
+    } else {
+        iconNode = nil
+    }
     
     let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
     |> deliverOnMainQueue
@@ -264,14 +325,22 @@ public func messageStatsController(context: AccountContext, messageId: EngineMes
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Stats_MessageTitle), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        let title: String
+        switch subject {
+        case .message:
+            title = presentationData.strings.Stats_MessageTitle
+        case .story:
+            title = presentationData.strings.Stats_StoryTitle
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: iconNode.flatMap { ItemListNavigationButton(content: .node($0), style: .regular, enabled: true, action: { }) }, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: messageStatsControllerEntries(data: data, messages: search?.0, presentationData: presentationData), style: .blocks, emptyStateItem: emptyStateItem, crossfadeState: previous == nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
     |> afterDisposed {
         actionsDisposable.dispose()
-        let _ = statsContext.state
+        let _ = anyStatsContext
     }
     
     let controller = ItemListController(context: context, state: signal)
@@ -282,6 +351,12 @@ public func messageStatsController(context: AccountContext, messageId: EngineMes
             }
         })
     }
+//    controller.visibleBottomContentOffsetChanged = { offset in
+//        let state = stateValue.with { $0 }
+//        if case let .known(value) = offset, value < 100.0, case .boosts = state.section, state.boostersExpanded {
+//            boostsContext.loadMore()
+//        }
+//    }
     controller.didDisappear = { [weak controller] _ in
         controller?.clearItemNodesHighlight(animated: true)
     }

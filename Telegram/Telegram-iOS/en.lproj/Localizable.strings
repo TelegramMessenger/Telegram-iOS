@@ -10498,7 +10498,13 @@ Sorry for the inconvenience.";
 
 "Stats.MessageReactionsTitle" = "REACTIONS";
 
+"MediaEditor.RemoveVideo" = "Remove Video";
+
 "Conversation.LaunchApp" = "LAUNCH APP";
 
 "Message.AdSponsoredLabel" = "Sponsored";
 "Message.AdRecommendedLabel" = "Recommended";
+
+"Stats.StoryTitle" = "Story Statistics";
+
+"Channel.Info.Settings" = "Channel Settings";

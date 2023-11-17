@@ -3694,7 +3694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, let (id, statsDatacenterId) = messageIdAndStatsDatacenterId, let statsDatacenterId = statsDatacenterId else {
                         return
                     }
-                    strongSelf.push(messageStatsController(context: context, messageId: id, statsDatacenterId: statsDatacenterId))
+                    strongSelf.push(messageStatsController(context: context, subject: .message(id: id), statsDatacenterId: statsDatacenterId))
                 })
             }, delay: true)
         }, editMessageMedia: { [weak self] messageId, draw in
