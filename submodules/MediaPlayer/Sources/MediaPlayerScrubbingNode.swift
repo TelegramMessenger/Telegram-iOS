@@ -813,7 +813,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
         
         if needsAnimation {
             if self.displayLink == nil {
-                let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+                let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                     self?.updateProgress()
                 }
                 self.displayLink = displayLink

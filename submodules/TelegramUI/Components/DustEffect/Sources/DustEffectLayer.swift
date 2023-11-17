@@ -36,6 +36,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         let texture: MTLTexture
         
         var phase: Float = 0
+        var particleBufferIsInitialized: Bool = false
         var particleBuffer: SharedBuffer?
         
         init?(frame: CGRect, image: UIImage) {
@@ -78,18 +79,29 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     }
     
     final class DustComputeState: ComputeState {
+        let computePipelineStateInitializeParticle: MTLComputePipelineState
         let computePipelineStateUpdateParticle: MTLComputePipelineState
         
         required init?(device: MTLDevice) {
             guard let library = metalLibrary(device: device) else {
                 return nil
             }
+            
+            guard let functionDustEffectInitializeParticle = library.makeFunction(name: "dustEffectInitializeParticle") else {
+                return nil
+            }
+            guard let computePipelineStateInitializeParticle = try? device.makeComputePipelineState(function: functionDustEffectInitializeParticle) else {
+                return nil
+            }
+            self.computePipelineStateInitializeParticle = computePipelineStateInitializeParticle
+            
             guard let functionDustEffectUpdateParticle = library.makeFunction(name: "dustEffectUpdateParticle") else {
                 return nil
             }
             guard let computePipelineStateUpdateParticle = try? device.makeComputePipelineState(function: functionDustEffectUpdateParticle) else {
                 return nil
             }
+            
             self.computePipelineStateUpdateParticle = computePipelineStateUpdateParticle
         }
     }
@@ -127,7 +139,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         fatalError("init(coder:) has not been implemented")
     }
     
-    private func updateItems() {
+    private func updateItems(deltaTime: Double) {
         var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
             self.items[i].phase += (1.0 / 60.0) / Float(UIView.animationDurationFactor())
@@ -147,13 +159,13 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     private func updateNeedsAnimation() {
         if !self.items.isEmpty && self.isInHierarchy {
             if self.updateLink == nil {
-                self.updateLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+                self.updateLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(60), { [weak self] deltaTime in
                     guard let self else {
                         return
                     }
-                    self.updateItems()
+                    self.updateItems(deltaTime: deltaTime)
                     self.setNeedsUpdate()
-                }
+                })
             }
         } else {
             if self.updateLink != nil {
@@ -189,7 +201,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                 if let particleBuffer = MetalEngine.shared.sharedBuffer(spec: BufferSpec(length: particleCount * 4 * (4 + 1))) {
                     item.particleBuffer = particleBuffer
                     
-                    let particles = particleBuffer.buffer.contents().assumingMemoryBound(to: Float.self)
+                    /*let particles = particleBuffer.buffer.contents().assumingMemoryBound(to: Float.self)
                     for i in 0 ..< particleCount {
                         particles[i * 5 + 0] = 0.0;
                         particles[i * 5 + 1] = 0.0;
@@ -200,7 +212,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                         particles[i * 5 + 3] = sin(direction) * velocity
                         
                         particles[i * 5 + 4] = Float.random(in: 0.7 ... 1.5)
-                    }
+                    }*/
                 }
             }
         }
@@ -217,6 +229,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                 guard let particleBuffer = item.particleBuffer else {
                     continue
                 }
+                
                 let itemFrame = item.frame
                 let particleColumnCount = Int(itemFrame.width)
                 let particleRowCount = Int(itemFrame.height)
@@ -224,8 +237,15 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                 let threadgroupSize = MTLSize(width: 32, height: 1, depth: 1)
                 let threadgroupCount = MTLSize(width: (particleRowCount * particleColumnCount + threadgroupSize.width - 1) / threadgroupSize.width, height: 1, depth: 1)
                 
-                computeEncoder.setComputePipelineState(state.computePipelineStateUpdateParticle)
                 computeEncoder.setBuffer(particleBuffer.buffer, offset: 0, index: 0)
+                
+                if !item.particleBufferIsInitialized {
+                    item.particleBufferIsInitialized = true
+                    computeEncoder.setComputePipelineState(state.computePipelineStateInitializeParticle)
+                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                }
+                
+                computeEncoder.setComputePipelineState(state.computePipelineStateUpdateParticle)
                 var particleCount = SIMD2<UInt32>(UInt32(particleColumnCount), UInt32(particleRowCount))
                 computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 1)
                 var phase = item.phase

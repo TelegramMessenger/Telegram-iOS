@@ -2866,11 +2866,19 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
                 var newIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
+                var expiredMessageIds = Set<MessageId>()
+                let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent())
+                
                 if case .peer = strongSelf.chatLocation, let previousHistoryView = strongSelf.historyView {
                     var updatedIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
+                    var existingIds = Set<MessageId>()
                     for entry in transition.historyView.filteredEntries {
                         switch entry {
                         case let .MessageEntry(message, _, _, _, _, _):
+                            if message.autoremoveAttribute != nil {
+                                existingIds.insert(message.id)
+                            }
+                            
                             if message.flags.contains(.Incoming) {
                                 continue
                             }
@@ -2883,6 +2891,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             }
                         case let .MessageGroupEntry(_, messages, _):
                             for message in messages {
+                                if message.0.autoremoveAttribute != nil {
+                                    existingIds.insert(message.0.id)
+                                }
+                                
                                 if message.0.flags.contains(.Incoming) {
                                     continue
                                 }
@@ -2914,6 +2926,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                     newIncomingReactions[message.id] = updatedReaction
                                 }
                             }
+                            if !existingIds.contains(message.id) {
+                                if let autoremoveAttribute = message.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
+                                    let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
+                                    if exipiresAt >= currentTimestamp - 1 {
+                                        expiredMessageIds.insert(message.id)
+                                    }
+                                }
+                            }
                         case let .MessageGroupEntry(_, messages, _):
                             for message in messages {
                                 if let updatedReaction = updatedIncomingReactions[message.0.id] {
@@ -2927,6 +2947,14 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                                     }
                                     if previousReaction != updatedReaction.value {
                                         newIncomingReactions[message.0.id] = updatedReaction
+                                    }
+                                }
+                                if !existingIds.contains(message.0.id) {
+                                    if let autoremoveAttribute = message.0.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
+                                        let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
+                                        if exipiresAt >= currentTimestamp - 1 {
+                                            expiredMessageIds.insert(message.0.id)
+                                        }
                                     }
                                 }
                             }
@@ -3172,12 +3200,18 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                 }
                 
+                var dustMessageIds = Set<MessageId>()
+                dustMessageIds.formUnion(expiredMessageIds)
                 if let currentDeleteAnimationCorrelationIds = strongSelf.currentDeleteAnimationCorrelationIds {
+                    dustMessageIds.formUnion(currentDeleteAnimationCorrelationIds)
+                }
+                
+                if !dustMessageIds.isEmpty {
                     var foundItemNodes: [ChatMessageItemView] = []
                     strongSelf.forEachRemovedItemNode { itemNode in
                         if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                             for (message, _) in item.content {
-                                if currentDeleteAnimationCorrelationIds.contains(message.id) {
+                                if dustMessageIds.contains(message.id) {
                                     foundItemNodes.append(itemNode)
                                 }
                             }
@@ -3185,32 +3219,30 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     }
                     if !foundItemNodes.isEmpty {
                         strongSelf.currentDeleteAnimationCorrelationIds = nil
-                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                            if strongSelf.dustEffectLayer == nil {
-                                let dustEffectLayer = DustEffectLayer()
-                                dustEffectLayer.position = strongSelf.bounds.center
-                                dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: strongSelf.bounds.size)
-                                strongSelf.dustEffectLayer = dustEffectLayer
-                                dustEffectLayer.zPosition = 10.0
-                                dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
-                                strongSelf.layer.addSublayer(dustEffectLayer)
-                                dustEffectLayer.becameEmpty = { [weak strongSelf] in
-                                    guard let strongSelf else {
-                                        return
-                                    }
-                                    strongSelf.dustEffectLayer?.removeFromSuperlayer()
-                                    strongSelf.dustEffectLayer = nil
+                        if strongSelf.dustEffectLayer == nil {
+                            let dustEffectLayer = DustEffectLayer()
+                            dustEffectLayer.position = strongSelf.bounds.center
+                            dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: strongSelf.bounds.size)
+                            strongSelf.dustEffectLayer = dustEffectLayer
+                            dustEffectLayer.zPosition = 10.0
+                            dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+                            strongSelf.layer.addSublayer(dustEffectLayer)
+                            dustEffectLayer.becameEmpty = { [weak strongSelf] in
+                                guard let strongSelf else {
+                                    return
                                 }
+                                strongSelf.dustEffectLayer?.removeFromSuperlayer()
+                                strongSelf.dustEffectLayer = nil
                             }
-                            if let dustEffectLayer = strongSelf.dustEffectLayer {
-                                for itemNode in foundItemNodes {
-                                    guard let (image, subFrame) = itemNode.makeContentSnapshot() else {
-                                        continue
-                                    }
-                                    let itemFrame = itemNode.layer.convert(subFrame, to: dustEffectLayer)
-                                    dustEffectLayer.addItem(frame: itemFrame, image: image)
-                                    itemNode.isHidden = true
+                        }
+                        if let dustEffectLayer = strongSelf.dustEffectLayer {
+                            for itemNode in foundItemNodes {
+                                guard let (image, subFrame) = itemNode.makeContentSnapshot() else {
+                                    continue
                                 }
+                                let itemFrame = itemNode.layer.convert(subFrame, to: dustEffectLayer)
+                                dustEffectLayer.addItem(frame: itemFrame, image: image)
+                                itemNode.isHidden = true
                             }
                         }
                     }

@@ -394,7 +394,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         didSet {
             if self.isAuxiliaryDisplayLinkEnabled {
                 if self.auxiliaryDisplayLinkHandle == nil {
-                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
+                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                         guard let self else {
                             return
                         }

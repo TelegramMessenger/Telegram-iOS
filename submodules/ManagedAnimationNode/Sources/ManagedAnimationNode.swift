@@ -144,7 +144,7 @@ public struct ManagedAnimationItem {
 open class ManagedAnimationNode: ASDisplayNode {
     public let intrinsicSize: CGSize
     
-    private let imageNode: ASImageNode
+    public let imageNode: ASImageNode
     private let displayLink: SharedDisplayLinkDriver.Link
     
     public var imageUpdated: ((UIImage) -> Void)?
@@ -182,7 +182,7 @@ open class ManagedAnimationNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
         
         var displayLinkUpdate: (() -> Void)?
-        self.displayLink = SharedDisplayLinkDriver.shared.add {
+        self.displayLink = SharedDisplayLinkDriver.shared.add { _ in
             displayLinkUpdate?()
         }
         

@@ -188,12 +188,12 @@ public final class PrivateCallScreen: OverlayMaskContainerView {
             guard let self else {
                 return
             }
-            self.audioLevelUpdateSubscription = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: false, { [weak self] in
+            self.audioLevelUpdateSubscription = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                 guard let self else {
                     return
                 }
                 self.attenuateAudioLevelStep()
-            })
+            }
         }
         (self.layer as? SimpleLayer)?.didExitHierarchy = { [weak self] in
             guard let self else {
