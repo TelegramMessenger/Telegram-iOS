@@ -71,6 +71,8 @@ public final class SharedDisplayLinkDriver {
     private var requests: [RequestContext] = []
     
     private var isInForeground: Bool = false
+    private var isProcessingEvent: Bool = false
+    private var isUpdateRequested: Bool = false
     
     private init() {
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
@@ -110,7 +112,11 @@ public final class SharedDisplayLinkDriver {
     }
     
     private func requestUpdate() {
-        self.update()
+        if self.isProcessingEvent {
+            self.isUpdateRequested = true
+        } else {
+            self.update()
+        }
     }
     
     private func update() {
@@ -153,6 +159,7 @@ public final class SharedDisplayLinkDriver {
                     }
                     if displayLink.preferredFrameRateRange != frameRateRange {
                         displayLink.preferredFrameRateRange = frameRateRange
+                        print("SharedDisplayLinkDriver: switch to \(frameRateRange)")
                     }
                 }
             }
@@ -166,19 +173,26 @@ public final class SharedDisplayLinkDriver {
     }
     
     @objc private func displayLinkEvent(displayLink: CADisplayLink) {
-        let duration = displayLink.duration
+        self.isProcessingEvent = true
+        
+        let duration = displayLink.targetTimestamp - displayLink.timestamp
         
         var removeIndices: [Int]?
         loop: for i in 0 ..< self.requests.count {
             let request = self.requests[i]
             if let link = request.link, link.isValid {
                 if !link.isPaused {
+                    var itemDuration = duration
+                    
                     switch request.framesPerSecond {
                     case let .fps(value):
                         let secondsPerFrame = 1.0 / CGFloat(value)
+                        itemDuration = secondsPerFrame
                         request.lastDuration += duration
-                        if request.lastDuration >= secondsPerFrame * 0.99 {
+                        if request.lastDuration >= secondsPerFrame * 0.95 {
+                            //print("item \(link) accepting cycle: \(request.lastDuration - duration) + \(duration) = \(request.lastDuration) >= \(secondsPerFrame)")
                         } else {
+                            //print("item \(link) skipping cycle: \(request.lastDuration - duration) + \(duration) < \(secondsPerFrame)")
                             continue loop
                         }
                     case .max:
@@ -186,7 +200,7 @@ public final class SharedDisplayLinkDriver {
                     }
                     
                     request.lastDuration = 0.0
-                    link.update(duration)
+                    link.update(itemDuration)
                 }
             } else {
                 if removeIndices == nil {
@@ -202,8 +216,14 @@ public final class SharedDisplayLinkDriver {
             }
             
             if self.requests.isEmpty {
-                self.update()
+                self.isUpdateRequested = true
             }
+        }
+        
+        self.isProcessingEvent = false
+        if self.isUpdateRequested {
+            self.isUpdateRequested = false
+            self.update()
         }
     }
     

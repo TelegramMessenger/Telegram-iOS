@@ -5389,7 +5389,61 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
         let context = UIGraphicsGetCurrentContext()!
         
         context.translateBy(x: -self.backgroundNode.frame.minX, y: -self.backgroundNode.frame.minY)
-        self.view.layer.render(in: context)
+        
+        context.translateBy(x: -self.mainContextSourceNode.contentNode.view.frame.minX, y: -self.mainContextSourceNode.contentNode.view.frame.minY)
+        for subview in self.mainContextSourceNode.contentNode.view.subviews {
+            if subview.isHidden || subview.alpha == 0.0 {
+                continue
+            }
+            if subview === self.backgroundWallpaperNode.view {
+                var targetPortalView: UIView?
+                for backgroundSubview0 in subview.subviews {
+                    for backgroundSubview1 in backgroundSubview0.subviews {
+                        if isViewPortalView(backgroundSubview1) {
+                            targetPortalView = backgroundSubview1
+                            break
+                        }
+                    }
+                }
+                
+                if let targetPortalView, let sourceView = getPortalViewSourceView(targetPortalView) {
+                    context.saveGState()
+                    context.translateBy(x: subview.frame.minX, y: subview.frame.minY)
+                    
+                    if let mask = subview.mask {
+                        let maskImage = generateImage(subview.bounds.size, rotatedContext: { size, context in
+                            context.clear(CGRect(origin: CGPoint(), size: size))
+                            UIGraphicsPushContext(context)
+                            mask.drawHierarchy(in: mask.frame, afterScreenUpdates: false)
+                            UIGraphicsPopContext()
+                        })
+                        if let cgImage = maskImage?.cgImage {
+                            context.translateBy(x: subview.frame.midX, y: subview.frame.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -subview.frame.midX, y: -subview.frame.midY)
+                            
+                            context.clip(to: subview.bounds, mask: cgImage)
+                            
+                            context.translateBy(x: subview.frame.midX, y: subview.frame.midY)
+                            context.scaleBy(x: 1.0, y: -1.0)
+                            context.translateBy(x: -subview.frame.midX, y: -subview.frame.midY)
+                        }
+                    }
+                    
+                    let sourceLocalFrame = sourceView.convert(sourceView.bounds, to: subview)
+                    for sourceSubview in sourceView.subviews {
+                        sourceSubview.drawHierarchy(in: CGRect(origin: sourceLocalFrame.origin, size: sourceSubview.bounds.size), afterScreenUpdates: false)
+                    }
+                    
+                    context.resetClip()
+                    context.restoreGState()
+                } else {
+                    subview.drawHierarchy(in: subview.frame, afterScreenUpdates: false)
+                }
+            } else {
+                subview.drawHierarchy(in: subview.frame, afterScreenUpdates: false)
+            }
+        }
         
         let image = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()

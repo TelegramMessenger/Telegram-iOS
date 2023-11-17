@@ -171,34 +171,51 @@ void applySmoothRoundedCornersImpl(CALayer * _Nonnull layer) {
 }
 
 UIView<UIKitPortalViewProtocol> * _Nullable makePortalView(bool matchPosition) {
-    if (@available(iOS 12.0, *)) {
-        static Class portalViewClass = nil;
-        static dispatch_once_t onceToken;
-        dispatch_once(&onceToken, ^{
-            portalViewClass = NSClassFromString([@[@"_", @"UI", @"Portal", @"View"] componentsJoinedByString:@""]);
-        });
-        if (!portalViewClass) {
-            return nil;
-        }
-        UIView<UIKitPortalViewProtocol> *view = [[portalViewClass alloc] init];
-        if (!view) {
-            return nil;
-        }
-        
-        if (@available(iOS 14.0, *)) {
-            view.forwardsClientHitTestingToSourceView = false;
-        }
-        view.matchesPosition = matchPosition;
-        view.matchesTransform = matchPosition;
-        view.matchesAlpha = false;
-        if (@available(iOS 14.0, *)) {
-            view.allowsHitTesting = false;
-        }
-        
-        return view;
-    } else {
+    static Class portalViewClass = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        portalViewClass = NSClassFromString([@[@"_", @"UI", @"Portal", @"View"] componentsJoinedByString:@""]);
+    });
+    if (!portalViewClass) {
         return nil;
     }
+    UIView<UIKitPortalViewProtocol> *view = [[portalViewClass alloc] init];
+    if (!view) {
+        return nil;
+    }
+    
+    if (@available(iOS 14.0, *)) {
+        view.forwardsClientHitTestingToSourceView = false;
+    }
+    view.matchesPosition = matchPosition;
+    view.matchesTransform = matchPosition;
+    view.matchesAlpha = false;
+    if (@available(iOS 14.0, *)) {
+        view.allowsHitTesting = false;
+    }
+    
+    return view;
+}
+
+bool isViewPortalView(UIView * _Nonnull view) {
+    static Class portalViewClass = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        portalViewClass = NSClassFromString([@[@"_", @"UI", @"Portal", @"View"] componentsJoinedByString:@""]);
+    });
+    if ([view isKindOfClass:portalViewClass]) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+UIView * _Nullable getPortalViewSourceView(UIView * _Nonnull portalView) {
+    if (!isViewPortalView(portalView)) {
+        return nil;
+    }
+    UIView<UIKitPortalViewProtocol> *view = (UIView<UIKitPortalViewProtocol> *)portalView;
+    return view.sourceView;
 }
 
 @protocol GraphicsFilterProtocol <NSObject>

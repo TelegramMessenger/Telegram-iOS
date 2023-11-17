@@ -3,6 +3,7 @@ import MetalKit
 import UIKit
 import MetalEngine
 import ComponentFlow
+import Display
 
 private func shiftArray(array: [SIMD2<Float>], offset: Int) -> [SIMD2<Float>] {
     var newArray = array
@@ -82,7 +83,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     private var phase: Float = 0.0
     
-    private var displayLinkSubscription: SharedDisplayLink.Subscription?
+    private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
     
     var renderSpec: RenderLayerSpec? {
         didSet {
@@ -128,7 +129,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             guard let self else {
                 return
             }
-            self.displayLinkSubscription = SharedDisplayLink.shared.add(framesPerSecond: .fps(30.0), { [weak self] in
+            self.displayLinkSubscription = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(30), { [weak self] timeDelta in
                 guard let self else {
                     return
                 }
@@ -136,7 +137,7 @@ final class CallBackgroundLayer: MetalEngineSubjectLayer, MetalEngineSubject {
                 self.phaseAcceleration.update()
                 
                 let stepCount = 8
-                var phaseStep: CGFloat = 0.5 / 30.0
+                var phaseStep: CGFloat = 0.5 * timeDelta
                 phaseStep += phaseStep * self.phaseAcceleration.value * 0.5
                 self.phase = (self.phase + Float(phaseStep)).truncatingRemainder(dividingBy: Float(stepCount))
                 

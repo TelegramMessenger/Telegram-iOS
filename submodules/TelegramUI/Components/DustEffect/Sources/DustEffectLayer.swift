@@ -108,6 +108,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     
     private var updateLink: SharedDisplayLinkDriver.Link?
     private var items: [Item] = []
+    private var lastTimeStep: Double = 0.0
     
     public var becameEmpty: (() -> Void)?
     
@@ -139,10 +140,31 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
         fatalError("init(coder:) has not been implemented")
     }
     
+    private var lastUpdateTimestamp: Double?
+    
     private func updateItems(deltaTime: Double) {
+        let timestamp = CACurrentMediaTime()
+        let localDeltaTime: Double
+        if let lastUpdateTimestamp = self.lastUpdateTimestamp {
+            localDeltaTime = timestamp - lastUpdateTimestamp
+        } else {
+            localDeltaTime = 0.0
+        }
+        self.lastUpdateTimestamp = timestamp
+        
+        let deltaTimeValue: Double
+        if localDeltaTime <= 0.001 || localDeltaTime >= 0.2 {
+            deltaTimeValue = deltaTime
+        } else {
+            deltaTimeValue = localDeltaTime
+        }
+        
+        self.lastTimeStep = deltaTimeValue
+        //print("updateItems: \(deltaTime), localDeltaTime: \(localDeltaTime)")
+        
         var didRemoveItems = false
         for i in (0 ..< self.items.count).reversed() {
-            self.items[i].phase += (1.0 / 60.0) / Float(UIView.animationDurationFactor())
+            self.items[i].phase += Float(deltaTimeValue) / Float(UIView.animationDurationFactor())
             
             if self.items[i].phase >= 4.0 {
                 self.items.remove(at: i)
@@ -217,6 +239,9 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
             }
         }
         
+        let lastTimeStep = self.lastTimeStep
+        self.lastTimeStep = 0.0
+        
         let _ = context.compute(state: DustComputeState.self, commands: { [weak self] commandBuffer, state in
             guard let self else {
                 return
@@ -245,14 +270,16 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
                     computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
                 }
                 
-                computeEncoder.setComputePipelineState(state.computePipelineStateUpdateParticle)
-                var particleCount = SIMD2<UInt32>(UInt32(particleColumnCount), UInt32(particleRowCount))
-                computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 1)
-                var phase = item.phase
-                computeEncoder.setBytes(&phase, length: 4, index: 2)
-                var timeStep: Float = (1.0 / 60.0) / Float(UIView.animationDurationFactor())
-                computeEncoder.setBytes(&timeStep, length: 4, index: 3)
-                computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                if lastTimeStep != 0.0 {
+                    computeEncoder.setComputePipelineState(state.computePipelineStateUpdateParticle)
+                    var particleCount = SIMD2<UInt32>(UInt32(particleColumnCount), UInt32(particleRowCount))
+                    computeEncoder.setBytes(&particleCount, length: 4 * 2, index: 1)
+                    var phase = item.phase
+                    computeEncoder.setBytes(&phase, length: 4, index: 2)
+                    var timeStep: Float = Float(lastTimeStep) / Float(UIView.animationDurationFactor())
+                    computeEncoder.setBytes(&timeStep, length: 4, index: 3)
+                    computeEncoder.dispatchThreadgroups(threadgroupCount, threadsPerThreadgroup: threadgroupSize)
+                }
             }
             
             computeEncoder.endEncoding()

@@ -17144,11 +17144,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
                         c.dismiss(completion: { [weak strongSelf] in
-                            guard let strongSelf else {
-                                return
-                            }
-                            strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
-                            let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                            DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.1, execute: {
+                                guard let strongSelf else {
+                                    return
+                                }
+                                strongSelf.chatDisplayNode.historyNode.setCurrentDeleteAnimationCorrelationIds(messageIds)
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: Array(messageIds), type: unsendPersonalMessages ? .forEveryone : .forLocalPeer).startStandalone()
+                            })
                         })
                     } else {
                         f(.dismissWithoutContent)

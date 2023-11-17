@@ -1,8 +1,9 @@
 import Foundation
 import UIKit
+import Display
 
 public final class ManagedAnimations {
-    private var displayLinkSubscription: SharedDisplayLink.Subscription?
+    private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
     
     private var properties: [AnyAnimatedProperty] = []
     
@@ -23,7 +24,7 @@ public final class ManagedAnimations {
     
     private func updateNeedAnimations() {
         if self.displayLinkSubscription == nil {
-            self.displayLinkSubscription = SharedDisplayLink.shared.add { [weak self] in
+            self.displayLinkSubscription = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                 guard let self else {
                     return
                 }

@@ -1,6 +1,7 @@
 import Foundation
 import MetalKit
 import MetalEngine
+import Display
 
 final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     var internalData: MetalEngineSubjectInternalData?
@@ -80,7 +81,7 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
     
     private var blobs: [Blob] = []
     
-    private var displayLinkSubscription: SharedDisplayLink.Subscription?
+    private var displayLinkSubscription: SharedDisplayLinkDriver.Link?
     
     override init() {
         super.init()
@@ -89,11 +90,11 @@ final class CallBlobsLayer: MetalEngineSubjectLayer, MetalEngineSubject {
             guard let self else {
                 return
             }
-            self.displayLinkSubscription = SharedDisplayLink.shared.add(framesPerSecond: .fps(30.0), { [weak self] in
+            self.displayLinkSubscription = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(30), { [weak self] deltaTime in
                 guard let self else {
                     return
                 }
-                self.phase += 3.0 / 60.0
+                self.phase += 3.0 * Float(deltaTime)
                 if self.phase >= 1.0 {
                     for i in 0 ..< self.blobs.count {
                         self.blobs[i].advance()

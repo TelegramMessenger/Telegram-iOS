@@ -1,6 +1,7 @@
 import AVFoundation
 import Metal
 import CoreVideo
+import Display
 
 public final class VideoSourceOutput {
     public let y: MTLTexture
@@ -36,7 +37,7 @@ public final class FileVideoSource: VideoSource {
     public private(set) var currentOutput: Output?
     public var updated: (() -> Void)?
     
-    private var displayLink: SharedDisplayLink.Subscription?
+    private var displayLink: SharedDisplayLinkDriver.Link?
     
     public var sourceId: Int = 0
     
@@ -56,7 +57,7 @@ public final class FileVideoSource: VideoSource {
         
         self.queuePlayer.play()
         
-        self.displayLink = SharedDisplayLink.shared.add(framesPerSecond: .fps(60.0), { [weak self] in
+        self.displayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(60), { [weak self] _ in
             guard let self else {
                 return
             }
