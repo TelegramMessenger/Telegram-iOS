@@ -235,7 +235,7 @@ public struct StandaloneSecretMessageContents: Codable {
             return innerEncoder.makeData()
         }
         try container.encode(attributes, forKey: .attributes)
-        let data: Data = self.media.flatMap { media in
+        let data: Data? = self.media.flatMap { media in
             let innerEncoder = PostboxEncoder()
             innerEncoder.encodeRootObject(media)
             return innerEncoder.makeData()
