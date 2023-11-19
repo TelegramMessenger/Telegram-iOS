@@ -8,28 +8,45 @@ public protocol SharedDisplayLinkDriverLink: AnyObject {
 }
 
 public final class SharedDisplayLinkDriver {
+    public enum FramesPerSecond: Comparable {
+        case fps(Int)
+        case max
+        
+        public static func <(lhs: FramesPerSecond, rhs: FramesPerSecond) -> Bool {
+            switch lhs {
+            case let .fps(lhsFps):
+                switch rhs {
+                case let .fps(rhsFps):
+                    return lhsFps < rhsFps
+                case .max:
+                    return true
+                }
+            case .max:
+                return false
+            }
+        }
+    }
+    
     public typealias Link = SharedDisplayLinkDriverLink
     
     public static let shared = SharedDisplayLinkDriver()
     
-    private let useNative: Bool
-    
     public final class LinkImpl: Link {
         private let driver: SharedDisplayLinkDriver
-        public let needsHighestFramerate: Bool
-        let update: () -> Void
+        public let framesPerSecond: FramesPerSecond
+        let update: (CGFloat) -> Void
         var isValid: Bool = true
         public var isPaused: Bool = false {
             didSet {
                 if self.isPaused != oldValue {
-                    driver.requestUpdate()
+                    self.driver.requestUpdate()
                 }
             }
         }
         
-        init(driver: SharedDisplayLinkDriver, needsHighestFramerate: Bool, update: @escaping () -> Void) {
+        init(driver: SharedDisplayLinkDriver, framesPerSecond: FramesPerSecond, update: @escaping (CGFloat) -> Void) {
             self.driver = driver
-            self.needsHighestFramerate = needsHighestFramerate
+            self.framesPerSecond = framesPerSecond
             self.update = update
         }
         
@@ -38,65 +55,26 @@ public final class SharedDisplayLinkDriver {
         }
     }
     
-    public final class NativeLinkImpl: Link {
-        private var displayLink: CADisplayLink?
-        
-        public var isPaused: Bool = false {
-            didSet {
-                self.displayLink?.isPaused = self.isPaused
-            }
-        }
-        
-        init(needsHighestFramerate: Bool, update: @escaping () -> Void) {
-            let displayLink = CADisplayLink(target: DisplayLinkTarget {
-                update()
-            }, selector: #selector(DisplayLinkTarget.event))
-            
-            if #available(iOS 15.0, *) {
-                let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
-                if maxFps > 61.0 {
-                    let frameRateRange: CAFrameRateRange
-                    if needsHighestFramerate {
-                        frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
-                    } else {
-                        frameRateRange = .default
-                    }
-                    if displayLink.preferredFrameRateRange != frameRateRange {
-                        displayLink.preferredFrameRateRange = frameRateRange
-                    }
-                }
-            }
-            
-            self.displayLink = displayLink
-            displayLink.add(to: .main, forMode: .common)
-        }
-        
-        deinit {
-            self.displayLink?.invalidate()
-        }
-        
-        public func invalidate() {
-            self.displayLink?.invalidate()
-        }
-    }
-    
     private final class RequestContext {
         weak var link: LinkImpl?
+        let framesPerSecond: FramesPerSecond
         
-        init(link: LinkImpl) {
+        var lastDuration: Double = 0.0
+        
+        init(link: LinkImpl, framesPerSecond: FramesPerSecond) {
             self.link = link
+            self.framesPerSecond = framesPerSecond
         }
     }
     
     private var displayLink: CADisplayLink?
-    private var hasRequestedHighestFramerate: Bool = false
     private var requests: [RequestContext] = []
     
     private var isInForeground: Bool = false
+    private var isProcessingEvent: Bool = false
+    private var isUpdateRequested: Bool = false
     
     private init() {
-        self.useNative = false
-        
         let _ = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil, using: { [weak self] _ in
             guard let self else {
                 return
@@ -134,15 +112,21 @@ public final class SharedDisplayLinkDriver {
     }
     
     private func requestUpdate() {
-        self.update()
+        if self.isProcessingEvent {
+            self.isUpdateRequested = true
+        } else {
+            self.update()
+        }
     }
     
     private func update() {
         var hasActiveItems = false
-        var needHighestFramerate = false
+        var maxFramesPerSecond: FramesPerSecond = .fps(30)
         for request in self.requests {
             if let link = request.link {
-                needHighestFramerate = link.needsHighestFramerate
+                if link.framesPerSecond > maxFramesPerSecond {
+                    maxFramesPerSecond = link.framesPerSecond
+                }
                 if link.isValid && !link.isPaused {
                     hasActiveItems = true
                     break
@@ -163,13 +147,19 @@ public final class SharedDisplayLinkDriver {
                 let maxFps = Float(UIScreen.main.maximumFramesPerSecond)
                 if maxFps > 61.0 {
                     let frameRateRange: CAFrameRateRange
-                    if needHighestFramerate {
+                    switch maxFramesPerSecond {
+                    case let .fps(fps):
+                        if fps > 60 {
+                            frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
+                        } else {
+                            frameRateRange = .default
+                        }
+                    case .max:
                         frameRateRange = CAFrameRateRange(minimum: 30.0, maximum: 120.0, preferred: 120.0)
-                    } else {
-                        frameRateRange = .default
                     }
                     if displayLink.preferredFrameRateRange != frameRateRange {
                         displayLink.preferredFrameRateRange = frameRateRange
+                        print("SharedDisplayLinkDriver: switch to \(frameRateRange)")
                     }
                 }
             }
@@ -182,12 +172,35 @@ public final class SharedDisplayLinkDriver {
         }
     }
     
-    @objc private func displayLinkEvent() {
+    @objc private func displayLinkEvent(displayLink: CADisplayLink) {
+        self.isProcessingEvent = true
+        
+        let duration = displayLink.targetTimestamp - displayLink.timestamp
+        
         var removeIndices: [Int]?
-        for i in 0 ..< self.requests.count {
-            if let link = self.requests[i].link, link.isValid {
+        loop: for i in 0 ..< self.requests.count {
+            let request = self.requests[i]
+            if let link = request.link, link.isValid {
                 if !link.isPaused {
-                    link.update()
+                    var itemDuration = duration
+                    
+                    switch request.framesPerSecond {
+                    case let .fps(value):
+                        let secondsPerFrame = 1.0 / CGFloat(value)
+                        itemDuration = secondsPerFrame
+                        request.lastDuration += duration
+                        if request.lastDuration >= secondsPerFrame * 0.95 {
+                            //print("item \(link) accepting cycle: \(request.lastDuration - duration) + \(duration) = \(request.lastDuration) >= \(secondsPerFrame)")
+                        } else {
+                            //print("item \(link) skipping cycle: \(request.lastDuration - duration) + \(duration) < \(secondsPerFrame)")
+                            continue loop
+                        }
+                    case .max:
+                        break
+                    }
+                    
+                    request.lastDuration = 0.0
+                    link.update(itemDuration)
                 }
             } else {
                 if removeIndices == nil {
@@ -203,34 +216,36 @@ public final class SharedDisplayLinkDriver {
             }
             
             if self.requests.isEmpty {
-                self.update()
+                self.isUpdateRequested = true
             }
+        }
+        
+        self.isProcessingEvent = false
+        if self.isUpdateRequested {
+            self.isUpdateRequested = false
+            self.update()
         }
     }
     
-    public func add(needsHighestFramerate: Bool = true, _ update: @escaping () -> Void) -> Link {
-        if self.useNative {
-            return NativeLinkImpl(needsHighestFramerate: needsHighestFramerate, update: update)
-        } else {
-            let link = LinkImpl(driver: self, needsHighestFramerate: needsHighestFramerate, update: update)
-            self.requests.append(RequestContext(link: link))
-            
-            self.update()
-            
-            return link
-        }
+    public func add(framesPerSecond: FramesPerSecond = .fps(60), _ update: @escaping (CGFloat) -> Void) -> Link {
+        let link = LinkImpl(driver: self, framesPerSecond: framesPerSecond, update: update)
+        self.requests.append(RequestContext(link: link, framesPerSecond: framesPerSecond))
+        
+        self.update()
+        
+        return link
     }
 }
 
 public final class DisplayLinkTarget: NSObject {
-    private let f: () -> Void
+    private let f: (CADisplayLink) -> Void
     
-    public init(_ f: @escaping () -> Void) {
+    public init(_ f: @escaping (CADisplayLink) -> Void) {
         self.f = f
     }
     
-    @objc public func event() {
-        self.f()
+    @objc public func event(_ displayLink: CADisplayLink) {
+        self.f(displayLink)
     }
 }
 
@@ -253,7 +268,7 @@ public final class DisplayLinkAnimator {
         
         self.startTime = CACurrentMediaTime()
         
-        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
             self?.tick()
         }
         self.displayLink?.isPaused = false
@@ -308,7 +323,7 @@ public final class ConstantDisplayLinkAnimator {
         didSet {
             if self.isPaused != oldValue {
                 if !self.isPaused && self.displayLink == nil {
-                    let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+                    let displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                         self?.tick()
                     }
                     self.displayLink = displayLink

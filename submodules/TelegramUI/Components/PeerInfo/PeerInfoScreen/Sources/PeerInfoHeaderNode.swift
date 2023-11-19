@@ -35,345 +35,7 @@ import AvatarStoryIndicatorComponent
 import ComponentDisplayAdapters
 import ChatAvatarNavigationNode
 import MultiScaleTextNode
-
-enum PeerInfoHeaderButtonKey: Hashable {
-    case message
-    case discussion
-    case call
-    case videoCall
-    case voiceChat
-    case mute
-    case more
-    case addMember
-    case search
-    case leave
-    case stop
-    case addContact
-}
-
-enum PeerInfoHeaderButtonIcon {
-    case message
-    case call
-    case videoCall
-    case voiceChat
-    case mute
-    case unmute
-    case more
-    case addMember
-    case search
-    case leave
-    case stop
-}
-
-final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
-    let key: PeerInfoHeaderButtonKey
-    private let action: (PeerInfoHeaderButtonNode, ContextGesture?) -> Void
-    let referenceNode: ContextReferenceContentNode
-    let containerNode: ContextControllerSourceNode
-    private let backgroundNode: ASDisplayNode
-    private let iconNode: ASImageNode
-    private let textNode: ImmediateTextNode
-    private var animationNode: AnimationNode?
-    
-    private var theme: PresentationTheme?
-    private var icon: PeerInfoHeaderButtonIcon?
-    private var isActive: Bool?
-    
-    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderButtonNode, ContextGesture?) -> Void) {
-        self.key = key
-        self.action = action
-        
-        self.referenceNode = ContextReferenceContentNode()
-        self.containerNode = ContextControllerSourceNode()
-        self.containerNode.animateScale = false
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.cornerRadius = 11.0
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.isUserInteractionEnabled = false
-        
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.isUserInteractionEnabled = false
-        
-        super.init()
-        
-        self.accessibilityTraits = .button
-        
-        self.containerNode.addSubnode(self.referenceNode)
-        self.referenceNode.addSubnode(self.backgroundNode)
-        self.referenceNode.addSubnode(self.iconNode)
-        self.addSubnode(self.containerNode)
-        self.addSubnode(self.textNode)
-        
-        self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.alpha = 0.4
-                } else {
-                    strongSelf.alpha = 1.0
-                    strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-        
-        self.containerNode.activated = { [weak self] gesture, _ in
-            if let strongSelf = self {
-                strongSelf.action(strongSelf, gesture)
-            }
-        }
-        
-        self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc private func buttonPressed() {
-        switch self.icon {
-            case .voiceChat, .more, .leave:
-                self.animationNode?.playOnce()
-            default:
-                break
-        }
-        self.action(self, nil)
-    }
-    
-    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        let previousIcon = self.icon
-        let themeUpdated = self.theme != presentationData.theme
-        let iconUpdated = self.icon != icon
-        let isActiveUpdated = self.isActive != isActive
-        self.isActive = isActive
-        
-        let iconSize = CGSize(width: 40.0, height: 40.0)
-        
-        if themeUpdated || iconUpdated {
-            self.theme = presentationData.theme
-            self.icon = icon
-            
-            var isGestureEnabled = false
-            if [.mute, .voiceChat, .more].contains(icon) {
-                isGestureEnabled = true
-            }
-            self.containerNode.isGestureEnabled = isGestureEnabled
-                        
-            let animationName: String?
-            var colors: [String: UIColor] = [:]
-            var playOnce = false
-            var seekToEnd = false
-            let iconColor = presentationData.theme.list.itemAccentColor
-            switch icon {
-                case .voiceChat:
-                    animationName = "anim_profilevc"
-                    colors = ["Line 3.Group 1.Stroke 1": iconColor,
-                              "Line 1.Group 1.Stroke 1": iconColor,
-                              "Line 2.Group 1.Stroke 1": iconColor]
-                case .mute:
-                    animationName = "anim_profileunmute"
-                    colors = ["Middle.Group 1.Fill 1": iconColor,
-                              "Top.Group 1.Fill 1": iconColor,
-                              "Bottom.Group 1.Fill 1": iconColor,
-                              "EXAMPLE.Group 1.Fill 1": iconColor,
-                              "Line.Group 1.Stroke 1": iconColor]
-                    if previousIcon == .unmute {
-                        playOnce = true
-                    } else {
-                        seekToEnd = true
-                    }
-                case .unmute:
-                    animationName = "anim_profilemute"
-                    colors = ["Middle.Group 1.Fill 1": iconColor,
-                              "Top.Group 1.Fill 1": iconColor,
-                              "Bottom.Group 1.Fill 1": iconColor,
-                              "EXAMPLE.Group 1.Fill 1": iconColor,
-                              "Line.Group 1.Stroke 1": iconColor]
-                    if previousIcon == .mute {
-                        playOnce = true
-                    } else {
-                        seekToEnd = true
-                    }
-                case .more:
-                    animationName = "anim_profilemore"
-                    colors = ["Point 2.Group 1.Fill 1": iconColor,
-                              "Point 3.Group 1.Fill 1": iconColor,
-                              "Point 1.Group 1.Fill 1": iconColor]
-                case .leave:
-                    animationName = "anim_profileleave"
-                    colors = ["Arrow.Group 2.Stroke 1": iconColor,
-                              "Door.Group 1.Stroke 1": iconColor,
-                              "Arrow.Group 1.Stroke 1": iconColor]
-                default:
-                    animationName = nil
-            }
-            
-            if let animationName = animationName {
-                let animationNode: AnimationNode
-                if let current = self.animationNode {
-                    animationNode = current
-                    animationNode.setAnimation(name: animationName, colors: colors)
-                } else {
-                    animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
-                    self.referenceNode.addSubnode(animationNode)
-                    self.animationNode = animationNode
-                }
-            } else if let animationNode = self.animationNode {
-                self.animationNode = nil
-                animationNode.removeFromSupernode()
-            }
-            
-            if playOnce {
-                self.animationNode?.play()
-            } else if seekToEnd {
-                self.animationNode?.seekToEnd()
-            }
-                        
-            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-            self.iconNode.image = generateImage(iconSize, contextGenerator: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.setBlendMode(.normal)
-                context.setFillColor(iconColor.cgColor)
-                let imageName: String?
-                switch icon {
-                case .message:
-                    imageName = "Peer Info/ButtonMessage"
-                case .call:
-                    imageName = "Peer Info/ButtonCall"
-                case .videoCall:
-                    imageName = "Peer Info/ButtonVideo"
-                case .voiceChat:
-                    imageName = nil
-                case .mute:
-                    imageName = nil
-                case .unmute:
-                    imageName = nil
-                case .more:
-                    imageName = nil
-                case .addMember:
-                    imageName = "Peer Info/ButtonAddMember"
-                case .search:
-                    imageName = "Peer Info/ButtonSearch"
-                case .leave:
-                    imageName = nil
-                case .stop:
-                    imageName = "Peer Info/ButtonStop"
-                }
-                if let imageName = imageName, let image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: .white) {
-                    let imageRect = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
-                    context.clip(to: imageRect, mask: image.cgImage!)
-                    context.fill(imageRect)
-                }
-            })
-        }
-        
-        if isActiveUpdated {
-            let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
-            alphaTransition.updateAlpha(node: self.iconNode, alpha: isActive ? 1.0 : 0.3)
-            if let animationNode = self.animationNode {
-                alphaTransition.updateAlpha(node: animationNode, alpha: isActive ? 1.0 : 0.3)
-            }
-            alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
-        }
-        
-        self.textNode.attributedText = NSAttributedString(string: text.lowercased(), font: Font.regular(11.0), textColor: presentationData.theme.list.itemAccentColor)
-        self.accessibilityLabel = text
-        let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
-        
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
-        if let animationNode = self.animationNode {
-            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
-        }
-        transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 9.0), size: titleSize))
-        
-        self.referenceNode.frame = self.containerNode.bounds
-    }
-}
-
-final class PeerInfoHeaderActionButtonNode: HighlightableButtonNode {
-    let key: PeerInfoHeaderButtonKey
-    private let action: (PeerInfoHeaderActionButtonNode, ContextGesture?) -> Void
-    let referenceNode: ContextReferenceContentNode
-    let containerNode: ContextControllerSourceNode
-    private let backgroundNode: ASDisplayNode
-    private let textNode: ImmediateTextNode
-    
-    private var theme: PresentationTheme?
-    
-    init(key: PeerInfoHeaderButtonKey, action: @escaping (PeerInfoHeaderActionButtonNode, ContextGesture?) -> Void) {
-        self.key = key
-        self.action = action
-        
-        self.referenceNode = ContextReferenceContentNode()
-        self.containerNode = ContextControllerSourceNode()
-        self.containerNode.animateScale = false
-        
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.cornerRadius = 11.0
-                
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.isUserInteractionEnabled = false
-        
-        super.init()
-        
-        self.accessibilityTraits = .button
-        
-        self.containerNode.addSubnode(self.referenceNode)
-        self.referenceNode.addSubnode(self.backgroundNode)
-        self.addSubnode(self.containerNode)
-        self.addSubnode(self.textNode)
-        
-        self.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.alpha = 0.4
-                } else {
-                    strongSelf.alpha = 1.0
-                    strongSelf.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-        
-        self.containerNode.activated = { [weak self] gesture, _ in
-            if let strongSelf = self {
-                strongSelf.action(strongSelf, gesture)
-            }
-        }
-        
-        self.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc private func buttonPressed() {
-        self.action(self, nil)
-    }
-    
-    func update(size: CGSize, text: String, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
-        let themeUpdated = self.theme != presentationData.theme
-        if themeUpdated {
-            self.theme = presentationData.theme
-            
-            self.containerNode.isGestureEnabled = false
-                                                            
-            self.backgroundNode.backgroundColor = presentationData.theme.list.itemAccentColor
-            transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        }
-        
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(16.0), textColor: presentationData.theme.list.itemCheckColors.foregroundColor)
-        self.accessibilityLabel = text
-        let titleSize = self.textNode.updateLayout(CGSize(width: 120.0, height: .greatestFiniteMagnitude))
-        
-        transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
-        transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - titleSize.width) / 2.0), y: floorToScreenPixels((size.height - titleSize.height) / 2.0)), size: titleSize))
-        
-        self.referenceNode.frame = self.containerNode.bounds
-    }
-}
+import PeerInfoCoverComponent
 
 final class PeerInfoHeaderNavigationTransition {
     let sourceNavigationBar: NavigationBar
@@ -393,1445 +55,7 @@ final class PeerInfoHeaderNavigationTransition {
     }
 }
 
-final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
-    let context: AccountContext
-    
-    let containerNode: ContextControllerSourceNode
-    
-    let avatarNode: AvatarNode
-    private(set) var avatarStoryView: ComponentView<Empty>?
-    fileprivate var videoNode: UniversalVideoNode?
-    fileprivate var markupNode: AvatarVideoNode?
-    fileprivate var iconView: ComponentView<Empty>?
-    private var videoContent: NativeVideoContent?
-    private var videoStartTimestamp: Double?
-    
-    var isExpanded: Bool = false
-    var canAttachVideo: Bool = true {
-        didSet {
-            if oldValue != self.canAttachVideo {
-                self.videoNode?.canAttachContent = !self.isExpanded && self.canAttachVideo
-            }
-        }
-    }
-    
-    var tapped: (() -> Void)?
-    var emojiTapped: (() -> Void)?
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
-    
-    private var isFirstAvatarLoading = true
-    var item: PeerInfoAvatarListItem?
-    
-    private let playbackStartDisposable = MetaDisposable()
-    
-    var storyData: (totalCount: Int, unseenCount: Int, hasUnseenCloseFriends: Bool)?
-    var storyProgress: Float?
-    
-    init(context: AccountContext) {
-        self.context = context
-        self.containerNode = ContextControllerSourceNode()
-        
-        let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
-        self.avatarNode = AvatarNode(font: avatarFont)
-        
-        super.init()
-        
-        self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.avatarNode)
-        self.containerNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
-        self.avatarNode.frame = self.containerNode.bounds
-        
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
-        self.avatarNode.view.addGestureRecognizer(tapGestureRecognizer)
-       
-        self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self else {
-                return
-            }
-            tapGestureRecognizer.isEnabled = false
-            tapGestureRecognizer.isEnabled = true
-            strongSelf.contextAction?(strongSelf.containerNode, gesture)
-        }
-    }
-    
-    deinit {
-        self.playbackStartDisposable.dispose()
-    }
-    
-    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
-        var colors = AvatarNode.Colors(theme: theme)
-        colors.seenColors = [
-            theme.list.controlSecondaryColor,
-            theme.list.controlSecondaryColor
-        ]
-        var storyStats: AvatarNode.StoryStats?
-        if let storyData = self.storyData {
-            storyStats = AvatarNode.StoryStats(
-                totalCount: storyData.totalCount,
-                unseenCount: storyData.unseenCount,
-                hasUnseenCloseFriendsItems: storyData.hasUnseenCloseFriends,
-                progress: self.storyProgress
-            )
-        } else if let storyProgress = self.storyProgress {
-            storyStats = AvatarNode.StoryStats(
-                totalCount: 1,
-                unseenCount: 1,
-                hasUnseenCloseFriendsItems: false,
-                progress: storyProgress
-            )
-        }
-        self.avatarNode.setStoryStats(storyStats: storyStats, presentationParams: AvatarNode.StoryPresentationParams(
-            colors: colors,
-            lineWidth: 3.0,
-            inactiveLineWidth: 1.5
-        ), transition: Transition(transition))
-    }
-    
-    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.tapped?()
-        }
-    }
-    
-    @objc private func emojiTapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.emojiTapped?()
-        }
-    }
-        
-    func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
-        if let videoNode = self.videoNode {
-            if case .immediate = transition, fraction == 1.0 {
-                return
-            }
-            if fraction > 0.0 {
-                videoNode.pause()
-            } else {
-                videoNode.play()
-            }
-            transition.updateAlpha(node: videoNode, alpha: 1.0 - fraction)
-        }
-        if let markupNode = self.markupNode {
-            if case .immediate = transition, fraction == 1.0 {
-                return
-            }
-            if fraction > 0.0 {
-                markupNode.updateVisibility(false)
-            } else {
-                markupNode.updateVisibility(true)
-            }
-            transition.updateAlpha(node: markupNode, alpha: 1.0 - fraction)
-        }
-    }
-        
-    var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, item: PeerInfoAvatarListItem?, theme: PresentationTheme, avatarSize: CGFloat, isExpanded: Bool, isSettings: Bool) {
-        if let peer = peer {
-            let previousItem = self.item
-            var item = item
-            self.item = item
-            
-            var overrideImage: AvatarNodeImageOverride?
-            if peer.isDeleted {
-                overrideImage = .deletedIcon
-            } else if let previousItem = previousItem, item == nil {
-                if case let .image(_, representations, _, _, _, _) = previousItem, let rep = representations.last {
-                    self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
-                }
-                overrideImage = AvatarNodeImageOverride.none
-                item = nil
-            } else if let rep = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(rep.resource.id.stringRepresentation) {
-                overrideImage = AvatarNodeImageOverride.none
-                item = nil
-            }
-            
-            if let _ = overrideImage {
-                self.containerNode.isGestureEnabled = false
-            } else if peer.profileImageRepresentations.isEmpty {
-                self.containerNode.isGestureEnabled = false
-            } else {
-                self.containerNode.isGestureEnabled = false
-            }
-            
-            self.avatarNode.imageNode.animateFirstTransition = !isSettings
-            self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
-            
-            if let threadInfo = threadInfo {
-                self.avatarNode.isHidden = true
-                
-                let iconView: ComponentView<Empty>
-                if let current = self.iconView {
-                    iconView = current
-                } else {
-                    iconView = ComponentView()
-                    self.iconView = iconView
-                }
-                let content: EmojiStatusComponent.Content
-                if threadId == 1 {
-                    content = .image(image: PresentationResourcesChat.chatGeneralThreadIcon(theme))
-                } else if let iconFileId = threadInfo.icon {
-                    content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .forever)
-                } else {
-                    content = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: avatarSize, height: avatarSize))
-                }
-                let _ = iconView.update(
-                    transition: .immediate,
-                    component: AnyComponent(EmojiStatusComponent(
-                        context: self.context,
-                        animationCache: self.context.animationCache,
-                        animationRenderer: self.context.animationRenderer,
-                        content: content,
-                        isVisibleForAnimations: true,
-                        action: nil
-                    )),
-                    environment: {},
-                    containerSize: CGSize(width: avatarSize, height: avatarSize)
-                )
-                if let iconComponentView = iconView.view {
-                    iconComponentView.isUserInteractionEnabled = true
-                    if iconComponentView.superview == nil {
-                        iconComponentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.emojiTapGesture(_:))))
-                        self.avatarNode.view.superview?.addSubview(iconComponentView)
-                    }
-                    iconComponentView.frame = CGRect(origin: CGPoint(), size: CGSize(width: avatarSize, height: avatarSize))
-                }
-            }
-            
-            var isForum = false
-            let avatarCornerRadius: CGFloat
-            if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-                avatarCornerRadius = floor(avatarSize * 0.25)
-                isForum = true
-            } else {
-                avatarCornerRadius = avatarSize / 2.0
-            }
-            if self.avatarNode.layer.cornerRadius != 0.0 {
-                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.contentNode.layer, cornerRadius: avatarCornerRadius)
-            } else {
-                self.avatarNode.contentNode.layer.cornerRadius = avatarCornerRadius
-            }
-            self.avatarNode.contentNode.layer.masksToBounds = true
-            
-            self.isFirstAvatarLoading = false
-            
-            self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
-            self.avatarNode.frame = self.containerNode.bounds
-            self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
-
-            if let item = item {
-                let representations: [ImageRepresentationWithReference]
-                let videoRepresentations: [VideoRepresentationWithReference]
-                let immediateThumbnailData: Data?
-                var videoId: Int64
-                let markup: TelegramMediaImage.EmojiMarkup?
-                switch item {
-                case .custom:
-                    representations = []
-                    videoRepresentations = []
-                    immediateThumbnailData = nil
-                    videoId = 0
-                    markup = nil
-                case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
-                    representations = topRepresentations
-                    videoRepresentations = videoRepresentationsValue
-                    immediateThumbnailData = immediateThumbnail
-                    videoId = peer.id.id._internalGetInt64Value()
-                    if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
-                        videoId = videoId &+ resource.photoId
-                    }
-                    markup = nil
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, markupValue):
-                    representations = imageRepresentations
-                    videoRepresentations = videoRepresentationsValue
-                    immediateThumbnailData = immediateThumbnail
-                    if case let .cloud(imageId, _, _) = reference {
-                        videoId = imageId
-                    } else {
-                        videoId = peer.id.id._internalGetInt64Value()
-                    }
-                    markup = markupValue
-                }
-                
-                self.containerNode.isGestureEnabled = !isSettings
-                
-                if let markup {
-                    if let videoNode = self.videoNode {
-                        self.videoContent = nil
-                        self.videoStartTimestamp = nil
-                        self.videoNode = nil
-                                  
-                        videoNode.removeFromSupernode()
-                    }
-                    
-                    let markupNode: AvatarVideoNode
-                    if let current = self.markupNode {
-                        markupNode = current
-                    } else {
-                        markupNode = AvatarVideoNode(context: self.context)
-                        self.avatarNode.contentNode.addSubnode(markupNode)
-                        self.markupNode = markupNode
-                    }
-                    markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
-                    markupNode.updateVisibility(true)
-                } else if threadInfo == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
-                    let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [], preloadSize: nil)]))
-                    let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled, storeAfterDownload: nil)
-                    if videoContent.id != self.videoContent?.id {
-                        self.videoNode?.removeFromSupernode()
-                        
-                        let mediaManager = self.context.sharedContext.mediaManager
-                        let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .embedded)
-                        videoNode.isUserInteractionEnabled = false
-                        videoNode.isHidden = true
-                        
-                        if let startTimestamp = video.representation.startTimestamp {
-                            self.videoStartTimestamp = startTimestamp
-                            self.playbackStartDisposable.set((videoNode.status
-                            |> map { status -> Bool in
-                                if let status = status, case .playing = status.status {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }
-                            |> filter { playing in
-                                return playing
-                            }
-                            |> take(1)
-                            |> deliverOnMainQueue).start(completed: { [weak self] in
-                                if let strongSelf = self {
-                                    Queue.mainQueue().after(0.15) {
-                                        strongSelf.videoNode?.isHidden = false
-                                    }
-                                }
-                            }))
-                        } else {
-                            self.videoStartTimestamp = nil
-                            self.playbackStartDisposable.set(nil)
-                            videoNode.isHidden = false
-                        }
-                        
-                        self.videoContent = videoContent
-                        self.videoNode = videoNode
-                        
-                        let maskPath: UIBezierPath
-                        if isForum {
-                            maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size), cornerRadius: avatarCornerRadius)
-                        } else {
-                            maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
-                        }
-                        let shape = CAShapeLayer()
-                        shape.path = maskPath.cgPath
-                        videoNode.layer.mask = shape
-                                                            
-                        self.avatarNode.contentNode.addSubnode(videoNode)
-                    }
-                } else {
-                    if let markupNode = self.markupNode {
-                        self.markupNode = nil
-                        markupNode.removeFromSupernode()
-                    }
-                    if let videoNode = self.videoNode {
-                        self.videoStartTimestamp = nil
-                        self.videoContent = nil
-                        self.videoNode = nil
-                        
-                        videoNode.removeFromSupernode()
-                    }
-                }
-            } else  {
-                if let markupNode = self.markupNode {
-                    self.markupNode = nil
-                    markupNode.removeFromSupernode()
-                }
-                if let videoNode = self.videoNode {
-                    self.videoStartTimestamp = nil
-                    self.videoContent = nil
-                    self.videoNode = nil
-                    
-                    videoNode.removeFromSupernode()
-                }
-                self.containerNode.isGestureEnabled = false
-            }
-            
-            if let markupNode = self.markupNode {
-                markupNode.frame = self.avatarNode.bounds
-                markupNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: avatarCornerRadius, transition: .immediate)
-            }
-            
-            if let videoNode = self.videoNode {
-                if self.canAttachVideo {
-                    videoNode.updateLayout(size: self.avatarNode.frame.size, transition: .immediate)
-                }
-                videoNode.frame = self.avatarNode.contentNode.bounds
-                
-                if isExpanded == videoNode.canAttachContent {
-                    self.isExpanded = isExpanded
-                    let update = {
-                        videoNode.canAttachContent = !self.isExpanded && self.canAttachVideo
-                        if videoNode.canAttachContent {
-                            videoNode.play()
-                        }
-                    }
-                    if isExpanded {
-                        DispatchQueue.main.async {
-                            update()
-                        }
-                    } else {
-                        update()
-                    }
-                }
-            }
-        }
-        
-        self.updateStoryView(transition: .immediate, theme: theme)
-    }
-}
-
-final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
-    private let context: AccountContext
-    
-    private let imageNode: ImageNode
-    private let updatingAvatarOverlay: ASImageNode
-    private let iconNode: ASImageNode
-    private var statusNode: RadialStatusNode
-    
-    private var currentRepresentation: TelegramMediaImageRepresentation?
-    
-    init(context: AccountContext) {
-        self.context = context
-        
-        self.imageNode = ImageNode(enableEmpty: true)
-        
-        self.updatingAvatarOverlay = ASImageNode()
-        self.updatingAvatarOverlay.displayWithoutProcessing = true
-        self.updatingAvatarOverlay.displaysAsynchronously = false
-        self.updatingAvatarOverlay.alpha = 0.0
-        
-        self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(rgb: 0x000000, alpha: 0.6))
-        self.statusNode.isUserInteractionEnabled = false
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: .white)
-        self.iconNode.alpha = 0.0
-        
-        super.init()
-        
-        self.imageNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
-        self.updatingAvatarOverlay.frame = self.imageNode.frame
-        
-        let radialStatusSize: CGFloat = 50.0
-        let imagePosition = self.imageNode.position
-        self.statusNode.frame = CGRect(origin: CGPoint(x: floor(imagePosition.x - radialStatusSize / 2.0), y: floor(imagePosition.y - radialStatusSize / 2.0)), size: CGSize(width: radialStatusSize, height: radialStatusSize))
-        
-        if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: floor(imagePosition.x - image.size.width / 2.0), y: floor(imagePosition.y - image.size.height / 2.0)), size: image.size)
-        }
-        
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.updatingAvatarOverlay)
-        self.addSubnode(self.statusNode)
-    }
-    
-    func updateTransitionFraction(_ fraction: CGFloat, transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self, alpha: 1.0 - fraction)
-    }
-    
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
-        guard let peer = peer else {
-            return
-        }
-        
-        self.imageNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
-        self.updatingAvatarOverlay.frame = self.imageNode.frame
-        
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
-        
-        let clipStyle: AvatarNodeClipStyle
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-            clipStyle = .roundedRect
-        } else {
-            clipStyle = .round
-        }
-        
-        var isPersonal = false
-        if let updatingAvatar, case let .image(image) = updatingAvatar, image.isPersonal {
-            isPersonal = true
-        }
-        
-        if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
-            || isPersonal
-            || self.currentRepresentation != nil && updatingAvatar == nil  {
-            var overlayHidden = true
-            if let updatingAvatar = updatingAvatar {
-                overlayHidden = false
-                
-                var cancelEnabled = true
-                let progressValue: CGFloat?
-                if let uploadProgress {
-                    switch uploadProgress {
-                    case let .value(value):
-                        progressValue = max(0.027, value)
-                    case .indefinite:
-                        progressValue = nil
-                        cancelEnabled = false
-                    }
-                } else {
-                    progressValue = 0.027
-                }
-                self.statusNode.transitionToState(.progress(color: .white, lineWidth: nil, value: progressValue, cancelEnabled: cancelEnabled, animateRotation: true))
-                
-                if case let .image(representation) = updatingAvatar {
-                    if representation != self.currentRepresentation {
-                        self.currentRepresentation = representation
-
-                        if let signal = peerAvatarImage(account: context.account, peerReference: nil, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: avatarSize, height: avatarSize), clipStyle: clipStyle, emptyColor: nil, synchronousLoad: false, provideUnrounded: false) {
-                            self.imageNode.setSignal(signal |> map { $0?.0 })
-                        }
-                    }
-                }
-                
-                transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: 1.0)
-            } else {
-                let targetOverlayAlpha: CGFloat = 0.0
-                if self.updatingAvatarOverlay.alpha != targetOverlayAlpha {
-                    let update = {
-                        self.statusNode.transitionToState(.none)
-                        self.currentRepresentation = nil
-                        self.imageNode.setSignal(.single(nil))
-                        transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: overlayHidden ? 0.0 : 1.0)
-                    }
-                    Queue.mainQueue().after(0.3) {
-                        update()
-                    }
-                }
-            }
-            if !overlayHidden && self.updatingAvatarOverlay.image == nil {
-                switch clipStyle {
-                case .round:
-                    self.updatingAvatarOverlay.image = generateFilledCircleImage(diameter: avatarSize, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
-                case .roundedRect:
-                    self.updatingAvatarOverlay.image = generateFilledRoundedRectImage(size: CGSize(width: avatarSize, height: avatarSize), cornerRadius: avatarSize * 0.25, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
-                default:
-                    break
-                }
-            }
-        } else {
-            self.statusNode.transitionToState(.none)
-            self.currentRepresentation = nil
-            transition.updateAlpha(node: self.iconNode, alpha: 0.0)
-            transition.updateAlpha(node: self.updatingAvatarOverlay, alpha: 0.0)
-        }
-    }
-}
-
-final class PeerInfoEditingAvatarNode: ASDisplayNode {
-    private let context: AccountContext
-    let avatarNode: AvatarNode
-    fileprivate var videoNode: UniversalVideoNode?
-    fileprivate var markupNode: AvatarVideoNode?
-    private var videoContent: NativeVideoContent?
-    private var videoStartTimestamp: Double?
-    var item: PeerInfoAvatarListItem?
-    
-    var tapped: ((Bool) -> Void)?
-        
-    var canAttachVideo: Bool = true
-    
-    init(context: AccountContext) {
-        self.context = context
-        let avatarFont = avatarPlaceholderFont(size: floor(100.0 * 16.0 / 37.0))
-        self.avatarNode = AvatarNode(font: avatarFont)
-    
-        super.init()
-        
-        self.addSubnode(self.avatarNode)
-        self.avatarNode.frame = CGRect(origin: CGPoint(x: -50.0, y: -50.0), size: CGSize(width: 100.0, height: 100.0))
-    
-        self.avatarNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-    }
-    
-    @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
-            self.tapped?(false)
-        }
-    }
-    
-    func reset() {
-        guard let videoNode = self.videoNode else {
-            return
-        }
-        videoNode.isHidden = true
-        videoNode.seek(self.videoStartTimestamp ?? 0.0)
-        Queue.mainQueue().after(0.15) {
-            videoNode.isHidden = false
-        }
-    }
-    
-    var removedPhotoResourceIds = Set<String>()
-    func update(peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, item: PeerInfoAvatarListItem?, updatingAvatar: PeerInfoUpdatingAvatar?, uploadProgress: AvatarUploadProgress?, theme: PresentationTheme, avatarSize: CGFloat, isEditing: Bool) {
-        guard let peer = peer else {
-            return
-        }
-        
-        let canEdit = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
-
-        let previousItem = self.item
-        var item = item
-        self.item = item
-                        
-        let overrideImage: AvatarNodeImageOverride?
-        if canEdit, peer.profileImageRepresentations.isEmpty {
-            overrideImage = .editAvatarIcon(forceNone: true)
-        } else if let previousItem = previousItem, item == nil {
-            if case let .image(_, representations, _, _, _, _) = previousItem, let rep = representations.last {
-                self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
-            }
-            overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
-            item = nil
-        } else if let representation = peer.profileImageRepresentations.last, self.removedPhotoResourceIds.contains(representation.resource.id.stringRepresentation) {
-            overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
-            item = nil
-        } else {
-            overrideImage = item == nil && canEdit ? .editAvatarIcon(forceNone: true) : nil
-        }
-        self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
-        self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
-        self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
-        
-        var isForum = false
-        let avatarCornerRadius: CGFloat
-        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-            isForum = true
-            avatarCornerRadius = floor(avatarSize * 0.25)
-        } else {
-            avatarCornerRadius = avatarSize / 2.0
-        }
-        if self.avatarNode.layer.cornerRadius != 0.0 {
-            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
-        } else {
-            self.avatarNode.layer.cornerRadius = avatarCornerRadius
-        }
-        self.avatarNode.layer.masksToBounds = true
-        
-        if let item = item {
-            let representations: [ImageRepresentationWithReference]
-            let videoRepresentations: [VideoRepresentationWithReference]
-            let immediateThumbnailData: Data?
-            var videoId: Int64
-            let markup: TelegramMediaImage.EmojiMarkup?
-            switch item {
-                case .custom:
-                    representations = []
-                    videoRepresentations = []
-                    immediateThumbnailData = nil
-                    videoId = 0
-                    markup = nil
-                case let .topImage(topRepresentations, videoRepresentationsValue, immediateThumbnail):
-                    representations = topRepresentations
-                    videoRepresentations = videoRepresentationsValue
-                    immediateThumbnailData = immediateThumbnail
-                    videoId = peer.id.id._internalGetInt64Value()
-                    if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
-                        videoId = videoId &+ resource.photoId
-                    }
-                    markup = nil
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _, markupValue):
-                    representations = imageRepresentations
-                    videoRepresentations = videoRepresentationsValue
-                    immediateThumbnailData = immediateThumbnail
-                    if case let .cloud(imageId, _, _) = reference {
-                        videoId = imageId
-                    } else {
-                        videoId = peer.id.id._internalGetInt64Value()
-                    }
-                    markup = markupValue
-            }
-            
-            if let markup {
-                if let videoNode = self.videoNode {
-                    self.videoContent = nil
-                    self.videoStartTimestamp = nil
-                    self.videoNode = nil
-                              
-                    videoNode.removeFromSupernode()
-                }
-                
-                let markupNode: AvatarVideoNode
-                if let current = self.markupNode {
-                    markupNode = current
-                } else {
-                    markupNode = AvatarVideoNode(context: self.context)
-                    self.avatarNode.contentNode.addSubnode(markupNode)
-                    self.markupNode = markupNode
-                }
-                markupNode.update(markup: markup, size: CGSize(width: 320.0, height: 320.0))
-                markupNode.updateVisibility(true)
-            } else if threadData == nil, let video = videoRepresentations.last, let peerReference = PeerReference(peer) {
-                if let markupNode = self.markupNode {
-                    self.markupNode = nil
-                    markupNode.removeFromSupernode()
-                }
-                
-                let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [], preloadSize: nil)]))
-                let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: peer.isCopyProtectionEnabled, storeAfterDownload: nil)
-                if videoContent.id != self.videoContent?.id {
-                    self.videoNode?.removeFromSupernode()
-                    
-                    let mediaManager = self.context.sharedContext.mediaManager
-                    let videoNode = UniversalVideoNode(postbox: self.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .gallery)
-                    videoNode.isUserInteractionEnabled = false
-                    self.videoStartTimestamp = video.representation.startTimestamp
-                    self.videoContent = videoContent
-                    self.videoNode = videoNode
-                    
-                    let maskPath: UIBezierPath
-                    if isForum {
-                        maskPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size), cornerRadius: avatarCornerRadius)
-                    } else {
-                        maskPath = UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: self.avatarNode.frame.size))
-                    }
-                    let shape = CAShapeLayer()
-                    shape.path = maskPath.cgPath
-                    videoNode.layer.mask = shape
-                    
-                    self.avatarNode.contentNode.addSubnode(videoNode)
-                }
-            } else {
-                if let markupNode = self.markupNode {
-                    self.markupNode = nil
-                    markupNode.removeFromSupernode()
-                }
-                if let videoNode = self.videoNode {
-                    self.videoStartTimestamp = nil
-                    self.videoContent = nil
-                    self.videoNode = nil
-                    
-                    videoNode.removeFromSupernode()
-                }
-            }
-        } else if let videoNode = self.videoNode {
-            self.videoStartTimestamp = nil
-            self.videoContent = nil
-            self.videoNode = nil
-            
-            videoNode.removeFromSupernode()
-        }
-        
-        if let markupNode = self.markupNode {
-            markupNode.frame = self.avatarNode.bounds
-            markupNode.updateLayout(size: self.avatarNode.bounds.size, cornerRadius: avatarCornerRadius, transition: .immediate)
-        }
-        
-        if let videoNode = self.videoNode {
-            if self.canAttachVideo {
-                videoNode.updateLayout(size: self.avatarNode.bounds.size, transition: .immediate)
-            }
-            videoNode.frame = self.avatarNode.bounds
-            
-            if isEditing != videoNode.canAttachContent {
-                videoNode.canAttachContent = isEditing && self.canAttachVideo
-            }
-        }
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if self.avatarNode.frame.contains(point) {
-            return self.avatarNode.view
-        }
-        return super.hitTest(point, with: event)
-    }
-}
-
-
-
-final class PeerInfoAvatarListNode: ASDisplayNode {
-    private let isSettings: Bool
-    let containerNode: ASDisplayNode
-    let pinchSourceNode: PinchSourceContainerNode
-    let bottomCoverNode: ASDisplayNode
-    fileprivate let maskNode: DynamicIslandMaskNode
-    fileprivate let topCoverNode: DynamicIslandBlurNode
-    let avatarContainerNode: PeerInfoAvatarTransformContainerNode
-    let listContainerTransformNode: ASDisplayNode
-    let listContainerNode: PeerInfoAvatarListContainerNode
-    
-    let isReady = Promise<Bool>()
-   
-    var arguments: (Peer?, Int64?, EngineMessageHistoryThread.Info?, PresentationTheme, CGFloat, Bool)?
-    var item: PeerInfoAvatarListItem?
-    
-    var itemsUpdated: (([PeerInfoAvatarListItem]) -> Void)?
-    var animateOverlaysFadeIn: (() -> Void)?
-    var openStories: (() -> Void)?
-    
-    init(context: AccountContext, readyWhenGalleryLoads: Bool, isSettings: Bool) {
-        self.isSettings = isSettings
-        
-        self.containerNode = ASDisplayNode()
-
-        self.bottomCoverNode = ASDisplayNode()
-        
-        self.maskNode = DynamicIslandMaskNode()
-        self.pinchSourceNode = PinchSourceContainerNode()
-        
-        self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
-        self.listContainerTransformNode = ASDisplayNode()
-        self.listContainerNode = PeerInfoAvatarListContainerNode(context: context, isSettings: isSettings)
-        self.listContainerNode.clipsToBounds = true
-        self.listContainerNode.isHidden = true
-        
-        self.topCoverNode = DynamicIslandBlurNode()
-        
-        super.init()
-
-        self.addSubnode(self.containerNode)
-        self.containerNode.addSubnode(self.bottomCoverNode)
-        self.containerNode.addSubnode(self.pinchSourceNode)
-        self.pinchSourceNode.contentNode.addSubnode(self.avatarContainerNode)
-        self.listContainerTransformNode.addSubnode(self.listContainerNode)
-        self.pinchSourceNode.contentNode.addSubnode(self.listContainerTransformNode)
-        self.containerNode.addSubnode(self.topCoverNode)
-        
-        let avatarReady = (self.avatarContainerNode.avatarNode.ready
-        |> mapToSignal { _ -> Signal<Bool, NoError> in
-            return .complete()
-        }
-        |> then(.single(true)))
-        
-        let galleryReady = self.listContainerNode.isReady.get()
-        |> filter { value in
-            return value
-        }
-        |> take(1)
-        
-        let combinedSignal: Signal<Bool, NoError>
-        if readyWhenGalleryLoads {
-            combinedSignal = combineLatest(queue: .mainQueue(),
-                avatarReady,
-                galleryReady
-            )
-            |> map { lhs, rhs in
-                return lhs && rhs
-            }
-        } else {
-            combinedSignal = avatarReady
-        }
-        
-        self.isReady.set(combinedSignal
-        |> filter { value in
-            return value
-        }
-        |> take(1))
-        
-        self.listContainerNode.itemsUpdated = { [weak self] items in
-            if let strongSelf = self {
-                strongSelf.item = items.first
-                strongSelf.itemsUpdated?(items)
-                if let (peer, threadId, threadInfo, theme, avatarSize, isExpanded) = strongSelf.arguments {
-                    strongSelf.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: strongSelf.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: strongSelf.isSettings)
-                }
-            }
-        }
-
-        self.pinchSourceNode.activate = { [weak self] sourceNode in
-            guard let strongSelf = self, let (_, _, _, _, _, isExpanded) = strongSelf.arguments, isExpanded else {
-                return
-            }
-            let pinchController = PinchController(sourceNode: sourceNode, getContentAreaInScreenSpace: {
-                return UIScreen.main.bounds
-            })
-            context.sharedContext.mainWindow?.presentInGlobalOverlay(pinchController)
-            
-            strongSelf.listContainerNode.bottomShadowNode.alpha = 0.0
-        }
-
-        self.pinchSourceNode.animatedOut = { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.animateOverlaysFadeIn?()
-        }
-        
-        self.listContainerNode.openStories = { [weak self] in
-            guard let self else {
-                return
-            }
-            self.openStories?()
-        }
-    }
-    
-    func update(size: CGSize, avatarSize: CGFloat, isExpanded: Bool, peer: Peer?, isForum: Bool, threadId: Int64?, threadInfo: EngineMessageHistoryThread.Info?, theme: PresentationTheme, transition: ContainedViewLayoutTransition) {
-        self.arguments = (peer, threadId, threadInfo, theme, avatarSize, isExpanded)
-        self.maskNode.isForum = isForum
-        self.pinchSourceNode.update(size: size, transition: transition)
-        self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.pinchSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.avatarContainerNode.update(peer: peer, threadId: threadId, threadInfo: threadInfo, item: self.item, theme: theme, avatarSize: avatarSize, isExpanded: isExpanded, isSettings: self.isSettings)
-    }
-    
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if !self.listContainerNode.isHidden {
-            if let result = self.listContainerNode.view.hitTest(self.view.convert(point, to: self.listContainerNode.view), with: event) {
-                return result
-            }
-        } else {
-            if let result = self.avatarContainerNode.avatarNode.view.hitTest(self.view.convert(point, to: self.avatarContainerNode.avatarNode.view), with: event) {
-                return result
-            } else if let result = self.avatarContainerNode.iconView?.view?.hitTest(self.view.convert(point, to: self.avatarContainerNode.iconView?.view), with: event) {
-                return result
-            }
-        }
-        
-        return super.hitTest(point, with: event)
-    }
-    
-    func animateAvatarCollapse(transition: ContainedViewLayoutTransition) {
-        if let currentItemNode = self.listContainerNode.currentItemNode, case .animated = transition {
-            if let _ = self.avatarContainerNode.videoNode {
-
-            } else if let _ = self.avatarContainerNode.markupNode {
-                
-            } else if let unroundedImage = self.avatarContainerNode.avatarNode.unroundedImage {
-                let avatarCopyView = UIImageView()
-                avatarCopyView.image = unroundedImage
-                avatarCopyView.frame = self.avatarContainerNode.avatarNode.frame
-                avatarCopyView.center = currentItemNode.imageNode.position
-                currentItemNode.view.addSubview(avatarCopyView)
-                let scale = currentItemNode.imageNode.bounds.height / avatarCopyView.bounds.height
-                avatarCopyView.layer.transform = CATransform3DMakeScale(scale, scale, scale)
-                avatarCopyView.alpha = 0.0
-                transition.updateAlpha(layer: avatarCopyView.layer, alpha: 1.0, completion: { [weak avatarCopyView] _ in
-                    Queue.mainQueue().after(0.1, {
-                        avatarCopyView?.removeFromSuperview()
-                    })
-                })
-            }
-        }
-    }
-}
-
-private enum MoreIconNodeState: Equatable {
-    case more
-    case search
-    case moreToSearch(Float)
-}
-
-private final class MoreIconNode: ManagedAnimationNode {
-    private let duration: Double = 0.21
-    private var iconState: MoreIconNodeState = .more
-    
-    init() {
-        super.init(size: CGSize(width: 30.0, height: 30.0))
-        
-        self.trackTo(item: ManagedAnimationItem(source: .local("anim_moretosearch"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
-    }
-        
-    func play() {
-        if case .more = self.iconState {
-            self.trackTo(item: ManagedAnimationItem(source: .local("anim_moredots"), frames: .range(startFrame: 0, endFrame: 46), duration: 0.76))
-        }
-    }
-    
-    func enqueueState(_ state: MoreIconNodeState, animated: Bool) {
-        guard self.iconState != state else {
-            return
-        }
-        
-        let previousState = self.iconState
-        self.iconState = state
-        
-        let source = ManagedAnimationSource.local("anim_moretosearch")
-        
-        let totalLength: Int = 90
-        if animated {
-            switch previousState {
-                case .more:
-                    switch state {
-                        case .more:
-                            break
-                        case .search:
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: totalLength), duration: self.duration))
-                        case let .moreToSearch(progress):
-                            let frame = Int(progress * Float(totalLength))
-                            let duration = self.duration * Double(progress)
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: frame), duration: duration))
-                    }
-                case .search:
-                    switch state {
-                        case .more:
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: 0), duration: self.duration))
-                        case .search:
-                            break
-                        case let .moreToSearch(progress):
-                            let frame = Int(progress * Float(totalLength))
-                            let duration = self.duration * Double((1.0 - progress))
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: frame), duration: duration))
-                    }
-                case let .moreToSearch(currentProgress):
-                    let currentFrame = Int(currentProgress * Float(totalLength))
-                    switch state {
-                        case .more:
-                            let duration = self.duration * Double(currentProgress)
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: 0), duration: duration))
-                        case .search:
-                            let duration = self.duration * (1.0 - Double(currentProgress))
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: totalLength), duration: duration))
-                        case let .moreToSearch(progress):
-                            let frame = Int(progress * Float(totalLength))
-                            let duration = self.duration * Double(abs(currentProgress - progress))
-                            self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: currentFrame, endFrame: frame), duration: duration))
-                    }
-            }
-        } else {
-            switch state {
-                case .more:
-                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: 0, endFrame: 0), duration: 0.0))
-                case .search:
-                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: totalLength, endFrame: totalLength), duration: 0.0))
-                case let .moreToSearch(progress):
-                    let frame = Int(progress * Float(totalLength))
-                    self.trackTo(item: ManagedAnimationItem(source: source, frames: .range(startFrame: frame, endFrame: frame), duration: 0.0))
-            }
-        }
-    }
-}
-
-final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
-    let containerNode: ContextControllerSourceNode
-    let contextSourceNode: ContextReferenceContentNode
-    private let regularTextNode: ImmediateTextNode
-    private let whiteTextNode: ImmediateTextNode
-    private let iconNode: ASImageNode
-    private var animationNode: MoreIconNode?
-    
-    private var key: PeerInfoHeaderNavigationButtonKey?
-    private var theme: PresentationTheme?
-    
-    var isWhite: Bool = false {
-        didSet {
-            if self.isWhite != oldValue {
-                if case .qrCode = self.key, let theme = self.theme {
-                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationQrCodeIcon(theme), color: .white) : PresentationResourcesRootController.navigationQrCodeIcon(theme)
-                } else if case .postStory = self.key, let theme = self.theme {
-                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationPostStoryIcon(theme), color: .white) : PresentationResourcesRootController.navigationPostStoryIcon(theme)
-                }
-                
-                self.regularTextNode.isHidden = self.isWhite
-                self.whiteTextNode.isHidden = !self.isWhite
-            }
-        }
-    }
-    
-    var action: ((ASDisplayNode, ContextGesture?) -> Void)?
-    
-    init() {
-        self.contextSourceNode = ContextReferenceContentNode()
-        self.containerNode = ContextControllerSourceNode()
-        self.containerNode.animateScale = false
-        
-        self.regularTextNode = ImmediateTextNode()
-        self.whiteTextNode = ImmediateTextNode()
-        self.whiteTextNode.isHidden = true
-        
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-        
-        super.init(pointerStyle: .insetRectangle(-8.0, 2.0))
-        
-        self.isAccessibilityElement = true
-        self.accessibilityTraits = .button
-        
-        self.containerNode.addSubnode(self.contextSourceNode)
-        self.contextSourceNode.addSubnode(self.regularTextNode)
-        self.contextSourceNode.addSubnode(self.whiteTextNode)
-        self.contextSourceNode.addSubnode(self.iconNode)
-
-        self.addSubnode(self.containerNode)
-        
-        self.containerNode.activated = { [weak self] gesture, _ in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.action?(strongSelf.contextSourceNode, gesture)
-        }
-        
-        self.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc private func pressed() {
-        self.animationNode?.play()
-        self.action?(self.contextSourceNode, nil)
-    }
-    
-    func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData, height: CGFloat) -> CGSize {
-        let textSize: CGSize
-        let isFirstTime = self.key == nil
-        if self.key != key || self.theme !== presentationData.theme {
-            self.key = key
-            self.theme = presentationData.theme
-            
-            let text: String
-            var accessibilityText: String
-            var icon: UIImage?
-            var isBold = false
-            var isGestureEnabled = false
-            var isAnimation = false
-            var animationState: MoreIconNodeState = .more
-            switch key {
-                case .edit:
-                    text = presentationData.strings.Common_Edit
-                    accessibilityText = text
-                case .done, .cancel, .selectionDone:
-                    text = presentationData.strings.Common_Done
-                    accessibilityText = text
-                    isBold = true
-                case .select:
-                    text = presentationData.strings.Common_Select
-                    accessibilityText = text
-                case .search:
-                    text = ""
-                    accessibilityText = presentationData.strings.Common_Search
-                    icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
-                    isAnimation = true
-                    animationState = .search
-                case .editPhoto:
-                    text = presentationData.strings.Settings_EditPhoto
-                    accessibilityText = text
-                case .editVideo:
-                    text = presentationData.strings.Settings_EditVideo
-                    accessibilityText = text
-                case .more:
-                    text = ""
-                    accessibilityText = presentationData.strings.Common_More
-                    icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
-                    isGestureEnabled = true
-                    isAnimation = true
-                    animationState = .more
-                case .qrCode:
-                    text = ""
-                    accessibilityText = presentationData.strings.PeerInfo_QRCode_Title
-                    icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
-                case .moreToSearch:
-                    text = ""
-                    accessibilityText = ""
-                case .postStory:
-                    text = ""
-                    accessibilityText = presentationData.strings.Story_Privacy_PostStory
-                    icon = PresentationResourcesRootController.navigationPostStoryIcon(presentationData.theme)
-            }
-            self.accessibilityLabel = accessibilityText
-            self.containerNode.isGestureEnabled = isGestureEnabled
-            
-            let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
-            
-            self.regularTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
-            self.whiteTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
-            self.iconNode.image = icon
-            
-            if isAnimation {
-                self.iconNode.isHidden = true
-                let animationNode: MoreIconNode
-                if let current = self.animationNode {
-                    animationNode = current
-                } else {
-                    animationNode = MoreIconNode()
-                    self.animationNode = animationNode
-                    self.contextSourceNode.addSubnode(animationNode)
-                }
-                animationNode.customColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                animationNode.enqueueState(animationState, animated: !isFirstTime)
-            } else {
-                self.iconNode.isHidden = false
-                if let current = self.animationNode {
-                    self.animationNode = nil
-                    current.removeFromSupernode()
-                }
-            }
-            
-            textSize = self.regularTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-            let _ = self.whiteTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-        } else {
-            textSize = self.regularTextNode.bounds.size
-        }
-        
-        let inset: CGFloat = 0.0
-        
-        let textFrame = CGRect(origin: CGPoint(x: inset, y: floor((height - textSize.height) / 2.0)), size: textSize)
-        self.regularTextNode.frame = textFrame
-        self.whiteTextNode.frame = textFrame
-        
-        if let animationNode = self.animationNode {
-            let animationSize = CGSize(width: 30.0, height: 30.0)
-            
-            animationNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - animationSize.height) / 2.0)), size: animationSize)
-            
-            let size = CGSize(width: animationSize.width + inset * 2.0, height: height)
-            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
-        } else if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size)
-            
-            let size = CGSize(width: image.size.width + inset * 2.0, height: height)
-            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
-        } else {
-            let size = CGSize(width: textSize.width + inset * 2.0, height: height)
-            self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
-            self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
-        }
-    }
-}
-
-enum PeerInfoHeaderNavigationButtonKey {
-    case edit
-    case done
-    case cancel
-    case select
-    case selectionDone
-    case search
-    case editPhoto
-    case editVideo
-    case more
-    case qrCode
-    case moreToSearch
-    case postStory
-}
-
-struct PeerInfoHeaderNavigationButtonSpec: Equatable {
-    let key: PeerInfoHeaderNavigationButtonKey
-    let isForExpandedView: Bool
-}
-
-final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
-    private var presentationData: PresentationData?
-    private(set) var leftButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
-    private(set) var rightButtonNodes: [PeerInfoHeaderNavigationButtonKey: PeerInfoHeaderNavigationButton] = [:]
-    
-    private var currentLeftButtons: [PeerInfoHeaderNavigationButtonSpec] = []
-    private var currentRightButtons: [PeerInfoHeaderNavigationButtonSpec] = []
-    
-    var isWhite: Bool = false {
-        didSet {
-            if self.isWhite != oldValue {
-                for (_, buttonNode) in self.leftButtonNodes {
-                    buttonNode.isWhite = self.isWhite
-                }
-                for (_, buttonNode) in self.rightButtonNodes {
-                    buttonNode.isWhite = self.isWhite
-                }
-            }
-        }
-    }
-    
-    var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
-    
-    func update(size: CGSize, presentationData: PresentationData, leftButtons: [PeerInfoHeaderNavigationButtonSpec], rightButtons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
-        let maximumExpandOffset: CGFloat = 14.0
-        let expandOffset: CGFloat = -expandFraction * maximumExpandOffset
-        
-        if self.currentLeftButtons != leftButtons || presentationData.strings !== self.presentationData?.strings {
-            self.currentLeftButtons = leftButtons
-            
-            var nextRegularButtonOrigin = 16.0
-            var nextExpandedButtonOrigin = 16.0
-            for spec in leftButtons.reversed() {
-                let buttonNode: PeerInfoHeaderNavigationButton
-                var wasAdded = false
-                if let current = self.leftButtonNodes[spec.key] {
-                    buttonNode = current
-                } else {
-                    wasAdded = true
-                    buttonNode = PeerInfoHeaderNavigationButton()
-                    self.leftButtonNodes[spec.key] = buttonNode
-                    self.addSubnode(buttonNode)
-                    buttonNode.action = { [weak self] _, gesture in
-                        guard let strongSelf = self, let buttonNode = strongSelf.leftButtonNodes[spec.key] else {
-                            return
-                        }
-                        strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
-                    }
-                }
-                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
-                var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                nextButtonOrigin += buttonSize.width + 4.0
-                if spec.isForExpandedView {
-                    nextExpandedButtonOrigin = nextButtonOrigin
-                } else {
-                    nextRegularButtonOrigin = nextButtonOrigin
-                }
-                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                if wasAdded {
-                    buttonNode.frame = buttonFrame
-                    buttonNode.alpha = 0.0
-                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                    
-                    buttonNode.isWhite = self.isWhite
-                } else {
-                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
-                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                }
-            }
-            var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
-            for (key, _) in self.leftButtonNodes {
-                if !leftButtons.contains(where: { $0.key == key }) {
-                    removeKeys.append(key)
-                }
-            }
-            for key in removeKeys {
-                if let buttonNode = self.leftButtonNodes.removeValue(forKey: key) {
-                    buttonNode.removeFromSupernode()
-                }
-            }
-        } else {
-            var nextRegularButtonOrigin = 16.0
-            var nextExpandedButtonOrigin = 16.0
-            for spec in leftButtons.reversed() {
-                if let buttonNode = self.leftButtonNodes[spec.key] {
-                    let buttonSize = buttonNode.bounds.size
-                    var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                    nextButtonOrigin += buttonSize.width + 4.0
-                    if spec.isForExpandedView {
-                        nextExpandedButtonOrigin = nextButtonOrigin
-                    } else {
-                        nextRegularButtonOrigin = nextButtonOrigin
-                    }
-                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
-                    let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                    
-                    var buttonTransition = transition
-                    if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
-                        buttonTransition = .animated(duration: duration * 0.25, curve: curve)
-                    }
-                    buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                }
-            }
-        }
-        
-        if self.currentRightButtons != rightButtons || presentationData.strings !== self.presentationData?.strings {
-            self.currentRightButtons = rightButtons
-            
-            var nextRegularButtonOrigin = size.width - 16.0
-            var nextExpandedButtonOrigin = size.width - 16.0
-            for spec in rightButtons.reversed() {
-                let buttonNode: PeerInfoHeaderNavigationButton
-                var wasAdded = false
-                
-                var key = spec.key
-                if key == .more || key == .search {
-                    key = .moreToSearch
-                }
-                
-                if let current = self.rightButtonNodes[key] {
-                    buttonNode = current
-                } else {
-                    wasAdded = true
-                    buttonNode = PeerInfoHeaderNavigationButton()
-                    self.rightButtonNodes[key] = buttonNode
-                    self.addSubnode(buttonNode)
-                }
-                buttonNode.action = { [weak self] _, gesture in
-                    guard let strongSelf = self, let buttonNode = strongSelf.rightButtonNodes[key] else {
-                        return
-                    }
-                    strongSelf.performAction?(spec.key, buttonNode.contextSourceNode, gesture)
-                }
-                let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
-                var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                var buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                if case .postStory = spec.key {
-                    buttonFrame.origin.x -= 12.0
-                }
-                nextButtonOrigin -= buttonSize.width + 4.0
-                if spec.isForExpandedView {
-                    nextExpandedButtonOrigin = nextButtonOrigin
-                } else {
-                    nextRegularButtonOrigin = nextButtonOrigin
-                }
-                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                if wasAdded {
-                    buttonNode.isWhite = self.isWhite
-                    
-                    if key == .moreToSearch {
-                        buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
-                    }
-                    
-                    buttonNode.frame = buttonFrame
-                    buttonNode.alpha = 0.0
-                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                } else {
-                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
-                    transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                }
-            }
-            var removeKeys: [PeerInfoHeaderNavigationButtonKey] = []
-            for (key, _) in self.rightButtonNodes {
-                if key == .moreToSearch {
-                    if !rightButtons.contains(where: { $0.key == .more || $0.key == .search }) {
-                        removeKeys.append(key)
-                    }
-                } else if !rightButtons.contains(where: { $0.key == key }) {
-                    removeKeys.append(key)
-                }
-            }
-            for key in removeKeys {
-                if let buttonNode = self.rightButtonNodes.removeValue(forKey: key) {
-                    if key == .moreToSearch {
-                        buttonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak buttonNode] _ in
-                            buttonNode?.removeFromSupernode()
-                        })
-                        buttonNode.layer.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
-                    } else {
-                        buttonNode.removeFromSupernode()
-                    }
-                }
-            }
-        } else {
-            var nextRegularButtonOrigin = size.width - 16.0
-            var nextExpandedButtonOrigin = size.width - 16.0
-                        
-            for spec in rightButtons.reversed() {
-                var key = spec.key
-                if key == .more || key == .search {
-                    key = .moreToSearch
-                }
-                
-                if let buttonNode = self.rightButtonNodes[key] {
-                    let buttonSize = buttonNode.bounds.size
-                    var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    var buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin - buttonSize.width, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
-                    if case .postStory = spec.key {
-                        buttonFrame.origin.x -= 12.0
-                    }
-                    nextButtonOrigin -= buttonSize.width + 4.0
-                    if spec.isForExpandedView {
-                        nextExpandedButtonOrigin = nextButtonOrigin
-                    } else {
-                        nextRegularButtonOrigin = nextButtonOrigin
-                    }
-                    transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
-                    let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
-                    
-                    var buttonTransition = transition
-                    if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
-                        buttonTransition = .animated(duration: duration * 0.25, curve: curve)
-                    }
-                    buttonTransition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                }
-            }
-        }
-        self.presentationData = presentationData
-    }
-}
-
 final class PeerInfoHeaderRegularContentNode: ASDisplayNode {
-    
 }
 
 enum PeerInfoHeaderTextFieldNodeKey: Equatable {
@@ -1845,544 +69,6 @@ protocol PeerInfoHeaderTextFieldNode: ASDisplayNode {
     var text: String { get }
     
     func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat
-}
-
-final class PeerInfoHeaderSingleLineTextFieldNode: ASDisplayNode, PeerInfoHeaderTextFieldNode, UITextFieldDelegate {
-    private let backgroundNode: ASDisplayNode
-    private let textNode: TextFieldNode
-    private let measureTextNode: ImmediateTextNode
-    private let clearIconNode: ASImageNode
-    private let clearButtonNode: HighlightableButtonNode
-    private let topSeparator: ASDisplayNode
-    private let maskNode: ASImageNode
-    
-    private var theme: PresentationTheme?
-    
-    var text: String {
-        return self.textNode.textField.text ?? ""
-    }
-    
-    override init() {
-        self.backgroundNode = ASDisplayNode()
-        
-        self.textNode = TextFieldNode()
-        self.measureTextNode = ImmediateTextNode()
-        self.measureTextNode.maximumNumberOfLines = 0
-        
-        self.clearIconNode = ASImageNode()
-        self.clearIconNode.isLayerBacked = true
-        self.clearIconNode.displayWithoutProcessing = true
-        self.clearIconNode.displaysAsynchronously = false
-        self.clearIconNode.isHidden = true
-        
-        self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.isHidden = true
-        self.clearButtonNode.isAccessibilityElement = false
-        
-        self.topSeparator = ASDisplayNode()
-        
-        self.maskNode = ASImageNode()
-        self.maskNode.isUserInteractionEnabled = false
-        
-        super.init()
-        
-        self.addSubnode(self.backgroundNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.clearIconNode)
-        self.addSubnode(self.clearButtonNode)
-        self.addSubnode(self.topSeparator)
-        self.addSubnode(self.maskNode)
-        
-        self.textNode.textField.delegate = self
-        
-        self.clearButtonNode.addTarget(self, action: #selector(self.clearButtonPressed), forControlEvents: .touchUpInside)
-        self.clearButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.clearIconNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.clearIconNode.alpha = 0.4
-                } else {
-                    strongSelf.clearIconNode.alpha = 1.0
-                    strongSelf.clearIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-    }
-    
-    @objc private func clearButtonPressed() {
-        self.textNode.textField.text = ""
-        self.updateClearButtonVisibility()
-    }
-    
-    @objc func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.updateClearButtonVisibility()
-    }
-    
-    @objc func textFieldDidEndEditing(_ textField: UITextField) {
-        self.updateClearButtonVisibility()
-    }
-    
-    private func updateClearButtonVisibility() {
-        let isHidden = !self.textNode.textField.isFirstResponder || self.text.isEmpty
-        self.clearIconNode.isHidden = isHidden
-        self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
-    }
-    
-    func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
-        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
-        self.textNode.textField.font = titleFont
-        
-        if self.theme !== presentationData.theme {
-            self.theme = presentationData.theme
-            
-            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-            
-            self.textNode.textField.textColor = presentationData.theme.list.itemPrimaryTextColor
-            self.textNode.textField.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
-            self.textNode.textField.tintColor = presentationData.theme.list.itemAccentColor
-            
-            self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
-        }
-        
-        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
-        if self.textNode.textField.attributedPlaceholder == nil || !self.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
-            self.textNode.textField.attributedPlaceholder = attributedPlaceholderText
-            self.textNode.textField.accessibilityHint = attributedPlaceholderText.string
-        }
-        
-        if let updateText = updateText {
-            self.textNode.textField.text = updateText
-        }
-        
-        if !hasPrevious {
-            self.topSeparator.isHidden = true
-        }
-        self.topSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
-        let separatorX = safeInset + (hasPrevious ? 16.0 : 0.0)
-        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - safeInset, height: UIScreenPixel))
-        
-        let measureText = "|"
-        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .black)
-        self.measureTextNode.attributedText = attributedMeasureText
-        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
-        
-        let height = measureTextSize.height + 22.0
-        
-        let buttonSize = CGSize(width: 38.0, height: height)
-        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width, y: 0.0), size: buttonSize)
-        if let image = self.clearIconNode.image {
-            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
-        }
-        
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: max(1.0, width - safeInset * 2.0), height: height))
-        self.textNode.frame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: floor((height - 40.0) / 2.0)), size: CGSize(width: max(1.0, width - safeInset * 2.0 - 16.0 * 2.0 - 38.0), height: 40.0))
-        
-        let hasCorners = safeInset > 0.0 && (!hasPrevious || !hasNext)
-        let hasTopCorners = hasCorners && !hasPrevious
-        let hasBottomCorners = hasCorners && !hasNext
-        
-        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: width - safeInset - safeInset, height: height))
-        
-        self.textNode.isUserInteractionEnabled = isEnabled
-        self.textNode.alpha = isEnabled ? 1.0 : 0.6
-        
-        return height
-    }
-}
-
-final class PeerInfoHeaderMultiLineTextFieldNode: ASDisplayNode, PeerInfoHeaderTextFieldNode, ASEditableTextNodeDelegate {
-    private let backgroundNode: ASDisplayNode
-    private let textNode: EditableTextNode
-    private let textNodeContainer: ASDisplayNode
-    private let measureTextNode: ImmediateTextNode
-    private let clearIconNode: ASImageNode
-    private let clearButtonNode: HighlightableButtonNode
-    private let topSeparator: ASDisplayNode
-    private let maskNode: ASImageNode
-    
-    private let requestUpdateHeight: () -> Void
-    
-    private var fontSize: PresentationFontSize?
-    private var theme: PresentationTheme?
-    private var currentParams: (width: CGFloat, safeInset: CGFloat)?
-    private var currentMeasuredHeight: CGFloat?
-    
-    var text: String {
-        return self.textNode.attributedText?.string ?? ""
-    }
-    
-    init(requestUpdateHeight: @escaping () -> Void) {
-        self.requestUpdateHeight = requestUpdateHeight
-        
-        self.backgroundNode = ASDisplayNode()
-        
-        self.textNode = EditableTextNode()
-        self.textNode.clipsToBounds = false
-        self.textNode.textView.clipsToBounds = false
-        self.textNode.textContainerInset = UIEdgeInsets()
-        
-        self.textNodeContainer = ASDisplayNode()
-        self.measureTextNode = ImmediateTextNode()
-        self.measureTextNode.maximumNumberOfLines = 0
-        self.measureTextNode.isUserInteractionEnabled = false
-        self.measureTextNode.lineSpacing = 0.1
-        self.topSeparator = ASDisplayNode()
-        
-        self.clearIconNode = ASImageNode()
-        self.clearIconNode.isLayerBacked = true
-        self.clearIconNode.displayWithoutProcessing = true
-        self.clearIconNode.displaysAsynchronously = false
-        self.clearIconNode.isHidden = true
-        
-        self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.isHidden = true
-        self.clearButtonNode.isAccessibilityElement = false
-        
-        self.maskNode = ASImageNode()
-        self.maskNode.isUserInteractionEnabled = false
-        
-        super.init()
-        
-        self.addSubnode(self.backgroundNode)
-        self.textNodeContainer.addSubnode(self.textNode)
-        self.addSubnode(self.textNodeContainer)
-        self.addSubnode(self.clearIconNode)
-        self.addSubnode(self.clearButtonNode)
-        self.addSubnode(self.topSeparator)
-        self.addSubnode(self.maskNode)
-    
-        self.clearButtonNode.addTarget(self, action: #selector(self.clearButtonPressed), forControlEvents: .touchUpInside)
-        self.clearButtonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
-                if highlighted {
-                    strongSelf.clearIconNode.layer.removeAnimation(forKey: "opacity")
-                    strongSelf.clearIconNode.alpha = 0.4
-                } else {
-                    strongSelf.clearIconNode.alpha = 1.0
-                    strongSelf.clearIconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
-                }
-            }
-        }
-    }
-        
-    @objc private func clearButtonPressed() {
-        guard let theme = self.theme else {
-            return
-        }
-        let font: UIFont
-        if let fontSize = self.fontSize {
-            font = Font.regular(fontSize.itemListBaseFontSize)
-        } else {
-            font = Font.regular(17.0)
-        }
-        let attributedText = NSAttributedString(string: "", font: font, textColor: theme.list.itemPrimaryTextColor)
-        self.textNode.attributedText = attributedText
-        self.requestUpdateHeight()
-        self.updateClearButtonVisibility()
-    }
-    
-    func update(width: CGFloat, safeInset: CGFloat, isSettings: Bool, hasPrevious: Bool, hasNext: Bool, placeholder: String, isEnabled: Bool, presentationData: PresentationData, updateText: String?) -> CGFloat {
-        self.currentParams = (width, safeInset)
-        
-        self.fontSize = presentationData.listsFontSize
-        let titleFont = Font.regular(presentationData.listsFontSize.itemListBaseFontSize)
-        
-        if self.theme !== presentationData.theme {
-            self.theme = presentationData.theme
-            
-            self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-            
-            let textColor = presentationData.theme.list.itemPrimaryTextColor
-            self.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: titleFont, NSAttributedString.Key.foregroundColor.rawValue: textColor]
-            self.textNode.keyboardAppearance = presentationData.theme.rootController.keyboardColor.keyboardAppearance
-            self.textNode.tintColor = presentationData.theme.list.itemAccentColor
-            
-            self.textNode.clipsToBounds = true
-            self.textNode.delegate = self
-            self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-            
-            self.clearIconNode.image = PresentationResourcesItemList.itemListClearInputIcon(presentationData.theme)
-        }
-        
-        self.topSeparator.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
-        
-        let separatorX = safeInset + (hasPrevious ? 16.0 : 0.0)
-        self.topSeparator.frame = CGRect(origin: CGPoint(x: separatorX, y: 0.0), size: CGSize(width: width - separatorX - safeInset, height: UIScreenPixel))
-        
-        let attributedPlaceholderText = NSAttributedString(string: placeholder, font: titleFont, textColor: presentationData.theme.list.itemPlaceholderTextColor)
-        if self.textNode.attributedPlaceholderText == nil || !self.textNode.attributedPlaceholderText!.isEqual(to: attributedPlaceholderText) {
-            self.textNode.attributedPlaceholderText = attributedPlaceholderText
-        }
-        
-        if let updateText = updateText {
-            let attributedText = NSAttributedString(string: updateText, font: titleFont, textColor: presentationData.theme.list.itemPrimaryTextColor)
-            self.textNode.attributedText = attributedText
-        }
-        
-        var measureText = self.textNode.attributedText?.string ?? ""
-        if measureText.hasSuffix("\n") || measureText.isEmpty {
-           measureText += "|"
-        }
-        let attributedMeasureText = NSAttributedString(string: measureText, font: titleFont, textColor: .gray)
-        self.measureTextNode.attributedText = attributedMeasureText
-        let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
-        self.measureTextNode.frame = CGRect(origin: CGPoint(), size: measureTextSize)
-        self.currentMeasuredHeight = measureTextSize.height
-        
-        let height = measureTextSize.height + 22.0
-        
-        let buttonSize = CGSize(width: 38.0, height: height)
-        self.clearButtonNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width, y: 0.0), size: buttonSize)
-        if let image = self.clearIconNode.image {
-            self.clearIconNode.frame = CGRect(origin: CGPoint(x: width - safeInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((height - image.size.height) / 2.0)), size: image.size)
-        }
-        
-        let textNodeFrame = CGRect(origin: CGPoint(x: safeInset + 16.0, y: 10.0), size: CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: max(height, 1000.0)))
-        self.textNodeContainer.frame = textNodeFrame
-        self.textNode.frame = CGRect(origin: CGPoint(), size: textNodeFrame.size)
-        
-        self.backgroundNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: max(1.0, width - safeInset * 2.0), height: height))
-        
-        let hasCorners = safeInset > 0.0 && (!hasPrevious || !hasNext)
-        let hasTopCorners = hasCorners && !hasPrevious
-        let hasBottomCorners = hasCorners && !hasNext
-        
-        self.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(presentationData.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
-        self.maskNode.frame = CGRect(origin: CGPoint(x: safeInset, y: 0.0), size: CGSize(width: width - safeInset - safeInset, height: height))
-        
-        return height
-    }
-    
-    func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
-        self.updateClearButtonVisibility()
-    }
-    
-    func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
-        self.updateClearButtonVisibility()
-    }
-    
-    private func updateClearButtonVisibility() {
-        let isHidden = !self.textNode.isFirstResponder() || self.text.isEmpty
-        self.clearIconNode.isHidden = isHidden
-        self.clearButtonNode.isHidden = isHidden
-        self.clearButtonNode.isAccessibilityElement = isHidden
-    }
-    
-    func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        guard let theme = self.theme else {
-            return true
-        }
-        let updatedText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
-        if updatedText.count > 255 {
-            let attributedText = NSAttributedString(string: String(updatedText[updatedText.startIndex..<updatedText.index(updatedText.startIndex, offsetBy: 255)]), font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
-            self.textNode.attributedText = attributedText
-            self.requestUpdateHeight()
-            
-            return false
-        } else {
-            return true
-        }
-    }
-    
-    func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {
-        if let (width, safeInset) = self.currentParams {
-            var measureText = self.textNode.attributedText?.string ?? ""
-            if measureText.hasSuffix("\n") || measureText.isEmpty {
-               measureText += "|"
-            }
-            let attributedMeasureText = NSAttributedString(string: measureText, font: Font.regular(17.0), textColor: .black)
-            self.measureTextNode.attributedText = attributedMeasureText
-            let measureTextSize = self.measureTextNode.updateLayout(CGSize(width: width - safeInset * 2.0 - 16.0 * 2.0 - 38.0, height: .greatestFiniteMagnitude))
-            if let currentMeasuredHeight = self.currentMeasuredHeight, abs(measureTextSize.height - currentMeasuredHeight) > 0.1 {
-                self.requestUpdateHeight()
-            }
-        }
-    }
-    
-    func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
-        let text: String? = UIPasteboard.general.string
-        if let _ = text {
-            return true
-        } else {
-            return false
-        }
-    }
-}
-
-final class PeerInfoHeaderEditingContentNode: ASDisplayNode {
-    private let context: AccountContext
-    private let requestUpdateLayout: () -> Void
-    
-    var requestEditing: (() -> Void)?
-    
-    let avatarNode: PeerInfoEditingAvatarNode
-    let avatarTextNode: ImmediateTextNode
-    let avatarButtonNode: HighlightableButtonNode
-    
-    var itemNodes: [PeerInfoHeaderTextFieldNodeKey: PeerInfoHeaderTextFieldNode] = [:]
-    
-    init(context: AccountContext, requestUpdateLayout: @escaping () -> Void) {
-        self.context = context
-        self.requestUpdateLayout = requestUpdateLayout
-        
-        self.avatarNode = PeerInfoEditingAvatarNode(context: context)
-        
-        self.avatarTextNode = ImmediateTextNode()
-        self.avatarButtonNode = HighlightableButtonNode()
-        
-        super.init()
-        
-        self.addSubnode(self.avatarNode)
-        self.avatarButtonNode.addSubnode(self.avatarTextNode)
-        
-        self.avatarButtonNode.addTarget(self, action: #selector(textPressed), forControlEvents: .touchUpInside)
-    }
-    
-    @objc private func textPressed() {
-        self.requestEditing?()
-    }
-    
-    func editingTextForKey(_ key: PeerInfoHeaderTextFieldNodeKey) -> String? {
-        return self.itemNodes[key]?.text
-    }
-    
-    func shakeTextForKey(_ key: PeerInfoHeaderTextFieldNodeKey) {
-        self.itemNodes[key]?.layer.addShakeAnimation()
-    }
-    
-    func update(width: CGFloat, safeInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, peer: Peer?, threadData: MessageHistoryThreadData?, chatLocation: ChatLocation, cachedData: CachedPeerData?, isContact: Bool, isSettings: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) -> CGFloat {
-        let avatarSize: CGFloat = isModalOverlay ? 200.0 : 100.0
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
-        transition.updateFrameAdditiveToCenter(node: self.avatarNode, frame: CGRect(origin: avatarFrame.center, size: CGSize()))
-        
-        var contentHeight: CGFloat = statusBarHeight + 10.0 + avatarSize + 20.0
-        
-        if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)  {
-            if self.avatarButtonNode.supernode == nil {
-                self.addSubnode(self.avatarButtonNode)
-            }
-            self.avatarTextNode.attributedText = NSAttributedString(string: presentationData.strings.Settings_SetNewProfilePhotoOrVideo, font: Font.regular(17.0), textColor: presentationData.theme.list.itemAccentColor)
-            self.avatarButtonNode.accessibilityLabel = self.avatarTextNode.attributedText?.string
-            
-            let avatarTextSize = self.avatarTextNode.updateLayout(CGSize(width: width, height: 32.0))
-            transition.updateFrame(node: self.avatarTextNode, frame: CGRect(origin: CGPoint(), size: avatarTextSize))
-            transition.updateFrame(node: self.avatarButtonNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((width - avatarTextSize.width) / 2.0), y: contentHeight - 1.0), size: avatarTextSize))
-            contentHeight += 32.0
-        }
-        
-        var isEditableBot = false
-        if let user = peer as? TelegramUser, let botInfo = user.botInfo, botInfo.flags.contains(.canEdit) {
-            isEditableBot = true
-        }
-        var fieldKeys: [PeerInfoHeaderTextFieldNodeKey] = []
-        if let user = peer as? TelegramUser {
-            if !user.isDeleted {
-                fieldKeys.append(.firstName)
-                if isEditableBot {
-                    fieldKeys.append(.description)
-                } else if user.botInfo == nil {
-                    fieldKeys.append(.lastName)
-                }
-            }
-        } else if let _ = peer as? TelegramGroup {
-            fieldKeys.append(.title)
-            if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) {
-                fieldKeys.append(.description)
-            }
-        } else if let _ = peer as? TelegramChannel {
-            fieldKeys.append(.title)
-            if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) {
-                fieldKeys.append(.description)
-            }
-        }
-        var hasPrevious = false
-        for key in fieldKeys {
-            let itemNode: PeerInfoHeaderTextFieldNode
-            var updateText: String?
-            if let current = self.itemNodes[key] {
-                itemNode = current
-            } else {
-                var isMultiline = false
-                switch key {
-                case .firstName:
-                    if let peer = peer as? TelegramUser {
-                        if let editableBotInfo = (cachedData as? CachedUserData)?.editableBotInfo {
-                            updateText = editableBotInfo.name
-                        } else {
-                            updateText = peer.firstName ?? ""
-                        }
-                    }
-                case .lastName:
-                    updateText = (peer as? TelegramUser)?.lastName ?? ""
-                case .title:
-                    updateText = peer?.debugDisplayTitle ?? ""
-                case .description:
-                    isMultiline = true
-                    if let cachedData = cachedData as? CachedChannelData {
-                        updateText = cachedData.about ?? ""
-                    } else if let cachedData = cachedData as? CachedGroupData {
-                        updateText = cachedData.about ?? ""
-                    } else if let cachedData = cachedData as? CachedUserData {
-                        if let editableBotInfo = cachedData.editableBotInfo {
-                            updateText = editableBotInfo.about
-                        } else {
-                            updateText = cachedData.about ?? ""
-                        }
-                    } else {
-                        updateText = ""
-                    }
-                }
-                if isMultiline {
-                    itemNode = PeerInfoHeaderMultiLineTextFieldNode(requestUpdateHeight: { [weak self] in
-                        self?.requestUpdateLayout()
-                    })
-                } else {
-                    itemNode = PeerInfoHeaderSingleLineTextFieldNode()
-                }
-                self.itemNodes[key] = itemNode
-                self.addSubnode(itemNode)
-            }
-            let placeholder: String
-            var isEnabled = true
-            switch key {
-            case .firstName:
-                placeholder = isEditableBot ? presentationData.strings.UserInfo_BotNamePlaceholder : presentationData.strings.UserInfo_FirstNamePlaceholder
-                isEnabled = isContact || isSettings || isEditableBot
-            case .lastName:
-                placeholder = presentationData.strings.UserInfo_LastNamePlaceholder
-                isEnabled = isContact || isSettings
-            case .title:
-                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    placeholder = presentationData.strings.GroupInfo_ChannelListNamePlaceholder
-                } else {
-                    placeholder = presentationData.strings.GroupInfo_GroupNamePlaceholder
-                }
-                isEnabled = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
-            case .description:
-                placeholder = presentationData.strings.Channel_Edit_AboutItem
-                isEnabled = canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) || isEditableBot
-            }
-            let itemHeight = itemNode.update(width: width, safeInset: safeInset, isSettings: isSettings, hasPrevious: hasPrevious, hasNext: key != fieldKeys.last, placeholder: placeholder, isEnabled: isEnabled, presentationData: presentationData, updateText: updateText)
-            transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentHeight), size: CGSize(width: width, height: itemHeight)))
-            contentHeight += itemHeight
-            hasPrevious = true
-        }
-        var removeKeys: [PeerInfoHeaderTextFieldNodeKey] = []
-        for (key, _) in self.itemNodes {
-            if !fieldKeys.contains(key) {
-                removeKeys.append(key)
-            }
-        }
-        for key in removeKeys {
-            if let itemNode = self.itemNodes.removeValue(forKey: key) {
-                itemNode.removeFromSupernode()
-            }
-        }
-        
-        return contentHeight
-    }
 }
 
 private let TitleNodeStateRegular = 0
@@ -2409,6 +95,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let avatarClippingNode: SparseNode
     let avatarListNode: PeerInfoAvatarListNode
     
+    let backgroundBannerView: UIView
+    let backgroundCover = ComponentView<Empty>()
     let buttonsContainerNode: SparseNode
     let regularContentNode: PeerInfoHeaderRegularContentNode
     let editingContentNode: PeerInfoHeaderEditingContentNode
@@ -2511,6 +199,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.usernameNode = MultiScaleTextNode(stateKeys: [TitleNodeStateRegular, TitleNodeStateExpanded])
         self.usernameNode.displaysAsynchronously = false
         
+        self.backgroundBannerView = UIView()
+        self.backgroundBannerView.clipsToBounds = true
+        self.backgroundBannerView.isUserInteractionEnabled = false
+        
         self.buttonsContainerNode = SparseNode()
         self.buttonsContainerNode.clipsToBounds = true
         
@@ -2556,11 +248,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self?.requestUpdateLayout?(false)
         }
         
-        if !isMediaOnly {
-            self.addSubnode(self.buttonsContainerNode)
-        }
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.expandedBackgroundNode)
+        self.view.addSubview(self.backgroundBannerView)
         self.titleNodeContainer.addSubnode(self.titleNode)
         self.subtitleNodeContainer.addSubnode(self.subtitleNode)
         self.subtitleNodeContainer.addSubnode(self.panelSubtitleNode)
@@ -2577,6 +267,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.regularContentNode.addSubnode(self.usernameNodeRawContainer)
         
         self.addSubnode(self.regularContentNode)
+        
+        if !isMediaOnly {
+            self.regularContentNode.addSubnode(self.buttonsContainerNode)
+        }
+        
         self.addSubnode(self.editingContentNode)
         self.addSubnode(self.avatarOverlayNode)
         self.addSubnode(self.navigationBackgroundNode)
@@ -2797,7 +492,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .none
                 emojiExpandedStatusContent = .none
             case .premium:
-                emojiRegularStatusContent = .premium(color: presentationData.theme.list.itemAccentColor)
+                emojiRegularStatusContent = .premium(color: UIColor.white)
                 emojiExpandedStatusContent = .premium(color: UIColor(rgb: 0xffffff, alpha: 0.75))
             case .verified:
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
@@ -2810,8 +505,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = emojiRegularStatusContent
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
-                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: UIColor.white, loopMode: .forever)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: UIColor.white, loopMode: .forever)
             }
             
             let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
@@ -2897,7 +592,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
-        self.buttonsContainerNode.alpha = self.regularContentNode.alpha
         self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
         
         let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings, presentationData: presentationData, transition: transition)
@@ -2917,6 +611,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
 
         let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
+        let _ = headerBackgroundColor
+        
         var effectiveSeparatorAlpha: CGFloat
         if let navigationTransition = self.navigationTransition {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
@@ -2939,6 +635,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
 
+            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: 1.0 - transitionFraction)
+            
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
             effectiveSeparatorAlpha = transitionFraction
             
@@ -2949,8 +647,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             let contentOffset = max(0.0, contentOffset - 140.0)
             let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / 30.0))
-
             self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: state.isEditing ? 0.0 : 1.0)
+            
             effectiveSeparatorAlpha = backgroundTransitionFraction
             
             self.avatarClippingNode.clipsToBounds = true
@@ -2961,7 +660,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.avatarOverlayNode.updateTransitionFraction(transitionFraction, transition: transition)
         
         if self.navigationTitle != presentationData.strings.EditProfile_Title || themeUpdated {
-            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.semibold(17.0), textColor: presentationData.theme.rootController.navigationBar.primaryTextColor)
+            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.semibold(17.0), textColor: UIColor.white)
         }
         
         let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: width, height: navigationHeight))
@@ -3028,8 +727,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
 
             titleStringText = title
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
-            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: UIColor.white)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
             
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
@@ -3038,22 +737,22 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitle = "\(subtitle) • @\(mainUsername)"
                 }
                 subtitleStringText = subtitle
-                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7))
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
             } else if let _ = threadData {
                 let subtitleColor: UIColor
-                subtitleColor = presentationData.theme.list.itemAccentColor
+                subtitleColor = UIColor.white
                 
                 let statusText: String
                 statusText = peer.debugDisplayTitle
                 
                 subtitleStringText = statusText
-                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(15.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(16.0), color: subtitleColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
                 
                 subtitleIsButton = true
 
@@ -3061,59 +760,59 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
                     if panelStatusData.isActivity {
-                        subtitleColor = presentationData.theme.list.itemAccentColor
+                        subtitleColor = UIColor.white
                     } else {
-                        subtitleColor = presentationData.theme.list.itemSecondaryTextColor
+                        subtitleColor = UIColor.white.withAlphaComponent(0.7)
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7)))
                 }
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
                 if statusData.isActivity {
-                    subtitleColor = presentationData.theme.list.itemAccentColor
+                    subtitleColor = UIColor.white
                 } else {
-                    subtitleColor = presentationData.theme.list.itemSecondaryTextColor
+                    subtitleColor = UIColor.white.withMultipliedAlpha(0.7)
                 }
                 
                 subtitleStringText = statusData.text
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
                     let subtitleColor: UIColor
                     if panelStatusData.isActivity {
-                        subtitleColor = presentationData.theme.list.itemAccentColor
+                        subtitleColor = UIColor.white
                     } else {
-                        subtitleColor = presentationData.theme.list.itemSecondaryTextColor
+                        subtitleColor = UIColor.white.withMultipliedAlpha(0.7)
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7)))
                 }
             } else {
                 subtitleStringText = " "
-                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
             }
         } else {
             titleStringText = " "
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: UIColor.white)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
             
             subtitleStringText = " "
-            subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
-            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+            subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
+            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
             
-            usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
+            usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
         }
         
         let textSideInset: CGFloat = 36.0
@@ -3169,16 +868,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let current = self.subtitleArrowNode {
                 subtitleArrowNode = current
                 if themeUpdated {
-                    subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
+                    subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: UIColor.white.withMultipliedAlpha(0.5))
                 }
             } else {
                 subtitleArrowNode = ASImageNode()
                 self.subtitleArrowNode = subtitleArrowNode
                 self.subtitleNode.insertSubnode(subtitleArrowNode, at: 1)
                 
-                subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
+                subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: UIColor.white.withMultipliedAlpha(0.5))
             }
-            subtitleBackgroundNode.backgroundColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.1)
+            subtitleBackgroundNode.backgroundColor = UIColor.white.withMultipliedAlpha(0.1)
             let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
             var subtitleBackgroundFrame = CGRect(origin: CGPoint(), size: subtitleSize).offsetBy(dx: -subtitleSize.width * 0.5, dy: -subtitleSize.height * 0.5).insetBy(dx: -6.0, dy: -4.0)
             subtitleBackgroundFrame.size.width += 12.0
@@ -3275,11 +974,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let usernameFrame: CGRect
         let usernameSpacing: CGFloat = 4.0
         
+        let expandedTitleScale: CGFloat = 0.8
+        
         transition.updateFrame(node: self.avatarListNode.listContainerNode.bottomShadowNode, frame: CGRect(origin: CGPoint(x: 0.0, y: expandedAvatarHeight - 70.0), size: CGSize(width: width, height: 70.0)))
         
         if self.isAvatarExpanded {
-            let minTitleSize = CGSize(width: titleSize.width * 0.7, height: titleSize.height * 0.7)
-            let minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            let minTitleSize = CGSize(width: titleSize.width * expandedTitleScale, height: titleSize.height * expandedTitleScale)
+            var minTitleFrame = CGRect(origin: CGPoint(x: 16.0, y: expandedAvatarHeight - 58.0 - UIScreenPixel + (subtitleSize.height.isZero ? 10.0 : 0.0)), size: minTitleSize)
+            if !self.isSettings {
+                minTitleFrame.origin.y -= 83.0
+            }
 
             titleFrame = CGRect(origin: CGPoint(x: minTitleFrame.midX - titleSize.width / 2.0, y: minTitleFrame.midY - titleSize.height / 2.0), size: titleSize)
             subtitleFrame = CGRect(origin: CGPoint(x: 16.0, y: minTitleFrame.maxY + 2.0), size: subtitleSize)
@@ -3597,24 +1301,39 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let rawHeight: CGFloat
         let height: CGFloat
         let maxY: CGFloat
+        let backgroundHeight: CGFloat
         if self.isAvatarExpanded {
             rawHeight = expandedAvatarHeight
             height = max(navigationHeight, rawHeight - contentOffset)
-            maxY = height
+            maxY = height - 98.0
+            backgroundHeight = height
         } else {
             rawHeight = navigationHeight + panelWithAvatarHeight
-            height = navigationHeight + max(0.0, panelWithAvatarHeight - contentOffset)
+            var expandablePart: CGFloat = panelWithAvatarHeight - contentOffset
+            if self.isSettings {
+                expandablePart += 20.0
+            } else {
+                if peer?.id == self.context.account.peerId {
+                    expandablePart = 0.0
+                } else {
+                    expandablePart += 99.0
+                }
+            }
+            height = navigationHeight + max(0.0, expandablePart)
             maxY = navigationHeight + panelWithAvatarHeight - contentOffset
+            backgroundHeight = height
         }
+        let _ = maxY
         
-        let apparentHeight = (1.0 - transitionFraction) * height + transitionFraction * transitionSourceHeight
+        let apparentHeight = (1.0 - transitionFraction) * backgroundHeight + transitionFraction * transitionSourceHeight
+        let apparentBackgroundHeight = (1.0 - transitionFraction) * backgroundHeight + transitionFraction * transitionSourceHeight
         
         if !titleSize.width.isZero && !titleSize.height.isZero {
             if self.navigationTransition != nil {
                 var neutralTitleScale: CGFloat = 1.0
                 var neutralSubtitleScale: CGFloat = 1.0
                 if self.isAvatarExpanded {
-                    neutralTitleScale = 0.7
+                    neutralTitleScale = expandedTitleScale
                     neutralSubtitleScale = 1.0
                 }
                                 
@@ -3648,7 +1367,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let subtitleScale: CGFloat
                 var subtitleOffset: CGFloat = 0.0
                 if self.isAvatarExpanded {
-                    titleScale = 0.7
+                    titleScale = expandedTitleScale
                     subtitleScale = 1.0
                 } else {
                     titleScale = (1.0 - titleCollapseFraction) * 1.0 + titleCollapseFraction * titleMinScale
@@ -3692,9 +1411,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let buttonSpacing: CGFloat = 8.0
         let buttonSideInset = max(16.0, containerInset)
         
-        var actionButtonRightOrigin = CGPoint(x: width - buttonSideInset, y: maxY + 24.0 - navigationHeight - UIScreenPixel)
         let actionButtonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(actionButtonKeys.count) - buttonSpacing
         let actionButtonSize = CGSize(width: actionButtonWidth, height: 40.0)
+        var actionButtonRightOrigin = CGPoint(x: width - buttonSideInset, y: backgroundHeight - 16.0 - actionButtonSize.height)
         
         for buttonKey in actionButtonKeys.reversed() {
             let buttonNode: PeerInfoHeaderActionButtonNode
@@ -3748,12 +1467,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        var buttonRightOrigin = CGPoint(x: width - buttonSideInset, y: maxY + 24.0 - navigationHeight - UIScreenPixel)
+        let buttonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
+        let buttonSize = CGSize(width: buttonWidth, height: 58.0)
+        var buttonRightOrigin = CGPoint(x: width - buttonSideInset, y: backgroundHeight - 16.0 - buttonSize.height)
         if !actionButtonKeys.isEmpty {
             buttonRightOrigin.y += actionButtonSize.height + 24.0
         }
-        let buttonWidth = (width - buttonSideInset * 2.0 + buttonSpacing) / CGFloat(buttonKeys.count) - buttonSpacing
-        let buttonSize = CGSize(width: buttonWidth, height: 58.0)
         
         for buttonKey in buttonKeys.reversed() {
             let buttonNode: PeerInfoHeaderButtonNode
@@ -3885,7 +1604,37 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.regularContentNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: width, height: resolvedHeight)))
-        transition.updateFrame(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationHeight + UIScreenPixel), size: CGSize(width: width, height: resolvedHeight - navigationHeight + 500.0)))
+        transition.updateFrameAdditive(node: self.buttonsContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentBackgroundHeight - backgroundHeight), size: CGSize(width: width, height: 1000.0)))
+        let buttonsTransitionDistance: CGFloat = -min(0.0, apparentBackgroundHeight - backgroundHeight)
+        let buttonsTransitionDistanceNorm: CGFloat = 40.0
+        
+        let innerContentOffset = max(0.0, contentOffset - 140.0)
+        let backgroundTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, innerContentOffset / 30.0))
+        
+        let buttonsTransitionFraction: CGFloat = 1.0 - max(0.0, min(1.0, buttonsTransitionDistance / buttonsTransitionDistanceNorm))
+        transition.updateAlpha(node: self.buttonsContainerNode, alpha: buttonsTransitionFraction * backgroundTransitionFraction)
+        
+        let bannerFrame = CGRect(origin: CGPoint(x: 0.0, y: -2000.0 + apparentBackgroundHeight), size: CGSize(width: width, height: 2000.0))
+        transition.updateFrameAdditive(view: self.backgroundBannerView, frame: bannerFrame)
+        let backgroundCoverSize = self.backgroundCover.update(
+            transition: Transition(transition),
+            component: AnyComponent(PeerInfoCoverComponent(
+                context: self.context,
+                peer: peer.flatMap(EnginePeer.init),
+                avatarCenter: apparentAvatarFrame.center,
+                avatarScale: avatarScale,
+                avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),
+                patternTransitionFraction: buttonsTransitionFraction * backgroundTransitionFraction
+            )),
+            environment: {},
+            containerSize: CGSize(width: width, height: apparentBackgroundHeight)
+        )
+        if let backgroundCoverView = self.backgroundCover.view {
+            if backgroundCoverView.superview == nil {
+                self.backgroundBannerView.addSubview(backgroundCoverView)
+            }
+            transition.updateFrameAdditive(view: backgroundCoverView, frame: CGRect(origin: CGPoint(x: 0.0, y: bannerFrame.height - backgroundCoverSize.height), size: backgroundCoverSize))
+        }
         
         if additive {
             transition.updateFrameAdditive(node: self.backgroundNode, frame: backgroundFrame)
@@ -3901,11 +1650,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             transition.updateFrame(node: self.separatorNode, frame: separatorFrame)
         }
         
-        if !state.isEditing && !isSettings {
-            resolvedHeight += 71.0
-            
-            if !actionButtonKeys.isEmpty {
-                resolvedHeight += 64.0
+        if !state.isEditing {
+            if !isSettings {
+                if self.isAvatarExpanded {
+                    resolvedHeight -= 21.0
+                } else {
+                    resolvedHeight += 79.0
+                    
+                    if !actionButtonKeys.isEmpty {
+                        resolvedHeight += 64.0
+                    }
+                }
+            } else {
+                if self.isAvatarExpanded {
+                    resolvedHeight -= 21.0
+                }
             }
         }
         
@@ -3962,6 +1721,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             return result
         }
         
+        if let result = self.buttonsContainerNode.view.hitTest(self.view.convert(point, to: self.buttonsContainerNode.view), with: event) {
+            return result
+        }
+        
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {
             return nil
         }
@@ -3997,129 +1760,3 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     }
 }
 
-private class DynamicIslandMaskNode: ASDisplayNode {
-    var animationNode: AnimationNode?
-    
-    var isForum = false {
-        didSet {
-            if self.isForum != oldValue {
-                self.animationNode?.removeFromSupernode()
-                let animationNode = AnimationNode(animation: "ForumAvatarMask")
-                self.addSubnode(animationNode)
-                self.animationNode = animationNode
-            }
-        }
-    }
-    
-    override init() {
-        let animationNode = AnimationNode(animation: "UserAvatarMask")
-        self.animationNode = animationNode
-        
-        super.init()
-        
-        self.addSubnode(animationNode)
-    }
-    
-    func update(_ value: CGFloat) {
-        self.animationNode?.setProgress(value)
-    }
-    
-    var animating = false
-    
-    override func layout() {
-        self.animationNode?.frame = self.bounds
-    }
-}
-
-private class DynamicIslandBlurNode: ASDisplayNode {
-    private var effectView: UIVisualEffectView?
-    private let fadeNode = ASDisplayNode()
-    let gradientNode = ASImageNode()
-
-    private var hierarchyTrackingNode: HierarchyTrackingNode?
-    
-    deinit {
-        self.animator?.stopAnimation(true)
-    }
-    
-    override func didLoad() {
-        super.didLoad()
-        
-        let hierarchyTrackingNode = HierarchyTrackingNode({ [weak self] value in
-            if !value {
-                self?.animator?.stopAnimation(true)
-                self?.animator = nil
-            }
-        })
-        self.hierarchyTrackingNode = hierarchyTrackingNode
-        self.addSubnode(hierarchyTrackingNode)
-        
-        self.fadeNode.backgroundColor = .black
-        self.fadeNode.alpha = 0.0
-        
-        self.gradientNode.displaysAsynchronously = false
-        let gradientImage = generateImage(CGSize(width: 100.0, height: 100.0), rotatedContext: { size, context in
-            let bounds = CGRect(origin: .zero, size: size)
-            context.clear(bounds)
-            
-            var locations: [CGFloat] = [0.0, 0.87, 1.0]
-            let colors: [CGColor] = [UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 1.0).cgColor]
-            let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-            
-            let endRadius: CGFloat = 90.0
-            let center = CGPoint(x: size.width / 2.0, y: size.height / 2.0 + 38.0)
-            context.drawRadialGradient(gradient, startCenter: center, startRadius: 0.0, endCenter: center, endRadius: endRadius, options: .drawsAfterEndLocation)
-        })
-        self.gradientNode.image = gradientImage
-        
-        let effectView = UIVisualEffectView(effect: nil)
-        self.effectView = effectView
-        self.view.insertSubview(effectView, at: 0)
-        
-        self.addSubnode(self.gradientNode)
-        self.addSubnode(self.fadeNode)
-    }
-    
-    private var animator: UIViewPropertyAnimator?
-    
-    func prepare() -> Bool {
-        guard self.animator == nil else {
-            return false
-        }
-        let animator =  UIViewPropertyAnimator(duration: 1.0, curve: .linear)
-        self.animator = animator
-        self.effectView?.effect = nil
-        animator.addAnimations { [weak self] in
-            self?.effectView?.effect = UIBlurEffect(style: .dark)
-        }
-        return true
-    }
-    
-    func update(_ value: CGFloat) {
-        let fadeAlpha = min(1.0, max(0.0, -0.25 + value * 1.55))
-        if value > 0.0 {
-            var value = value
-            let updated = self.prepare()
-            if value > 0.99 && updated {
-                value = 0.99
-            }
-            self.animator?.fractionComplete = max(0.0, -0.1 + value * 1.1)
-        } else {
-            self.animator?.stopAnimation(true)
-            self.animator = nil
-            self.effectView?.effect = nil
-        }
-        self.fadeNode.alpha = fadeAlpha
-    }
-    
-    override func layout() {
-        super.layout()
-        
-        self.effectView?.frame = self.bounds
-        self.fadeNode.frame = self.bounds
-        
-        let gradientSize = CGSize(width: 100.0, height: 100.0)
-        self.gradientNode.frame = CGRect(origin: CGPoint(x: (self.bounds.width - gradientSize.width) / 2.0, y: 0.0), size: gradientSize)
-    }
-}

@@ -2861,11 +2861,109 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.hasActiveTransition = true
         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
         
+        var expiredMessageIds = Set<MessageId>()
+        if let previousHistoryView = self.historyView {
+            var existingIds = Set<MessageId>()
+            for entry in transition.historyView.filteredEntries {
+                switch entry {
+                case let .MessageEntry(message, _, _, _, _, _):
+                    if message.autoremoveAttribute != nil {
+                        existingIds.insert(message.id)
+                    }
+                case let .MessageGroupEntry(_, messages, _):
+                    for message in messages {
+                        if message.0.autoremoveAttribute != nil {
+                            existingIds.insert(message.0.id)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+            let currentTimestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for entry in previousHistoryView.filteredEntries {
+                switch entry {
+                case let .MessageEntry(message, _, _, _, _, _):
+                    if !existingIds.contains(message.id) {
+                        if let autoremoveAttribute = message.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
+                            let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
+                            if exipiresAt >= currentTimestamp - 1 {
+                                expiredMessageIds.insert(message.id)
+                            }
+                        }
+                    }
+                case let .MessageGroupEntry(_, messages, _):
+                    for message in messages {
+                        if !existingIds.contains(message.0.id) {
+                            if let autoremoveAttribute = message.0.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
+                                let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
+                                if exipiresAt >= currentTimestamp - 1 {
+                                    expiredMessageIds.insert(message.0.id)
+                                }
+                            }
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+        }
+        self.currentDeleteAnimationCorrelationIds.formUnion(expiredMessageIds)
+        
+        var appliedDeleteAnimationCorrelationIds = Set<MessageId>()
+        if !self.currentDeleteAnimationCorrelationIds.isEmpty {
+            var foundItemNodes: [ChatMessageItemView] = []
+            self.forEachItemNode { itemNode in
+                if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                    for (message, _) in item.content {
+                        if self.currentDeleteAnimationCorrelationIds.contains(message.id) {
+                            appliedDeleteAnimationCorrelationIds.insert(message.id)
+                            self.currentDeleteAnimationCorrelationIds.remove(message.id)
+                            foundItemNodes.append(itemNode)
+                        }
+                    }
+                }
+            }
+            if !foundItemNodes.isEmpty {
+                if self.dustEffectLayer == nil {
+                    let dustEffectLayer = DustEffectLayer()
+                    dustEffectLayer.position = self.bounds.center
+                    dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: self.bounds.size)
+                    self.dustEffectLayer = dustEffectLayer
+                    dustEffectLayer.zPosition = 10.0
+                    dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
+                    self.layer.addSublayer(dustEffectLayer)
+                    dustEffectLayer.becameEmpty = { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.dustEffectLayer?.removeFromSuperlayer()
+                        self.dustEffectLayer = nil
+                    }
+                }
+                if let dustEffectLayer = self.dustEffectLayer {
+                    for itemNode in foundItemNodes {
+                        guard let (image, subFrame) = itemNode.makeContentSnapshot() else {
+                            continue
+                        }
+                        let itemFrame = itemNode.layer.convert(subFrame, to: dustEffectLayer)
+                        dustEffectLayer.addItem(frame: itemFrame, image: image)
+                        itemNode.isHidden = true
+                    }
+                }
+            }
+        }
+        
+        self.currentAppliedDeleteAnimationCorrelationIds = appliedDeleteAnimationCorrelationIds
+        
         let animated = transition.options.contains(.AnimateInsertion)
 
         let completion: (Bool, ListViewDisplayedItemRange) -> Void = { [weak self] wasTransformed, visibleRange in
             if let strongSelf = self {
+                strongSelf.currentAppliedDeleteAnimationCorrelationIds.removeAll()
+                
                 var newIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
+                
                 if case .peer = strongSelf.chatLocation, let previousHistoryView = strongSelf.historyView {
                     var updatedIncomingReactions: [MessageId: (value: MessageReaction.Reaction, isLarge: Bool)] = [:]
                     for entry in transition.historyView.filteredEntries {
@@ -3169,50 +3267,6 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                     if !foundItemNodes.isEmpty {
                         strongSelf.currentSendAnimationCorrelationIds = nil
                         strongSelf.animationCorrelationMessagesFound?(foundItemNodes)
-                    }
-                }
-                
-                if let currentDeleteAnimationCorrelationIds = strongSelf.currentDeleteAnimationCorrelationIds {
-                    var foundItemNodes: [ChatMessageItemView] = []
-                    strongSelf.forEachRemovedItemNode { itemNode in
-                        if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
-                            for (message, _) in item.content {
-                                if currentDeleteAnimationCorrelationIds.contains(message.id) {
-                                    foundItemNodes.append(itemNode)
-                                }
-                            }
-                        }
-                    }
-                    if !foundItemNodes.isEmpty {
-                        strongSelf.currentDeleteAnimationCorrelationIds = nil
-                        if strongSelf.context.sharedContext.immediateExperimentalUISettings.dustEffect {
-                            if strongSelf.dustEffectLayer == nil {
-                                let dustEffectLayer = DustEffectLayer()
-                                dustEffectLayer.position = strongSelf.bounds.center
-                                dustEffectLayer.bounds = CGRect(origin: CGPoint(), size: strongSelf.bounds.size)
-                                strongSelf.dustEffectLayer = dustEffectLayer
-                                dustEffectLayer.zPosition = 10.0
-                                dustEffectLayer.transform = CATransform3DMakeRotation(CGFloat(Double.pi), 0.0, 0.0, 1.0)
-                                strongSelf.layer.addSublayer(dustEffectLayer)
-                                dustEffectLayer.becameEmpty = { [weak strongSelf] in
-                                    guard let strongSelf else {
-                                        return
-                                    }
-                                    strongSelf.dustEffectLayer?.removeFromSuperlayer()
-                                    strongSelf.dustEffectLayer = nil
-                                }
-                            }
-                            if let dustEffectLayer = strongSelf.dustEffectLayer {
-                                for itemNode in foundItemNodes {
-                                    guard let (image, subFrame) = itemNode.makeContentSnapshot() else {
-                                        continue
-                                    }
-                                    let itemFrame = itemNode.layer.convert(subFrame, to: dustEffectLayer)
-                                    dustEffectLayer.addItem(frame: itemFrame, image: image)
-                                    itemNode.isHidden = true
-                                }
-                            }
-                        }
                     }
                 }
                 
@@ -3894,10 +3948,11 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         self.currentSendAnimationCorrelationIds = value
     }
     
-    private var currentDeleteAnimationCorrelationIds: Set<MessageId>?
-    func setCurrentDeleteAnimationCorrelationIds(_ value: Set<MessageId>?) {
+    private var currentDeleteAnimationCorrelationIds = Set<MessageId>()
+    func setCurrentDeleteAnimationCorrelationIds(_ value: Set<MessageId>) {
         self.currentDeleteAnimationCorrelationIds = value
     }
+    private var currentAppliedDeleteAnimationCorrelationIds = Set<MessageId>()
 
     var animationCorrelationMessagesFound: (([Int64: ChatMessageItemView]) -> Void)?
 
@@ -3994,10 +4049,10 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
     }
     
     override public func customItemDeleteAnimationDuration(itemNode: ListViewItemNode) -> Double? {
-        if let currentDeleteAnimationCorrelationIds = self.currentDeleteAnimationCorrelationIds {
+        if !self.currentAppliedDeleteAnimationCorrelationIds.isEmpty {
             if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
                 for (message, _) in item.content {
-                    if currentDeleteAnimationCorrelationIds.contains(message.id) {
+                    if self.currentAppliedDeleteAnimationCorrelationIds.contains(message.id) {
                         return 1.5
                     }
                 }

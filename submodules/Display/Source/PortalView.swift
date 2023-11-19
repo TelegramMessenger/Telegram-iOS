@@ -3,6 +3,7 @@ import UIKitRuntimeUtils
 
 public class PortalView {
     public let view: UIView & UIKitPortalViewProtocol
+    public weak var sourceView: UIView?
     
     public init?(matchPosition: Bool = true) {
         guard let view = makePortalView(matchPosition) else {
@@ -13,6 +14,7 @@ public class PortalView {
     
     func reloadPortal(sourceView: PortalSourceView) {
         self.view.sourceView = sourceView
+        self.sourceView = sourceView
         
         if let portalSuperview = self.view.superview, let index = portalSuperview.subviews.firstIndex(of: self.view) {
             portalSuperview.insertSubview(self.view, at: index)

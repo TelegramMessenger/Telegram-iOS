@@ -2990,9 +2990,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.addSubnode(self.scrollNode)
         self.scrollNode.addSubnode(self.paneContainerNode)
         
-        if !self.isMediaOnly {
-            self.addSubnode(self.headerNode.buttonsContainerNode)
-        }
         self.addSubnode(self.headerNode)
         self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
         
@@ -9959,7 +9956,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
           
             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
-            self.headerNode.navigationButtonContainer.isWhite = self.headerNode.isAvatarExpanded
+            self.headerNode.navigationButtonContainer.isWhite = true//self.headerNode.isAvatarExpanded
                         
             var leftNavigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
             var rightNavigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
@@ -10103,7 +10100,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     
     private func updateNavigationExpansionPresentation(isExpanded: Bool, animated: Bool) {
         if let controller = self.controller {
-            controller.setStatusBarStyle(isExpanded ? .White : self.presentationData.theme.rootController.statusBarStyle.style, animated: animated)
+            controller.setStatusBarStyle(.White, animated: animated)
             
             if animated {
                 UIView.transition(with: controller.controllerNode.headerNode.navigationButtonContainer.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
@@ -10113,7 +10110,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             let baseNavigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
             let navigationBarPresentationData = NavigationBarPresentationData(
                 theme: NavigationBarTheme(
-                    buttonColor: isExpanded ? .white : baseNavigationBarPresentationData.theme.buttonColor,
+                    buttonColor: .white,
                     disabledButtonColor: baseNavigationBarPresentationData.theme.disabledButtonColor,
                     primaryTextColor: baseNavigationBarPresentationData.theme.primaryTextColor,
                     backgroundColor: .clear,
@@ -10281,7 +10278,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         let baseNavigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData)
         super.init(navigationBarPresentationData: NavigationBarPresentationData(
             theme: NavigationBarTheme(
-                buttonColor: avatarInitiallyExpanded ? .white : baseNavigationBarPresentationData.theme.buttonColor,
+                buttonColor: .white,
                 disabledButtonColor: baseNavigationBarPresentationData.theme.disabledButtonColor,
                 primaryTextColor: baseNavigationBarPresentationData.theme.primaryTextColor,
                 backgroundColor: .clear,
@@ -10502,7 +10499,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             }
         }
         
-        self.setStatusBarStyle(avatarInitiallyExpanded ? .White : self.presentationData.theme.rootController.statusBarStyle.style, animated: false)
+        self.setStatusBarStyle(.White, animated: false)
         
         self.scrollToTop = { [weak self] in
             self?.controllerNode.scrollToTop()
@@ -10999,7 +10996,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
             }
                 
-            if self.screenNode.headerNode.isAvatarExpanded, let currentBackButtonArrow = topNavigationBar.makeTransitionBackArrowNode(accentColor: self.screenNode.headerNode.isAvatarExpanded ? .white : self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+            if let currentBackButtonArrow = topNavigationBar.makeTransitionBackArrowNode(accentColor: .white) {
                 self.currentBackButtonArrow = currentBackButtonArrow
                 self.addSubnode(currentBackButtonArrow)
             }
@@ -11013,7 +11010,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 }
             }
             
-            if let currentBackButton = topNavigationBar.makeTransitionBackButtonNode(accentColor: self.screenNode.headerNode.isAvatarExpanded ? .white : self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+            if let currentBackButton = topNavigationBar.makeTransitionBackButtonNode(accentColor: .white) {
                 self.currentBackButton = currentBackButton
                 self.addSubnode(currentBackButton)
             }

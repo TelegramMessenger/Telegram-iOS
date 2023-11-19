@@ -38,6 +38,24 @@ struct Particle {
     float lifetime;
 };
 
+kernel void dustEffectInitializeParticle(
+    device Particle *particles [[ buffer(0) ]],
+    uint gid [[ thread_position_in_grid ]]
+) {
+    Loki rng = Loki(gid);
+    
+    Particle particle;
+    particle.offsetFromBasePosition = packed_float2(0.0, 0.0);
+    
+    float direction = rng.rand() * (3.14159265 * 2.0);
+    float velocity = (0.1 + rng.rand() * (0.2 - 0.1)) * 420.0;
+    particle.velocity = packed_float2(cos(direction) * velocity, sin(direction) * velocity);
+    
+    particle.lifetime = 0.7 + rng.rand() * (1.5 - 0.7);
+    
+    particles[gid] = particle;
+}
+
 float particleEaseInWindowFunction(float t) {
     return t;
 }

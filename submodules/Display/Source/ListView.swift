@@ -394,7 +394,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         didSet {
             if self.isAuxiliaryDisplayLinkEnabled {
                 if self.auxiliaryDisplayLinkHandle == nil {
-                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
+                    self.auxiliaryDisplayLinkHandle = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] _ in
                         guard let self else {
                             return
                         }
@@ -2436,8 +2436,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         if node.index == nil {
             var duration = insertionAnimationDuration
+            var hasCustomRemoveAnimation = false
             if let value = self.customItemDeleteAnimationDuration(itemNode: node) {
                 duration = value
+                hasCustomRemoveAnimation = true
             }
             
             if node.animationForKey("height") == nil || !(node is ListViewTempItemNode) {
@@ -2450,7 +2452,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     }
                 })
             }
-            node.animateRemoved(timestamp, duration: duration * UIView.animationDurationFactor())
+            if !hasCustomRemoveAnimation {
+                node.animateRemoved(timestamp, duration: duration * UIView.animationDurationFactor())
+            }
         } else if animated {
             if takenAnimation {
                 if let previousFrame = previousFrame {

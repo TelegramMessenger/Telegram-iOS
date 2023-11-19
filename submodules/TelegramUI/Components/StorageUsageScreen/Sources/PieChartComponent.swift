@@ -1054,23 +1054,7 @@ final class PieChartComponent: Component {
             self.backgroundColor = nil
             self.isOpaque = false
             
-            var previousTimestamp: Double?
-            self.displayLink = SharedDisplayLinkDriver.shared.add(needsHighestFramerate: true, { [weak self] in
-                let timestamp = CACurrentMediaTime()
-                var delta: Double
-                if let previousTimestamp {
-                    delta = timestamp - previousTimestamp
-                } else {
-                    delta = 1.0 / 60.0
-                }
-                previousTimestamp = timestamp
-                
-                if delta < 0.0 {
-                    delta = 1.0 / 60.0
-                } else if delta > 0.5 {
-                    delta = 1.0 / 60.0
-                }
-                
+            self.displayLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] delta in
                 self?.update(deltaTime: CGFloat(delta))
             })
         }

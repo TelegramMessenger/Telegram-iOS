@@ -281,7 +281,7 @@ final class VideoScrubberComponent: Component {
             
             self.cursorView.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.handlePositionHandlePan(_:))))
             
-            self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+            self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
                 self?.updateCursorPosition()
             }
             self.displayLink?.isPaused = true

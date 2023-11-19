@@ -535,7 +535,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         let displayLinkStart = CACurrentMediaTime()
         self.displayLinkStart = displayLinkStart
         
-        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] in
+        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
             if let strongSelf = self {
                 let currentTime = CACurrentMediaTime()
                 if let previousDisplayLinkTime = strongSelf.previousDisplayLinkTime, currentTime < previousDisplayLinkTime + delta {
