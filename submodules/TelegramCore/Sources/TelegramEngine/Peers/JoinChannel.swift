@@ -79,7 +79,7 @@ func _internal_joinChannel(account: Account, peerId: PeerId, hash: String?) -> S
             }
             |> afterCompleted {
                 if hash == nil {
-                    let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId).startStandalone()
+                    let _ = _internal_requestRecommendedChannels(account: account, peerId: peerId, forceUpdate: true).startStandalone()
                 }
             }
         } else {

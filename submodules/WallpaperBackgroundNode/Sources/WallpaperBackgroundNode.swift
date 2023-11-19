@@ -747,8 +747,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
     private let dimLayer: SimpleLayer
     private var isGeneratingPatternImage: Bool = false
 
-    private let bakedBackgroundView: UIImageView
-
     private var validLayout: (CGSize, WallpaperDisplayMode)?
     private var wallpaper: TelegramWallpaper?
     private var isSettingUpWallpaper: Bool = false
@@ -861,9 +859,6 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
 
         self.patternImageLayer = EffectImageLayer()
 
-        self.bakedBackgroundView = UIImageView()
-        self.bakedBackgroundView.isHidden = true
-        
         self.dimLayer = SimpleLayer()
         self.dimLayer.opacity = 0.0
         self.dimLayer.backgroundColor = UIColor.black.cgColor

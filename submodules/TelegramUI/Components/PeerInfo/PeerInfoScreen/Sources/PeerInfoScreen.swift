@@ -3990,6 +3990,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             |> deliverOnMainQueue).startStrict(next: { [weak self] translationState in
                 self?.translationState = translationState
             })
+            
+            let _ = context.engine.peers.requestRecommendedChannels(peerId: peerId, forceUpdate: true).startStandalone()
         }
         
         if peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudUser {
@@ -6735,21 +6737,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func openStats(boosts: Bool = false, boostStatus: ChannelBoostStatus? = nil) {
-        guard let controller = self.controller, let data = self.data, let peer = data.peer, let cachedData = data.cachedData else {
+        guard let controller = self.controller, let data = self.data, let peer = data.peer else {
             return
         }
         self.view.endEditing(true)
         
-        var statsDatacenterId: Int32?
-        if let cachedData = cachedData as? CachedChannelData {
-            statsDatacenterId = cachedData.statsDatacenterId
-        }
-        
         let statsController: ViewController
         if let channel = peer as? TelegramChannel, case .group = channel.info {
-            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, statsDatacenterId: statsDatacenterId)
+            statsController = groupStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id)
         } else {
-            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: boosts ? .boosts : .stats, boostStatus: boostStatus, statsDatacenterId: statsDatacenterId)
+            statsController = channelStatsController(context: self.context, updatedPresentationData: self.controller?.updatedPresentationData, peerId: peer.id, section: boosts ? .boosts : .stats, boostStatus: boostStatus)
         }
         controller.push(statsController)
     }

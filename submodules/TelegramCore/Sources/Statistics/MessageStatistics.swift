@@ -47,15 +47,15 @@ public struct MessageStatsContextState: Equatable {
     public var stats: MessageStats?
 }
 
-private func requestMessageStats(postbox: Postbox, network: Network, datacenterId: Int32, messageId: MessageId, dark: Bool = false) -> Signal<MessageStats?, NoError> {
-    return postbox.transaction { transaction -> (Peer, Message)? in
-        if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
-            return (peer, message)
+private func requestMessageStats(postbox: Postbox, network: Network, messageId: MessageId, dark: Bool = false) -> Signal<MessageStats?, NoError> {
+    return postbox.transaction { transaction -> (Int32, Peer, Message)? in
+        if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId), let cachedData = transaction.getPeerCachedData(peerId: messageId.peerId) as? CachedChannelData {
+            return (cachedData.statsDatacenterId, peer, message)
         } else {
             return nil
         }
-    } |> mapToSignal { peerAndMessage -> Signal<MessageStats?, NoError> in
-        guard let (peer, message) = peerAndMessage, let inputChannel = apiInputChannel(peer) else {
+    } |> mapToSignal { data -> Signal<MessageStats?, NoError> in
+        guard let (datacenterId, peer, message) = data, let inputChannel = apiInputChannel(peer) else {
             return .never()
         }
         
@@ -125,7 +125,6 @@ private func requestMessageStats(postbox: Postbox, network: Network, datacenterI
 private final class MessageStatsContextImpl {
     private let postbox: Postbox
     private let network: Network
-    private let datacenterId: Int32
     private let messageId: MessageId
     
     private var _state: MessageStatsContextState {
@@ -143,12 +142,11 @@ private final class MessageStatsContextImpl {
     private let disposable = MetaDisposable()
     private let disposables = DisposableDict<String>()
     
-    init(postbox: Postbox, network: Network, datacenterId: Int32, messageId: MessageId) {
+    init(postbox: Postbox, network: Network, messageId: MessageId) {
         assert(Queue.mainQueue().isCurrent())
         
         self.postbox = postbox
         self.network = network
-        self.datacenterId = datacenterId
         self.messageId = messageId
         self._state = MessageStatsContextState(stats: nil)
         self._statePromise.set(.single(self._state))
@@ -165,7 +163,7 @@ private final class MessageStatsContextImpl {
     private func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestMessageStats(postbox: self.postbox, network: self.network, datacenterId: self.datacenterId, messageId: self.messageId)
+        self.disposable.set((requestMessageStats(postbox: self.postbox, network: self.network, messageId: self.messageId)
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = MessageStatsContextState(stats: stats)
@@ -176,7 +174,7 @@ private final class MessageStatsContextImpl {
     
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
-            return requestGraph(network: self.network, datacenterId: self.datacenterId, token: token, x: x)
+            return requestGraph(postbox: self.postbox, network: self.network, peerId: self.messageId.peerId, token: token, x: x)
         } else {
             return .single(nil)
         }
@@ -198,9 +196,9 @@ public final class MessageStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, datacenterId: Int32, messageId: MessageId) {
+    public init(postbox: Postbox, network: Network, messageId: MessageId) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return MessageStatsContextImpl(postbox: postbox, network: network, datacenterId: datacenterId, messageId: messageId)
+            return MessageStatsContextImpl(postbox: postbox, network: network, messageId: messageId)
         })
     }
         

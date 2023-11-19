@@ -47,18 +47,18 @@ public struct StoryStatsContextState: Equatable {
     public var stats: StoryStats?
 }
 
-private func requestStoryStats(postbox: Postbox, network: Network, datacenterId: Int32, peerId: EnginePeer.Id, storyId: Int32, dark: Bool = false) -> Signal<StoryStats?, NoError> {
-    return postbox.transaction { transaction -> Peer? in
-        if let peer = transaction.getPeer(peerId) {
-            return peer
+private func requestStoryStats(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32, dark: Bool = false) -> Signal<StoryStats?, NoError> {
+    return postbox.transaction { transaction -> (Int32, Peer, Stories.Item)? in
+        if let peer = transaction.getPeer(peerId), let storedItem = transaction.getStory(id: StoryId(peerId: peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(story) = storedItem, let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData  {
+            return (cachedData.statsDatacenterId, peer, story)
         } else {
             return nil
         }
-    } |> mapToSignal { peer -> Signal<StoryStats?, NoError> in
-        guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+    } |> mapToSignal { data -> Signal<StoryStats?, NoError> in
+        guard let (statsDatacenterId, peer, story) = data, let inputPeer = apiInputPeer(peer) else {
             return .never()
         }
-        
+
         var flags: Int32 = 0
         if dark {
             flags |= (1 << 1)
@@ -66,8 +66,8 @@ private func requestStoryStats(postbox: Postbox, network: Network, datacenterId:
         
         let request = Api.functions.stats.getStoryStats(flags: flags, peer: inputPeer, id: storyId)
         let signal: Signal<Api.stats.StoryStats, MTRpcError>
-        if network.datacenterId != datacenterId {
-            signal = network.download(datacenterId: Int(datacenterId), isMedia: false, tag: nil)
+        if network.datacenterId != statsDatacenterId {
+            signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
             |> castError(MTRpcError.self)
             |> mapToSignal { worker in
                 return worker.request(request)
@@ -76,15 +76,12 @@ private func requestStoryStats(postbox: Postbox, network: Network, datacenterId:
             signal = network.request(request)
         }
         
-        let views: Int = 0
-        let forwards: Int = 0
-//        for attribute in story.attributes {
-//            if let viewsAttribute = attribute as? ViewCountStoryAttribute {
-//                views = viewsAttribute.count
-//            } else if let forwardsAttribute = attribute as? ForwardCountStoryAttribute {
-//                forwards = forwardsAttribute.count
-//            }
-//        }
+        var views: Int = 0
+        var forwards: Int = 0
+        if let storyViews = story.views {
+            views = storyViews.seenCount
+            forwards = storyViews.forwardCount
+        }
         
         return signal
         |> mapToSignal { result -> Signal<StoryStats?, MTRpcError> in
@@ -125,7 +122,6 @@ private func requestStoryStats(postbox: Postbox, network: Network, datacenterId:
 private final class StoryStatsContextImpl {
     private let postbox: Postbox
     private let network: Network
-    private let datacenterId: Int32
     private let peerId: EnginePeer.Id
     private let storyId: Int32
     
@@ -144,12 +140,11 @@ private final class StoryStatsContextImpl {
     private let disposable = MetaDisposable()
     private let disposables = DisposableDict<String>()
     
-    init(postbox: Postbox, network: Network, datacenterId: Int32, peerId: EnginePeer.Id, storyId: Int32) {
+    init(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32) {
         assert(Queue.mainQueue().isCurrent())
         
         self.postbox = postbox
         self.network = network
-        self.datacenterId = datacenterId
         self.peerId = peerId
         self.storyId = storyId
         self._state = StoryStatsContextState(stats: nil)
@@ -167,7 +162,7 @@ private final class StoryStatsContextImpl {
     private func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestStoryStats(postbox: self.postbox, network: self.network, datacenterId: self.datacenterId, peerId: self.peerId, storyId: self.storyId)
+        self.disposable.set((requestStoryStats(postbox: self.postbox, network: self.network, peerId: self.peerId, storyId: self.storyId)
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = StoryStatsContextState(stats: stats)
@@ -178,7 +173,7 @@ private final class StoryStatsContextImpl {
     
     func loadDetailedGraph(_ graph: StatsGraph, x: Int64) -> Signal<StatsGraph?, NoError> {
         if let token = graph.token {
-            return requestGraph(network: self.network, datacenterId: self.datacenterId, token: token, x: x)
+            return requestGraph(postbox: self.postbox, network: self.network, peerId: self.peerId, token: token, x: x)
         } else {
             return .single(nil)
         }
@@ -200,9 +195,9 @@ public final class StoryStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, datacenterId: Int32, peerId: EnginePeer.Id, storyId: Int32) {
+    public init(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return StoryStatsContextImpl(postbox: postbox, network: network, datacenterId: datacenterId, peerId: peerId, storyId: storyId)
+            return StoryStatsContextImpl(postbox: postbox, network: network, peerId: peerId, storyId: storyId)
         })
     }
         

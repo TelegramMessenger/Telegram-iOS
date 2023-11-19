@@ -155,7 +155,7 @@ private enum StatsEntry: ItemListNodeEntry {
     case instantPageInteractionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
     
     case postsTitle(PresentationTheme, String)
-    case post(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, StatsPostItem, ChannelStatsMessageInteractions)
+    case post(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer, StatsPostItem, ChannelStatsPostInteractions)
 
     case boostLevel(PresentationTheme, Int32, Int32, CGFloat)
     
@@ -816,7 +816,7 @@ private struct ChannelStatsControllerState: Equatable {
 }
 
 
-private func channelStatsControllerEntries(state: ChannelStatsControllerState, peer: EnginePeer?, data: ChannelStats?, messages: [Message]?, stories: PeerStoryListContext.State?, interactions: [MessageId: ChannelStatsMessageInteractions]?, boostData: ChannelBoostStatus?, boostersState: ChannelBoostersContext.State?, giftsState: ChannelBoostersContext.State?, presentationData: PresentationData, giveawayAvailable: Bool) -> [StatsEntry] {
+private func channelStatsControllerEntries(state: ChannelStatsControllerState, peer: EnginePeer?, data: ChannelStats?, messages: [Message]?, stories: PeerStoryListContext.State?, interactions: [ChannelStatsPostInteractions.PostId: ChannelStatsPostInteractions]?, boostData: ChannelBoostStatus?, boostersState: ChannelBoostersContext.State?, giftsState: ChannelBoostersContext.State?, presentationData: PresentationData, giveawayAvailable: Bool) -> [StatsEntry] {
     var entries: [StatsEntry] = []
     
     switch state.section {
@@ -889,34 +889,40 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
             }
             
             
-            var posts: [StatsPostItem] = []
-            if let messages, let interactions {
-                for message in messages {
-                    if let _ = interactions[message.id] {
-                        posts.append(.message(message))
-                    }
-                }
-            }
-            if let stories {
-                for story in stories.items {
-                    posts.append(.story(story))
-                }
-            }
-            posts.sort(by: { $0.timestamp > $1.timestamp })
-            
-            if !posts.isEmpty, let interactions, let peer = peer?._asPeer() {
-                entries.append(.postsTitle(presentationData.theme, presentationData.strings.Stats_PostsTitle))
-                var index: Int32 = 0
-                for post in posts {
-                    switch post {
-                    case let .message(message):
-                        if let interactions = interactions[message.id] {
-                            entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, post, interactions))
+            if let peer, let interactions {
+                var posts: [StatsPostItem] = []
+                if let messages {
+                    for message in messages {
+                        if let _ = interactions[.message(id: message.id)] {
+                            posts.append(.message(message))
                         }
-                    case let .story(story):
-                        entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, post, ChannelStatsMessageInteractions(messageId: MessageId(peerId: PeerId(0), namespace: 0, id: 0), views: Int32(story.views?.seenCount ?? 0), forwards: Int32(story.views?.forwardCount ?? 0), reactions: Int32(story.views?.reactedCount ?? 0))))
                     }
-                    index += 1
+                }
+                if let stories {
+                    for story in stories.items {
+                        if let _ = interactions[.story(peerId: peer.id, id: story.id)] {
+                            posts.append(.story(story))
+                        }
+                    }
+                }
+                posts.sort(by: { $0.timestamp > $1.timestamp })
+                
+                if !posts.isEmpty {
+                    entries.append(.postsTitle(presentationData.theme, presentationData.strings.Stats_PostsTitle))
+                    var index: Int32 = 0
+                    for post in posts {
+                        switch post {
+                        case let .message(message):
+                            if let interactions = interactions[.message(id: message.id)] {
+                                entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), post, interactions))
+                            }
+                        case let .story(story):
+                            if let interactions = interactions[.story(peerId: peer.id, id: story.id)] {
+                                entries.append(.post(index, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer._asPeer(), post, interactions))
+                            }
+                        }
+                        index += 1
+                    }
                 }
             }
         }
@@ -1032,7 +1038,7 @@ private func channelStatsControllerEntries(state: ChannelStatsControllerState, p
     return entries
 }
 
-public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil, statsDatacenterId: Int32?) -> ViewController {
+public func channelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, section: ChannelStatsSection = .stats, boostStatus: ChannelBoostStatus? = nil) -> ViewController {
     let statePromise = ValuePromise(ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false), ignoreRepeated: true)
     let stateValue = Atomic(value: ChannelStatsControllerState(section: section, boostersExpanded: false, moreBoostersDisplayed: 0, giftsSelected: false))
     let updateState: ((ChannelStatsControllerState) -> ChannelStatsControllerState) -> Void = { f in
@@ -1049,10 +1055,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let messagesPromise = Promise<MessageHistoryView?>(nil)
     
     let storiesPromise = Promise<PeerStoryListContext.State?>()
-    
-    let datacenterId: Int32 = statsDatacenterId ?? 0
-        
-    let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peerId)
+            
+    let statsContext = ChannelStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId)
     let dataSignal: Signal<ChannelStats?, NoError> = statsContext.state
     |> map { state in
         return state.stats
@@ -1251,9 +1255,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         let messages = messageView?.entries.map { $0.message }.sorted(by: { (lhsMessage, rhsMessage) -> Bool in
             return lhsMessage.timestamp > rhsMessage.timestamp
         })
-        let interactions = data?.messageInteractions.reduce([MessageId : ChannelStatsMessageInteractions]()) { (map, interactions) -> [MessageId : ChannelStatsMessageInteractions] in
+        let interactions = data?.postInteractions.reduce([ChannelStatsPostInteractions.PostId : ChannelStatsPostInteractions]()) { (map, interactions) -> [ChannelStatsPostInteractions.PostId : ChannelStatsPostInteractions] in
             var map = map
-            map[interactions.messageId] = interactions
+            map[interactions.postId] = interactions
             return map
         }
                 
@@ -1288,9 +1292,9 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         case let .message(message):
             subject = .message(id: message.id)
         case let .story(story):
-            subject = .story(peer: peer, storyItem: story)
+            subject = .story(peerId: peerId, id: story.id)
         }
-        controller?.push(messageStatsController(context: context, subject: subject, statsDatacenterId: statsDatacenterId))
+        controller?.push(messageStatsController(context: context, subject: subject))
     }
     contextActionImpl = { [weak controller] messageId, sourceNode, gesture in
         guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {

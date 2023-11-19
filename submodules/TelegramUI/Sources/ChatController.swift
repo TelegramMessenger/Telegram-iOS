@@ -2047,7 +2047,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                     |> deliverOnMainQueue).startStrict(error: { error in
                         let controller = ownershipTransferController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, initialError: error, present: { c, a in
-                                strongSelf.present(c, in: .window(.root), with: a)
+                            strongSelf.present(c, in: .window(.root), with: a)
                         }, commit: { password in
                             return context.engine.messages.requestMessageActionCallback(messageId: messageId, isGame: isGame, password: password, data: data)
                             |> afterDisposed {
@@ -3680,21 +3680,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let _ = strongSelf.presentVoiceMessageDiscardAlert(action: {
                 let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: id))
-                |> mapToSignal { message -> Signal<(EngineMessage.Id, Int32?)?, NoError> in
+                |> mapToSignal { message -> Signal<EngineMessage.Id?, NoError> in
                     if let message {
-                        return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: message.id.peerId))
-                        |> map { statsDatacenterId -> (EngineMessage.Id, Int32?)? in
-                            return (message.id, statsDatacenterId)
-                        }
+                        return .single(message.id)
                     } else {
                         return .complete()
                     }
                 }
-                |> deliverOnMainQueue).startStandalone(next: { [weak self] messageIdAndStatsDatacenterId in
-                    guard let strongSelf = self, let (id, statsDatacenterId) = messageIdAndStatsDatacenterId, let statsDatacenterId = statsDatacenterId else {
+                |> deliverOnMainQueue).startStandalone(next: { [weak self] messageId in
+                    guard let strongSelf = self, let messageId else {
                         return
                     }
-                    strongSelf.push(messageStatsController(context: context, subject: .message(id: id), statsDatacenterId: statsDatacenterId))
+                    strongSelf.push(messageStatsController(context: context, subject: .message(id: messageId)))
                 })
             }, delay: true)
         }, editMessageMedia: { [weak self] messageId, draw in
@@ -4674,10 +4671,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 galleryController.setHintWillBePresentedInPreviewingContext(true)
                 
                 let items: Signal<[ContextMenuItem], NoError> = context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peer.id),
-                    TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peer.id)
+                    TelegramEngine.EngineData.Item.Peer.CanViewStats(id: peer.id)
                 )
-                |> map { canViewStats, statsDatacenterId -> [ContextMenuItem] in
+                |> map { canViewStats -> [ContextMenuItem] in
                     var items: [ContextMenuItem] = [
                         .action(ContextMenuActionItem(text: strongSelf.presentationData.strings.Conversation_LinkDialogOpen, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
@@ -4698,9 +4694,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let statsController: ViewController
                             if let channel = peer as? TelegramChannel, case .group = channel.info {
-                                statsController = groupStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, statsDatacenterId: statsDatacenterId)
+                                statsController = groupStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
                             } else {
-                                statsController = channelStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id, statsDatacenterId: statsDatacenterId)
+                                statsController = channelStatsController(context: context, updatedPresentationData: strongSelf.updatedPresentationData, peerId: peer.id)
                             }
                             strongSelf.push(statsController)
                         })))

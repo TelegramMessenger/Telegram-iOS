@@ -1796,6 +1796,12 @@ public final class StoryItemSetContainerComponent: Component {
                                             return
                                         }
                                         self.sendMessageContext.performShareAction(view: self)
+                                    },
+                                    repostAction: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.openStoryEditing(repost: true)
                                     }
                                 )),
                                 environment: {},
@@ -2980,6 +2986,7 @@ public final class StoryItemSetContainerComponent: Component {
                         audioRecorder: self.sendMessageContext.audioRecorderValue,
                         videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
                         isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
+                        hasRecordedVideo: false,
                         recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
                         hasRecordedVideoPreview: self.sendMessageContext.hasRecordedVideoPreview,
                         wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
@@ -5075,7 +5082,7 @@ public final class StoryItemSetContainerComponent: Component {
             StoryContainerScreen.openPeerStories(context: component.context, peerId: peer.id, parentController: controller, avatarNode: avatarNode)
         }
         
-        private func openStoryEditing() {
+        func openStoryEditing(repost: Bool = false) {
             guard let component = self.component, let peerReference = PeerReference(component.slice.peer._asPeer()) else {
                 return
             }
@@ -5952,6 +5959,26 @@ public final class StoryItemSetContainerComponent: Component {
                             action: { _ in return false }
                         ), nil)
                     }
+                })))
+            }
+            
+            if component.slice.additionalPeerData.canViewStats {
+                items.append(.action(ContextMenuActionItem(text: component.strings.Story_Context_ViewStats, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Statistics"), color: theme.contextMenu.primaryColor)
+                }, action: { [weak self] _, a in
+                    a(.default)
+                    
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
+                    let statsController = component.context.sharedContext.makeStoryStatsController(
+                        context: component.context,
+                        updatedPresentationData: (presentationData, .single(presentationData)),
+                        peerId: component.slice.peer.id,
+                        storyId: component.slice.item.storyItem.id
+                    )
+                    component.controller()?.push(statsController)
                 })))
             }
             

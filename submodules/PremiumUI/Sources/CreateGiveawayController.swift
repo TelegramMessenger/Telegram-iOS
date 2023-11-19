@@ -989,14 +989,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                                 }
                                 
                                 let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
-                                    |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
-                                        guard let statsDatacenterId else {
-                                            return
-                                        }
-                                        let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
-                                        navigationController?.pushViewController(statsController)
-                                    })
+                                    let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)
+                                    navigationController?.pushViewController(statsController)
                                 }), elevatedLayout: false, action: { _ in
                                     return true
                                 })
@@ -1068,14 +1062,8 @@ public func createGiveawayController(context: AccountContext, updatedPresentatio
                     let text = presentationData.strings.BoostGift_GiveawayCreated_Text
                     
                     let tooltipController = UndoOverlayController(presentationData: presentationData, content: .premiumPaywall(title: title, text: text, customUndoText: nil, timeout: nil, linkAction: { [weak navigationController] _ in
-                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: peerId))
-                        |> deliverOnMainQueue).startStandalone(next: { [weak navigationController] statsDatacenterId in
-                            guard let statsDatacenterId else {
-                                return
-                            }
-                            let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil, statsDatacenterId: statsDatacenterId)
-                            navigationController?.pushViewController(statsController)
-                        })
+                        let statsController = context.sharedContext.makeChannelStatsController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, boosts: true, boostStatus: nil)
+                        navigationController?.pushViewController(statsController)
                     }), elevatedLayout: false, action: { _ in
                         return true
                     })

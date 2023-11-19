@@ -211,7 +211,7 @@ public final class BlockedPeersContext {
                 }
             }
             let inputPeers = peers.compactMap { apiInputPeer($0) }
-            return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputPeers, limit: Int32(peers.count)))
+            return network.request(Api.functions.contacts.setBlocked(flags: flags, id: inputPeers, limit: Int32(max(currentPeers.count, peers.count))))
             |> mapError { _ -> BlockedPeersContextAddError in
                 return .generic
             }
