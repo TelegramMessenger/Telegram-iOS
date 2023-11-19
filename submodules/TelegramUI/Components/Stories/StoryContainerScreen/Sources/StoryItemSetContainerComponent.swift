@@ -1796,12 +1796,6 @@ public final class StoryItemSetContainerComponent: Component {
                                             return
                                         }
                                         self.sendMessageContext.performShareAction(view: self)
-                                    },
-                                    repostAction: { [weak self] in
-                                        guard let self else {
-                                            return
-                                        }
-                                        self.openStoryEditing(repost: true)
                                     }
                                 )),
                                 environment: {},
