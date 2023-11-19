@@ -2986,7 +2986,6 @@ public final class StoryItemSetContainerComponent: Component {
                         audioRecorder: self.sendMessageContext.audioRecorderValue,
                         videoRecordingStatus: !self.sendMessageContext.hasRecordedVideoPreview ? self.sendMessageContext.videoRecorderValue?.audioStatus : nil,
                         isRecordingLocked: self.sendMessageContext.isMediaRecordingLocked,
-                        hasRecordedVideo: false,
                         recordedAudioPreview: self.sendMessageContext.recordedAudioPreview,
                         hasRecordedVideoPreview: self.sendMessageContext.hasRecordedVideoPreview,
                         wasRecordingDismissed: self.sendMessageContext.wasRecordingDismissed,
