@@ -287,13 +287,15 @@ final class PeerNameColorItem: ListViewItem, ItemListItem {
     
     let theme: PresentationTheme
     let colors: PeerNameColors
-    let currentColor: PeerNameColor
+    let isProfile: Bool
+    let currentColor: PeerNameColor?
     let updated: (PeerNameColor) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, colors: PeerNameColors, currentColor: PeerNameColor, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, colors: PeerNameColors, isProfile: Bool, currentColor: PeerNameColor?, updated: @escaping (PeerNameColor) -> Void, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.colors = colors
+        self.isProfile = isProfile
         self.currentColor = currentColor
         self.updated = updated
         self.tag = tag
@@ -436,7 +438,13 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
         let options = ListViewDeleteAndInsertOptions()
         var scrollToItem: ListViewScrollToItem?
         if !self.initialized || transition.updatePosition || !self.tapping {
-            if let index = item.colors.displayOrder.firstIndex(where: { $0 == item.currentColor.rawValue }) {
+            let displayOrder: [Int32]
+            if item.isProfile {
+                displayOrder = item.colors.profileDisplayOrder
+            } else {
+                displayOrder = item.colors.displayOrder
+            }
+            if let index = displayOrder.firstIndex(where: { $0 == item.currentColor?.rawValue }) {
                 scrollToItem = ListViewScrollToItem(index: index, position: .bottom(-70.0), animated: false, curve: .Default(duration: 0.0), directionHint: .Down)
                 self.initialized = true
             }
@@ -492,12 +500,17 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
                     var hasBottomCorners = false
-                    switch neighbors.top {
+                    if item.currentColor != nil {
+                        switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
                             hasTopCorners = true
                             strongSelf.topStripeNode.isHidden = hasCorners
+                        }
+                    } else {
+                        strongSelf.topStripeNode.isHidden = true
+                        hasTopCorners = true
                     }
                     let bottomStripeInset: CGFloat
                     let bottomStripeOffset: CGFloat
@@ -531,10 +544,21 @@ final class PeerNameColorItemNode: ListViewItemNode, ItemListItemNode {
                     
                     var entries: [PeerNameColorEntry] = []
                     
+                    let displayOrder: [Int32]
+                    if item.isProfile {
+                        displayOrder = item.colors.profileDisplayOrder
+                    } else {
+                        displayOrder = item.colors.displayOrder
+                    }
                     var i: Int = 0
-                    for index in item.colors.displayOrder {
+                    for index in displayOrder {
                         let color = PeerNameColor(rawValue: index)
-                        let colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
+                        let colors: PeerNameColors.Colors
+                        if item.isProfile {
+                            colors = item.colors.getProfile(color, dark: item.theme.overallDarkAppearance)
+                        } else {
+                            colors = item.colors.get(color, dark: item.theme.overallDarkAppearance)
+                        }
                         entries.append(.color(i, color, colors, item.theme.overallDarkAppearance, color == item.currentColor))
                         
                         i += 1

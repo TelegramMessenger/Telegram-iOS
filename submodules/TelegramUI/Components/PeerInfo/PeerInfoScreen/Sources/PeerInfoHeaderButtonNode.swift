@@ -5,6 +5,8 @@ import ContextUI
 import AnimationUI
 import Display
 import TelegramPresentationData
+import ComponentFlow
+import LottieComponent
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -43,7 +45,7 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     private let backgroundNode: NavigationBackgroundNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
-    private var animationNode: AnimationNode?
+    private var animatedIcon: ComponentView<Empty>?
     
     private var theme: PresentationTheme?
     private var icon: PeerInfoHeaderButtonIcon?
@@ -102,15 +104,17 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
     
     @objc private func buttonPressed() {
         switch self.icon {
-            case .voiceChat, .more, .leave:
-                self.animationNode?.playOnce()
-            default:
-                break
+        case .voiceChat, .more, .leave:
+            if let animatedIconView = self.animatedIcon?.view as? LottieComponent.View {
+                animatedIconView.playOnce()
+            }
+        default:
+            break
         }
         self.action(self, nil)
     }
     
-    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, text: String, icon: PeerInfoHeaderButtonIcon, isActive: Bool, presentationData: PresentationData, backgroundColor: UIColor, foregroundColor: UIColor, transition: ContainedViewLayoutTransition) {
         let previousIcon = self.icon
         let themeUpdated = self.theme != presentationData.theme
         let iconUpdated = self.icon != icon
@@ -128,78 +132,8 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
                 isGestureEnabled = true
             }
             self.containerNode.isGestureEnabled = isGestureEnabled
-                        
-            let animationName: String?
-            var colors: [String: UIColor] = [:]
-            var playOnce = false
-            var seekToEnd = false
+            
             let iconColor = UIColor.white
-            switch icon {
-                case .voiceChat:
-                    animationName = "anim_profilevc"
-                    colors = ["Line 3.Group 1.Stroke 1": iconColor,
-                              "Line 1.Group 1.Stroke 1": iconColor,
-                              "Line 2.Group 1.Stroke 1": iconColor]
-                case .mute:
-                    animationName = "anim_profileunmute"
-                    colors = ["Middle.Group 1.Fill 1": iconColor,
-                              "Top.Group 1.Fill 1": iconColor,
-                              "Bottom.Group 1.Fill 1": iconColor,
-                              "EXAMPLE.Group 1.Fill 1": iconColor,
-                              "Line.Group 1.Stroke 1": iconColor]
-                    if previousIcon == .unmute {
-                        playOnce = true
-                    } else {
-                        seekToEnd = true
-                    }
-                case .unmute:
-                    animationName = "anim_profilemute"
-                    colors = ["Middle.Group 1.Fill 1": iconColor,
-                              "Top.Group 1.Fill 1": iconColor,
-                              "Bottom.Group 1.Fill 1": iconColor,
-                              "EXAMPLE.Group 1.Fill 1": iconColor,
-                              "Line.Group 1.Stroke 1": iconColor]
-                    if previousIcon == .mute {
-                        playOnce = true
-                    } else {
-                        seekToEnd = true
-                    }
-                case .more:
-                    animationName = "anim_profilemore"
-                    colors = ["Point 2.Group 1.Fill 1": iconColor,
-                              "Point 3.Group 1.Fill 1": iconColor,
-                              "Point 1.Group 1.Fill 1": iconColor]
-                case .leave:
-                    animationName = "anim_profileleave"
-                    colors = ["Arrow.Group 2.Stroke 1": iconColor,
-                              "Door.Group 1.Stroke 1": iconColor,
-                              "Arrow.Group 1.Stroke 1": iconColor]
-                default:
-                    animationName = nil
-            }
-            
-            if let animationName = animationName {
-                let animationNode: AnimationNode
-                if let current = self.animationNode {
-                    animationNode = current
-                    animationNode.setAnimation(name: animationName, colors: colors)
-                } else {
-                    animationNode = AnimationNode(animation: animationName, colors: colors, scale: 1.0)
-                    self.referenceNode.addSubnode(animationNode)
-                    self.animationNode = animationNode
-                }
-            } else if let animationNode = self.animationNode {
-                self.animationNode = nil
-                animationNode.removeFromSupernode()
-            }
-            
-            if playOnce {
-                self.animationNode?.play()
-            } else if seekToEnd {
-                self.animationNode?.seekToEnd()
-            }
-                        
-            //self.backgroundNode.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
             self.iconNode.image = generateImage(iconSize, contextGenerator: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setBlendMode(.normal)
@@ -237,11 +171,75 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
             })
         }
         
+        let animationName: String?
+        var playOnce = false
+        var seekToEnd = false
+        switch icon {
+        case .voiceChat:
+            animationName = "anim_profilevc"
+        case .mute:
+            animationName = "anim_profileunmute"
+            if previousIcon == .unmute {
+                playOnce = true
+            } else {
+                seekToEnd = true
+            }
+        case .unmute:
+            animationName = "anim_profilemute"
+            if previousIcon == .mute {
+                playOnce = true
+            } else {
+                seekToEnd = true
+            }
+        case .more:
+            animationName = "anim_profilemore"
+        case .leave:
+            animationName = "anim_profileleave"
+        default:
+            animationName = nil
+        }
+        
+        if let animationName = animationName {
+            let animatedIcon: ComponentView<Empty>
+            if let current = self.animatedIcon {
+                animatedIcon = current
+            } else {
+                animatedIcon = ComponentView()
+                self.animatedIcon = animatedIcon
+            }
+            let _ = animatedIcon.update(
+                transition: .immediate,
+                component: AnyComponent(LottieComponent(
+                    content: LottieComponent.AppBundleContent(name: animationName),
+                    color: foregroundColor,
+                    startingPosition: seekToEnd ? .end : .begin
+                )),
+                environment: {},
+                containerSize: iconSize
+            )
+        } else if let animatedIcon = self.animatedIcon {
+            self.animatedIcon = nil
+            animatedIcon.view?.removeFromSuperview()
+        }
+        
+        if let animatedIconView = self.animatedIcon?.view as? LottieComponent.View {
+            if animatedIconView.superview == nil {
+                self.referenceNode.view.addSubview(animatedIconView)
+            }
+            if playOnce {
+                animatedIconView.playOnce()
+            }
+        }
+        
+        transition.updateTintColor(layer: self.iconNode.layer, color: foregroundColor)
+        transition.updateTintColor(layer: self.titleNode.layer, color: foregroundColor)
+        transition.updateTintColor(layer: self.textNode.layer, color: foregroundColor)
+        
         if isActiveUpdated {
             let alphaTransition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .easeInOut)
             alphaTransition.updateAlpha(node: self.iconNode, alpha: isActive ? 1.0 : 0.3)
-            if let animationNode = self.animationNode {
-                alphaTransition.updateAlpha(node: animationNode, alpha: isActive ? 1.0 : 0.3)
+            if let animatedIconView = self.animatedIcon?.view {
+                alphaTransition.updateAlpha(layer: animatedIconView.layer, alpha: isActive ? 1.0 : 0.3)
             }
             alphaTransition.updateAlpha(node: self.textNode, alpha: isActive ? 1.0 : 0.3)
         }
@@ -253,9 +251,10 @@ final class PeerInfoHeaderButtonNode: HighlightableButtonNode {
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: size))
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         self.backgroundNode.update(size: size, cornerRadius: 11.0, transition: transition)
+        self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
         transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
-        if let animationNode = self.animationNode {
-            transition.updateFrame(node: animationNode, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
+        if let animatedIconView = self.animatedIcon?.view {
+            transition.updateFrame(view: animatedIconView, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: 1.0), size: iconSize))
         }
         transition.updateFrameAdditiveToCenter(node: self.textNode, frame: CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: size.height - titleSize.height - 9.0), size: titleSize))
         

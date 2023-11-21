@@ -76,6 +76,7 @@ private let TitleNodeStateExpanded = 1
 
 final class PeerInfoHeaderNode: ASDisplayNode {
     private var context: AccountContext
+    private weak var controller: PeerInfoScreenImpl?
     private var presentationData: PresentationData?
     private var state: PeerInfoState?
     private var peer: Peer?
@@ -159,8 +160,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     private var validLayout: (width: CGFloat, deviceMetrics: DeviceMetrics)?
     
-    init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
+    init(context: AccountContext, controller: PeerInfoScreenImpl, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool, forumTopicThreadId: Int64?, chatLocation: ChatLocation) {
         self.context = context
+        self.controller = controller
         self.isAvatarExpanded = avatarInitiallyExpanded
         self.isOpenedFromChat = isOpenedFromChat
         self.isSettings = isSettings
@@ -481,7 +483,168 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             isForum = true
         }
         
-        if themeUpdated || self.currentCredibilityIcon != credibilityIcon {
+        self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
+        self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
+        
+        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings, presentationData: presentationData, transition: transition)
+        transition.updateFrame(node: self.editingContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -contentOffset), size: CGSize(width: width, height: editingContentHeight)))
+        
+        let avatarOverlayFarme = self.editingContentNode.convert(self.editingContentNode.avatarNode.frame, to: self)
+        transition.updateFrame(node: self.avatarOverlayNode, frame: avatarOverlayFarme)
+        
+        var transitionSourceHeight: CGFloat = 0.0
+        var transitionFraction: CGFloat = 0.0
+        var transitionSourceAvatarFrame: CGRect?
+        var transitionSourceTitleFrame = CGRect()
+        var transitionSourceSubtitleFrame = CGRect()
+        
+        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
+        
+        self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
+
+        let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
+        
+        let regularNavigationContentsAccentColor: UIColor = peer?.profileColor != nil ? .white : presentationData.theme.list.itemAccentColor
+        let collapsedHeaderNavigationContentsAccentColor = presentationData.theme.list.itemAccentColor
+        let expandedAvatarNavigationContentsAccentColor: UIColor = .white
+        
+        let regularNavigationContentsPrimaryColor: UIColor = peer?.profileColor != nil ? .white : presentationData.theme.list.itemPrimaryTextColor
+        let collapsedHeaderNavigationContentsPrimaryColor = presentationData.theme.list.itemPrimaryTextColor
+        let expandedAvatarNavigationContentsPrimaryColor: UIColor = .white
+        
+        let regularContentButtonBackgroundColor: UIColor
+        let collapsedHeaderContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        let expandedAvatarContentButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
+        
+        let regularHeaderButtonBackgroundColor: UIColor
+        let collapsedHeaderButtonBackgroundColor: UIColor = .clear
+        let expandedAvatarHeaderButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
+        
+        let regularContentButtonForegroundColor: UIColor = peer?.profileColor != nil ? UIColor.white : presentationData.theme.list.itemAccentColor
+        let collapsedHeaderContentButtonForegroundColor = presentationData.theme.list.itemAccentColor
+        let expandedAvatarContentButtonForegroundColor: UIColor = .white
+        
+        let regularNavigationContentsSecondaryColor: UIColor
+        if let profileColor = peer?.profileColor {
+            let backgroundColor = self.context.peerNameColors.getProfile(profileColor).main
+            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+            
+            if presentationData.theme.overallDarkAppearance {
+                let baseButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.4)
+                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 0.7), alpha: 1.0)
+            } else {
+                let baseButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
+                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 0.8, brightness: 1.0), alpha: 1.0)
+            }
+            regularHeaderButtonBackgroundColor = regularContentButtonBackgroundColor
+        } else {
+            regularNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
+            regularContentButtonBackgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+            regularHeaderButtonBackgroundColor = .clear
+        }
+        let collapsedHeaderNavigationContentsSecondaryColor = presentationData.theme.list.itemSecondaryTextColor
+        let expandedAvatarNavigationContentsSecondaryColor: UIColor = .white
+        
+        let navigationContentsAccentColor: UIColor
+        let navigationContentsPrimaryColor: UIColor
+        let navigationContentsSecondaryColor: UIColor
+        
+        let contentButtonBackgroundColor: UIColor
+        let contentButtonForegroundColor: UIColor
+        
+        let headerButtonBackgroundColor: UIColor
+        
+        var effectiveSeparatorAlpha: CGFloat
+        if let navigationTransition = self.navigationTransition {
+            transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
+            transitionFraction = navigationTransition.fraction
+            
+            if let avatarNavigationNode = navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
+                if let statusView = avatarNavigationNode.statusView.view {
+                    transitionSourceAvatarFrame = statusView.convert(statusView.bounds, to: navigationTransition.sourceNavigationBar.view)
+                } else {
+                    transitionSourceAvatarFrame = avatarNavigationNode.avatarNode.view.convert(avatarNavigationNode.avatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
+                }
+                transition.updateAlpha(node: self.avatarListNode.avatarContainerNode.avatarNode, alpha: 1.0 - transitionFraction)
+            } else {
+                if deviceMetrics.hasDynamicIsland && !isLandscape {
+                    transitionSourceAvatarFrame = CGRect(origin: CGPoint(x: avatarFrame.minX, y: -20.0), size: avatarFrame.size).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
+                } else {
+                    transitionSourceAvatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: -avatarFrame.maxY).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
+                }
+            }
+            transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
+            transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
+
+            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: 1.0 - transitionFraction)
+            
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
+            effectiveSeparatorAlpha = transitionFraction
+            
+            if self.isAvatarExpanded {
+                navigationContentsAccentColor = expandedAvatarNavigationContentsAccentColor
+                navigationContentsPrimaryColor = expandedAvatarNavigationContentsPrimaryColor
+                navigationContentsSecondaryColor = expandedAvatarNavigationContentsSecondaryColor
+                
+                contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
+                contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
+                
+                headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
+            } else {
+                navigationContentsAccentColor = regularNavigationContentsAccentColor
+                navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor
+                navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor
+                
+                contentButtonBackgroundColor = regularContentButtonBackgroundColor
+                contentButtonForegroundColor = regularContentButtonForegroundColor
+                
+                headerButtonBackgroundColor = regularHeaderButtonBackgroundColor
+            }
+            
+            if self.isAvatarExpanded, case .animated = transition, transitionFraction == 1.0 {
+                self.avatarListNode.animateAvatarCollapse(transition: transition)
+            }
+            self.avatarClippingNode.clipsToBounds = false
+        } else {
+            let contentOffset = max(0.0, contentOffset - 140.0)
+            let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / 30.0))
+            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
+            
+            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: state.isEditing ? 0.0 : (1.0 - backgroundTransitionFraction))
+            
+            if state.isEditing {
+                navigationContentsAccentColor = collapsedHeaderNavigationContentsAccentColor
+                navigationContentsPrimaryColor = collapsedHeaderNavigationContentsPrimaryColor
+                navigationContentsSecondaryColor = collapsedHeaderNavigationContentsSecondaryColor
+                contentButtonBackgroundColor = collapsedHeaderContentButtonBackgroundColor
+                contentButtonForegroundColor = collapsedHeaderContentButtonForegroundColor
+                
+                headerButtonBackgroundColor = collapsedHeaderButtonBackgroundColor
+            } else if self.isAvatarExpanded {
+                navigationContentsAccentColor = expandedAvatarNavigationContentsAccentColor
+                navigationContentsPrimaryColor = expandedAvatarNavigationContentsPrimaryColor
+                navigationContentsSecondaryColor = expandedAvatarNavigationContentsSecondaryColor
+                contentButtonBackgroundColor = expandedAvatarContentButtonBackgroundColor
+                contentButtonForegroundColor = expandedAvatarContentButtonForegroundColor
+                
+                headerButtonBackgroundColor = expandedAvatarHeaderButtonBackgroundColor
+            } else {
+                navigationContentsAccentColor = regularNavigationContentsAccentColor.mixedWith(collapsedHeaderNavigationContentsAccentColor, alpha: backgroundTransitionFraction)
+                navigationContentsPrimaryColor = regularNavigationContentsPrimaryColor.mixedWith(collapsedHeaderNavigationContentsPrimaryColor, alpha: backgroundTransitionFraction)
+                navigationContentsSecondaryColor = regularNavigationContentsSecondaryColor.mixedWith(collapsedHeaderNavigationContentsSecondaryColor, alpha: backgroundTransitionFraction)
+                
+                contentButtonBackgroundColor = regularContentButtonBackgroundColor.mixedWith(collapsedHeaderContentButtonBackgroundColor, alpha: backgroundTransitionFraction)
+                contentButtonForegroundColor = regularContentButtonForegroundColor.mixedWith(collapsedHeaderContentButtonForegroundColor, alpha: backgroundTransitionFraction)
+                
+                headerButtonBackgroundColor = regularHeaderButtonBackgroundColor.mixedWith(collapsedHeaderButtonBackgroundColor, alpha: backgroundTransitionFraction)
+            }
+            
+            effectiveSeparatorAlpha = backgroundTransitionFraction
+            
+            self.avatarClippingNode.clipsToBounds = true
+        }
+        
+        do {
             self.currentCredibilityIcon = credibilityIcon
             
             var currentEmojiStatus: PeerEmojiStatus?
@@ -492,11 +655,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .none
                 emojiExpandedStatusContent = .none
             case .premium:
-                emojiRegularStatusContent = .premium(color: UIColor.white)
-                emojiExpandedStatusContent = .premium(color: UIColor(rgb: 0xffffff, alpha: 0.75))
+                emojiRegularStatusContent = .premium(color: navigationContentsAccentColor)
+                emojiExpandedStatusContent = .premium(color: navigationContentsAccentColor)
             case .verified:
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
-                emojiExpandedStatusContent = .verified(fillColor: UIColor(rgb: 0xffffff, alpha: 0.75), foregroundColor: .clear, sizeType: .large)
+                emojiExpandedStatusContent = .verified(fillColor: navigationContentsAccentColor, foregroundColor: .clear, sizeType: .large)
             case .fake:
                 emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
                 emojiExpandedStatusContent = emojiRegularStatusContent
@@ -505,14 +668,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = emojiRegularStatusContent
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: UIColor.white, loopMode: .forever)
-                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: UIColor.white, loopMode: .forever)
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: navigationContentsAccentColor, themeColor: navigationContentsAccentColor, loopMode: .forever)
             }
             
-            let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
+            //let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
             
             let iconSize = self.titleCredibilityIconView.update(
-                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
+                transition: Transition(transition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -568,7 +731,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 containerSize: CGSize(width: 34.0, height: 34.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
-                transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
+                transition: Transition(transition),
                 component: AnyComponent(EmojiStatusComponent(
                     context: self.context,
                     animationCache: self.animationCache,
@@ -591,76 +754,37 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.titleExpandedCredibilityIconSize = expandedIconSize
         }
         
-        self.regularContentNode.alpha = state.isEditing ? 0.0 : 1.0
-        self.editingContentNode.alpha = state.isEditing ? 1.0 : 0.0
+        self.navigationButtonContainer.updateContentsColor(backgroundContentColor: headerButtonBackgroundColor, contentsColor: navigationContentsAccentColor, transition: transition)
         
-        let editingContentHeight = self.editingContentNode.update(width: width, safeInset: containerInset, statusBarHeight: statusBarHeight, navigationHeight: navigationHeight, isModalOverlay: isModalOverlay, peer: state.isEditing ? peer : nil, threadData: threadData, chatLocation: self.chatLocation, cachedData: cachedData, isContact: isContact, isSettings: isSettings, presentationData: presentationData, transition: transition)
-        transition.updateFrame(node: self.editingContentNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -contentOffset), size: CGSize(width: width, height: editingContentHeight)))
-        
-        let avatarOverlayFarme = self.editingContentNode.convert(self.editingContentNode.avatarNode.frame, to: self)
-        transition.updateFrame(node: self.avatarOverlayNode, frame: avatarOverlayFarme)
-        
-        var transitionSourceHeight: CGFloat = 0.0
-        var transitionFraction: CGFloat = 0.0
-        var transitionSourceAvatarFrame: CGRect?
-        var transitionSourceTitleFrame = CGRect()
-        var transitionSourceSubtitleFrame = CGRect()
-        
-        let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 22.0), size: CGSize(width: avatarSize, height: avatarSize))
-        
-        self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
-
-        let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
-        let _ = headerBackgroundColor
-        
-        var effectiveSeparatorAlpha: CGFloat
-        if let navigationTransition = self.navigationTransition {
-            transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
-            transitionFraction = navigationTransition.fraction
-            
-            if let avatarNavigationNode = navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
-                if let statusView = avatarNavigationNode.statusView.view {
-                    transitionSourceAvatarFrame = statusView.convert(statusView.bounds, to: navigationTransition.sourceNavigationBar.view)
-                } else {
-                    transitionSourceAvatarFrame = avatarNavigationNode.avatarNode.view.convert(avatarNavigationNode.avatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
-                }
-                transition.updateAlpha(node: self.avatarListNode.avatarContainerNode.avatarNode, alpha: 1.0 - transitionFraction)
-            } else {
-                if deviceMetrics.hasDynamicIsland && !isLandscape {
-                    transitionSourceAvatarFrame = CGRect(origin: CGPoint(x: avatarFrame.minX, y: -20.0), size: avatarFrame.size).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
-                } else {
-                    transitionSourceAvatarFrame = avatarFrame.offsetBy(dx: 0.0, dy: -avatarFrame.maxY).insetBy(dx: avatarSize * 0.4, dy: avatarSize * 0.4)
-                }
+        self.titleNode.updateTintColor(color: navigationContentsPrimaryColor, transition: transition)
+        self.subtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
+        self.panelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
+        self.nextPanelSubtitleNode.updateTintColor(color: navigationContentsSecondaryColor, transition: transition)
+        if let navigationBar = self.controller?.navigationBar {
+            if let mainContentNode = navigationBar.backButtonNode.mainContentNode {
+                transition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
             }
-            transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
-            transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
-
-            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: 1.0 - transitionFraction)
+            transition.updateTintColor(layer: navigationBar.backButtonArrow.layer, color: navigationContentsAccentColor)
             
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - transitionFraction), forceKeepBlur: true, transition: transition)
-            effectiveSeparatorAlpha = transitionFraction
-            
-            if self.isAvatarExpanded, case .animated = transition, transitionFraction == 1.0 {
-                self.avatarListNode.animateAvatarCollapse(transition: transition)
+            if let mainContentNode = navigationBar.leftButtonNode.mainContentNode {
+                transition.updateTintColor(layer: mainContentNode.layer, color: navigationContentsAccentColor)
             }
-            self.avatarClippingNode.clipsToBounds = false
-        } else {
-            let contentOffset = max(0.0, contentOffset - 140.0)
-            let backgroundTransitionFraction: CGFloat = max(0.0, min(1.0, contentOffset / 30.0))
-            self.expandedBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor.mixedWith(headerBackgroundColor, alpha: 1.0 - backgroundTransitionFraction), forceKeepBlur: true, transition: transition)
-            transition.updateAlpha(layer: self.backgroundBannerView.layer, alpha: state.isEditing ? 0.0 : 1.0)
             
-            effectiveSeparatorAlpha = backgroundTransitionFraction
-            
-            self.avatarClippingNode.clipsToBounds = true
+            navigationBar.rightButtonNode.contentsColor = navigationContentsAccentColor
+            navigationBar.leftButtonNode.contentsColor = navigationContentsAccentColor
+            navigationBar.backButtonNode.contentsColor = navigationContentsAccentColor
         }
+        
+        var titleBrightness: CGFloat = 0.0
+        navigationContentsPrimaryColor.getHue(nil, saturation: nil, brightness: &titleBrightness, alpha: nil)
+        self.controller?.setStatusBarStyle(titleBrightness > 0.5 ? .White : .Black, animated: !isFirstTime)
         
         self.avatarListNode.avatarContainerNode.updateTransitionFraction(transitionFraction, transition: transition)
         self.avatarListNode.listContainerNode.currentItemNode?.updateTransitionFraction(transitionFraction, transition: transition)
         self.avatarOverlayNode.updateTransitionFraction(transitionFraction, transition: transition)
         
         if self.navigationTitle != presentationData.strings.EditProfile_Title || themeUpdated {
-            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.semibold(17.0), textColor: UIColor.white)
+            self.navigationTitleNode.attributedText = NSAttributedString(string: presentationData.strings.EditProfile_Title, font: Font.semibold(17.0), textColor: .white)
         }
         
         let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: width, height: navigationHeight))
@@ -727,7 +851,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
 
             titleStringText = title
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: UIColor.white)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.medium(28.0), color: .white)
             
             if self.isSettings, let user = peer as? TelegramUser {
@@ -737,10 +861,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     subtitle = "\(subtitle) • @\(mainUsername)"
                 }
                 subtitleStringText = subtitle
-                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7))
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
             } else if let _ = threadData {
                 let subtitleColor: UIColor
                 subtitleColor = UIColor.white
@@ -750,9 +874,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
                 subtitleStringText = statusText
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(16.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
                 
                 subtitleIsButton = true
 
@@ -762,26 +886,26 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     if panelStatusData.isActivity {
                         subtitleColor = UIColor.white
                     } else {
-                        subtitleColor = UIColor.white.withAlphaComponent(0.7)
+                        subtitleColor = UIColor.white
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white))
                 }
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
                 if statusData.isActivity {
                     subtitleColor = UIColor.white
                 } else {
-                    subtitleColor = UIColor.white.withMultipliedAlpha(0.7)
+                    subtitleColor = UIColor.white
                 }
                 
                 subtitleStringText = statusData.text
                 subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor(white: 1.0, alpha: 0.7))
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
@@ -789,30 +913,30 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     if panelStatusData.isActivity {
                         subtitleColor = UIColor.white
                     } else {
-                        subtitleColor = UIColor.white.withMultipliedAlpha(0.7)
+                        subtitleColor = UIColor.white
                     }
                     panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: .white))
                 }
             } else {
                 subtitleStringText = " "
-                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
-                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
                 
-                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
             }
         } else {
             titleStringText = " "
-            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: UIColor.white)
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
             smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
             
             subtitleStringText = " "
-            subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
-            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7))
+            subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
+            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white)
             
-            usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: UIColor.white.withMultipliedAlpha(0.7)))
+            usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(16.0), color: .white))
         }
         
         let textSideInset: CGFloat = 36.0
@@ -868,16 +992,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if let current = self.subtitleArrowNode {
                 subtitleArrowNode = current
                 if themeUpdated {
-                    subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: UIColor.white.withMultipliedAlpha(0.5))
+                    subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
                 }
             } else {
                 subtitleArrowNode = ASImageNode()
                 self.subtitleArrowNode = subtitleArrowNode
                 self.subtitleNode.insertSubnode(subtitleArrowNode, at: 1)
                 
-                subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: UIColor.white.withMultipliedAlpha(0.5))
+                subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
             }
-            subtitleBackgroundNode.backgroundColor = UIColor.white.withMultipliedAlpha(0.1)
+            subtitleBackgroundNode.backgroundColor = .white.withMultipliedAlpha(0.1)
             let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
             var subtitleBackgroundFrame = CGRect(origin: CGPoint(), size: subtitleSize).offsetBy(dx: -subtitleSize.width * 0.5, dy: -subtitleSize.height * 0.5).insetBy(dx: -6.0, dy: -4.0)
             subtitleBackgroundFrame.size.width += 12.0
@@ -965,7 +1089,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 collapsedTransitionOffset = -10.0 * navigationTransition.fraction
             }
             
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 2.0), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         
@@ -1097,6 +1221,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
             avatarOffset = 0.0
         } else {
+            //
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         }
@@ -1190,7 +1315,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         } else {
             var trueAvatarSize = avatarFrame.size
-            if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.unseenCount != 0 {
+            if let storyStats = self.avatarListNode.avatarContainerNode.avatarNode.storyStats, storyStats.totalCount != 0 {
                 trueAvatarSize.width -= 3.0 * 4.0
                 trueAvatarSize.height -= 3.0 * 4.0
             }
@@ -1551,7 +1676,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 isActive = buttonKey == highlightedButton
             }
             
-            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, presentationData: presentationData, transition: buttonTransition)
+            buttonNode.update(size: buttonFrame.size, text: buttonText, icon: buttonIcon, isActive: isActive, presentationData: presentationData, backgroundColor: contentButtonBackgroundColor, foregroundColor: contentButtonForegroundColor, transition: buttonTransition)
             
             if wasAdded {
                 buttonNode.alpha = 0.0
@@ -1621,6 +1746,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             component: AnyComponent(PeerInfoCoverComponent(
                 context: self.context,
                 peer: peer.flatMap(EnginePeer.init),
+                isDark: presentationData.theme.overallDarkAppearance,
                 avatarCenter: apparentAvatarFrame.center,
                 avatarScale: avatarScale,
                 avatarTransitionFraction: max(0.0, min(1.0, titleCollapseFraction + transitionFraction * 2.0)),

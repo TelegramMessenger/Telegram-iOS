@@ -84,12 +84,22 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
         self.playbackStartDisposable.dispose()
     }
     
-    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme) {
+    func updateStoryView(transition: ContainedViewLayoutTransition, theme: PresentationTheme, peer: Peer?) {
         var colors = AvatarNode.Colors(theme: theme)
+        
+        let regularNavigationContentsSecondaryColor: UIColor
+        if let profileColor = peer?.profileColor {
+            let backgroundColor = self.context.peerNameColors.getProfile(profileColor).main
+            regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
+        } else {
+            regularNavigationContentsSecondaryColor = theme.list.controlSecondaryColor
+        }
+        
         colors.seenColors = [
-            theme.list.controlSecondaryColor,
-            theme.list.controlSecondaryColor
+            regularNavigationContentsSecondaryColor,
+            regularNavigationContentsSecondaryColor
         ]
+        
         var storyStats: AvatarNode.StoryStats?
         if let storyData = self.storyData {
             storyStats = AvatarNode.StoryStats(
@@ -410,6 +420,6 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             }
         }
         
-        self.updateStoryView(transition: .immediate, theme: theme)
+        self.updateStoryView(transition: .immediate, theme: theme, peer: peer)
     }
 }

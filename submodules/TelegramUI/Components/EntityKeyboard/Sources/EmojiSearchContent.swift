@@ -468,7 +468,8 @@ public final class EmojiSearchContent: ASDisplayNode, EntitySearchContainerNode 
             searchIsPlaceholderOnly: false,
             emptySearchResults: nil,
             enableLongPress: false,
-            selectedItems: Set()
+            selectedItems: Set(),
+            customTintColor: nil
         )
         
         if let emojiSearchResult = self.immediateEmojiSearchState.result {

@@ -2694,6 +2694,7 @@ public final class EmojiPagerContentComponent: Component {
     public let emptySearchResults: EmptySearchResults?
     public let enableLongPress: Bool
     public let selectedItems: Set<MediaId>
+    public let customTintColor: UIColor?
     
     public init(
         id: AnyHashable,
@@ -2716,7 +2717,8 @@ public final class EmojiPagerContentComponent: Component {
         searchIsPlaceholderOnly: Bool,
         emptySearchResults: EmptySearchResults?,
         enableLongPress: Bool,
-        selectedItems: Set<MediaId>
+        selectedItems: Set<MediaId>,
+        customTintColor: UIColor?
     ) {
         self.id = id
         self.context = context
@@ -2739,6 +2741,7 @@ public final class EmojiPagerContentComponent: Component {
         self.emptySearchResults = emptySearchResults
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
+        self.customTintColor = customTintColor
     }
     
     public func withUpdatedItemGroups(panelItemGroups: [ItemGroup], contentItemGroups: [ItemGroup], itemContentUniqueId: ContentId?, emptySearchResults: EmptySearchResults?, searchState: SearchState) -> EmojiPagerContentComponent {
@@ -2763,7 +2766,8 @@ public final class EmojiPagerContentComponent: Component {
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
-            selectedItems: self.selectedItems
+            selectedItems: self.selectedItems,
+            customTintColor: self.customTintColor
         )
     }
     
@@ -2789,7 +2793,35 @@ public final class EmojiPagerContentComponent: Component {
             searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
             emptySearchResults: emptySearchResults,
             enableLongPress: self.enableLongPress,
-            selectedItems: selectedItems
+            selectedItems: selectedItems,
+            customTintColor: self.customTintColor
+        )
+    }
+    
+    public func withCustomTintColor(_ customTintColor: UIColor?) -> EmojiPagerContentComponent {
+        return EmojiPagerContentComponent(
+            id: self.id,
+            context: self.context,
+            avatarPeer: self.avatarPeer,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            inputInteractionHolder: self.inputInteractionHolder,
+            panelItemGroups: panelItemGroups,
+            contentItemGroups: contentItemGroups,
+            itemLayoutType: self.itemLayoutType,
+            itemContentUniqueId: itemContentUniqueId,
+            searchState: searchState,
+            warpContentsOnEdges: self.warpContentsOnEdges,
+            hideBackground: self.hideBackground,
+            displaySearchWithPlaceholder: self.displaySearchWithPlaceholder,
+            searchCategories: self.searchCategories,
+            searchInitiallyHidden: self.searchInitiallyHidden,
+            searchAlwaysActive: self.searchAlwaysActive,
+            searchIsPlaceholderOnly: self.searchIsPlaceholderOnly,
+            emptySearchResults: emptySearchResults,
+            enableLongPress: self.enableLongPress,
+            selectedItems: self.selectedItems,
+            customTintColor: customTintColor
         )
     }
     
@@ -2858,6 +2890,9 @@ public final class EmojiPagerContentComponent: Component {
             return false
         }
         if lhs.selectedItems != rhs.selectedItems {
+            return false
+        }
+        if lhs.customTintColor != rhs.customTintColor {
             return false
         }
         
@@ -5882,7 +5917,7 @@ public final class EmojiPagerContentComponent: Component {
                         case let .custom(color):
                             itemLayer.layerTintColor = color.cgColor
                         case .accent:
-                            itemLayer.layerTintColor = keyboardChildEnvironment.theme.list.itemAccentColor.cgColor
+                            itemLayer.layerTintColor = component.customTintColor?.cgColor ?? keyboardChildEnvironment.theme.list.itemAccentColor.cgColor
                         case .primary:
                             itemLayer.layerTintColor = keyboardChildEnvironment.theme.list.itemPrimaryTextColor.cgColor
                         case .none:
@@ -5928,7 +5963,7 @@ public final class EmojiPagerContentComponent: Component {
                                 itemSelectionLayer.backgroundColor = color.withMultipliedAlpha(0.1).cgColor
                                 itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
                             } else if case .accent = item.tintMode {
-                                itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
+                                itemSelectionLayer.backgroundColor = component.customTintColor?.withMultipliedAlpha(0.1).cgColor ?? keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
                                 itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
                             } else {
                                 if useOpaqueTheme {
@@ -7940,7 +7975,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemFile: nil,
                     subgroupId: nil,
                     icon: .none,
-                    tintMode: backgroundIconColor.flatMap { .custom($0) } ?? .accent
+                    tintMode: .accent
                 )
                 
                 let groupId = "recent"
@@ -8329,7 +8364,8 @@ public final class EmojiPagerContentComponent: Component {
                 searchIsPlaceholderOnly: false,
                 emptySearchResults: nil,
                 enableLongPress: enableLongPress,
-                selectedItems: selectedItems
+                selectedItems: selectedItems,
+                customTintColor: backgroundIconColor
             )
         }
         return emojiItems
@@ -8810,7 +8846,8 @@ public final class EmojiPagerContentComponent: Component {
                 searchIsPlaceholderOnly: searchIsPlaceholderOnly,
                 emptySearchResults: nil,
                 enableLongPress: false,
-                selectedItems: Set()
+                selectedItems: Set(),
+                customTintColor: nil
             )
         }
     }

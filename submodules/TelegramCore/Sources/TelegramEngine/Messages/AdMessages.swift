@@ -313,7 +313,9 @@ private class AdMessagesHistoryContextImpl {
                     usernames: [],
                     storiesHidden: nil,
                     nameColor: invite.nameColor,
-                    backgroundEmojiId: nil
+                    backgroundEmojiId: nil,
+                    profileColor: nil,
+                    profileBackgroundEmojiId: nil
                 )
             case let .webPage(webPage):
                 author = TelegramChannel(
@@ -334,7 +336,9 @@ private class AdMessagesHistoryContextImpl {
                     usernames: [],
                     storiesHidden: nil,
                     nameColor: .blue,
-                    backgroundEmojiId: nil
+                    backgroundEmojiId: nil,
+                    profileColor: nil,
+                    profileBackgroundEmojiId: nil
                 )
             }
             

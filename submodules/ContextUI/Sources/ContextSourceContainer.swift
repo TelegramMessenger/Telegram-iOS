@@ -610,6 +610,7 @@ final class ContextSourceContainer: ASDisplayNode {
                         selection: presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.1)
                     ),
                     customLayout: TabSelectorComponent.CustomLayout(
+                        font: Font.medium(14.0),
                         spacing: 9.0
                     ),
                     items: mappedItems,

@@ -6,6 +6,7 @@ import TelegramPresentationData
 import Display
 
 enum PeerInfoHeaderNavigationButtonKey {
+    case back
     case edit
     case done
     case cancel
@@ -33,30 +34,34 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
     private var currentLeftButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     private var currentRightButtons: [PeerInfoHeaderNavigationButtonSpec] = []
     
-    var isWhite: Bool = false {
-        didSet {
-            if self.isWhite != oldValue {
-                for (_, buttonNode) in self.leftButtonNodes {
-                    buttonNode.isWhite = self.isWhite
-                }
-                for (_, buttonNode) in self.rightButtonNodes {
-                    buttonNode.isWhite = self.isWhite
-                }
-            }
-        }
-    }
+    private var backgroundContentColor: UIColor = .clear
+    private var contentsColor: UIColor = .white
     
     var performAction: ((PeerInfoHeaderNavigationButtonKey, ContextReferenceContentNode?, ContextGesture?) -> Void)?
     
+    func updateContentsColor(backgroundContentColor: UIColor, contentsColor: UIColor, transition: ContainedViewLayoutTransition) {
+        self.backgroundContentColor = backgroundContentColor
+        self.contentsColor = contentsColor
+        
+        for (_, button) in self.leftButtonNodes {
+            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: transition)
+        }
+        for (_, button) in self.rightButtonNodes {
+            button.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: transition)
+        }
+    }
+    
     func update(size: CGSize, presentationData: PresentationData, leftButtons: [PeerInfoHeaderNavigationButtonSpec], rightButtons: [PeerInfoHeaderNavigationButtonSpec], expandFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        let sideInset: CGFloat = 24.0
+        
         let maximumExpandOffset: CGFloat = 14.0
         let expandOffset: CGFloat = -expandFraction * maximumExpandOffset
         
         if self.currentLeftButtons != leftButtons || presentationData.strings !== self.presentationData?.strings {
             self.currentLeftButtons = leftButtons
             
-            var nextRegularButtonOrigin = 16.0
-            var nextExpandedButtonOrigin = 16.0
+            var nextRegularButtonOrigin = sideInset
+            var nextExpandedButtonOrigin = sideInset
             for spec in leftButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
@@ -88,8 +93,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
-                    
-                    buttonNode.isWhite = self.isWhite
+                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: .immediate)
                 } else {
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
                     transition.updateAlpha(node: buttonNode, alpha: alphaFactor * alphaFactor)
@@ -107,8 +111,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
             }
         } else {
-            var nextRegularButtonOrigin = 16.0
-            var nextExpandedButtonOrigin = 16.0
+            var nextRegularButtonOrigin = sideInset
+            var nextExpandedButtonOrigin = sideInset
             for spec in leftButtons.reversed() {
                 if let buttonNode = self.leftButtonNodes[spec.key] {
                     let buttonSize = buttonNode.bounds.size
@@ -135,8 +139,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
         if self.currentRightButtons != rightButtons || presentationData.strings !== self.presentationData?.strings {
             self.currentRightButtons = rightButtons
             
-            var nextRegularButtonOrigin = size.width - 16.0
-            var nextExpandedButtonOrigin = size.width - 16.0
+            var nextRegularButtonOrigin = size.width - sideInset
+            var nextExpandedButtonOrigin = size.width - sideInset
             for spec in rightButtons.reversed() {
                 let buttonNode: PeerInfoHeaderNavigationButton
                 var wasAdded = false
@@ -174,7 +178,7 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
                 let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
                 if wasAdded {
-                    buttonNode.isWhite = self.isWhite
+                    buttonNode.updateContentsColor(backgroundColor: self.backgroundContentColor, contentsColor: self.contentsColor, transition: .immediate)
                     
                     if key == .moreToSearch {
                         buttonNode.layer.animateScale(from: 0.001, to: 1.0, duration: 0.2)
@@ -211,8 +215,8 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
             }
         } else {
-            var nextRegularButtonOrigin = size.width - 16.0
-            var nextExpandedButtonOrigin = size.width - 16.0
+            var nextRegularButtonOrigin = size.width - sideInset
+            var nextExpandedButtonOrigin = size.width - sideInset
                         
             for spec in rightButtons.reversed() {
                 var key = spec.key

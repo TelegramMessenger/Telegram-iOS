@@ -1271,13 +1271,20 @@ public class PeerNameColors: Equatable {
         return PeerNameColors(
             colors: defaultSingleColors,
             darkColors: [:],
-            displayOrder: [5, 3, 1, 0, 2, 4, 6]
+            displayOrder: [5, 3, 1, 0, 2, 4, 6],
+            profileColors: [:],
+            profileDarkColors: [:],
+            profileDisplayOrder: []
         )
     }
     
     public let colors: [Int32: Colors]
     public let darkColors: [Int32: Colors]
     public let displayOrder: [Int32]
+    
+    public let profileColors: [Int32: Colors]
+    public let profileDarkColors: [Int32: Colors]
+    public let profileDisplayOrder: [Int32]
     
     public func get(_ color: PeerNameColor, dark: Bool = false) -> Colors {
         if dark, let colors = self.darkColors[color.rawValue] {
@@ -1289,10 +1296,30 @@ public class PeerNameColors: Equatable {
         }
     }
     
-    fileprivate init(colors: [Int32: Colors], darkColors: [Int32: Colors], displayOrder: [Int32]) {
+    public func getProfile(_ color: PeerNameColor, dark: Bool = false) -> Colors {
+        if dark, let colors = self.profileDarkColors[color.rawValue] {
+            return colors
+        } else if let colors = self.profileColors[color.rawValue] {
+            return colors
+        } else {
+            return Colors(main: UIColor(rgb: 0xcc5049))
+        }
+    }
+    
+    fileprivate init(
+        colors: [Int32: Colors],
+        darkColors: [Int32: Colors],
+        displayOrder: [Int32],
+        profileColors: [Int32: Colors],
+        profileDarkColors: [Int32: Colors],
+        profileDisplayOrder: [Int32]
+    ) {
         self.colors = colors
         self.darkColors = darkColors
         self.displayOrder = displayOrder
+        self.profileColors = profileColors
+        self.profileDarkColors = profileDarkColors
+        self.profileDisplayOrder = profileDisplayOrder
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PeerNameColors {
@@ -1330,10 +1357,84 @@ public class PeerNameColors: Equatable {
                 displayOrder = PeerNameColors.defaultValue.displayOrder
             }
             
+            var profileColors = PeerNameColors.defaultSingleColors
+            var profileDarkColors: [Int32: Colors] = [:]
+            
+            if let peerColors = data["profile_colors"] as? [String: [String]] {
+                for (key, values) in peerColors {
+                    if let index = Int32(key) {
+                        let colorsArray = values.compactMap { UIColor(hexString: $0) }
+                        if let colorValues = Colors(colors: colorsArray) {
+                            profileColors[index] = colorValues
+                        }
+                    }
+                }
+            } else {
+                profileColors = [
+                    0: Colors(main: UIColor(rgb: 0x5A8FBB), secondary: nil, tertiary: nil),
+                    1: Colors(main: UIColor(rgb: 0x49A355), secondary: nil, tertiary: nil),
+                    2: Colors(main: UIColor(rgb: 0xC27C3E), secondary: nil, tertiary: nil),
+                    3: Colors(main: UIColor(rgb: 0xBA5650), secondary: nil, tertiary: nil),
+                    4: Colors(main: UIColor(rgb: 0x956AC8), secondary: nil, tertiary: nil),
+                    5: Colors(main: UIColor(rgb: 0x3E97AD), secondary: nil, tertiary: nil),
+                    6: Colors(main: UIColor(rgb: 0xB85378), secondary: nil, tertiary: nil),
+                    7: Colors(main: UIColor(rgb: 0x7F8B95), secondary: nil, tertiary: nil),
+                    8: Colors(main: UIColor(rgb: 0x538BC2), secondary: UIColor(rgb: 0x4DA8BD), tertiary: nil),
+                    9: Colors(main: UIColor(rgb: 0x3D9755), secondary: UIColor(rgb: 0x89A650), tertiary: nil),
+                    10: Colors(main: UIColor(rgb: 0xCF7244), secondary: UIColor(rgb: 0xCC9433), tertiary: nil),
+                    11: Colors(main: UIColor(rgb: 0xC9565D), secondary: UIColor(rgb: 0xD97C57), tertiary: nil),
+                    12: Colors(main: UIColor(rgb: 0x9662D4), secondary: UIColor(rgb: 0xB966B6), tertiary: nil),
+                    13: Colors(main: UIColor(rgb: 0x3D95BA), secondary: UIColor(rgb: 0x50AD98), tertiary: nil),
+                    14: Colors(main: UIColor(rgb: 0xB04F74), secondary: UIColor(rgb: 0xD1666D), tertiary: nil),
+                    15: Colors(main: UIColor(rgb: 0x637482), secondary: UIColor(rgb: 0x7B8A97), tertiary: nil),
+                ]
+            }
+            
+            if let darkPeerColors = data["dark_profile_colors"] as? [String: [String]] {
+                for (key, values) in darkPeerColors {
+                    if let index = Int32(key) {
+                        let colorsArray = values.compactMap { UIColor(hexString: $0) }
+                        if let colorValues = Colors(colors: colorsArray) {
+                            profileDarkColors[index] = colorValues
+                        }
+                    }
+                }
+            } else {
+                profileDarkColors = [
+                    0: Colors(main: UIColor(rgb: 0x477194), secondary: nil, tertiary: nil),
+                    1: Colors(main: UIColor(rgb: 0x33713B), secondary: nil, tertiary: nil),
+                    2: Colors(main: UIColor(rgb: 0x945E2C), secondary: nil, tertiary: nil),
+                    3: Colors(main: UIColor(rgb: 0x9C4540), secondary: nil, tertiary: nil),
+                    4: Colors(main: UIColor(rgb: 0x715099), secondary: nil, tertiary: nil),
+                    5: Colors(main: UIColor(rgb: 0x387E87), secondary: nil, tertiary: nil),
+                    6: Colors(main: UIColor(rgb: 0x944763), secondary: nil, tertiary: nil),
+                    7: Colors(main: UIColor(rgb: 0x435261), secondary: nil, tertiary: nil),
+                    8: Colors(main: UIColor(rgb: 0x38618C), secondary: UIColor(rgb: 0x458BA1), tertiary: nil),
+                    9: Colors(main: UIColor(rgb: 0x296A43), secondary: UIColor(rgb: 0x5F8F44), tertiary: nil),
+                    10: Colors(main: UIColor(rgb: 0x8F552F), secondary: UIColor(rgb: 0xA17232), tertiary: nil),
+                    11: Colors(main: UIColor(rgb: 0x994343), secondary: UIColor(rgb: 0xAC583E), tertiary: nil),
+                    12: Colors(main: UIColor(rgb: 0x634691), secondary: UIColor(rgb: 0x9250A2), tertiary: nil),
+                    13: Colors(main: UIColor(rgb: 0x306C7C), secondary: UIColor(rgb: 0x3E987E), tertiary: nil),
+                    14: Colors(main: UIColor(rgb: 0x884160), secondary: UIColor(rgb: 0xA65259), tertiary: nil),
+                    15: Colors(main: UIColor(rgb: 0x384654), secondary: UIColor(rgb: 0x99ACC3), tertiary: nil),
+                ]
+            }
+            
+            var profileDisplayOrder: [Int32] = []
+            if let order = data["profile_colors_available"] as? [Double] {
+                profileDisplayOrder = order.map { Int32($0) }
+            }
+            if profileDisplayOrder.isEmpty {
+                profileDisplayOrder = Array((0 ..< profileColors.count).map { i in Int32(i) })
+            }
+            
             return PeerNameColors(
                 colors: colors,
                 darkColors: darkColors,
-                displayOrder: displayOrder
+                displayOrder: displayOrder,
+                profileColors: profileColors,
+                profileDarkColors: profileDarkColors,
+                profileDisplayOrder: profileDisplayOrder
             )
         } else {
             return .defaultValue
@@ -1348,6 +1449,15 @@ public class PeerNameColors: Equatable {
             return false
         }
         if lhs.displayOrder != rhs.displayOrder {
+            return false
+        }
+        if lhs.profileColors != rhs.profileColors {
+            return false
+        }
+        if lhs.profileDarkColors != rhs.profileDarkColors {
+            return false
+        }
+        if lhs.profileDisplayOrder != rhs.profileDisplayOrder {
             return false
         }
         return true

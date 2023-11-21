@@ -16,12 +16,12 @@ import PremiumUI
 
 private final class PeerNameColorScreenArguments {
     let context: AccountContext
-    let updateNameColor: (PeerNameColor) -> Void
+    let updateNameColor: (PeerNameColor?) -> Void
     let updateBackgroundEmojiId: (Int64?) -> Void
     
     init(
         context: AccountContext,
-        updateNameColor: @escaping (PeerNameColor) -> Void,
+        updateNameColor: @escaping (PeerNameColor?) -> Void,
         updateBackgroundEmojiId: @escaping (Int64?) -> Void
     ) {
         self.context = context
@@ -39,7 +39,9 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     enum StableId: Hashable {
         case colorHeader
         case colorMessage
+        case colorProfile
         case colorPicker
+        case removeColor
         case colorDescription
         case backgroundEmojiHeader
         case backgroundEmoji
@@ -47,14 +49,16 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
     
     case colorHeader(String)
     case colorMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, items: [PeerNameColorChatPreviewItem.MessageItem])
-    case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor)
+    case colorProfile(peer: EnginePeer?, nameDisplayOrder: PresentationPersonNameOrder)
+    case colorPicker(colors: PeerNameColors, currentColor: PeerNameColor?, isProfile: Bool)
+    case removeColor
     case colorDescription(String)
     case backgroundEmojiHeader(String, String?)
-    case backgroundEmoji(EmojiPagerContentComponent, UIColor)
+    case backgroundEmoji(EmojiPagerContentComponent, UIColor, Bool, Bool)
     
     var section: ItemListSectionId {
         switch self {
-        case .colorHeader, .colorMessage, .colorPicker, .colorDescription:
+        case .colorHeader, .colorMessage, .colorProfile, .colorPicker, .removeColor, .colorDescription:
             return PeerNameColorScreenSection.nameColor.rawValue
         case .backgroundEmojiHeader, .backgroundEmoji:
             return PeerNameColorScreenSection.backgroundEmoji.rawValue
@@ -67,8 +71,12 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return .colorHeader
         case .colorMessage:
             return .colorMessage
+        case .colorProfile:
+            return .colorProfile
         case .colorPicker:
             return .colorPicker
+        case .removeColor:
+            return.removeColor
         case .colorDescription:
             return .colorDescription
         case .backgroundEmojiHeader:
@@ -84,14 +92,18 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             return 0
         case .colorMessage:
             return 1
-        case .colorPicker:
+        case .colorProfile:
             return 2
-        case .colorDescription:
+        case .colorPicker:
             return 3
-        case .backgroundEmojiHeader:
+        case .removeColor:
             return 4
-        case .backgroundEmoji:
+        case .colorDescription:
             return 5
+        case .backgroundEmojiHeader:
+            return 6
+        case .backgroundEmoji:
+            return 7
         }
     }
     
@@ -109,8 +121,26 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .colorPicker(lhsColors, lhsCurrentColor):
-            if case let .colorPicker(rhsColors, rhsCurrentColor) = rhs, lhsColors == rhsColors, lhsCurrentColor == rhsCurrentColor {
+        case let .colorProfile(lhsPeer, lhsNameDisplayOrder):
+            if case let .colorProfile(rhsPeer, rhsNameDisplayOrder) = rhs {
+                if lhsPeer != rhsPeer {
+                    return false
+                }
+                if lhsNameDisplayOrder != rhsNameDisplayOrder {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .colorPicker(lhsColors, lhsCurrentColor, lhsIsProfile):
+            if case let .colorPicker(rhsColors, rhsCurrentColor, rhsIsProfile) = rhs, lhsColors == rhsColors, lhsCurrentColor == rhsCurrentColor, lhsIsProfile == rhsIsProfile {
+                return true
+            } else {
+                return false
+            }
+        case .removeColor:
+            if case .removeColor = rhs {
                 return true
             } else {
                 return false
@@ -127,8 +157,8 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .backgroundEmoji(lhsEmojiContent, lhsBackgroundIconColor):
-            if case let .backgroundEmoji(rhsEmojiContent, rhsBackgroundIconColor) = rhs, lhsEmojiContent == rhsEmojiContent, lhsBackgroundIconColor == rhsBackgroundIconColor {
+        case let .backgroundEmoji(lhsEmojiContent, lhsBackgroundIconColor, lhsIsProfile, lhsHasRemoveButton):
+            if case let .backgroundEmoji(rhsEmojiContent, rhsBackgroundIconColor, rhsIsProfile, rhsHasRemoveButton) = rhs, lhsEmojiContent == rhsEmojiContent, lhsBackgroundIconColor == rhsBackgroundIconColor, lhsIsProfile == rhsIsProfile, lhsHasRemoveButton == rhsHasRemoveButton {
                 return true
             } else {
                 return false
@@ -157,25 +187,42 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
                 wallpaper: wallpaper,
                 dateTimeFormat: dateTimeFormat,
                 nameDisplayOrder: nameDisplayOrder,
-                messageItems: items)
-        case let .colorPicker(colors, currentColor):
+                messageItems: items
+            )
+        case let .colorProfile(peer, nameDisplayOrder):
+            return PeerNameColorProfilePreviewItem(
+                context: arguments.context,
+                theme: presentationData.theme,
+                componentTheme: presentationData.theme,
+                strings: presentationData.strings,
+                sectionId: self.section,
+                peer: peer,
+                nameDisplayOrder: nameDisplayOrder
+            )
+        case let .colorPicker(colors, currentColor, isProfile):
             return PeerNameColorItem(
                 theme: presentationData.theme,
                 colors: colors,
+                isProfile: isProfile,
                 currentColor: currentColor,
                 updated: { color in
                     arguments.updateNameColor(color)
                 },
                 sectionId: self.section
             )
+        case .removeColor:
+            //TODO:localize
+            return ItemListActionItem(presentationData: presentationData, title: "Reset Profile Color", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.updateNameColor(nil)
+            })
         case let .colorDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .backgroundEmojiHeader(text, action):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, actionText: action, action: action != nil ? {
                 arguments.updateBackgroundEmojiId(0)
             } : nil, sectionId: self.section)
-        case let .backgroundEmoji(emojiContent, backgroundIconColor):
-            return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, sectionId: self.section)
+        case let .backgroundEmoji(emojiContent, backgroundIconColor, isProfileColor, hasRemoveButton):
+            return EmojiPickerItem(context: arguments.context, theme: presentationData.theme, strings: presentationData.strings, emojiContent: emojiContent, backgroundIconColor: backgroundIconColor, isProfileColor: isProfileColor, hasRemoveButton: hasRemoveButton, sectionId: self.section)
         }
     }
 }
@@ -185,6 +232,13 @@ private struct PeerNameColorScreenState: Equatable {
     var updatedBackgroundEmojiId: Int64?
     var inProgress: Bool = false
     var needsBoosts: Bool = false
+    
+    var updatedProfileColor: PeerNameColor?
+    var hasUpdatedProfileColor: Bool = false
+    var updatedProfileBackgroundEmojiId: Int64?
+    var hasUpdatedProfileBackgroundEmojiId: Bool = false
+    
+    var selectedTabIndex: Int = 0
 }
 
 private func peerNameColorScreenEntries(
@@ -222,6 +276,20 @@ private func peerNameColorScreenEntries(
             backgroundEmojiId = nil
         }
         
+        let profileColor: PeerNameColor?
+        if state.hasUpdatedProfileColor {
+            profileColor = state.updatedProfileColor
+        } else {
+            profileColor = peer.profileColor
+        }
+        var selectedProfileEmojiId: Int64?
+        if state.hasUpdatedProfileBackgroundEmojiId {
+            selectedProfileEmojiId = state.updatedProfileBackgroundEmojiId
+        } else {
+            selectedProfileEmojiId = peer.profileBackgroundEmojiId
+        }
+        let profileColors = profileColor.flatMap { profileColor in nameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance) }
+        
         let replyText: String
         let messageText: String
         if case .channel = peer {
@@ -242,27 +310,83 @@ private func peerNameColorScreenEntries(
             linkPreview: (presentationData.strings.NameColor_ChatPreview_LinkSite, presentationData.strings.NameColor_ChatPreview_LinkTitle, presentationData.strings.NameColor_ChatPreview_LinkText),
             text: messageText
         )
-        entries.append(.colorMessage(
-            wallpaper: presentationData.chatWallpaper,
-            fontSize: presentationData.chatFontSize,
-            bubbleCorners: presentationData.chatBubbleCorners,
-            dateTimeFormat: presentationData.dateTimeFormat,
-            nameDisplayOrder: presentationData.nameDisplayOrder,
-            items: [messageItem]
-        ))
-        entries.append(.colorPicker(
-            colors: nameColors,
-            currentColor: nameColor
-        ))
-        if case .channel = peer {
-            entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Channel))
+        if state.selectedTabIndex == 0 {
+            entries.append(.colorMessage(
+                wallpaper: presentationData.chatWallpaper,
+                fontSize: presentationData.chatFontSize,
+                bubbleCorners: presentationData.chatBubbleCorners,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                items: [messageItem]
+            ))
         } else {
-            entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
+            var updatedPeer = peer
+            switch updatedPeer {
+            case let .user(user):
+                updatedPeer = .user(user.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId).withUpdatedProfileColor(profileColor).withUpdatedProfileBackgroundEmojiId(selectedProfileEmojiId))
+            case let .channel(channel):
+                updatedPeer = .channel(channel.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId).withUpdatedProfileColor(profileColor).withUpdatedProfileBackgroundEmojiId(selectedProfileEmojiId))
+            default:
+                break
+            }
+            entries.append(.colorProfile(
+                peer: updatedPeer,
+                nameDisplayOrder: presentationData.nameDisplayOrder
+            ))
+        }
+        if state.selectedTabIndex == 0 {
+            entries.append(.colorPicker(
+                colors: nameColors,
+                currentColor: nameColor,
+                isProfile: false
+            ))
+        } else {
+            entries.append(.colorPicker(
+                colors: nameColors,
+                currentColor: profileColor,
+                isProfile: true
+            ))
+        }
+        if state.selectedTabIndex == 1 && profileColor != nil {
+            entries.append(.removeColor)
         }
         
-        if let emojiContent {
-            entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title, backgroundEmojiId != nil ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
-            entries.append(.backgroundEmoji(emojiContent, colors.main))
+        if state.selectedTabIndex == 0 {
+            if case .channel = peer {
+                entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Channel))
+            } else {
+                entries.append(.colorDescription(presentationData.strings.NameColor_ChatPreview_Description_Account))
+            }
+            
+            if let emojiContent {
+                var selectedItems = Set<MediaId>()
+                if let backgroundEmojiId {
+                    selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: backgroundEmojiId))
+                }
+                let emojiContent = emojiContent.withSelectedItems(selectedItems).withCustomTintColor(colors.main)
+                
+                entries.append(.backgroundEmojiHeader(presentationData.strings.NameColor_BackgroundEmoji_Title, (backgroundEmojiId != nil && backgroundEmojiId != 0) ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
+                entries.append(.backgroundEmoji(emojiContent, colors.main, false, false))
+            }
+        } else {
+            if let emojiContent, profileColors != nil {
+                var selectedItems = Set<MediaId>()
+                if let selectedProfileEmojiId {
+                    selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: selectedProfileEmojiId))
+                }
+                let emojiContent = emojiContent.withSelectedItems(selectedItems).withCustomTintColor(profileColors?.main)
+                
+                //TODO:localize
+                entries.append(.backgroundEmojiHeader("ADD ICON TO PROFILE", (selectedProfileEmojiId != nil && selectedProfileEmojiId != 0) ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))
+                entries.append(.backgroundEmoji(emojiContent, profileColors?.main ?? presentationData.theme.list.itemSecondaryTextColor, true, profileColor != nil))
+            } else {
+                //TODO:localize
+                if case .channel = peer {
+                    entries.append(.colorDescription("Choose a color for channel's profile"))
+                } else {
+                    entries.append(.colorDescription("Choose a color for your profile"))
+                }
+            }
         }
     }
     
@@ -300,14 +424,27 @@ public func PeerNameColorScreen(
         updateNameColor: { color in
             updateState { state in
                 var updatedState = state
-                updatedState.updatedNameColor = color
+                
+                if state.selectedTabIndex == 0 {
+                    if let color {
+                        updatedState.updatedNameColor = color
+                    }
+                } else {
+                    updatedState.updatedProfileColor = color
+                    updatedState.hasUpdatedProfileColor = true
+                }
                 return updatedState
             }
         },
         updateBackgroundEmojiId: { emojiId in
             updateState { state in
                 var updatedState = state
-                updatedState.updatedBackgroundEmojiId = emojiId
+                if state.selectedTabIndex == 0 {
+                    updatedState.updatedBackgroundEmojiId = emojiId
+                } else {
+                    updatedState.hasUpdatedProfileBackgroundEmojiId = true
+                    updatedState.updatedProfileBackgroundEmojiId = emojiId
+                }
                 return updatedState
             }
         }
@@ -321,12 +458,24 @@ public func PeerNameColorScreen(
         peerId = channelId
     }
     
-    let emojiContent = combineLatest(
-        context.sharedContext.presentationData,
-        statePromise.get(),
-        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+    let emojiContent = EmojiPagerContentComponent.emojiInputData(
+        context: context,
+        animationCache: context.animationCache,
+        animationRenderer: context.animationRenderer,
+        isStandalone: false,
+        subject: .backgroundIcon,
+        hasTrending: false,
+        topReactionItems: [],
+        areUnicodeEmojiEnabled: false,
+        areCustomEmojiEnabled: true,
+        chatPeerId: context.account.peerId,
+        selectedItems: Set(),
+        backgroundIconColor: nil
     )
-    |> mapToSignal { presentationData, state, peer -> Signal<EmojiPagerContentComponent, NoError> in
+    /*let emojiContent: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
+        context.sharedContext.presentationData
+    )
+    |> mapToSignal { presentationData, state, peer -> Signal<(EmojiPagerContentComponent, EmojiPagerContentComponent), NoError> in
         var selectedEmojiId: Int64?
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
             selectedEmojiId = updatedBackgroundEmojiId
@@ -339,7 +488,22 @@ public func PeerNameColorScreen(
         } else {
             nameColor = (peer?.nameColor ?? .blue)
         }
+        
+        var selectedProfileEmojiId: Int64?
+        if state.hasUpdatedProfileBackgroundEmojiId {
+            selectedProfileEmojiId = state.updatedProfileBackgroundEmojiId
+        } else {
+            selectedProfileEmojiId = peer?.profileBackgroundEmojiId
+        }
+        let profileColor: PeerNameColor?
+        if state.hasUpdatedProfileColor {
+            profileColor = state.updatedProfileColor
+        } else {
+            profileColor = peer?.profileColor
+        }
+        
         let color = context.peerNameColors.get(nameColor, dark: presentationData.theme.overallDarkAppearance)
+        let profileColorValue: UIColor? = profileColor.flatMap { profileColor in context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance).main }
         
         let selectedItems: [EngineMedia.Id]
         if let selectedEmojiId, selectedEmojiId != 0 {
@@ -348,21 +512,13 @@ public func PeerNameColorScreen(
             selectedItems = []
         }
         
-        return EmojiPagerContentComponent.emojiInputData(
-            context: context,
-            animationCache: context.animationCache,
-            animationRenderer: context.animationRenderer,
-            isStandalone: false,
-            subject: .backgroundIcon,
-            hasTrending: false,
-            topReactionItems: [],
-            areUnicodeEmojiEnabled: false,
-            areCustomEmojiEnabled: true,
-            chatPeerId: context.account.peerId,
-            selectedItems: Set(selectedItems),
-            backgroundIconColor: color.main
-        )
-    }
+        let selectedProfileItems: [EngineMedia.Id]
+        if let selectedProfileEmojiId, selectedProfileEmojiId != 0 {
+            selectedProfileItems = [EngineMedia.Id(namespace: Namespaces.Media.CloudFile, id: selectedProfileEmojiId)]
+        } else {
+            selectedProfileItems = []
+        }
+    }*/
     
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
@@ -375,17 +531,15 @@ public func PeerNameColorScreen(
     |> deliverOnMainQueue
     |> map { presentationData, state, availableReactions, peer, emojiContent -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let isPremium = peer?.isPremium ?? false
-        let title: String
         let buttonTitle: String
         let isLocked: Bool
         switch subject {
         case .account:
-            title = presentationData.strings.NameColor_Title_Account
             isLocked = !isPremium
         case .channel:
-            title = presentationData.strings.NameColor_Title_Channel
             isLocked = false
         }
+        let _ = isLocked
         
         let backgroundEmojiId: Int64
         if let updatedBackgroundEmojiId = state.updatedBackgroundEmojiId {
@@ -400,8 +554,9 @@ public func PeerNameColorScreen(
         } else {
             buttonTitle = presentationData.strings.NameColor_ApplyColor
         }
+        let _ = buttonTitle
         
-        let footerItem = ApplyColorFooterItem(
+        /*let footerItem = ApplyColorFooterItem(
             theme: presentationData.theme,
             title: buttonTitle,
             locked: isLocked,
@@ -432,7 +587,7 @@ public func PeerNameColorScreen(
                     presentImpl?(controller)
                 }
             }
-        )
+        )*/
     
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { _, item, _, _, _, _ in
@@ -512,11 +667,37 @@ public func PeerNameColorScreen(
             emojiContent: emojiContent
         )
         
+        //TODO:localize
         let controllerState = ItemListControllerState(
             presentationData: ItemListPresentationData(presentationData),
-            title: .text(title),
+            title: .sectionControl(["Name", "Profile"], state.selectedTabIndex),
             leftNavigationButton: nil,
-            rightNavigationButton: nil,
+            rightNavigationButton: ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+                if !isLocked {
+                    applyChangesImpl?()
+                } else {
+                    HapticFeedback().impact(.light)
+                    let controller = UndoOverlayController(
+                        presentationData: presentationData,
+                        content: .premiumPaywall(
+                            title: nil,
+                            text: presentationData.strings.NameColor_TooltipPremium_Account,
+                            customUndoText: nil,
+                            timeout: nil,
+                            linkAction: nil
+                        ),
+                        elevatedLayout: false,
+                        action: { action in
+                            if case .info = action {
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .nameColor, forceDark: false, dismissed: nil)
+                                pushImpl?(controller)
+                            }
+                            return true
+                        }
+                    )
+                    presentImpl?(controller)
+                }
+            }),
             backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back),
             animateChanges: false
         )
@@ -524,7 +705,7 @@ public func PeerNameColorScreen(
             presentationData: ItemListPresentationData(presentationData),
             entries: entries,
             style: .blocks,
-            footerItem: footerItem,
+            footerItem: nil,
             animateChanges: false
         )
         
@@ -536,6 +717,13 @@ public func PeerNameColorScreen(
     
     let controller = ItemListController(context: context, state: signal)
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+    controller.titleControlValueChanged = { value in
+        updateState { state in
+            var state = state
+            state.selectedTabIndex = value
+            return state
+        }
+    }
     presentImpl = { [weak controller] c in
         guard let controller else {
             return
@@ -596,7 +784,7 @@ public func PeerNameColorScreen(
                 return
             }
             let state = stateValue.with { $0 }
-            if state.updatedNameColor == nil && state.updatedBackgroundEmojiId == nil {
+            if state.updatedNameColor == nil && state.updatedBackgroundEmojiId == nil && !state.hasUpdatedProfileColor && !state.hasUpdatedProfileBackgroundEmojiId {
                 dismissImpl?()
                 return
             }
@@ -607,9 +795,12 @@ public func PeerNameColorScreen(
             let backgroundEmojiId = state.updatedBackgroundEmojiId ?? peer.backgroundEmojiId
             let colors = context.peerNameColors.get(nameColor ?? .blue, dark: presentationData.theme.overallDarkAppearance)
             
+            let profileColor = state.hasUpdatedProfileColor ? state.updatedProfileColor : peer.profileColor
+            let profileBackgroundEmojiId = state.hasUpdatedProfileBackgroundEmojiId ? state.updatedProfileBackgroundEmojiId : peer.profileBackgroundEmojiId
+            
             switch subject {
             case .account:
-                let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0).startStandalone()
+                let _ = context.engine.accountData.updateNameColorAndEmoji(nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId ?? 0).startStandalone()
                 
                 if let navigationController = controller?.navigationController as? NavigationController {
                     Queue.mainQueue().after(0.25) {
@@ -627,7 +818,7 @@ public func PeerNameColorScreen(
                     updatedState.inProgress = true
                     return updatedState
                 }
-                let _ = (context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0)
+                let _ = (context.engine.peers.updatePeerNameColorAndEmoji(peerId: peerId, nameColor: nameColor ?? .blue, backgroundEmojiId: backgroundEmojiId ?? 0, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId ?? 0)
                 |> deliverOnMainQueue).startStandalone(next: {
                 }, error: { error in
                     if case .channelBoostRequired = error {

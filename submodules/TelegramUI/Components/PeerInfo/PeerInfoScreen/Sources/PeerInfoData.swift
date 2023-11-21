@@ -819,8 +819,15 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     availablePanes = nil
                 }
                 
+                var peer: Peer?
+                peer = peerView.peers[userPeerId]
+                
+                if let user = peer as? TelegramUser, let profileColor = user.nameColor {
+                    peer = user.withUpdatedProfileColor(PeerNameColor(rawValue: profileColor.rawValue)).withUpdatedProfileBackgroundEmojiId(user.backgroundEmojiId)
+                }
+                
                 return PeerInfoScreenData(
-                    peer: peerView.peers[userPeerId],
+                    peer: peer,
                     chatPeer: peerView.peers[peerId],
                     cachedData: peerView.cachedData,
                     status: status,

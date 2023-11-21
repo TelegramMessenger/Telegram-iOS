@@ -476,6 +476,8 @@ open class NavigationBar: ASDisplayNode {
             }
         }
     }
+    
+    public static let thinBackArrowImage = generateTintedImage(image: UIImage(bundleImageName: "Navigation/BackArrow"), color: .white)?.withRenderingMode(.alwaysTemplate)
 
     public static let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
     
@@ -729,11 +731,20 @@ open class NavigationBar: ASDisplayNode {
         self.updateAccessibilityElements()
     }
     
+    public var enableAutomaticBackButton: Bool = true
+    
     var _previousItem: NavigationPreviousAction?
     public internal(set) var previousItem: NavigationPreviousAction? {
         get {
+            if !self.enableAutomaticBackButton {
+                return nil
+            }
             return self._previousItem
         } set(value) {
+            if !self.enableAutomaticBackButton {
+                self._previousItem = nil
+                return
+            }
             if self._previousItem != value {
                 if let previousValue = self._previousItem, case let .item(itemValue) = previousValue {
                     if let previousItemListenerKey = self.previousItemListenerKey {
