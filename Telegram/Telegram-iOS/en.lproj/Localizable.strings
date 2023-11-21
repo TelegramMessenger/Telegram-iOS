@@ -10508,3 +10508,9 @@ Sorry for the inconvenience.";
 "Stats.StoryTitle" = "Story Statistics";
 
 "Channel.Info.Settings" = "Channel Settings";
+
+"Story.Context.ViewStats" = "View Statistics";
+
+"Share.RepostStory" = "Repost\nStory";
+
+"PeerInfo.PaneRecommended" = "Similar Channels";

@@ -235,11 +235,12 @@ public struct StandaloneSecretMessageContents: Codable {
             return innerEncoder.makeData()
         }
         try container.encode(attributes, forKey: .attributes)
-        try container.encodeIfPresent(self.media.flatMap { media in
+        let data: Data? = self.media.flatMap { media in
             let innerEncoder = PostboxEncoder()
             innerEncoder.encodeRootObject(media)
             return innerEncoder.makeData()
-        }, forKey: .media)
+        }
+        try container.encodeIfPresent(data, forKey: .media)
         try container.encodeIfPresent(self.file, forKey: .file)
     }
 }

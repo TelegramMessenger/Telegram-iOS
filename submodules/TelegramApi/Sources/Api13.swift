@@ -689,50 +689,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum MessageInteractionCounters: TypeConstructorDescription {
-        case messageInteractionCounters(msgId: Int32, views: Int32, forwards: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .messageInteractionCounters(let msgId, let views, let forwards):
-                    if boxed {
-                        buffer.appendInt32(-1387279939)
-                    }
-                    serializeInt32(msgId, buffer: buffer, boxed: false)
-                    serializeInt32(views, buffer: buffer, boxed: false)
-                    serializeInt32(forwards, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .messageInteractionCounters(let msgId, let views, let forwards):
-                return ("messageInteractionCounters", [("msgId", msgId as Any), ("views", views as Any), ("forwards", forwards as Any)])
-    }
-    }
-    
-        public static func parse_messageInteractionCounters(_ reader: BufferReader) -> MessageInteractionCounters? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.MessageInteractionCounters.messageInteractionCounters(msgId: _1!, views: _2!, forwards: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     indirect enum MessageMedia: TypeConstructorDescription {
         case messageMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String, userId: Int64)
         case messageMediaDice(value: Int32, emoticon: String)

@@ -707,7 +707,7 @@ private func canEditAdminRights(accountPeerId: EnginePeer.Id, channelPeer: Engin
     }
 }
 
-public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id, statsDatacenterId: Int32?) -> ViewController {
+public func groupStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: EnginePeer.Id) -> ViewController {
     let statePromise = ValuePromise(GroupStatsState())
     let stateValue = Atomic(value: GroupStatsState())
     let updateState: ((GroupStatsState) -> GroupStatsState) -> Void = { f in
@@ -718,8 +718,6 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     let dataPromise = Promise<GroupStats?>(nil)
     let peersPromise = Promise<[EnginePeer.Id: EnginePeer]?>(nil)
     
-    let datacenterId: Int32 = statsDatacenterId ?? 0
-    
     var openPeerImpl: ((EnginePeer) -> Void)?
     var openPeerHistoryImpl: ((EnginePeer.Id) -> Void)?
     var openPeerAdminActionsImpl: ((EnginePeer.Id) -> Void)?
@@ -727,7 +725,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     
     actionsDisposable.add(context.account.viewTracker.peerView(peerId, updateData: true).start())
         
-    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, datacenterId: datacenterId, peerId: peerId)
+    let statsContext = GroupStatsContext(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
     let dataSignal: Signal<GroupStats?, NoError> = statsContext.state
     |> map { state in
         return state.stats

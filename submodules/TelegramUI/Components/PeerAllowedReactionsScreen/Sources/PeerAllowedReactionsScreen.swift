@@ -370,24 +370,11 @@ final class PeerAllowedReactionsScreenComponent: Component {
         }
         
         private func openBoostStats() {
-            guard let component = self.component else {
+            guard let component = self.component, let boostStatus = self.boostStatus else {
                 return
             }
-            
-            let _ = (component.context.engine.data.get(
-                TelegramEngine.EngineData.Item.Peer.StatsDatacenterId(id: component.peerId)
-            )
-            |> deliverOnMainQueue).start(next: { [weak self] statsDatacenterId in
-                guard let self, let component = self.component, let boostStatus = self.boostStatus else {
-                    return
-                }
-                guard let statsDatacenterId else {
-                    return
-                }
-                
-                let statsController = component.context.sharedContext.makeChannelStatsController(context: component.context, updatedPresentationData: nil, peerId: component.peerId, boosts: true, boostStatus: boostStatus, statsDatacenterId: statsDatacenterId)
-                self.environment?.controller()?.push(statsController)
-            })
+            let statsController = component.context.sharedContext.makeChannelStatsController(context: component.context, updatedPresentationData: nil, peerId: component.peerId, boosts: true, boostStatus: boostStatus)
+            self.environment?.controller()?.push(statsController)
         }
         
         func update(component: PeerAllowedReactionsScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {

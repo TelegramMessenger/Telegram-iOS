@@ -1525,7 +1525,7 @@ public func standaloneStateManager(
                                     Logger.shared.log("StandaloneStateManager", "received network")
                                     
                                     postbox.mediaBox.fetchResource = { [weak postbox] resource, intervals, parameters -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
-                                        guard let postbox else {
+                                        guard let postbox = postbox else {
                                             return .never()
                                         }
                                         if let result = auxiliaryMethods.fetchResource(

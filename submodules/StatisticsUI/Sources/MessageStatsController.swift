@@ -221,7 +221,7 @@ private func messageStatsControllerEntries(data: PostStats?, messages: SearchMes
 
 public enum StatsSubject {
     case message(id: EngineMessage.Id)
-    case story(peer: EnginePeer, storyItem: EngineStoryItem)
+    case story(peerId: EnginePeer.Id, id: Int32)
 }
 
 protocol PostStats {
@@ -240,21 +240,19 @@ extension StoryStats: PostStats {
     
 }
 
-public func messageStatsController(context: AccountContext, subject: StatsSubject, statsDatacenterId: Int32?) -> ViewController {
+public func messageStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, subject: StatsSubject) -> ViewController {
     var navigateToMessageImpl: ((EngineMessage.Id) -> Void)?
     
     let actionsDisposable = DisposableSet()
     let dataPromise = Promise<PostStats?>(nil)
     let messagesPromise = Promise<(SearchMessagesResult, SearchMessagesState)?>(nil)
-    
-    let datacenterId: Int32 = statsDatacenterId ?? 0
         
     let anyStatsContext: Any
     let dataSignal: Signal<PostStats?, NoError>
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
     switch subject {
     case let .message(id):
-        let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, messageId: id)
+        let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, messageId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
         }
@@ -264,8 +262,8 @@ public func messageStatsController(context: AccountContext, subject: StatsSubjec
         }
         dataPromise.set(.single(nil) |> then(dataSignal))
         anyStatsContext = statsContext
-    case let .story(peer, storyItem):
-        let statsContext = StoryStatsContext(postbox: context.account.postbox, network: context.account.network, datacenterId: datacenterId, peerId: peer.id, storyId: storyItem.id)
+    case let .story(peerId, id):
+        let statsContext = StoryStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId, storyId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
         }
@@ -288,7 +286,7 @@ public func messageStatsController(context: AccountContext, subject: StatsSubjec
     let previousData = Atomic<PostStats?>(value: nil)
     
     if case let .message(id) = subject {
-        let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id, datacenterId: Int(datacenterId)), query: "", state: nil)
+        let searchSignal = context.engine.messages.searchMessages(location: .publicForwards(messageId: id), query: "", state: nil)
         |> map(Optional.init)
         |> afterNext { result in
             if let result = result {
@@ -304,17 +302,31 @@ public func messageStatsController(context: AccountContext, subject: StatsSubjec
         messagesPromise.set(.single(nil))
     }
     
-    let iconNode: ASDisplayNode?
-    if case let .story(peer, storyItem) = subject {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        iconNode = StoryIconNode(context: context, theme: presentationData.theme, peer: peer._asPeer(), storyItem: storyItem)
+    let iconNodePromise = Promise<ASDisplayNode?>()
+    if case let .story(peerId, id) = subject {
+        let _ = id
+        iconNodePromise.set(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue
+            |> map { peer -> ASDisplayNode? in
+                if let _ = peer?._asPeer() {
+//                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+//                    return StoryIconNode(context: context, theme: presentationData.theme, peer: peer, storyItem: storyItem)
+                    return nil
+                } else {
+                    return nil
+                }
+            }
+        )
+
     } else {
-        iconNode = nil
+        iconNodePromise.set(.single(nil))
     }
     
-    let signal = combineLatest(context.sharedContext.presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal)
+    let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
+    let signal = combineLatest(presentationData, dataPromise.get(), messagesPromise.get(), longLoadingSignal, iconNodePromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, data, search, longLoading -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, data, search, longLoading, iconNode -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let previous = previousData.swap(data)
         var emptyStateItem: ItemListControllerEmptyStateItem?
         if data == nil {

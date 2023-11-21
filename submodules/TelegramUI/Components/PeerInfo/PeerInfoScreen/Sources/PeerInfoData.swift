@@ -897,13 +897,17 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
                 hasStories,
-                accountIsPremium
+                accountIsPremium,
+                context.engine.peers.recommendedChannels(peerId: peerId)
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, hasStories, accountIsPremium, recommendedChannels -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if let hasStories {
                     if hasStories {
                         availablePanes?.insert(.stories, at: 0)
+                    }
+                    if let recommendedChannels, !recommendedChannels.channels.isEmpty {
+                        availablePanes?.append(.recommended)
                     }
                 } else {
                     availablePanes = nil

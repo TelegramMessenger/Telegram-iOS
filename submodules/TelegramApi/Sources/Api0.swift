@@ -535,7 +535,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-297296796] = { return Api.MessageExtendedMedia.parse_messageExtendedMedia($0) }
     dict[-1386050360] = { return Api.MessageExtendedMedia.parse_messageExtendedMediaPreview($0) }
     dict[1601666510] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
-    dict[-1387279939] = { return Api.MessageInteractionCounters.parse_messageInteractionCounters($0) }
     dict[1882335561] = { return Api.MessageMedia.parse_messageMediaContact($0) }
     dict[1065280907] = { return Api.MessageMedia.parse_messageMediaDice($0) }
     dict[1291114285] = { return Api.MessageMedia.parse_messageMediaDocument($0) }
@@ -669,6 +668,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[2061444128] = { return Api.PollResults.parse_pollResults($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
+    dict[-419066241] = { return Api.PostInteractionCounters.parse_postInteractionCountersMessage($0) }
+    dict[-1974989273] = { return Api.PostInteractionCounters.parse_postInteractionCountersStory($0) }
     dict[629052971] = { return Api.PremiumGiftCodeOption.parse_premiumGiftCodeOption($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
     dict[1596792306] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
@@ -1187,7 +1188,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2030542532] = { return Api.premium.BoostsList.parse_boostsList($0) }
     dict[1230586490] = { return Api.premium.BoostsStatus.parse_boostsStatus($0) }
     dict[-1696454430] = { return Api.premium.MyBoosts.parse_myBoosts($0) }
-    dict[-886032030] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
+    dict[963421692] = { return Api.stats.BroadcastStats.parse_broadcastStats($0) }
     dict[-276825834] = { return Api.stats.MegagroupStats.parse_megagroupStats($0) }
     dict[2145983508] = { return Api.stats.MessageStats.parse_messageStats($0) }
     dict[1355613820] = { return Api.stats.StoryStats.parse_storyStats($0) }
@@ -1593,8 +1594,6 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessageFwdHeader:
                 _1.serialize(buffer, boxed)
-            case let _1 as Api.MessageInteractionCounters:
-                _1.serialize(buffer, boxed)
             case let _1 as Api.MessageMedia:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.MessagePeerReaction:
@@ -1682,6 +1681,8 @@ public extension Api {
             case let _1 as Api.PopularContact:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PostAddress:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PostInteractionCounters:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumGiftCodeOption:
                 _1.serialize(buffer, boxed)

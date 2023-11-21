@@ -416,6 +416,8 @@ private final class PeerInfoPendingPane {
             } else {
                 preconditionFailure()
             }
+        case .recommended:
+            paneNode = PeerInfoRecommendedChannelsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction)
         }
         paneNode.parentController = parentController
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
@@ -989,6 +991,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                 title = presentationData.strings.PeerInfo_PaneGroups
             case .members:
                 title = presentationData.strings.PeerInfo_PaneMembers
+            case .recommended:
+                title = presentationData.strings.PeerInfo_PaneRecommended
             }
             return PeerInfoPaneSpecifier(key: key, title: title)
         }, selectedPane: self.currentPaneKey, transitionFraction: self.transitionFraction, transition: transition)

@@ -34,12 +34,12 @@ private func entryId(peerId: EnginePeer.Id) -> ItemCacheEntryId {
     return ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.recommendedChannels, key: cacheKey)
 }
 
-func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.Id) -> Signal<Never, NoError> {
+func _internal_requestRecommendedChannels(account: Account, peerId: EnginePeer.Id, forceUpdate: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Peer? in
-        guard let channel = transaction.getPeer(peerId) else {
+        guard let channel = transaction.getPeer(peerId) as? TelegramChannel, case .broadcast = channel.info else {
             return nil
         }
-        if let entry = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedRecommendedChannels.self), !entry.peerIds.isEmpty {
+        if let entry = transaction.retrieveItemCacheEntry(id: entryId(peerId: peerId))?.get(CachedRecommendedChannels.self), !entry.peerIds.isEmpty && !forceUpdate {
             return nil
         } else {
             return channel

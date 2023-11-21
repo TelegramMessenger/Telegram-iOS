@@ -173,7 +173,14 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             leftTitleLabelLayoutAndApply = makeLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_Views, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             remainingWidth -= leftTitleLabelLayoutAndApply!.0.size.width - 4.0
             
-            centerTitleLabelLayoutAndApply = makeCenterTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_PublicShares, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let centerTitle: String
+            if let _ = item.stats as? StoryStats {
+                centerTitle = "Reactions"
+            } else {
+                centerTitle = item.presentationData.strings.Stats_Message_PublicShares
+            }
+            
+            centerTitleLabelLayoutAndApply = makeCenterTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: centerTitle, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             remainingWidth -= centerTitleLabelLayoutAndApply!.0.size.width - 4.0
             
             rightTitleLabelLayoutAndApply = makeRightTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_PrivateShares, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

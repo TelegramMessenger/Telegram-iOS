@@ -38,6 +38,7 @@ public enum PeerInfoPaneKey: Int32 {
     case links
     case gifs
     case groupsInCommon
+    case recommended
 }
 
 public struct PeerInfoStatusData: Equatable {
