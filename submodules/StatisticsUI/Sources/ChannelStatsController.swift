@@ -21,6 +21,7 @@ import UndoUI
 import ShareController
 import ItemListPeerActionItem
 import PremiumUI
+import StoryContainerScreen
 
 private let initialBoostersDisplayedLimit: Int32 = 5
 
@@ -28,6 +29,7 @@ private final class ChannelStatsControllerArguments {
     let context: AccountContext
     let loadDetailedGraph: (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>
     let openPostStats: (EnginePeer, StatsPostItem) -> Void
+    let openStory: (EngineStoryItem, UIView) -> Void
     let contextAction: (MessageId, ASDisplayNode, ContextGesture?) -> Void
     let copyBoostLink: (String) -> Void
     let shareBoostLink: (String) -> Void
@@ -37,10 +39,11 @@ private final class ChannelStatsControllerArguments {
     let createPrepaidGiveaway: (PrepaidGiveaway) -> Void
     let updateGiftsSelected: (Bool) -> Void
         
-    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void) {
+    init(context: AccountContext, loadDetailedGraph: @escaping (StatsGraph, Int64) -> Signal<StatsGraph?, NoError>, openPostStats: @escaping (EnginePeer, StatsPostItem) -> Void, openStory: @escaping (EngineStoryItem, UIView) -> Void, contextAction: @escaping (MessageId, ASDisplayNode, ContextGesture?) -> Void, copyBoostLink: @escaping (String) -> Void, shareBoostLink: @escaping (String) -> Void, openBoost: @escaping (ChannelBoostersContext.State.Boost) -> Void, expandBoosters: @escaping () -> Void, openGifts: @escaping () -> Void, createPrepaidGiveaway: @escaping (PrepaidGiveaway) -> Void, updateGiftsSelected: @escaping (Bool) -> Void) {
         self.context = context
         self.loadDetailedGraph = loadDetailedGraph
         self.openPostStats = openPostStats
+        self.openStory = openStory
         self.contextAction = contextAction
         self.copyBoostLink = copyBoostLink
         self.shareBoostLink = shareBoostLink
@@ -652,6 +655,10 @@ private enum StatsEntry: ItemListNodeEntry {
             case let .post(_, _, _, _, peer, post, interactions):
                 return StatsMessageItem(context: arguments.context, presentationData: presentationData, peer: peer, item: post, views: interactions.views, reactions: interactions.reactions, forwards: interactions.forwards, sectionId: self.section, style: .blocks, action: {
                     arguments.openPostStats(EnginePeer(peer), post)
+                }, openStory: { sourceView in
+                    if case let .story(story) = post {
+                        arguments.openStory(story, sourceView)
+                    }
                 }, contextAction: !post.isStory ? { node, gesture in
                     if case let .message(message) = post {
                         arguments.contextAction(message.id, node, gesture)
@@ -1048,6 +1055,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     var openPostStatsImpl: ((EnginePeer, StatsPostItem) -> Void)?
+    var openStoryImpl: ((EngineStoryItem, UIView) -> Void)?
     var contextActionImpl: ((MessageId, ASDisplayNode, ContextGesture?) -> Void)?
     
     let actionsDisposable = DisposableSet()    
@@ -1097,6 +1105,8 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         return statsContext.loadDetailedGraph(graph, x: x)
     }, openPostStats: { peer, item in
         openPostStatsImpl?(peer, item)
+    }, openStory: { story, sourceView in
+        openStoryImpl?(story, sourceView)
     }, contextAction: { messageId, node, gesture in
         contextActionImpl?(messageId, node, gesture)
     }, copyBoostLink: { link in
@@ -1292,9 +1302,69 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         case let .message(message):
             subject = .message(id: message.id)
         case let .story(story):
-            subject = .story(peerId: peerId, id: story.id)
+            subject = .story(peerId: peerId, id: story.id, item: story)
         }
         controller?.push(messageStatsController(context: context, subject: subject))
+    }
+    openStoryImpl = { [weak controller] story, sourceView in
+        let storyContent = SingleStoryContentContextImpl(context: context, storyId: StoryId(peerId: peerId, id: story.id), storyItem: story, readGlobally: false)
+        let _ = (storyContent.state
+        |> take(1)
+        |> deliverOnMainQueue).startStandalone(next: { [weak controller, weak sourceView] _ in
+            guard let controller, let sourceView else {
+                return
+            }
+            let transitionIn = StoryContainerScreen.TransitionIn(
+                sourceView: sourceView,
+                sourceRect: sourceView.bounds,
+                sourceCornerRadius: sourceView.bounds.width * 0.5,
+                sourceIsAvatar: false
+            )
+        
+            let storyContainerScreen = StoryContainerScreen(
+                context: context,
+                content: storyContent,
+                transitionIn: transitionIn,
+                transitionOut: { [weak sourceView] peerId, storyIdValue in
+                    if let sourceView {
+                        let destinationView = sourceView
+                        return StoryContainerScreen.TransitionOut(
+                            destinationView: destinationView,
+                            transitionView: StoryContainerScreen.TransitionView(
+                                makeView: { [weak destinationView] in
+                                    let parentView = UIView()
+                                    if let copyView = destinationView?.snapshotContentTree(unhide: true) {
+                                        parentView.addSubview(copyView)
+                                    }
+                                    return parentView
+                                },
+                                updateView: { copyView, state, transition in
+                                    guard let view = copyView.subviews.first else {
+                                        return
+                                    }
+                                    let size = state.sourceSize.interpolate(to: state.destinationSize, amount: state.progress)
+                                    transition.setPosition(view: view, position: CGPoint(x: size.width * 0.5, y: size.height * 0.5))
+                                    transition.setScale(view: view, scale: size.width / state.destinationSize.width)
+                                },
+                                insertCloneTransitionView: nil
+                            ),
+                            destinationRect: destinationView.bounds,
+                            destinationCornerRadius: destinationView.bounds.width * 0.5,
+                            destinationIsAvatar: false,
+                            completed: { [weak sourceView] in
+                                guard let sourceView else {
+                                    return
+                                }
+                                sourceView.isHidden = false
+                            }
+                        )
+                    } else {
+                        return nil
+                    }
+                }
+            )
+            controller.push(storyContainerScreen)
+        })
     }
     contextActionImpl = { [weak controller] messageId, sourceNode, gesture in
         guard let controller = controller, let sourceNode = sourceNode as? ContextExtractedContentContainingNode else {

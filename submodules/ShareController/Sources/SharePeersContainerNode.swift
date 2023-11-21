@@ -37,31 +37,24 @@ extension CGPoint {
 
 private struct SharePeerEntry: Comparable, Identifiable {
     let index: Int32
-    let peer: EngineRenderedPeer
-    let presence: EnginePeer.Presence?
-    let threadId: Int64?
-    let threadData: MessageHistoryThreadData?
+    let item: ShareControllerPeerGridItem.ShareItem
     let theme: PresentationTheme
     let strings: PresentationStrings
     
     var stableId: Int64 {
-        return self.peer.peerId.toInt64()
+        switch self.item {
+        case let .peer(peer, _, _, _):
+            return peer.peerId.toInt64()
+        case .story:
+            return 0
+        }
     }
     
     static func ==(lhs: SharePeerEntry, rhs: SharePeerEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
-        if lhs.peer != rhs.peer {
-            return false
-        }
-        if lhs.presence != rhs.presence {
-            return false
-        }
-        if lhs.threadId != rhs.threadId {
-            return false
-        }
-        if lhs.threadData != rhs.threadData {
+        if lhs.item != rhs.item {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -76,7 +69,7 @@ private struct SharePeerEntry: Comparable, Identifiable {
     }
     
     func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, topicId: self.threadId, threadData: self.threadData, controllerInteraction: interfaceInteraction, search: false)
+        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.item, controllerInteraction: interfaceInteraction, search: false)
     }
 }
 
@@ -169,19 +162,26 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         
         self.peersValue.set(.single(peers))
         
+        let canShareStory = controllerInteraction.shareStory != nil
+        
         let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get(), self.tick.get(), self.themePromise.get())
         |> map { [weak controllerInteraction] initialPeers, foundPeers, _, theme -> [SharePeerEntry] in
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0
             
+            if canShareStory {
+                entries.append(SharePeerEntry(index: index, item: .story, theme: theme, strings: strings))
+                index += 1
+            }
+            
             var existingPeerIds: Set<EnginePeer.Id> = Set()
-            entries.append(SharePeerEntry(index: index, peer: EngineRenderedPeer(peer: accountPeer), presence: nil, threadId: nil, threadData: nil, theme: theme, strings: strings))
+            entries.append(SharePeerEntry(index: index, item: .peer(peer: EngineRenderedPeer(peer: accountPeer), presence: nil, topicId: nil, threadData: nil), theme: theme, strings: strings))
             existingPeerIds.insert(accountPeer.id)
             index += 1
             
             for peer in foundPeers.reversed() {
                 if !existingPeerIds.contains(peer.peerId) {
-                    entries.append(SharePeerEntry(index: index, peer: peer, presence: nil, threadId: nil, threadData: nil, theme: theme, strings: strings))
+                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: nil, topicId: nil, threadData: nil), theme: theme, strings: strings))
                     existingPeerIds.insert(peer.peerId)
                     index += 1
                 }
@@ -190,7 +190,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             for (peer, presence) in initialPeers {
                 if !existingPeerIds.contains(peer.peerId) {
                     let thread = controllerInteraction?.selectedTopics[peer.peerId]
-                    entries.append(SharePeerEntry(index: index, peer: peer, presence: presence, threadId: thread?.0, threadData: thread?.1, theme: theme, strings: strings))
+                    entries.append(SharePeerEntry(index: index, item: .peer(peer: peer, presence: presence, topicId: thread?.0, threadData: thread?.1), theme: theme, strings: strings))
                     existingPeerIds.insert(peer.peerId)
                     index += 1
                 }
@@ -568,7 +568,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.firstIndex(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.firstIndex(where: { $0.item.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }

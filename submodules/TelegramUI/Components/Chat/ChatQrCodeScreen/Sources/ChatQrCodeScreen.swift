@@ -1850,7 +1850,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
     func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
         self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
         
-        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         
         self.codeForegroundDimNode.alpha = isDarkAppearance ? 0.5 : 0.3
         
@@ -2185,7 +2185,7 @@ private class MessageContentNode: ASDisplayNode, ContentNode {
     func update(theme: PresentationTheme, wallpaper: TelegramWallpaper, isDarkAppearance: Bool, selectedEmoticon: String?) {
         self.currentParams = (theme, wallpaper, isDarkAppearance, selectedEmoticon)
         
-        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         
         self.linkBackgroundDimNode.alpha = isDarkAppearance ? 0.6 : 0.2
         

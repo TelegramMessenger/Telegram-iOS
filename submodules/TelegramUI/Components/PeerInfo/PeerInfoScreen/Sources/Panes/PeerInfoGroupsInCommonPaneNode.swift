@@ -62,7 +62,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId
     private let chatControllerInteraction: ChatControllerInteraction
-    private let openPeerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
+    private let openPeerContextAction: (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void
     private let groupsInCommonContext: GroupsInCommonContext
     
     weak var parentController: ViewController?
@@ -99,7 +99,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         
     private var disposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {
+    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void, groupsInCommonContext: GroupsInCommonContext) {
         self.context = context
         self.peerId = peerId
         self.chatControllerInteraction = chatControllerInteraction
@@ -190,7 +190,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
             self?.chatControllerInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
         }, openPeerContextAction: { [weak self] peer, node, gesture in
-            self?.openPeerContextAction(peer, node, gesture)
+            self?.openPeerContextAction(false, peer, node, gesture)
         })
         self.currentEntries = entries
         self.enqueuedTransactions.append(transaction)

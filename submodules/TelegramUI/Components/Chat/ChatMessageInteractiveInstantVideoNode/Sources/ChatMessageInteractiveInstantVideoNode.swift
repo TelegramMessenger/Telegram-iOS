@@ -28,6 +28,7 @@ import InstantVideoRadialStatusNode
 import ChatInstantVideoMessageDurationNode
 import ChatControllerInteraction
 import WallpaperBackgroundNode
+import TelegramStringFormatting
 
 public struct ChatMessageInstantVideoItemLayoutResult {
     public let contentSize: CGSize
@@ -590,6 +591,11 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 updatedTranscriptionText = transcribedText
             }
             
+            let currentTime = Int32(Date().timeIntervalSince1970)
+            if transcribedText == nil, let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
+                updatedAudioTranscriptionState = .locked
+            }
+            
             let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
                         
             return (result, { [weak self] layoutData, animation in
@@ -775,21 +781,22 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }))
                     }
                                         
-                    var displayTranscribe: Bool
+                    var displayTranscribe = false
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
                         if item.associatedData.isPremium {
                             displayTranscribe = true
+                        } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
+                            if incoming {
+                                displayTranscribe = true
+                            }
                         } else if item.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
                             if incoming && notConsumed && item.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                                 displayTranscribe = true
                             } else {
                                 displayTranscribe = false
                             }
-                        } else {
-                            displayTranscribe = false
                         }
-                    } else {
-                        displayTranscribe = false
                     }
                     
                     if displayTranscribe, let durationBlurColor = durationBlurColor {
@@ -1614,32 +1621,47 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         guard let item = self.item, item.message.id.namespace == Namespaces.Message.Cloud else {
             return
         }
+        
+        let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
                 
-        guard item.associatedData.isPremium else {
-            if self.hapticFeedback == nil {
-                self.hapticFeedback = HapticFeedback()
-            }
-            self.hapticFeedback?.impact(.medium)
-            
-            let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
-            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
-                if case .undo = action {
-                    let context = item.context
-                    var replaceImpl: ((ViewController) -> Void)?
-                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
-                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
-                        replaceImpl?(controller)
-                    })
-                    replaceImpl = { [weak controller] c in
-                        controller?.replace(with: c)
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+        
+        let transcriptionText = transcribedText(message: item.message)
+        if transcriptionText == nil {
+            if premiumConfiguration.audioTransciptionTrialCount > 0 {
+                if !item.associatedData.isPremium {
+                    if self.presentAudioTranscriptionTooltip(finished: false) {
+                        return
                     }
-                    item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
-                    
-                    let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).startStandalone()
                 }
-                return false })
-            item.controllerInteraction.presentControllerInCurrent(tipController, nil)
-            return
+            } else {
+                guard item.associatedData.isPremium else {
+                    if self.hapticFeedback == nil {
+                        self.hapticFeedback = HapticFeedback()
+                    }
+                    self.hapticFeedback?.impact(.medium)
+                    
+                    
+                    let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction, timeout: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+                        if case .undo = action {
+                            let context = item.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                                let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
+                            
+                            let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).startStandalone()
+                        }
+                        return false })
+                    item.controllerInteraction.presentControllerInCurrent(tipController, nil)
+                    return
+                }
+            }
         }
         
         var shouldBeginTranscription = false
@@ -1673,6 +1695,12 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     strongSelf.transcribeDisposable?.dispose()
                     strongSelf.transcribeDisposable = nil
+                    
+                    if let item = strongSelf.item, !item.associatedData.isPremium {
+                        Queue.mainQueue().after(0.1, {
+                            let _ = strongSelf.presentAudioTranscriptionTooltip(finished: true)
+                        })
+                    }
                 })
             }
         }
@@ -1692,6 +1720,58 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         
         self.updateTranscriptionExpanded?(self.audioTranscriptionState)
+    }
+    
+    private func presentAudioTranscriptionTooltip(finished: Bool) -> Bool {
+        guard let item = self.item, !item.associatedData.isPremium else {
+            return false
+        }
+        
+        let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+        var text: String?
+        var timeout: Double = 5.0
+        
+        let currentTime = Int32(Date().timeIntervalSince1970)
+        if let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
+            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+            
+            let time = stringForMediumDate(timestamp: cooldownUntilTime, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
+            let usedString = presentationData.strings.Conversation_FreeTranscriptionCooldownTooltip(premiumConfiguration.audioTransciptionTrialCount)
+            let waitString = presentationData.strings.Conversation_FreeTranscriptionWaitOrSubscribe(time).string
+            let fullString = "\(usedString) \(waitString)"
+            text = fullString
+            
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.impact(.medium)
+            timeout = 7.0
+        } else if finished {
+            let remainingCount = item.associatedData.audioTranscriptionTrial.remainingCount
+            text = presentationData.strings.Conversation_FreeTranscriptionLimitTooltip(remainingCount)
+        }
+        
+        guard let text else {
+            return false
+        }
+        let context = item.context
+        let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "Transcribe", scale: 0.06, colors: [:], title: nil, text: text, customUndoText: nil, timeout: timeout), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+            if case .info = action {
+                var replaceImpl: ((ViewController) -> Void)?
+                let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                    let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings, forceDark: false, dismissed: nil)
+                    replaceImpl?(controller)
+                })
+                replaceImpl = { [weak controller] c in
+                    controller?.replace(with: c)
+                }
+                item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
+                return true
+            }
+            return false
+        })
+        item.controllerInteraction.presentControllerInCurrent(tipController, nil)
+        return true
     }
     
     public final class AnimateFileNodeDescription {

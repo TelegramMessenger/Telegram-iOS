@@ -82,7 +82,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     var isReady: Signal<Bool, NoError> { get }
     var rotation: CGFloat { get set }
 
-    func update(wallpaper: TelegramWallpaper)
+    func update(wallpaper: TelegramWallpaper, animated: Bool)
     func _internalUpdateIsSettingUpWallpaper()
     func updateLayout(size: CGSize, displayMode: WallpaperDisplayMode, transition: ContainedViewLayoutTransition)
     func updateIsLooping(_ isLooping: Bool)
@@ -920,12 +920,22 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.dimLayer.opacity = dimAlpha
     }
 
-    func update(wallpaper: TelegramWallpaper) {
+    func update(wallpaper: TelegramWallpaper, animated: Bool) {
         if self.wallpaper == wallpaper {
             return
         }
+        let previousWallpaper = self.wallpaper
         self.wallpaper = wallpaper
-
+        
+        if let _ = previousWallpaper, animated {
+            if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
+                self.view.addSubview(snapshotView)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                    snapshotView.removeFromSuperview()
+                })
+            }
+        }
+        
         var gradientColors: [UInt32] = []
         var gradientAngle: Int32 = 0
         

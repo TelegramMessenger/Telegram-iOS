@@ -69,7 +69,7 @@ private final class BubbleSettingsControllerNode: ASDisplayNode, UIScrollViewDel
         self.messagesContainerNode.clipsToBounds = true
         self.messagesContainerNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
-        self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper)
+        self.chatBackgroundNode.update(wallpaper: self.presentationData.chatWallpaper, animated: false)
         self.chatBackgroundNode.updateBubbleTheme(bubbleTheme: self.presentationData.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
                         
         self.toolbarNode = BubbleSettingsToolbarNode(presentationThemeSettings: self.presentationThemeSettings, presentationData: self.presentationData)

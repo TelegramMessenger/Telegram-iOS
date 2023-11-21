@@ -12,6 +12,7 @@ import UrlEscaping
 import TelegramPresentationData
 import TextSelectionNode
 import SwiftSignalKit
+import ForwardInfoPanelComponent
 
 final class StoryContentCaptionComponent: Component {
     enum Action {
@@ -57,6 +58,7 @@ final class StoryContentCaptionComponent: Component {
     let theme: PresentationTheme
     let text: String
     let author: EnginePeer
+    let forwardInfo: EngineStoryItem.ForwardInfo?
     let entities: [MessageTextEntity]
     let entityFiles: [EngineMedia.Id: TelegramMediaFile]
     let action: (Action) -> Void
@@ -71,6 +73,7 @@ final class StoryContentCaptionComponent: Component {
         theme: PresentationTheme,
         text: String,
         author: EnginePeer,
+        forwardInfo: EngineStoryItem.ForwardInfo?,
         entities: [MessageTextEntity],
         entityFiles: [EngineMedia.Id: TelegramMediaFile],
         action: @escaping (Action) -> Void,
@@ -83,6 +86,7 @@ final class StoryContentCaptionComponent: Component {
         self.strings = strings
         self.theme = theme
         self.author = author
+        self.forwardInfo = forwardInfo
         self.text = text
         self.entities = entities
         self.entityFiles = entityFiles
@@ -106,6 +110,9 @@ final class StoryContentCaptionComponent: Component {
             return false
         }
         if lhs.author != rhs.author {
+            return false
+        }
+        if lhs.forwardInfo != rhs.forwardInfo {
             return false
         }
         if lhs.text != rhs.text {
@@ -167,6 +174,8 @@ final class StoryContentCaptionComponent: Component {
         private let scrollBottomMaskView: UIImageView
         private let scrollBottomFullMaskView: UIView
         private let scrollTopMaskView: UIImageView
+        
+        private var forwardInfoPanel: ComponentView<Empty>?
         
         private let shadowGradientView: UIImageView
 
@@ -642,6 +651,50 @@ final class StoryContentCaptionComponent: Component {
             let visibleTextHeight = collapsedTextLayout.0.size.height
             let textOverflowHeight: CGFloat = expandedTextLayout.0.size.height - visibleTextHeight
             let scrollContentSize = CGSize(width: availableSize.width, height: availableSize.height + textOverflowHeight)
+            
+            if let forwardInfo = component.forwardInfo {
+                let authorName: String
+                let isChannel: Bool
+                switch forwardInfo {
+                case let .known(peer, _):
+                    authorName = peer.displayTitle(strings: component.strings, displayOrder: .firstLast)
+                    isChannel = peer.id.isGroupOrChannel
+                case let .unknown(name):
+                    authorName = name
+                    isChannel = false
+                }
+                let forwardInfoPanel: ComponentView<Empty>
+                if let current = self.forwardInfoPanel {
+                    forwardInfoPanel = current
+                } else {
+                    forwardInfoPanel = ComponentView<Empty>()
+                    self.forwardInfoPanel = forwardInfoPanel
+                }
+                
+                let forwardInfoPanelSize = forwardInfoPanel.update(
+                    transition: .immediate,
+                    component: AnyComponent(
+                        ForwardInfoPanelComponent(
+                            authorName: authorName,
+                            text: "Story",
+                            isChannel: isChannel,
+                            isVibrant: false
+                        )
+                    ),
+                    environment: {},
+                    containerSize: CGSize(width: availableSize.width - sideInset * 2.0, height: availableSize.height)
+                )
+                let forwardInfoPanelFrame = CGRect(origin: CGPoint(x: sideInset, y: availableSize.height - visibleTextHeight - verticalInset - forwardInfoPanelSize.height - 10.0), size: forwardInfoPanelSize)
+                if let view = forwardInfoPanel.view {
+                    if view.superview == nil {
+                        self.scrollView.addSubview(view)
+                    }
+                    view.frame = forwardInfoPanelFrame
+                }
+            } else if let forwardInfoPanel = self.forwardInfoPanel {
+                self.forwardInfoPanel = nil
+                forwardInfoPanel.view?.removeFromSuperview()
+            }
             
             do {
                 let collapsedTextNode = collapsedTextLayout.1(TextNodeWithEntities.Arguments(

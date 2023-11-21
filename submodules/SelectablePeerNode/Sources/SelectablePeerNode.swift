@@ -171,6 +171,15 @@ public final class SelectablePeerNode: ASDisplayNode {
         )
     }
     
+    public func setupStoryRepost(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, theme: PresentationTheme, strings: PresentationStrings, synchronousLoad: Bool) {
+        self.peer = nil
+        
+        self.textNode.maximumNumberOfLines = 2
+        self.textNode.attributedText = NSAttributedString(string: strings.Share_RepostStory, font: textFont, textColor: self.theme.textColor, paragraphAlignment: .center)
+        self.avatarNode.setPeer(accountPeerId: accountPeerId, postbox: postbox, network: network, contentSettings: ContentSettings.default, theme: theme, peer: nil, overrideImage: .repostIcon, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: .round, synchronousLoad: synchronousLoad)
+        
+    }
+    
     public func setup(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, energyUsageSettings: EnergyUsageSettings, contentSettings: ContentSettings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, resolveInlineStickers: @escaping ([Int64]) -> Signal<[Int64: TelegramMediaFile], NoError>, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer

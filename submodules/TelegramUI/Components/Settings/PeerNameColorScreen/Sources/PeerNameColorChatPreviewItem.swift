@@ -168,7 +168,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
-                currentBackgroundNode?.update(wallpaper: item.wallpaper)
+                currentBackgroundNode?.update(wallpaper: item.wallpaper, animated: false)
                 currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
             }
 
@@ -254,7 +254,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     if let currentBackgroundNode {
-                        currentBackgroundNode.update(wallpaper: item.wallpaper)
+                        currentBackgroundNode.update(wallpaper: item.wallpaper, animated: false)
                         currentBackgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
                     }
                     

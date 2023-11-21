@@ -352,7 +352,7 @@ private final class PeerInfoPendingPane {
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?,
         chatControllerInteraction: ChatControllerInteraction,
         data: PeerInfoScreenData,
-        openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void,
+        openPeerContextAction: @escaping (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void,
         openAddMemberAction: @escaping () -> Void,
         requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
         peerId: PeerId,
@@ -417,7 +417,7 @@ private final class PeerInfoPendingPane {
                 preconditionFailure()
             }
         case .recommended:
-            paneNode = PeerInfoRecommendedChannelsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction)
+            paneNode = PeerInfoRecommendedChannelsPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction)
         }
         paneNode.parentController = parentController
         self.pane = PeerInfoPaneWrapper(key: key, node: paneNode)
@@ -483,7 +483,7 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     var selectionPanelNode: PeerInfoSelectionPanelNode?
     
     var chatControllerInteraction: ChatControllerInteraction?
-    var openPeerContextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+    var openPeerContextAction: ((Bool, Peer, ASDisplayNode, ContextGesture?) -> Void)?
     var openAddMemberAction: (() -> Void)?
     var requestPerformPeerMemberAction: ((PeerInfoMember, PeerMembersListAction) -> Void)?
     
@@ -792,8 +792,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                     updatedPresentationData: self.updatedPresentationData,
                     chatControllerInteraction: self.chatControllerInteraction!,
                     data: data!,
-                    openPeerContextAction: { [weak self] peer, node, gesture in
-                        self?.openPeerContextAction?(peer, node, gesture)
+                    openPeerContextAction: { [weak self] recommended, peer, node, gesture in
+                        self?.openPeerContextAction?(recommended, peer, node, gesture)
                     },
                     openAddMemberAction: { [weak self] in
                         self?.openAddMemberAction?()

@@ -2502,7 +2502,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let themeUpdated = presentationReadyUpdated || (self.chatPresentationInterfaceState.theme !== chatPresentationInterfaceState.theme)
             
-            self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
+            self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper, animated: true)
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
             self.loadingPlaceholderNode?.updatePresentationInterfaceState(chatPresentationInterfaceState)

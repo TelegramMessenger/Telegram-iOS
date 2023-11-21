@@ -7,13 +7,15 @@ import MtProtoKit
 public struct StoryStats: Equatable {
     public let views: Int
     public let forwards: Int
+    public let reactions: Int
     public let interactionsGraph: StatsGraph
     public let interactionsGraphDelta: Int64
     public let reactionsGraph: StatsGraph
     
-    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
+    init(views: Int, forwards: Int, reactions: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
         self.views = views
         self.forwards = forwards
+        self.reactions = reactions
         self.interactionsGraph = interactionsGraph
         self.interactionsGraphDelta = interactionsGraphDelta
         self.reactionsGraph = reactionsGraph
@@ -24,6 +26,9 @@ public struct StoryStats: Equatable {
             return false
         }
         if lhs.forwards != rhs.forwards {
+            return false
+        }
+        if lhs.reactions != rhs.reactions {
             return false
         }
         if lhs.interactionsGraph != rhs.interactionsGraph {
@@ -39,7 +44,7 @@ public struct StoryStats: Equatable {
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> StoryStats {
-        return StoryStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
+        return StoryStats(views: self.views, forwards: self.forwards, reactions: self.reactions, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
     }
 }
 
@@ -47,79 +52,90 @@ public struct StoryStatsContextState: Equatable {
     public var stats: StoryStats?
 }
 
-private func requestStoryStats(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32, dark: Bool = false) -> Signal<StoryStats?, NoError> {
-    return postbox.transaction { transaction -> (Int32, Peer, Stories.Item)? in
-        if let peer = transaction.getPeer(peerId), let storedItem = transaction.getStory(id: StoryId(peerId: peerId, id: storyId))?.get(Stories.StoredItem.self), case let .item(story) = storedItem, let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData  {
-            return (cachedData.statsDatacenterId, peer, story)
+private func requestStoryStats(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32, dark: Bool = false) -> Signal<StoryStats?, NoError> {
+    return postbox.transaction { transaction -> (Int32, Peer)? in
+        if let peer = transaction.getPeer(peerId), let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData  {
+            return (cachedData.statsDatacenterId, peer)
         } else {
             return nil
         }
-    } |> mapToSignal { data -> Signal<StoryStats?, NoError> in
-        guard let (statsDatacenterId, peer, story) = data, let inputPeer = apiInputPeer(peer) else {
+    }
+    |> mapToSignal { data -> Signal<StoryStats?, NoError> in
+        guard let (statsDatacenterId, peer) = data, let peerReference = PeerReference(peer) else {
             return .never()
         }
-
-        var flags: Int32 = 0
-        if dark {
-            flags |= (1 << 1)
-        }
-        
-        let request = Api.functions.stats.getStoryStats(flags: flags, peer: inputPeer, id: storyId)
-        let signal: Signal<Api.stats.StoryStats, MTRpcError>
-        if network.datacenterId != statsDatacenterId {
-            signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
-            |> castError(MTRpcError.self)
-            |> mapToSignal { worker in
-                return worker.request(request)
+        return _internal_getStoriesById(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peerReference, ids: [storyId])
+        |> mapToSignal { stories -> Signal<StoryStats?, NoError> in
+            guard let storyItem = stories.first, case let .item(story) = storyItem, let inputPeer = apiInputPeer(peer) else {
+                return .never()
             }
-        } else {
-            signal = network.request(request)
-        }
-        
-        var views: Int = 0
-        var forwards: Int = 0
-        if let storyViews = story.views {
-            views = storyViews.seenCount
-            forwards = storyViews.forwardCount
-        }
-        
-        return signal
-        |> mapToSignal { result -> Signal<StoryStats?, MTRpcError> in
-            if case let .storyStats(apiInteractionsGraph, apiReactionsGraph) = result {
-                let interactionsGraph = StatsGraph(apiStatsGraph: apiInteractionsGraph)
-                var interactionsGraphDelta: Int64 = 86400
-                if case let .Loaded(_, data) = interactionsGraph {
-                    if let start = data.range(of: "[\"x\",") {
-                        let substring = data.suffix(from: start.upperBound)
-                        if let end = substring.range(of: "],") {
-                            let valuesString = substring.prefix(through: substring.index(before: end.lowerBound))
-                            let values = valuesString.components(separatedBy: ",").compactMap { Int64($0) }
-                            if values.count > 1 {
-                                let first = values[0]
-                                let second = values[1]
-                                let delta = abs(second - first) / 1000
-                                interactionsGraphDelta = delta
+            
+            var flags: Int32 = 0
+            if dark {
+                flags |= (1 << 1)
+            }
+            
+            let request = Api.functions.stats.getStoryStats(flags: flags, peer: inputPeer, id: storyId)
+            let signal: Signal<Api.stats.StoryStats, MTRpcError>
+            if network.datacenterId != statsDatacenterId {
+                signal = network.download(datacenterId: Int(statsDatacenterId), isMedia: false, tag: nil)
+                |> castError(MTRpcError.self)
+                |> mapToSignal { worker in
+                    return worker.request(request)
+                }
+            } else {
+                signal = network.request(request)
+            }
+            
+            var views: Int = 0
+            var forwards: Int = 0
+            var reactions: Int = 0
+            if let storyViews = story.views {
+                views = storyViews.seenCount
+                forwards = storyViews.forwardCount
+                reactions = storyViews.reactedCount
+            }
+            
+            return signal
+            |> mapToSignal { result -> Signal<StoryStats?, MTRpcError> in
+                if case let .storyStats(apiInteractionsGraph, apiReactionsGraph) = result {
+                    let interactionsGraph = StatsGraph(apiStatsGraph: apiInteractionsGraph)
+                    var interactionsGraphDelta: Int64 = 86400
+                    if case let .Loaded(_, data) = interactionsGraph {
+                        if let start = data.range(of: "[\"x\",") {
+                            let substring = data.suffix(from: start.upperBound)
+                            if let end = substring.range(of: "],") {
+                                let valuesString = substring.prefix(through: substring.index(before: end.lowerBound))
+                                let values = valuesString.components(separatedBy: ",").compactMap { Int64($0) }
+                                if values.count > 1 {
+                                    let first = values[0]
+                                    let second = values[1]
+                                    let delta = abs(second - first) / 1000
+                                    interactionsGraphDelta = delta
+                                }
                             }
                         }
                     }
+                    let reactionsGraph = StatsGraph(apiStatsGraph: apiReactionsGraph)
+                    return .single(StoryStats(
+                        views: views,
+                        forwards: forwards,
+                        reactions: reactions,
+                        interactionsGraph: interactionsGraph,
+                        interactionsGraphDelta: interactionsGraphDelta,
+                        reactionsGraph: reactionsGraph
+                    ))
+                } else {
+                    return .single(nil)
                 }
-                let reactionsGraph = StatsGraph(apiStatsGraph: apiReactionsGraph)
-                return .single(StoryStats(
-                    views: views, 
-                    forwards: forwards,
-                    interactionsGraph: interactionsGraph,
-                    interactionsGraphDelta: interactionsGraphDelta,
-                    reactionsGraph: reactionsGraph
-                ))
-            } else {
-                return .single(nil)
             }
+            |> retryRequest
         }
-        |> retryRequest
     }
 }
 
 private final class StoryStatsContextImpl {
+    private let accountPeerId: EnginePeer.Id
     private let postbox: Postbox
     private let network: Network
     private let peerId: EnginePeer.Id
@@ -140,9 +156,10 @@ private final class StoryStatsContextImpl {
     private let disposable = MetaDisposable()
     private let disposables = DisposableDict<String>()
     
-    init(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32) {
+    init(accountPeerId: EnginePeer.Id, postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32) {
         assert(Queue.mainQueue().isCurrent())
         
+        self.accountPeerId = accountPeerId
         self.postbox = postbox
         self.network = network
         self.peerId = peerId
@@ -162,7 +179,7 @@ private final class StoryStatsContextImpl {
     private func load() {
         assert(Queue.mainQueue().isCurrent())
         
-        self.disposable.set((requestStoryStats(postbox: self.postbox, network: self.network, peerId: self.peerId, storyId: self.storyId)
+        self.disposable.set((requestStoryStats(accountPeerId: self.accountPeerId, postbox: self.postbox, network: self.network, peerId: self.peerId, storyId: self.storyId)
         |> deliverOnMainQueue).start(next: { [weak self] stats in
             if let strongSelf = self {
                 strongSelf._state = StoryStatsContextState(stats: stats)
@@ -195,9 +212,9 @@ public final class StoryStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, peerId: EnginePeer.Id, storyId: Int32) {
+    public init(account: Account, peerId: EnginePeer.Id, storyId: Int32) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return StoryStatsContextImpl(postbox: postbox, network: network, peerId: peerId, storyId: storyId)
+            return StoryStatsContextImpl(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, storyId: storyId)
         })
     }
         

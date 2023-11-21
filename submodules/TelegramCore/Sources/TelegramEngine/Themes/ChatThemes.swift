@@ -186,7 +186,7 @@ func _internal_revertChatWallpaper(account: Account, peerId: EnginePeer.Id) -> S
         return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: nil, id: nil), automaticFloodWait: false)
         |> map(Optional.init)
         |> `catch` { error -> Signal<Api.Updates?, RevertChatWallpaperError> in
-            if error.description == "WALLPAPER_NOT_FOUND" {
+            if error.errorDescription == "WALLPAPER_NOT_FOUND" {
                 return .single(nil)
             }
             return .fail(.generic)
@@ -215,7 +215,7 @@ public enum SetExistingChatWallpaperError {
     case generic
 }
                                                                                         
-func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, settings: WallpaperSettings?) -> Signal<Void, SetExistingChatWallpaperError> {
+func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, settings: WallpaperSettings?, forBoth: Bool) -> Signal<Void, SetExistingChatWallpaperError> {
     return account.postbox.transaction { transaction -> Peer? in
         if let peer = transaction.getPeer(messageId.peerId), let message = transaction.getMessage(messageId) {
             if let action = message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .setChatWallpaper(wallpaper, _) = action.action {
@@ -247,6 +247,9 @@ func _internal_setExistingChatWallpaper(account: Account, messageId: MessageId, 
         if let settings = settings {
             flags |= 1 << 2
             inputSettings = apiWallpaperSettings(settings)
+        }
+        if forBoth {
+            flags |= 1 << 3
         }
         return account.network.request(Api.functions.messages.setChatWallPaper(flags: flags, peer: inputPeer, wallpaper: nil, settings: inputSettings, id: messageId.id), automaticFloodWait: false)
         |> `catch` { _ -> Signal<Api.Updates, SetExistingChatWallpaperError> in

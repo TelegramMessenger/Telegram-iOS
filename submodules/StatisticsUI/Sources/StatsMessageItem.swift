@@ -25,9 +25,10 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
+    let openStory: (UIView) -> Void
     let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
-    init(context: AccountContext, presentationData: ItemListPresentationData, peer: Peer, item: StatsPostItem, views: Int32, reactions: Int32, forwards: Int32, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
+    init(context: AccountContext, presentationData: ItemListPresentationData, peer: Peer, item: StatsPostItem, views: Int32, reactions: Int32, forwards: Int32, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)?, openStory: @escaping (UIView) -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         self.context = context
         self.presentationData = presentationData
         self.peer = peer
@@ -38,6 +39,7 @@ public class StatsMessageItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
         self.style = style
         self.action = action
+        self.openStory = openStory
         self.contextAction = contextAction
     }
     
@@ -103,6 +105,8 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
     
     let contentImageNode: TransformImageNode
     var storyIndicator: ComponentView<Empty>?
+    var storyButton: HighlightTrackingButton?
+    
     let titleNode: TextNode
     let labelNode: TextNode
     let viewsNode: TextNode
@@ -146,7 +150,7 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         self.extractedBackgroundImageNode.alpha = 0.0
         
         self.contentImageNode = TransformImageNode()
-        self.contentImageNode.isLayerBacked = true
+        self.contentImageNode.isLayerBacked = false
         
         self.offsetContainerNode = ASDisplayNode()
         self.countersContainerNode = ASDisplayNode()
@@ -232,6 +236,18 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 }
             })
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let result = super.hitTest(point, with: event)
+        return result
+    }
+    
+    @objc private func storyPressed() {
+        guard let item = self.item else {
+            return
+        }
+        item.openStory(self.contentImageNode.view)
     }
     
     public func asyncLayout() -> (_ item: StatsMessageItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -603,17 +619,34 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                             environment: {},
                             containerSize: indicatorSize
                         )
+                        let storyIndicatorFrame = CGRect(origin: CGPoint(x: contentImageFrame.midX - indicatorSize.width / 2.0, y: contentImageFrame.midY - indicatorSize.height / 2.0), size: indicatorSize)
                         if let storyIndicatorView = storyIndicator.view {
                             if storyIndicatorView.superview == nil {
                                 strongSelf.offsetContainerNode.view.addSubview(storyIndicatorView)
                             }
-                            indicatorTransition.setFrame(view: storyIndicatorView, frame: CGRect(origin: CGPoint(x: contentImageFrame.midX - indicatorSize.width / 2.0, y: contentImageFrame.midY - indicatorSize.height / 2.0), size: indicatorSize))
+                            indicatorTransition.setFrame(view: storyIndicatorView, frame: storyIndicatorFrame)
                         }
+                        
+                        let storyButton: HighlightTrackingButton
+                        if let current = strongSelf.storyButton {
+                            storyButton = current
+                        } else {
+                            storyButton = HighlightTrackingButton()
+                            storyButton.addTarget(strongSelf, action: #selector(strongSelf.storyPressed), for: .touchUpInside)
+                            strongSelf.view.addSubview(storyButton)
+                            strongSelf.storyButton = storyButton
+                        }
+                        storyButton.frame = storyIndicatorFrame
                     } else if let storyIndicator = strongSelf.storyIndicator {
                         if let storyIndicatorView = storyIndicator.view {
                             storyIndicatorView.removeFromSuperview()
                         }
                         strongSelf.storyIndicator = nil
+                        
+                        if let storyButton = strongSelf.storyButton {
+                            storyButton.removeFromSuperview()
+                            strongSelf.storyButton = nil
+                        }
                     }
                 }
             })
@@ -622,6 +655,11 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
     
     override public func setHighlighted(_ highlighted: Bool, at point: CGPoint, animated: Bool) {
         super.setHighlighted(highlighted, at: point, animated: animated)
+        
+        var highlighted = highlighted
+        if let avatarButton = self.storyButton, avatarButton.bounds.contains(self.view.convert(point, to: storyButton)) {
+            highlighted = false
+        }
         
         if highlighted {
             self.highlightedBackgroundNode.alpha = 1.0
@@ -670,4 +708,3 @@ final class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }
-

@@ -269,6 +269,7 @@ private enum PreferencesKeyValues: Int32 {
     case chatListFilterUpdates = 30
     case globalPrivacySettings = 31
     case storiesConfiguration = 32
+    case audioTranscriptionTrialState = 33
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -431,6 +432,12 @@ public struct PreferencesKeys {
     public static let storiesConfiguration: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.storiesConfiguration.rawValue)
+        return key
+    }()
+    
+    public static let audioTranscriptionTrialState: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.audioTranscriptionTrialState.rawValue)
         return key
     }()
 }

@@ -148,7 +148,7 @@ class ThemeSettingsChatPreviewItemNode: ListViewItemNode {
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
             }
-            currentBackgroundNode?.update(wallpaper: item.wallpaper)
+            currentBackgroundNode?.update(wallpaper: item.wallpaper, animated: false)
             currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.componentTheme, bubbleCorners: item.chatBubbleCorners)
 
             let insets: UIEdgeInsets

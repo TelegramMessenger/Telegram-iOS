@@ -502,5 +502,26 @@ public extension TelegramEngine.EngineData.Item {
                 return value
             }
         }
+        
+        public struct AudioTranscriptionTrial: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = AudioTranscription.TrialState
+            
+            public init() {
+            }
+            
+            var key: PostboxViewKey {
+                return .preferences(keys: Set([PreferencesKeys.audioTranscriptionTrialState]))
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? PreferencesView else {
+                    preconditionFailure()
+                }
+                guard let value = view.values[PreferencesKeys.audioTranscriptionTrialState]?.get(AudioTranscription.TrialState.self) else {
+                    return AudioTranscription.TrialState.defaultValue
+                }
+                return value
+            }
+        }
     }
 }

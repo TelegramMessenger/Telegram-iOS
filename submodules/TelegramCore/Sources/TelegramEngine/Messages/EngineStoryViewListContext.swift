@@ -14,6 +14,7 @@ public final class EngineStoryViewListContext {
     }
     
     public enum SortMode {
+        case repostsFirst
         case reactionsFirst
         case recentFirst
     }
@@ -176,6 +177,16 @@ public final class EngineStoryViewListContext {
                                 }
                             }
                             switch sortMode {
+                            case .repostsFirst:
+                                items.sort(by: { lhs, rhs in
+                                    if (lhs.reaction == nil) != (rhs.reaction == nil) {
+                                        return lhs.reaction != nil
+                                    }
+                                    if lhs.timestamp != rhs.timestamp {
+                                        return lhs.timestamp > rhs.timestamp
+                                    }
+                                    return lhs.peer.id < rhs.peer.id
+                                })
                             case .reactionsFirst:
                                 items.sort(by: { lhs, rhs in
                                     if (lhs.reaction == nil) != (rhs.reaction == nil) {
@@ -287,7 +298,7 @@ public final class EngineStoryViewListContext {
                 switch sortMode {
                 case .reactionsFirst:
                     flags |= (1 << 2)
-                case .recentFirst:
+                case .recentFirst, .repostsFirst:
                     break
                 }
                 if searchQuery != nil {
@@ -376,7 +387,8 @@ public final class EngineStoryViewListContext {
                                         isForwardingDisabled: item.isForwardingDisabled,
                                         isEdited: item.isEdited,
                                         isMy: item.isMy,
-                                        myReaction: item.myReaction
+                                        myReaction: item.myReaction,
+                                        forwardInfo: item.forwardInfo
                                     ))
                                     if let entry = CodableEntry(updatedItem) {
                                         transaction.setStory(id: StoryId(peerId: account.peerId, id: storyId), value: entry)
@@ -413,7 +425,8 @@ public final class EngineStoryViewListContext {
                                                 isForwardingDisabled: item.isForwardingDisabled,
                                                 isEdited: item.isEdited,
                                                 isMy: item.isMy,
-                                                myReaction: item.myReaction
+                                                myReaction: item.myReaction,
+                                                forwardInfo: item.forwardInfo
                                             ))
                                             if let entry = CodableEntry(updatedItem) {
                                                 currentItems[i] = StoryItemsTableEntry(value: entry, id: updatedItem.id, expirationTimestamp: updatedItem.expirationTimestamp, isCloseFriends: updatedItem.isCloseFriends)

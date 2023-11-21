@@ -230,6 +230,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
     public let openNoAdsDemo: () -> Void
     public let displayGiveawayParticipationStatus: (EngineMessage.Id) -> Void
     public let openPremiumStatusInfo: (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void
+    public let openRecommendedChannelContextMenu: (EnginePeer, UIView, ContextGesture?) -> Void
     
     public let requestMessageUpdate: (MessageId, Bool) -> Void
     public let cancelInteractiveKeyboardGestures: () -> Void
@@ -349,6 +350,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         openNoAdsDemo: @escaping () -> Void,
         displayGiveawayParticipationStatus: @escaping (EngineMessage.Id) -> Void,
         openPremiumStatusInfo: @escaping (EnginePeer.Id, UIView, Int64?, PeerNameColor) -> Void,
+        openRecommendedChannelContextMenu: @escaping (EnginePeer, UIView, ContextGesture?) -> Void,
         requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
@@ -450,6 +452,7 @@ public final class ChatControllerInteraction: ChatControllerInteractionProtocol 
         self.openNoAdsDemo = openNoAdsDemo
         self.displayGiveawayParticipationStatus = displayGiveawayParticipationStatus
         self.openPremiumStatusInfo = openPremiumStatusInfo
+        self.openRecommendedChannelContextMenu = openRecommendedChannelContextMenu
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
         self.dismissTextInput = dismissTextInput

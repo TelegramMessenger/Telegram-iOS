@@ -58,7 +58,7 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void) -> ListViewItem {
+    func item(context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> ListViewItem {
         switch self {
             case let .peer(_, _, peer, subscribers):
                 let subtitle = presentationData.strings.Conversation_StatusSubscribers(subscribers)
@@ -66,17 +66,19 @@ private enum RecommendedChannelsListEntry: Comparable, Identifiable {
                     action(peer)
                 }, setPeerIdWithRevealedOptions: { _, _ in
                 }, removePeer: { _ in
-                }, contextAction: nil, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true)
+                }, contextAction: { node, gesture in
+                    openPeerContextAction(peer._asPeer(), node, gesture)
+                }, hasTopStripe: false, noInsets: true, noCorners: true, disableInteractiveTransitionIfNecessary: true)
         }
     }
 }
 
-private func preparedTransition(from fromEntries: [RecommendedChannelsListEntry], to toEntries: [RecommendedChannelsListEntry], context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void) -> RecommendedChannelsListTransaction {
+private func preparedTransition(from fromEntries: [RecommendedChannelsListEntry], to toEntries: [RecommendedChannelsListEntry], context: AccountContext, presentationData: PresentationData, action: @escaping (EnginePeer) -> Void, openPeerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) -> RecommendedChannelsListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(context: context, presentationData: presentationData, action: action, openPeerContextAction: openPeerContextAction), directionHint: nil) }
     
     return RecommendedChannelsListTransaction(deletions: deletions, insertions: insertions, updates: updates, animated: toEntries.count < fromEntries.count)
 }
@@ -84,6 +86,7 @@ private func preparedTransition(from fromEntries: [RecommendedChannelsListEntry]
 final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let chatControllerInteraction: ChatControllerInteraction
+    private let openPeerContextAction: (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void
     
     weak var parentController: ViewController?
     
@@ -113,9 +116,10 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         
     private var disposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction) {
+    init(context: AccountContext, peerId: PeerId, chatControllerInteraction: ChatControllerInteraction, openPeerContextAction: @escaping (Bool, Peer, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
         self.chatControllerInteraction = chatControllerInteraction
+        self.openPeerContextAction = openPeerContextAction
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.listNode = ListView()
@@ -194,6 +198,8 @@ final class PeerInfoRecommendedChannelsPaneNode: ASDisplayNode, PeerInfoPaneNode
         
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, action: { [weak self] peer in
             self?.chatControllerInteraction.openPeer(peer, .default, nil, .default)
+        }, openPeerContextAction: { [weak self] peer, node, gesture in
+            self?.openPeerContextAction(true, peer, node, gesture)
         })
         self.currentEntries = entries
         self.enqueuedTransactions.append(transaction)

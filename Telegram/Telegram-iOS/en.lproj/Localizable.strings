@@ -10465,8 +10465,12 @@ Sorry for the inconvenience.";
 
 "Channel.Info.Stats" = "Statistics and Boosts";
 
-"Conversation.FreeTranscriptionLimitTooltip_1" = "You have **%@** free voice transcription left this month.";
-"Conversation.FreeTranscriptionLimitTooltip_any" = "You have **%@** free voice transcriptions left this month.";
+"Conversation.FreeTranscriptionLimitTooltip_1" = "You have **%@** free voice transcription left this week.";
+"Conversation.FreeTranscriptionLimitTooltip_any" = "You have **%@** free voice transcriptions left this week.";
+
+"Conversation.FreeTranscriptionCooldownTooltip_1" = "You have used all your **%@** free transcription this week.";
+"Conversation.FreeTranscriptionCooldownTooltip_any" = "You have used all your **%@** free transcriptions this week.";
+"Conversation.FreeTranscriptionWaitOrSubscribe" = "Wait until **%@** to use it again or subscribe to [Telegram Premium]() now.";
 
 "Notification.GiveawayResults_1" = "**%@** winner of the giveaway was randomly selected by Telegram and received their gift link in a private message.";
 "Notification.GiveawayResults_any" = "**%@** winners of the giveaway were randomly selected by Telegram and received their gift links in private messages.";
@@ -10483,6 +10487,8 @@ Sorry for the inconvenience.";
 "Chat.Giveaway.DeleteConfirmation.Text" = "Deleting this message won't cancel the giveaway - the winners will still be selected on **%@**.\n\nOnce deleted, the Giveaway Announcement cannot be recovered.";
 
 "Chat.SimilarChannels" = "Similar Channels";
+"Chat.SimilarChannels.Join" = "Join";
+"Chat.SimilarChannels.JoinedChannel" = "You joined channel **%@**.";
 
 "Wallpaper.ApplyForMe" = "Apply for Me";
 "Wallpaper.ApplyForBoth" = "Apply for Me and %@";
@@ -10514,3 +10520,19 @@ Sorry for the inconvenience.";
 "Share.RepostStory" = "Repost\nStory";
 
 "PeerInfo.PaneRecommended" = "Similar Channels";
+
+"Story.ViewList.ContextSortReposts" = "Reposts First";
+
+"ShortTime.JustNow" = "now";
+"ShortTime.MinutesAgo_1" = "%@m";
+"ShortTime.MinutesAgo_any" = "%@m";
+"ShortTime.HoursAgo_1" = "%@h";
+"ShortTime.HoursAgo_any" = "%@h";
+"ShortTime.AtDate" = "%@";
+"ShortTime.AtPreciseDate" = "%@ at %@";
+
+"Stats.Message.Reactions" = "Reactions";
+"Stats.ReactionsPerPost" = "Reactions Per Post";
+"Stats.ViewsPerStory" = "Views Per Story";
+"Stats.SharesPerStory" = "Shares Per Story";
+"Stats.ReactionsPerStory" = "Reactions Per Story";

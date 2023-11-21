@@ -570,6 +570,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openNoAdsDemo: {  
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
+        }, openRecommendedChannelContextMenu: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -663,7 +664,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
         self.chatPresentationDataPromise.set(.single(self.chatPresentationData))
         
-        self.backgroundNode.update(wallpaper: presentationData.chatWallpaper)
+        self.backgroundNode.update(wallpaper: presentationData.chatWallpaper, animated: false)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
         
         self.panelBackgroundNode.updateColor(color: presentationData.theme.chat.inputPanel.panelBackgroundColor, transition: .immediate)

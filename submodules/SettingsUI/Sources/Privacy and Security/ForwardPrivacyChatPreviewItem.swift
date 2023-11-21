@@ -133,7 +133,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
         return { item, params, neighbors in
             if currentBackgroundNode == nil {
                 currentBackgroundNode = createWallpaperBackgroundNode(context: item.context, forChatDisplay: false)
-                currentBackgroundNode?.update(wallpaper: item.wallpaper)
+                currentBackgroundNode?.update(wallpaper: item.wallpaper, animated: false)
                 currentBackgroundNode?.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
             }
             
@@ -190,7 +190,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     if let currentBackgroundNode {
-                        currentBackgroundNode.update(wallpaper: item.wallpaper)
+                        currentBackgroundNode.update(wallpaper: item.wallpaper, animated: false)
                         currentBackgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
                     }
                     
@@ -268,7 +268,7 @@ class ForwardPrivacyChatPreviewItemNode: ListViewItemNode {
                     
                     if let backgroundNode = strongSelf.backgroundNode {
                         backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
-                        backgroundNode.update(wallpaper: item.wallpaper)
+                        backgroundNode.update(wallpaper: item.wallpaper, animated: false)
                         backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }

@@ -104,17 +104,23 @@ func _internal_recommendedChannels(account: Account, peerId: EnginePeer.Id) -> S
     let key = PostboxViewKey.cachedItem(entryId(peerId: peerId))
     return account.postbox.combinedView(keys: [key])
     |> mapToSignal { views -> Signal<RecommendedChannels?, NoError> in
-        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self) else {
+        guard let cachedChannels = (views.views[key] as? CachedItemView)?.value?.get(CachedRecommendedChannels.self), !cachedChannels.peerIds.isEmpty else {
             return .single(nil)
         }
-        return account.postbox.transaction { transaction -> RecommendedChannels? in
-            var channels: [RecommendedChannels.Channel] = []
-            for peerId in cachedChannels.peerIds {
-                if let peer = transaction.getPeer(peerId), let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
-                    channels.append(RecommendedChannels.Channel(peer: EnginePeer(peer), subscribers: cachedData.participantsSummary.memberCount ?? 0))
+        return account.postbox.multiplePeersView(cachedChannels.peerIds)
+        |> mapToSignal { view in
+            return account.postbox.transaction { transaction -> RecommendedChannels? in
+                var channels: [RecommendedChannels.Channel] = []
+                for peerId in cachedChannels.peerIds {
+                    if let peer = view.peers[peerId] as? TelegramChannel, let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData {
+                        if case .member = peer.participationStatus {
+                        } else {
+                            channels.append(RecommendedChannels.Channel(peer: EnginePeer(peer), subscribers: cachedData.participantsSummary.memberCount ?? 0))
+                        }
+                    }
                 }
+                return RecommendedChannels(channels: channels, isHidden: cachedChannels.isHidden)
             }
-            return RecommendedChannels(channels: channels, isHidden: cachedChannels.isHidden)
         }
     }
 }

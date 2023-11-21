@@ -7,13 +7,15 @@ import MtProtoKit
 public struct MessageStats: Equatable {
     public let views: Int
     public let forwards: Int
+    public let reactions: Int
     public let interactionsGraph: StatsGraph
     public let interactionsGraphDelta: Int64
     public let reactionsGraph: StatsGraph
     
-    init(views: Int, forwards: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
+    init(views: Int, forwards: Int, reactions: Int, interactionsGraph: StatsGraph, interactionsGraphDelta: Int64, reactionsGraph: StatsGraph) {
         self.views = views
         self.forwards = forwards
+        self.reactions = reactions
         self.interactionsGraph = interactionsGraph
         self.interactionsGraphDelta = interactionsGraphDelta
         self.reactionsGraph = reactionsGraph
@@ -24,6 +26,9 @@ public struct MessageStats: Equatable {
             return false
         }
         if lhs.forwards != rhs.forwards {
+            return false
+        }
+        if lhs.reactions != rhs.reactions {
             return false
         }
         if lhs.interactionsGraph != rhs.interactionsGraph {
@@ -39,7 +44,7 @@ public struct MessageStats: Equatable {
     }
     
     public func withUpdatedInteractionsGraph(_ interactionsGraph: StatsGraph) -> MessageStats {
-        return MessageStats(views: self.views, forwards: self.forwards, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
+        return MessageStats(views: self.views, forwards: self.forwards, reactions: self.reactions, interactionsGraph: interactionsGraph, interactionsGraphDelta: self.interactionsGraphDelta, reactionsGraph: self.reactionsGraph)
     }
 }
 
@@ -78,11 +83,16 @@ private func requestMessageStats(postbox: Postbox, network: Network, messageId: 
         
         var views: Int = 0
         var forwards: Int = 0
+        var reactions: Int = 0
         for attribute in message.attributes {
             if let viewsAttribute = attribute as? ViewCountMessageAttribute {
                 views = viewsAttribute.count
             } else if let forwardsAttribute = attribute as? ForwardCountMessageAttribute {
                 forwards = forwardsAttribute.count
+            } else if let reactionsAttribute = attribute as? ReactionsMessageAttribute {
+                reactions = Int(reactionsAttribute.reactions.reduce(0, { partialResult, reaction in
+                    return partialResult + reaction.count
+                }))
             }
         }
         
@@ -110,6 +120,7 @@ private func requestMessageStats(postbox: Postbox, network: Network, messageId: 
                 return .single(MessageStats(
                     views: views, 
                     forwards: forwards,
+                    reactions: reactions,
                     interactionsGraph: interactionsGraph,
                     interactionsGraphDelta: interactionsGraphDelta,
                     reactionsGraph: reactionsGraph
@@ -196,9 +207,9 @@ public final class MessageStatsContext {
         }
     }
     
-    public init(postbox: Postbox, network: Network, messageId: MessageId) {
+    public init(account: Account, messageId: MessageId) {
         self.impl = QueueLocalObject(queue: Queue.mainQueue(), generate: {
-            return MessageStatsContextImpl(postbox: postbox, network: network, messageId: messageId)
+            return MessageStatsContextImpl(postbox: account.postbox, network: account.network, messageId: messageId)
         })
     }
         

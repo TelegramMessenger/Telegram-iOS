@@ -56,6 +56,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
     public var unidirectionalSwipeToReply: Bool
     public var dustEffect: Bool
     public var callUIV2: Bool
+    public var allowWebViewInspection: Bool
     
     public static var defaultSettings: ExperimentalUISettings {
         return ExperimentalUISettings(
@@ -89,7 +90,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             crashOnMemoryPressure: false,
             unidirectionalSwipeToReply: false,
             dustEffect: false,
-            callUIV2: false
+            callUIV2: false,
+            allowWebViewInspection: false
         )
     }
     
@@ -124,7 +126,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         crashOnMemoryPressure: Bool,
         unidirectionalSwipeToReply: Bool,
         dustEffect: Bool,
-        callUIV2: Bool
+        callUIV2: Bool,
+        allowWebViewInspection: Bool
     ) {
         self.keepChatNavigationStack = keepChatNavigationStack
         self.skipReadHistory = skipReadHistory
@@ -157,6 +160,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.unidirectionalSwipeToReply = unidirectionalSwipeToReply
         self.dustEffect = dustEffect
         self.callUIV2 = callUIV2
+        self.allowWebViewInspection = allowWebViewInspection
     }
     
     public init(from decoder: Decoder) throws {
@@ -193,6 +197,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.unidirectionalSwipeToReply = try container.decodeIfPresent(Bool.self, forKey: "unidirectionalSwipeToReply") ?? false
         self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect") ?? false
         self.callUIV2 = try container.decodeIfPresent(Bool.self, forKey: "callUIV2") ?? false
+        self.allowWebViewInspection = try container.decodeIfPresent(Bool.self, forKey: "allowWebViewInspection") ?? false
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -229,6 +234,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.unidirectionalSwipeToReply, forKey: "unidirectionalSwipeToReply")
         try container.encode(self.dustEffect, forKey: "dustEffect")
         try container.encode(self.callUIV2, forKey: "callUIV2")
+        try container.encode(self.allowWebViewInspection, forKey: "allowWebViewInspection")
     }
 }
 

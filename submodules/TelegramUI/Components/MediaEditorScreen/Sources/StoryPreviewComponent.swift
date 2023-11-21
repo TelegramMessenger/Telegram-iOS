@@ -281,6 +281,7 @@ final class StoryPreviewComponent: Component {
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,
+                    hasRecordedVideo: false,
                     recordedAudioPreview: nil,
                     hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
@@ -293,6 +294,7 @@ final class StoryPreviewComponent: Component {
                     customInputView: nil,
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
+                    header: nil,
                     isChannel: false,
                     storyItem: nil,
                     chatLocation: nil

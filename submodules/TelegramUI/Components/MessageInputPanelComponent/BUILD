@@ -39,6 +39,7 @@ swift_library(
         "//submodules/SearchPeerMembers",
         "//submodules/ContextUI",
         "//submodules/TelegramUI/Components/ContextReferenceButtonComponent",
+        "//submodules/TelegramUI/Components/Stories/ForwardInfoPanelComponent",
     ],
     visibility = [
         "//visibility:public",
