@@ -29,6 +29,8 @@ swift_library(
         "//submodules/ManagedAnimationNode:ManagedAnimationNode",
         "//submodules/AvatarNode",
         "//submodules/TelegramCore",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/TabSelectorComponent",
     ],
     visibility = [
         "//visibility:public",

@@ -184,7 +184,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var messages = SimpleDictionary<MessageId, Message>()
                 
-                peers[authorPeerId] = TelegramUser(id: authorPeerId, accessHash: nil, firstName: messageItem.author, lastName: "", username: nil, phone: nil, photo: messageItem.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: messageItem.nameColor, backgroundEmojiId: messageItem.backgroundEmojiId)
+                peers[authorPeerId] = TelegramUser(id: authorPeerId, accessHash: nil, firstName: messageItem.author, lastName: "", username: nil, phone: nil, photo: messageItem.photo, botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: messageItem.nameColor, backgroundEmojiId: messageItem.backgroundEmojiId, profileColor: nil, profileBackgroundEmojiId: nil)
                 
                 let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
                 if let (_, text) = messageItem.reply {
@@ -296,7 +296,7 @@ final class PeerNameColorChatPreviewItemNode: ListViewItemNode {
                                 headerNode.updateLayoutInternal(size: headerFrame.size, leftInset: leftInset, rightInset: rightInset)
                                 headerNode.updateStickDistanceFactor(stickLocationDistanceFactor, transition: .immediate)
                             } else {
-                                headerNode = header.node(synchronousLoad: false)
+                                headerNode = header.node(synchronousLoad: true)
                                 if headerNode.item !== header {
                                     header.updateNode(headerNode, previous: nil, next: nil)
                                     headerNode.item = header

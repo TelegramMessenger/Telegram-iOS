@@ -169,9 +169,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                 case .none:
                     break
                 case .primary:
-                    itemLayer.layerTintColor = component.theme.list.itemPrimaryTextColor.cgColor
+                    itemLayer.layerTintColor = component.customTintColor?.cgColor ?? component.theme.list.itemPrimaryTextColor.cgColor
                 case .accent:
-                    itemLayer.layerTintColor = component.theme.list.itemAccentColor.cgColor
+                    itemLayer.layerTintColor = component.customTintColor?.cgColor ?? component.theme.list.itemAccentColor.cgColor
                 case let .custom(color):
                     itemLayer.layerTintColor = component.customTintColor?.cgColor ?? color.cgColor
                 }

@@ -95,30 +95,14 @@ private final class MoreIconNode: ManagedAnimationNode {
 final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
     let containerNode: ContextControllerSourceNode
     let contextSourceNode: ContextReferenceContentNode
-    private let regularTextNode: ImmediateTextNode
-    private let whiteTextNode: ImmediateTextNode
+    private let textNode: ImmediateTextNode
     private let iconNode: ASImageNode
     private var animationNode: MoreIconNode?
+    private let backgroundNode: NavigationBackgroundNode
     
     private var key: PeerInfoHeaderNavigationButtonKey?
-    private var theme: PresentationTheme?
     
-    var isWhite: Bool = false {
-        didSet {
-            if self.isWhite != oldValue {
-                if case .qrCode = self.key, let theme = self.theme {
-                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationQrCodeIcon(theme), color: .white) : PresentationResourcesRootController.navigationQrCodeIcon(theme)
-                } else if case .postStory = self.key, let theme = self.theme {
-                    self.iconNode.image = self.isWhite ? generateTintedImage(image: PresentationResourcesRootController.navigationPostStoryIcon(theme), color: .white) : PresentationResourcesRootController.navigationPostStoryIcon(theme)
-                }
-                
-                self.regularTextNode.isHidden = self.isWhite
-                self.whiteTextNode.isHidden = !self.isWhite
-                self.animationNode?.view.tintColor = self.isWhite ? .white : self.theme?.list.itemAccentColor
-                self.animationNode?.imageNode.layer.layerTintColor = self.isWhite ? UIColor.white.cgColor : self.theme?.list.itemAccentColor.cgColor
-            }
-        }
-    }
+    private var contentsColor: UIColor = .white
     
     var action: ((ASDisplayNode, ContextGesture?) -> Void)?
     
@@ -127,13 +111,13 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.containerNode = ContextControllerSourceNode()
         self.containerNode.animateScale = false
         
-        self.regularTextNode = ImmediateTextNode()
-        self.whiteTextNode = ImmediateTextNode()
-        self.whiteTextNode.isHidden = true
+        self.textNode = ImmediateTextNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
+        
+        self.backgroundNode = NavigationBackgroundNode(color: .clear, enableBlur: true)
         
         super.init(pointerStyle: .insetRectangle(-8.0, 2.0))
         
@@ -141,8 +125,8 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.accessibilityTraits = .button
         
         self.containerNode.addSubnode(self.contextSourceNode)
-        self.contextSourceNode.addSubnode(self.regularTextNode)
-        self.contextSourceNode.addSubnode(self.whiteTextNode)
+        self.contextSourceNode.addSubnode(self.backgroundNode)
+        self.contextSourceNode.addSubnode(self.textNode)
         self.contextSourceNode.addSubnode(self.iconNode)
 
         self.addSubnode(self.containerNode)
@@ -162,12 +146,34 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
         self.action?(self.contextSourceNode, nil)
     }
     
+    func updateContentsColor(backgroundColor: UIColor, contentsColor: UIColor, transition: ContainedViewLayoutTransition) {
+        self.contentsColor = contentsColor
+        
+        self.backgroundNode.updateColor(color: backgroundColor, transition: transition)
+        
+        transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
+        transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
+        
+        if let animationNode = self.animationNode {
+            transition.updateTintColor(layer: animationNode.imageNode.layer, color: self.contentsColor)
+        }
+    }
+    
     func update(key: PeerInfoHeaderNavigationButtonKey, presentationData: PresentationData, height: CGFloat) -> CGSize {
+        let transition: ContainedViewLayoutTransition = .immediate
+        
+        var iconOffset = CGPoint()
+        switch key {
+        case .back:
+            iconOffset = CGPoint(x: -1.0, y: 0.0)
+        default:
+            break
+        }
+        
         let textSize: CGSize
         let isFirstTime = self.key == nil
-        if self.key != key || self.theme !== presentationData.theme {
+        if self.key != key {
             self.key = key
-            self.theme = presentationData.theme
             
             let text: String
             var accessibilityText: String
@@ -177,55 +183,64 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
             var isAnimation = false
             var animationState: MoreIconNodeState = .more
             switch key {
-                case .edit:
-                    text = presentationData.strings.Common_Edit
-                    accessibilityText = text
-                case .done, .cancel, .selectionDone:
-                    text = presentationData.strings.Common_Done
-                    accessibilityText = text
-                    isBold = true
-                case .select:
-                    text = presentationData.strings.Common_Select
-                    accessibilityText = text
-                case .search:
-                    text = ""
-                    accessibilityText = presentationData.strings.Common_Search
-                    icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
-                    isAnimation = true
-                    animationState = .search
-                case .editPhoto:
-                    text = presentationData.strings.Settings_EditPhoto
-                    accessibilityText = text
-                case .editVideo:
-                    text = presentationData.strings.Settings_EditVideo
-                    accessibilityText = text
-                case .more:
-                    text = ""
-                    accessibilityText = presentationData.strings.Common_More
-                    icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
-                    isGestureEnabled = true
-                    isAnimation = true
-                    animationState = .more
-                case .qrCode:
-                    text = ""
-                    accessibilityText = presentationData.strings.PeerInfo_QRCode_Title
-                    icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
-                case .moreToSearch:
-                    text = ""
-                    accessibilityText = ""
-                case .postStory:
-                    text = ""
-                    accessibilityText = presentationData.strings.Story_Privacy_PostStory
-                    icon = PresentationResourcesRootController.navigationPostStoryIcon(presentationData.theme)
+            case .back:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Back
+                icon = NavigationBar.thinBackArrowImage
+            case .edit:
+                text = presentationData.strings.Common_Edit
+                accessibilityText = text
+            case .cancel:
+                text = presentationData.strings.Common_Cancel
+                accessibilityText = text
+                isBold = false
+            case .done, .selectionDone:
+                text = presentationData.strings.Common_Done
+                accessibilityText = text
+                isBold = true
+            case .select:
+                text = presentationData.strings.Common_Select
+                accessibilityText = text
+            case .search:
+                text = ""
+                accessibilityText = presentationData.strings.Common_Search
+                icon = nil// PresentationResourcesRootController.navigationCompactSearchIcon(presentationData.theme)
+                isAnimation = true
+                animationState = .search
+            case .editPhoto:
+                text = presentationData.strings.Settings_EditPhoto
+                accessibilityText = text
+            case .editVideo:
+                text = presentationData.strings.Settings_EditVideo
+                accessibilityText = text
+            case .more:
+                text = ""
+                accessibilityText = presentationData.strings.Common_More
+                icon = nil// PresentationResourcesRootController.navigationMoreCircledIcon(presentationData.theme)
+                isGestureEnabled = true
+                isAnimation = true
+                animationState = .more
+            case .qrCode:
+                text = ""
+                accessibilityText = presentationData.strings.PeerInfo_QRCode_Title
+                icon = PresentationResourcesRootController.navigationQrCodeIcon(presentationData.theme)
+            case .moreToSearch:
+                text = ""
+                accessibilityText = ""
+            case .postStory:
+                text = ""
+                accessibilityText = presentationData.strings.Story_Privacy_PostStory
+                icon = PresentationResourcesRootController.navigationPostStoryIcon(presentationData.theme)
             }
             self.accessibilityLabel = accessibilityText
             self.containerNode.isGestureEnabled = isGestureEnabled
             
             let font: UIFont = isBold ? Font.semibold(17.0) : Font.regular(17.0)
             
-            self.regularTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: presentationData.theme.rootController.navigationBar.accentTextColor)
-            self.whiteTextNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
+            self.textNode.attributedText = NSAttributedString(string: text, font: font, textColor: .white)
+            transition.updateTintColor(layer: self.textNode.layer, color: self.contentsColor)
             self.iconNode.image = icon
+            transition.updateTintColor(layer: self.iconNode.layer, color: self.contentsColor)
             
             if isAnimation {
                 self.iconNode.isHidden = true
@@ -236,9 +251,10 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                     animationNode = MoreIconNode()
                     self.animationNode = animationNode
                     self.contextSourceNode.addSubnode(animationNode)
+                    animationNode.imageNode.layer.layerTintColor = self.contentsColor.cgColor
+                    animationNode.customColor = .white
                 }
-                animationNode.customColor = .white
-                animationNode.imageNode.layer.layerTintColor = self.isWhite ? UIColor.white.cgColor : presentationData.theme.rootController.navigationBar.accentTextColor.cgColor
+                transition.updateTintColor(layer: animationNode.imageNode.layer, color: self.contentsColor)
                 animationNode.enqueueState(animationState, animated: !isFirstTime)
             } else {
                 self.iconNode.isHidden = false
@@ -248,39 +264,54 @@ final class PeerInfoHeaderNavigationButton: HighlightableButtonNode {
                 }
             }
             
-            textSize = self.regularTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
-            let _ = self.whiteTextNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
+            textSize = self.textNode.updateLayout(CGSize(width: 200.0, height: .greatestFiniteMagnitude))
         } else {
-            textSize = self.regularTextNode.bounds.size
+            textSize = self.textNode.bounds.size
         }
         
         let inset: CGFloat = 0.0
         
+        let resultSize: CGSize
+        
         let textFrame = CGRect(origin: CGPoint(x: inset, y: floor((height - textSize.height) / 2.0)), size: textSize)
-        self.regularTextNode.frame = textFrame
-        self.whiteTextNode.frame = textFrame
+        self.textNode.frame = textFrame
         
         if let animationNode = self.animationNode {
             let animationSize = CGSize(width: 30.0, height: 30.0)
             
-            animationNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - animationSize.height) / 2.0)), size: animationSize)
+            animationNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - animationSize.height) / 2.0)), size: animationSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
             
             let size = CGSize(width: animationSize.width + inset * 2.0, height: height)
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
+            resultSize = size
         } else if let image = self.iconNode.image {
-            self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: inset, y: floor((height - image.size.height) / 2.0)), size: image.size).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
             
             let size = CGSize(width: image.size.width + inset * 2.0, height: height)
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
+            resultSize = size
         } else {
             let size = CGSize(width: textSize.width + inset * 2.0, height: height)
             self.containerNode.frame = CGRect(origin: CGPoint(), size: size)
             self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: size)
-            return size
+            resultSize = size
         }
+        
+        let diameter: CGFloat = 32.0
+        let backgroundWidth: CGFloat
+        if self.iconNode.image != nil || self.animationNode != nil {
+            backgroundWidth = diameter
+        } else {
+            backgroundWidth = max(diameter, resultSize.width + 12.0 * 2.0)
+        }
+        let backgroundFrame = CGRect(origin: CGPoint(x: floor((resultSize.width - backgroundWidth) * 0.5), y: floor((resultSize.height - diameter) * 0.5)), size: CGSize(width: backgroundWidth, height: diameter))
+        transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: backgroundFrame.size, cornerRadius: diameter * 0.5, transition: transition)
+        
+        self.hitTestSlop = UIEdgeInsets(top: -2.0, left: -12.0, bottom: -2.0, right: -12.0)
+        
+        return resultSize
     }
 }

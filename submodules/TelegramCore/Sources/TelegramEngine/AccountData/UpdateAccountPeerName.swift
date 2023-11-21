@@ -51,13 +51,13 @@ public enum UpdateNameColorAndEmojiError {
     case generic
 }
 
-func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColor, backgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
+func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
     let flags: Int32 = (1 << 0)
     return account.postbox.transaction { transaction -> Signal<Peer, NoError> in
         guard let peer = transaction.getPeer(account.peerId) as? TelegramUser else {
             return .complete()
         }
-        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId)], update: { _, updated in
+        updatePeersCustom(transaction: transaction, peers: [peer.withUpdatedNameColor(nameColor).withUpdatedBackgroundEmojiId(backgroundEmojiId).withUpdatedProfileColor(profileColor).withUpdatedProfileBackgroundEmojiId(profileBackgroundEmojiId)], update: { _, updated in
             return updated
         })
         return .single(peer)

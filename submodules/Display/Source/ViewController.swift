@@ -155,7 +155,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
         return self.prefersOnScreenNavigationHidden
     }
     
-    public internal(set) var previousItem: NavigationPreviousAction?
+    open var previousItem: NavigationPreviousAction?
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
     open var _presentedInModal: Bool = false

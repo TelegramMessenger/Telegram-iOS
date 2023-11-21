@@ -63,6 +63,12 @@ public final class MultiScaleTextNode: ASDisplayNode {
         return self.stateNodes[key]?.textNode
     }
     
+    public func updateTintColor(color: UIColor, transition: ContainedViewLayoutTransition) {
+        for (_, node) in self.stateNodes {
+            transition.updateTintColor(layer: node.textNode.layer, color: color)
+        }
+    }
+    
     public func updateLayout(text: String, states: [AnyHashable: MultiScaleTextState], mainState: AnyHashable) -> [AnyHashable: MultiScaleTextLayout] {
         assert(Set(states.keys) == Set(self.stateNodes.keys))
         assert(states[mainState] != nil)

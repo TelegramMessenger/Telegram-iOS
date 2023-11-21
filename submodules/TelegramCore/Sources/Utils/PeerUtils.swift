@@ -236,6 +236,17 @@ public extension Peer {
         }
     }
     
+    var profileColor: PeerNameColor? {
+        switch self {
+        case let user as TelegramUser:
+            return user.profileColor
+        case let channel as TelegramChannel:
+            return channel.profileColor
+        default:
+            return nil
+        }
+    }
+    
     var hasCustomNameColor: Bool {
         let defaultNameColor = PeerNameColor(rawValue: Int32(self.id.id._internalGetInt64Value() % 7))
         if self.nameColor != defaultNameColor {
@@ -250,6 +261,17 @@ public extension Peer {
             return user.backgroundEmojiId
         case let channel as TelegramChannel:
             return channel.backgroundEmojiId
+        default:
+            return nil
+        }
+    }
+    
+    var profileBackgroundEmojiId: Int64? {
+        switch self {
+        case let user as TelegramUser:
+            return user.profileBackgroundEmojiId
+        case let channel as TelegramChannel:
+            return channel.profileBackgroundEmojiId
         default:
             return nil
         }

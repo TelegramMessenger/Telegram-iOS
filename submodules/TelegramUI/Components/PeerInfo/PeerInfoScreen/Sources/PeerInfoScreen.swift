@@ -2256,7 +2256,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         if case let .replyThread(message) = chatLocation {
             forumTopicThreadId = Int64(message.messageId.id)
         }
-        self.headerNode = PeerInfoHeaderNode(context: context, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isMediaOnly: self.isMediaOnly, isSettings: isSettings, forumTopicThreadId: forumTopicThreadId, chatLocation: self.chatLocation)
+        self.headerNode = PeerInfoHeaderNode(context: context, controller: controller, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, isMediaOnly: self.isMediaOnly, isSettings: isSettings, forumTopicThreadId: forumTopicThreadId, chatLocation: self.chatLocation)
         self.paneContainerNode = PeerInfoPaneContainerNode(context: context, updatedPresentationData: controller.updatedPresentationData, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, isMediaOnly: self.isMediaOnly)
         
         super.init()
@@ -3301,6 +3301,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 return
             }
             switch key {
+            case .back:
+                strongSelf.controller?.dismiss()
             case .edit:
                 if case let .replyThread(message) = strongSelf.chatLocation {
                     let threadId = Int64(message.messageId.id)
@@ -3353,7 +3355,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                             }
                         }
                     })
-                    strongSelf.controller?.navigationItem.setLeftBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, style: .plain, target: strongSelf, action: #selector(strongSelf.editingCancelPressed)), animated: true)
                 }
             case .done, .cancel:
                 strongSelf.view.endEditing(true)
@@ -3669,7 +3670,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                     UIView.transition(with: strongSelf.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
                     }, completion: nil)
-                    strongSelf.controller?.navigationItem.setLeftBarButton(nil, animated: true)
                 }
                 (strongSelf.controller?.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.3, curve: .linear))
             case .select:
@@ -4015,11 +4015,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.storiesReady.set(false)
             let expiringStoryList = PeerExpiringStoryListContext(account: context.account, peerId: peerId)
             self.expiringStoryList = expiringStoryList
-            self.storyUploadProgressDisposable = (context.engine.messages.allStoriesUploadProgress()
-            |> map { value -> Float? in
-                return value[peerId]
-            }
-            |> distinctUntilChanged).startStrict(next: { [weak self] value in
+            self.storyUploadProgressDisposable = (
+                combineLatest(context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> distinctUntilChanged,
+                context.engine.messages.allStoriesUploadProgress()
+                |> map { value -> Float? in
+                    return value[peerId]
+                }
+                |> distinctUntilChanged
+            )).startStrict(next: { [weak self] peer, value in
                 guard let self else {
                     return
                 }
@@ -4030,7 +4034,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                 
                 if self.headerNode.avatarListNode.avatarContainerNode.storyProgress != mappedValue {
                     self.headerNode.avatarListNode.avatarContainerNode.storyProgress = mappedValue
-                    self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme)
+                    self.headerNode.avatarListNode.avatarContainerNode.updateStoryView(transition: .immediate, theme: self.presentationData.theme, peer: peer?._asPeer())
                 }
             })
             self.expiringStoryListDisposable = (combineLatest(queue: .mainQueue(),
@@ -9977,11 +9981,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             self.paneContainerNode.update(size: self.paneContainerNode.bounds.size, sideInset: layout.safeInsets.left, bottomInset: bottomInset, visibleHeight: visibleHeight, expansionFraction: effectiveAreaExpansionFraction, presentationData: self.presentationData, data: self.data, transition: transition)
           
             transition.updateFrame(node: self.headerNode.navigationButtonContainer, frame: CGRect(origin: CGPoint(x: layout.safeInsets.left, y: layout.statusBarHeight ?? 0.0), size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight)))
-            self.headerNode.navigationButtonContainer.isWhite = true//self.headerNode.isAvatarExpanded
+            
                         
             var leftNavigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
             var rightNavigationButtons: [PeerInfoHeaderNavigationButtonSpec] = []
             if self.state.isEditing {
+                leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .cancel, isForExpandedView: false))
                 rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .done, isForExpandedView: false))
             } else {
                 if self.isSettings {
@@ -10015,6 +10020,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
                     }
                 } else {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .selectionDone, isForExpandedView: true))
+                }
+            }
+            if leftNavigationButtons.isEmpty, let controller = self.controller, let previousItem = controller.previousItem {
+                switch previousItem {
+                case .close, .item:
+                    leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .back, isForExpandedView: false))
                 }
             }
             self.headerNode.navigationButtonContainer.update(size: CGSize(width: layout.size.width - layout.safeInsets.left * 2.0, height: navigationBarHeight), presentationData: self.presentationData, leftButtons: leftNavigationButtons, rightButtons: rightNavigationButtons, expandFraction: effectiveAreaExpansionFraction, transition: transition)
@@ -10120,9 +10131,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     }
     
     private func updateNavigationExpansionPresentation(isExpanded: Bool, animated: Bool) {
-        if let controller = self.controller {
-            controller.setStatusBarStyle(.White, animated: animated)
-            
+        /*if let controller = self.controller {
             if animated {
                 UIView.transition(with: controller.controllerNode.headerNode.navigationButtonContainer.view, duration: 0.3, options: [.transitionCrossDissolve], animations: {
                 }, completion: nil)
@@ -10143,7 +10152,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             ), strings: baseNavigationBarPresentationData.strings)
             
             controller.setNavigationBarPresentationData(navigationBarPresentationData, animated: animated)
-        }
+        }*/
     }
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
@@ -10310,6 +10319,16 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    override public var previousItem: NavigationPreviousAction? {
+        didSet {
+            if self.isNodeLoaded {
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.controllerNode.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+                }
+            }
+        }
+    }
+    
     private var validLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
     
     public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, nearbyPeerDistance: Int32?, reactionSourceMessageId: MessageId?, callMessages: [Message], isSettings: Bool = false, hintGroupInCommon: PeerId? = nil, requestsContext: PeerInvitationImportersContext? = nil, forumTopicThread: ChatReplyThreadMessage? = nil) {
@@ -10337,8 +10356,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         super.init(navigationBarPresentationData: NavigationBarPresentationData(
             theme: NavigationBarTheme(
                 buttonColor: .white,
-                disabledButtonColor: baseNavigationBarPresentationData.theme.disabledButtonColor,
-                primaryTextColor: baseNavigationBarPresentationData.theme.primaryTextColor,
+                disabledButtonColor: .white,
+                primaryTextColor: .white,
                 backgroundColor: .clear,
                 enableBackgroundBlur: false,
                 separatorColor: .clear,
@@ -10346,6 +10365,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 badgeStrokeColor: baseNavigationBarPresentationData.theme.badgeStrokeColor,
                 badgeTextColor: baseNavigationBarPresentationData.theme.badgeTextColor
         ), strings: baseNavigationBarPresentationData.strings))
+        
+        self.navigationBar?.enableAutomaticBackButton = false
                 
         if isSettings {
             let activeSessionsContextAndCountSignal = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext)?, NoError> in
@@ -10556,8 +10577,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                 return nil
             }
         }
-        
-        self.setStatusBarStyle(.White, animated: false)
         
         self.scrollToTop = { [weak self] in
             self?.controllerNode.scrollToTop()
@@ -11056,7 +11075,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 
             if let currentBackButtonArrow = topNavigationBar.makeTransitionBackArrowNode(accentColor: .white) {
                 self.currentBackButtonArrow = currentBackButtonArrow
-                self.addSubnode(currentBackButtonArrow)
+                //self.addSubnode(currentBackButtonArrow)
             }
             
             if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
@@ -11070,7 +11089,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             if let currentBackButton = topNavigationBar.makeTransitionBackButtonNode(accentColor: .white) {
                 self.currentBackButton = currentBackButton
-                self.addSubnode(currentBackButton)
+                //self.addSubnode(currentBackButton)
             }
             
             if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
@@ -11142,10 +11161,12 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 if let backArrowView = headerView.backArrowView {
                     let previousBackButtonArrowFrame = backArrowView.convert(backArrowView.bounds, to: bottomNavigationBar.view)
                     previousBackButtonArrow.frame = previousBackButtonArrowFrame
+                    transition.updateAlpha(layer: previousBackButtonArrow.layer, alpha: fraction)
                 }
             } else {
                 let previousBackButtonArrowFrame = bottomNavigationBar.backButtonArrow.view.convert(bottomNavigationBar.backButtonArrow.view.bounds, to: bottomNavigationBar.view)
                 previousBackButtonArrow.frame = previousBackButtonArrowFrame
+                transition.updateAlpha(layer: previousBackButtonArrow.layer, alpha: fraction)
             }
         }
         

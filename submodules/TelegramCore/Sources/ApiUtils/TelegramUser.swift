@@ -96,9 +96,9 @@ extension TelegramUser {
             
             let restrictionInfo: PeerAccessRestrictionInfo? = restrictionReason.flatMap(PeerAccessRestrictionInfo.init(apiReasons:))
             
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: accessHashValue, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [], storiesHidden: storiesHidden, nameColor: nameColor.flatMap { PeerNameColor(rawValue: $0) }, backgroundEmojiId: backgroundEmojiId)
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: accessHashValue, firstName: firstName, lastName: lastName, username: username, phone: phone, photo: representations, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: usernames?.map(TelegramPeerUsername.init(apiUsername:)) ?? [], storiesHidden: storiesHidden, nameColor: nameColor.flatMap { PeerNameColor(rawValue: $0) }, backgroundEmojiId: backgroundEmojiId, profileColor: nil, profileBackgroundEmojiId: nil)
         case let .userEmpty(id):
-            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil)
+            self.init(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(id)), accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [], storiesHidden: nil, nameColor: nil, backgroundEmojiId: nil, profileColor: nil, profileBackgroundEmojiId: nil)
         }
     }
     
@@ -180,7 +180,7 @@ extension TelegramUser {
                             accessHash = lhs.accessHash ?? rhsAccessHashValue
                         }
                         
-                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: lhs.usernames, storiesHidden: lhs.storiesHidden, nameColor: nameColor.flatMap { PeerNameColor(rawValue: $0) }, backgroundEmojiId: backgroundEmojiId)
+                        return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: telegramPhoto, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus.flatMap(PeerEmojiStatus.init(apiStatus:)), usernames: lhs.usernames, storiesHidden: lhs.storiesHidden, nameColor: nameColor.flatMap { PeerNameColor(rawValue: $0) }, backgroundEmojiId: backgroundEmojiId, profileColor: nil, profileBackgroundEmojiId: nil)
                     } else {
                         return TelegramUser(user: rhs)
                     }
@@ -241,7 +241,7 @@ extension TelegramUser {
                 storiesHidden = lhs.storiesHidden
             }
             
-            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: lhs.usernames, storiesHidden: storiesHidden, nameColor: rhs.nameColor, backgroundEmojiId: rhs.backgroundEmojiId)
+            return TelegramUser(id: lhs.id, accessHash: accessHash, firstName: lhs.firstName, lastName: lhs.lastName, username: lhs.username, phone: lhs.phone, photo: photo, botInfo: botInfo, restrictionInfo: restrictionInfo, flags: userFlags, emojiStatus: emojiStatus, usernames: lhs.usernames, storiesHidden: storiesHidden, nameColor: rhs.nameColor, backgroundEmojiId: rhs.backgroundEmojiId, profileColor: rhs.profileColor, profileBackgroundEmojiId: rhs.profileBackgroundEmojiId)
         }
     }
 }

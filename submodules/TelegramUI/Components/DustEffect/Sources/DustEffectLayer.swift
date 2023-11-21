@@ -181,7 +181,7 @@ public final class DustEffectLayer: MetalEngineSubjectLayer, MetalEngineSubject 
     private func updateNeedsAnimation() {
         if !self.items.isEmpty && self.isInHierarchy {
             if self.updateLink == nil {
-                self.updateLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .fps(60), { [weak self] deltaTime in
+                self.updateLink = SharedDisplayLinkDriver.shared.add(framesPerSecond: .max, { [weak self] deltaTime in
                     guard let self else {
                         return
                     }

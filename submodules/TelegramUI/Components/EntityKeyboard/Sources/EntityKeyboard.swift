@@ -370,6 +370,7 @@ public final class EntityKeyboardComponent: Component {
                                         animationRenderer: maskContent.animationRenderer,
                                         theme: component.theme,
                                         title: itemGroup.title ?? "",
+                                        customTintColor: component.customTintColor,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "masks", groupId: itemGroup.supergroupId, subgroupId: nil)
                                         }
@@ -509,6 +510,7 @@ public final class EntityKeyboardComponent: Component {
                                         animationRenderer: stickerContent.animationRenderer,
                                         theme: component.theme,
                                         title: itemGroup.title ?? "",
+                                        customTintColor: component.customTintColor,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "stickers", groupId: itemGroup.supergroupId, subgroupId: nil)
                                         }
@@ -625,7 +627,7 @@ public final class EntityKeyboardComponent: Component {
                                         animationRenderer: emojiContent.animationRenderer,
                                         theme: component.theme,
                                         title: itemGroup.title ?? "",
-                                        customTintColor: itemGroup.customTintColor,
+                                        customTintColor: component.customTintColor ?? itemGroup.customTintColor,
                                         pressed: { [weak self] in
                                             self?.scrollToItemGroup(contentId: "emoji", groupId: itemGroup.supergroupId, subgroupId: nil)
                                         }

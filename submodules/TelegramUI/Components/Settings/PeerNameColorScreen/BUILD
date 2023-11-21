@@ -26,6 +26,8 @@ swift_library(
         "//submodules/SolidRoundedButtonNode",
         "//submodules/AppBundle",
         "//submodules/PremiumUI",
+        "//submodules/TelegramUI/Components/PeerInfo/PeerInfoCoverComponent",
+        "//submodules/AvatarNode",
     ],
     visibility = [
         "//visibility:public",

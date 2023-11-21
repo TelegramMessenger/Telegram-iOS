@@ -348,6 +348,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UIDevice.current.isBatteryMonitoringEnabled = true
         }
         
+        
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
                 UNUserNotificationCenter.current().getDeliveredNotifications(completionHandler: { notifications in

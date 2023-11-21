@@ -16,6 +16,8 @@ final class EmojiPickerItem: ListViewItem, ItemListItem {
     let strings: PresentationStrings
     let emojiContent: EmojiPagerContentComponent
     let backgroundIconColor: UIColor
+    let isProfileColor: Bool
+    let hasRemoveButton: Bool
     let sectionId: ItemListSectionId
     
     init(
@@ -24,6 +26,8 @@ final class EmojiPickerItem: ListViewItem, ItemListItem {
         strings: PresentationStrings,
         emojiContent: EmojiPagerContentComponent,
         backgroundIconColor: UIColor,
+        isProfileColor: Bool,
+        hasRemoveButton: Bool,
         sectionId: ItemListSectionId
     ) {
         self.context = context
@@ -31,6 +35,8 @@ final class EmojiPickerItem: ListViewItem, ItemListItem {
         self.strings = strings
         self.emojiContent = emojiContent
         self.backgroundIconColor = backgroundIconColor
+        self.isProfileColor = isProfileColor
+        self.hasRemoveButton = hasRemoveButton
         self.sectionId = sectionId
     }
     
@@ -103,13 +109,20 @@ final class EmojiPickerItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: EmojiPickerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
         return { item, params, neighbors in
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            var contentSize = CGSize(width: params.width, height: params.availableHeight - 452.0)
+            var contentHeight: CGFloat
+            if item.isProfileColor {
+                contentHeight = params.availableHeight - 352.0 - 10.0
+                if item.hasRemoveButton {
+                    contentHeight -= 44.0
+                }
+            } else {
+                contentHeight = params.availableHeight - 452.0
+            }
+            var contentSize = CGSize(width: params.width, height: contentHeight)
             if params.width <= 320.0 {
                 contentSize.height += 77.0
             }
@@ -121,16 +134,6 @@ final class EmojiPickerItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
-                       
-                    if let currentItem, currentItem.backgroundIconColor != item.backgroundIconColor {
-                        if let snapshot = strongSelf.view.snapshotView(afterScreenUpdates: false) {
-                            snapshot.frame = CGRect(origin: CGPoint(x: 0.0, y: -insets.top), size: snapshot.frame.size)
-                            strongSelf.view.addSubview(snapshot)
-                            snapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.25, removeOnCompletion: false, completion: { _ in
-                                snapshot.removeFromSuperview()
-                            })
-                        }
-                    }
                     
                     strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                     strongSelf.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
