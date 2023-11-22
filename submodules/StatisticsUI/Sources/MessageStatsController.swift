@@ -39,10 +39,10 @@ private enum StatsEntry: ItemListNodeEntry {
     case overview(PresentationTheme, PostStats, Int32?)
     
     case interactionsTitle(PresentationTheme, String)
-    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    case interactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
     
     case reactionsTitle(PresentationTheme, String)
-    case reactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType)
+    case reactionsGraph(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, StatsGraph, ChartType, Bool)
     
     case publicForwardsTitle(PresentationTheme, String)
     case publicForward(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, EngineMessage)
@@ -53,7 +53,7 @@ private enum StatsEntry: ItemListNodeEntry {
                 return StatsSection.overview.rawValue
             case .interactionsTitle, .interactionsGraph:
                 return StatsSection.interactions.rawValue
-        case .reactionsTitle, .reactionsGraph:
+            case .reactionsTitle, .reactionsGraph:
                 return StatsSection.reactions.rawValue
             case .publicForwardsTitle, .publicForward:
                 return StatsSection.publicForwards.rawValue
@@ -107,8 +107,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
-                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+            case let .interactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsNoInitialZoom):
+                if case let .interactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsNoInitialZoom) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType, lhsNoInitialZoom == rhsNoInitialZoom {
                     return true
                 } else {
                     return false
@@ -119,8 +119,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .reactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType):
-                if case let .reactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType {
+            case let .reactionsGraph(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsGraph, lhsType, lhsNoInitialZoom):
+                if case let .reactionsGraph(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsGraph, rhsType, rhsNoInitialZoom) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsDateTimeFormat == rhsDateTimeFormat, lhsGraph == rhsGraph, lhsType == rhsType, lhsNoInitialZoom == rhsNoInitialZoom {
                     return true
                 } else {
                     return false
@@ -154,8 +154,8 @@ private enum StatsEntry: ItemListNodeEntry {
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, publicShares):
                 return StatsOverviewItem(presentationData: presentationData, stats: stats as! Stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
-            case let .interactionsGraph(_, _, _, graph, type), let .reactionsGraph(_, _, _, graph, type):
-                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
+            case let .interactionsGraph(_, _, _, graph, type, noInitialZoom), let .reactionsGraph(_, _, _, graph, type, noInitialZoom):
+                return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, noInitialZoom: noInitialZoom, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
                         if let graph = graph, case let .Loaded(_, data) = graph {
                             completion(data)
@@ -185,6 +185,11 @@ private func messageStatsControllerEntries(data: PostStats?, messages: SearchMes
     if let data = data {
         entries.append(.overviewTitle(presentationData.theme, presentationData.strings.Stats_MessageOverview.uppercased()))
         entries.append(.overview(presentationData.theme, data, messages?.totalCount))
+        
+        var isStories = false
+        if let _ = data as? StoryStats {
+            isStories = true
+        }
     
         if !data.interactionsGraph.isEmpty {
             entries.append(.interactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageInteractionsTitle.uppercased()))
@@ -198,12 +203,12 @@ private func messageStatsControllerEntries(data: PostStats?, messages: SearchMes
                 chartType = .twoAxisStep
             }
             
-            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType))
+            entries.append(.interactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.interactionsGraph, chartType, isStories))
         }
         
         if !data.reactionsGraph.isEmpty {
             entries.append(.reactionsTitle(presentationData.theme, presentationData.strings.Stats_MessageReactionsTitle.uppercased()))
-            entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars))
+            entries.append(.reactionsGraph(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, data.reactionsGraph, .bars, isStories))
         }
 
         if let messages = messages, !messages.messages.isEmpty {

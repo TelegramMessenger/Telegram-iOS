@@ -147,12 +147,16 @@ public final class ChartNode: ASDisplayNode {
         self.chartView.apply(theme: theme, strings: strings, animated: false)
     }
     
-    public func setup(controller: BaseChartController) {
+    public func setup(controller: BaseChartController, noInitialZoom: Bool = false) {
         var displayRange = true
+        var zoomToEnding = true
         if let controller = controller as? StepBarsChartController {
             displayRange = !controller.hourly
         }
-        self.chartView.setup(controller: controller, displayRange: displayRange)
+        if noInitialZoom {
+            zoomToEnding = false
+        }
+        self.chartView.setup(controller: controller, displayRange: displayRange, zoomToEnding: zoomToEnding)
     }
     
     public func resetInteraction() {
