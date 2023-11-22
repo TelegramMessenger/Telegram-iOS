@@ -63,7 +63,7 @@ private func requestEditMessageInternal(accountPeerId: PeerId, postbox: Postbox,
             if let webpagePreviewAttribute = webpagePreviewAttribute {
                 attributes.append(webpagePreviewAttribute)
             }
-            return mediaContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, passFetchProgress: false, forceNoBigParts: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, messageId: nil, attributes: attributes)
+            return mediaContentToUpload(accountPeerId: accountPeerId, network: network, postbox: postbox, auxiliaryMethods: stateManager.auxiliaryMethods, transformOutgoingMessageMedia: transformOutgoingMessageMedia, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: mediaReferenceRevalidationContext, forceReupload: forceReupload, isGrouped: false, passFetchProgress: false, forceNoBigParts: false, peerId: messageId.peerId, media: augmentedMedia, text: "", autoremoveMessageAttribute: nil, autoclearMessageAttribute: nil, messageId: nil, attributes: attributes, mediaReference: nil)
         }
         if let uploadSignal = generateUploadSignal(forceReupload) {
             uploadedMedia = .single(.progress(0.027))

@@ -454,9 +454,9 @@ public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTi
         let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
         if dayDifference == 0 || dayDifference == -1 {
             let day: RelativeTimestampFormatDay
-            if dayDifference == 0 {
-                let minutes = difference / (60 * 60)
-                return short ? strings.ShortTime_HoursAgo(minutes) : strings.Time_HoursAgo(minutes)
+            if dayDifference == 0 || short {
+                let hours = difference / (60 * 60)
+                return short ? strings.ShortTime_HoursAgo(hours) : strings.Time_HoursAgo(hours)
             } else {
                 day = .yesterday
             }

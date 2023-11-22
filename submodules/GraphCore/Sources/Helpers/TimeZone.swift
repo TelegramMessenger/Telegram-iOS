@@ -35,7 +35,7 @@ extension DateFormatter {
         let formatter = DateFormatter()
         formatter.calendar = Calendar.utc
         formatter.dateFormat = format
-        formatter.timeZone = TimeZone.utc
+        formatter.timeZone = .current
         return formatter
     }
 }

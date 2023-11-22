@@ -43,17 +43,14 @@ public extension Stories {
         private enum CodingKeys: String, CodingKey {
             case peerId = "peerId"
             case storyId = "storyId"
-            case isForwardingDisabled = "isForwardingDisabled"
         }
         
         public let peerId: EnginePeer.Id
         public let storyId: Int32
-        public let isForwardingDisabled: Bool
         
-        public init(peerId: EnginePeer.Id, storyId: Int32, isForwardingDisabled: Bool) {
+        public init(peerId: EnginePeer.Id, storyId: Int32) {
             self.peerId = peerId
             self.storyId = storyId
-            self.isForwardingDisabled = isForwardingDisabled
         }
         
         public init(from decoder: Decoder) throws {
@@ -61,7 +58,6 @@ public extension Stories {
             
             self.peerId = EnginePeer.Id(try container.decode(Int64.self, forKey: .peerId))
             self.storyId = try container.decode(Int32.self, forKey: .storyId)
-            self.isForwardingDisabled = try container.decode(Bool.self, forKey: .isForwardingDisabled)
         }
         
         public func encode(to encoder: Encoder) throws {
@@ -69,7 +65,6 @@ public extension Stories {
             
             try container.encode(self.peerId.toInt64(), forKey: .peerId)
             try container.encode(self.storyId, forKey: .storyId)
-            try container.encode(self.isForwardingDisabled, forKey: .isForwardingDisabled)
         }
     }
     

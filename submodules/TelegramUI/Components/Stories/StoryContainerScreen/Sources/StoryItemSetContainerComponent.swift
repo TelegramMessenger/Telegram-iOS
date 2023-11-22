@@ -5222,11 +5222,12 @@ public final class StoryItemSetContainerComponent: Component {
                             
                             if case let .user(user) = peer {
                                 externalState.isPeerArchived = user.storiesHidden ?? false
+                                
                             } else if case let .channel(channel) = peer {
                                 externalState.isPeerArchived = channel.storiesHidden ?? false
                             }
                             
-                            let forwardInfo = Stories.PendingForwardInfo(peerId: component.slice.peer.id, storyId: item.id, isForwardingDisabled: item.isForwardingDisabled)
+                            let forwardInfo = Stories.PendingForwardInfo(peerId: component.slice.peer.id, storyId: item.id)
                             
                             if let rootController = context.sharedContext.mainWindow?.viewController as? TelegramRootControllerInterface {
                                 var existingMedia: EngineMedia?

@@ -1034,7 +1034,8 @@ final class MediaEditorScreenComponent: Component {
                         authorName: authorName,
                         text: forwardStory.text,
                         isChannel: forwardAuthor.id.isGroupOrChannel,
-                        isVibrant: true
+                        isVibrant: true,
+                        fillsWidth: true
                     )
                 )
             }

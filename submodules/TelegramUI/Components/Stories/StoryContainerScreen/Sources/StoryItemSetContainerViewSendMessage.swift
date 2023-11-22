@@ -1041,11 +1041,13 @@ final class StoryItemSetContainerSendMessage {
                 immediateExternalShare: false,
                 forceTheme: defaultDarkColorPresentationTheme
             )
-            shareController.shareStory = { [weak view] in
-                guard let view else {
-                    return
+            if !component.slice.peer.isService {
+                shareController.shareStory = { [weak view] in
+                    guard let view else {
+                        return
+                    }
+                    view.openStoryEditing(repost: true)
                 }
-                view.openStoryEditing(repost: true)
             }
             shareController.completed = { [weak view] peerIds in
                 guard let view, let component = view.component else {
