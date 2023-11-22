@@ -2915,7 +2915,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
                 
         private weak var muteTooltip: ViewController?
         func presentMutedTooltip() {
-            guard let sourceView = self.componentHost.findTaggedView(tag: muteButtonTag) else {
+            guard let mediaEditor = self.mediaEditor, let sourceView = self.componentHost.findTaggedView(tag: muteButtonTag) else {
                 return
             }
 
@@ -2931,7 +2931,7 @@ public final class MediaEditorScreen: ViewController, UIDropInteractionDelegate 
             let location = CGRect(origin: CGPoint(x: absoluteFrame.midX, y: absoluteFrame.maxY + 3.0), size: CGSize())
             
             let text: String
-            if let _ = self.mediaEditor?.values.audioTrack {
+            if mediaEditor.values.audioTrack != nil || mediaEditor.values.additionalVideoPath != nil {
                 if isMuted {
                     text = self.presentationData.strings.Story_Editor_TooltipMutedWithAudio
                 } else {
