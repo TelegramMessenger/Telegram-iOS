@@ -523,5 +523,37 @@ public extension TelegramEngine.EngineData.Item {
                 return value
             }
         }
+        
+        public struct AvailableColorOptions: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EngineAvailableColorOptions
+            
+            public let scope: PeerColorsScope
+            
+            public init(scope: PeerColorsScope) {
+                self.scope = scope
+            }
+            
+            var key: PostboxViewKey {
+                let key = ValueBoxKey(length: 8)
+                switch scope {
+                case .replies:
+                    key.setInt64(0, value: 0)
+                case .profile:
+                    key.setInt64(0, value: 1)
+                }
+                let viewKey: PostboxViewKey = .cachedItem(ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.peerColorOptions, key: key))
+                return viewKey
+            }
+            
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? CachedItemView else {
+                    preconditionFailure()
+                }
+                guard let value = view.value?.get(EngineAvailableColorOptions.self) else {
+                    return EngineAvailableColorOptions(hash: 0, options: [])
+                }
+                return value
+            }
+        }
     }
 }

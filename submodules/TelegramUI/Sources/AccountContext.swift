@@ -254,7 +254,7 @@ public final class AccountContextImpl: AccountContext {
     
     public let imageCache: AnyObject?
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, temp: Bool = false)
+    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration, contentSettings: ContentSettings, appConfiguration: AppConfiguration, availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions, temp: Bool = false)
     {
         self.sharedContextImpl = sharedContext
         self.account = account
@@ -263,7 +263,7 @@ public final class AccountContextImpl: AccountContext {
         self.imageCache = DirectMediaImageCache(account: account)
         
         self.userLimits = EngineConfiguration.UserLimits(UserLimitsConfiguration.defaultValue)
-        self.peerNameColors = PeerNameColors.defaultValue
+        self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         self.audioTranscriptionTrial = AudioTranscription.TrialState.defaultValue
         self.isPremium = false
         
@@ -411,12 +411,15 @@ public final class AccountContextImpl: AccountContext {
             self.userLimits = userLimits
         })
         
-        self.peerNameColorsConfigurationDisposable = (self._appConfiguration.get()
-        |> deliverOnMainQueue).startStrict(next: { [weak self] appConfiguration in
+        self.peerNameColorsConfigurationDisposable = (combineLatest(
+            self.engine.accountData.observeAvailableColorOptions(scope: .replies),
+            self.engine.accountData.observeAvailableColorOptions(scope: .profile)
+        )
+        |> deliverOnMainQueue).startStrict(next: { [weak self] availableReplyColors, availableProfileColors in
             guard let self = self else {
                 return
             }
-            self.peerNameColors = PeerNameColors.with(appConfiguration: appConfiguration)
+            self.peerNameColors = PeerNameColors.with(availableReplyColors: availableReplyColors, availableProfileColors: availableProfileColors)
         })
         
         self.audioTranscriptionTrialDisposable = (self.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: account.peerId))

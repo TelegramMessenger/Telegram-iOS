@@ -59,6 +59,8 @@ private final class AccountUserInterfaceInUseContext {
     }
 }
 
+typealias AccountInitialData = (limitsConfiguration: LimitsConfiguration?, contentSettings: ContentSettings?, appConfiguration: AppConfiguration?, availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions)
+
 private struct AccountAttributes: Equatable {
     let sortIndex: Int32
     let isTestingEnvironment: Bool
@@ -67,12 +69,12 @@ private struct AccountAttributes: Equatable {
 
 private enum AddedAccountResult {
     case upgrading(Float)
-    case ready(AccountRecordId, Account?, Int32, LimitsConfiguration?, ContentSettings?, AppConfiguration?)
+    case ready(AccountRecordId, Account?, Int32, AccountInitialData)
 }
 
 private enum AddedAccountsResult {
     case upgrading(Float)
-    case ready([(AccountRecordId, Account?, Int32, LimitsConfiguration?, ContentSettings?, AppConfiguration?)])
+    case ready([(AccountRecordId, Account?, Int32, AccountInitialData)])
 }
 
 private var testHasInstance = false
@@ -524,15 +526,17 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 return TelegramEngine(account: account).data.get(
                                     TelegramEngine.EngineData.Item.Configuration.Limits(),
                                     TelegramEngine.EngineData.Item.Configuration.ContentSettings(),
-                                    TelegramEngine.EngineData.Item.Configuration.App()
+                                    TelegramEngine.EngineData.Item.Configuration.App(),
+                                    TelegramEngine.EngineData.Item.Configuration.AvailableColorOptions(scope: .replies),
+                                    TelegramEngine.EngineData.Item.Configuration.AvailableColorOptions(scope: .profile)
                                 )
-                                |> map { limitsConfiguration, contentSettings, appConfiguration -> AddedAccountResult in
-                                    return .ready(id, account, attributes.sortIndex, limitsConfiguration._asLimits(), contentSettings, appConfiguration)
+                                |> map { limitsConfiguration, contentSettings, appConfiguration, availableReplyColors, availableProfileColors -> AddedAccountResult in
+                                    return .ready(id, account, attributes.sortIndex, (limitsConfiguration._asLimits(), contentSettings, appConfiguration, availableReplyColors, availableProfileColors))
                                 }
                             case let .upgrading(progress):
                                 return .single(.upgrading(progress))
                             default:
-                                return .single(.ready(id, nil, attributes.sortIndex, nil, nil, nil))
+                                return .single(.ready(id, nil, attributes.sortIndex, (nil, nil, nil, EngineAvailableColorOptions(hash: 0, options: []), EngineAvailableColorOptions(hash: 0, options: []))))
                         }
                     })
                 }
@@ -553,13 +557,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             
             let mappedAddedAccounts = combineLatest(queue: .mainQueue(), addedSignals)
             |> map { results -> AddedAccountsResult in
-                var readyAccounts: [(AccountRecordId, Account?, Int32, LimitsConfiguration?, ContentSettings?, AppConfiguration?)] = []
+                var readyAccounts: [(AccountRecordId, Account?, Int32, AccountInitialData)] = []
                 var totalProgress: Float = 0.0
                 var hasItemsWithProgress = false
                 for result in results {
                     switch result {
-                        case let .ready(id, account, sortIndex, limitsConfiguration, contentSettings, appConfiguration):
-                            readyAccounts.append((id, account, sortIndex, limitsConfiguration, contentSettings, appConfiguration))
+                        case let .ready(id, account, sortIndex, initialData):
+                            readyAccounts.append((id, account, sortIndex, initialData))
                             totalProgress += 1.0
                         case let .upgrading(progress):
                             hasItemsWithProgress = true
@@ -577,7 +581,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> deliverOnMainQueue).start(next: { mappedAddedAccounts, authAccount in
                 print("SharedAccountContextImpl: accounts processed in \(CFAbsoluteTimeGetCurrent() - startTime)")
                 
-                var addedAccounts: [(AccountRecordId, Account?, Int32, LimitsConfiguration?, ContentSettings?, AppConfiguration?)] = []
+                var addedAccounts: [(AccountRecordId, Account?, Int32, AccountInitialData)] = []
                 switch mappedAddedAccounts {
                     case let .upgrading(progress):
                         self.displayUpgradeProgress(progress)
@@ -616,7 +620,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 assertionFailure()
                             }
 
-                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue)
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3.limitsConfiguration ?? .defaultValue, contentSettings: accountRecord.3.contentSettings ?? .default, appConfiguration: accountRecord.3.appConfiguration ?? .defaultValue, availableReplyColors: accountRecord.3.availableReplyColors, availableProfileColors: accountRecord.3.availableProfileColors)
 
                             self.activeAccountsValue!.accounts.append((account.id, context, accountRecord.2))
                             
@@ -1221,7 +1225,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makeTempAccountContext(account: Account) -> AccountContext {
-        return AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: .defaultValue, contentSettings: .default, appConfiguration: .defaultValue, temp: true)
+        return AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: .defaultValue, contentSettings: .default, appConfiguration: .defaultValue, availableReplyColors: EngineAvailableColorOptions(hash: 0, options: []), availableProfileColors: EngineAvailableColorOptions(hash: 0, options: []), temp: true)
     }
     
     public func openChatMessage(_ params: OpenChatMessageParams) -> Bool {

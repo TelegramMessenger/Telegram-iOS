@@ -35,6 +35,10 @@ public extension TelegramEngine {
             return _internal_updateAbout(account: self.account, about: about)
         }
         
+        public func observeAvailableColorOptions(scope: PeerColorsScope) -> Signal<EngineAvailableColorOptions, NoError> {
+            return _internal_observeAvailableColorOptions(postbox: self.account.postbox, scope: scope)
+        }
+        
         public func updateNameColorAndEmoji(nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
             return _internal_updateNameColorAndEmoji(account: self.account, nameColor: nameColor, backgroundEmojiId: backgroundEmojiId, profileColor: profileColor, profileBackgroundEmojiId: profileBackgroundEmojiId)
         }

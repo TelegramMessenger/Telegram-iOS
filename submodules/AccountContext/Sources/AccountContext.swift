@@ -1244,6 +1244,25 @@ public struct StickersSearchConfiguration {
     }
 }
 
+private extension PeerNameColors.Colors {
+    init?(colors: EngineAvailableColorOptions.MultiColorPack) {
+        if colors.colors.isEmpty {
+            return nil
+        }
+        self.main = UIColor(rgb: colors.colors[0])
+        if colors.colors.count > 1 {
+            self.secondary = UIColor(rgb: colors.colors[1])
+        } else {
+            self.secondary = nil
+        }
+        if colors.colors.count > 2 {
+            self.tertiary = UIColor(rgb: colors.colors[2])
+        } else {
+            self.tertiary = nil
+        }
+    }
+}
+
 public class PeerNameColors: Equatable {
     public struct Colors: Equatable {
         public let main: UIColor
@@ -1347,8 +1366,69 @@ public class PeerNameColors: Equatable {
         self.profileDisplayOrder = profileDisplayOrder
     }
     
-    public static func with(appConfiguration: AppConfiguration) -> PeerNameColors {
-        if let data = appConfiguration.data {
+    public static func with(availableReplyColors: EngineAvailableColorOptions, availableProfileColors: EngineAvailableColorOptions) -> PeerNameColors {
+        var colors: [Int32: Colors] = [:]
+        var darkColors: [Int32: Colors] = [:]
+        var displayOrder: [Int32] = []
+        var profileColors: [Int32: Colors] = [:]
+        var profileDarkColors: [Int32: Colors] = [:]
+        var profileDisplayOrder: [Int32] = []
+        
+        if !availableReplyColors.options.isEmpty {
+            for option in availableReplyColors.options {
+                if let parsedLight = PeerNameColors.Colors(colors: option.value.light.background) {
+                    colors[option.key] = parsedLight
+                }
+                if let parsedDark = (option.value.dark?.background).flatMap(PeerNameColors.Colors.init(colors:)) {
+                    darkColors[option.key] = parsedDark
+                }
+                
+                //displayOrder.append(contentsOf: availableReplyColors.options.filter({ !$0.value.isHidden }).map(\.key))
+                for option in availableReplyColors.options {
+                    if !displayOrder.contains(option.key) {
+                        displayOrder.append(option.key)
+                    }
+                }
+                /*for i in (0 ..< 7).reversed() {
+                    if !displayOrder.contains(Int32(i)) {
+                        displayOrder.insert(Int32(i), at: 0)
+                    }
+                }*/
+            }
+        } else {
+            let defaultValue = PeerNameColors.defaultValue
+            colors = defaultValue.colors
+            darkColors = defaultValue.darkColors
+            displayOrder = defaultValue.displayOrder
+        }
+            
+        if !availableProfileColors.options.isEmpty {
+            for option in availableProfileColors.options {
+                if let parsedLight = PeerNameColors.Colors(colors: option.value.light.background) {
+                    profileColors[option.key] = parsedLight
+                }
+                if let parsedDark = (option.value.dark?.background).flatMap(PeerNameColors.Colors.init(colors:)) {
+                    profileDarkColors[option.key] = parsedDark
+                }
+                for option in availableProfileColors.options {
+                    if !profileDisplayOrder.contains(option.key) {
+                        profileDisplayOrder.append(option.key)
+                    }
+                }
+                //profileDisplayOrder = availableProfileColors.options.filter({ !$0.value.isHidden }).map(\.key)
+            }
+        }
+        
+        return PeerNameColors(
+            colors: colors,
+            darkColors: darkColors,
+            displayOrder: displayOrder,
+            profileColors: profileColors,
+            profileDarkColors: profileDarkColors,
+            profileDisplayOrder: profileDisplayOrder
+        )
+        
+        /*if let data = appConfiguration.data {
             var colors = PeerNameColors.defaultSingleColors
             var darkColors: [Int32: Colors] = [:]
             
@@ -1463,7 +1543,7 @@ public class PeerNameColors: Equatable {
             )
         } else {
             return .defaultValue
-        }
+        }*/
     }
     
     public static func == (lhs: PeerNameColors, rhs: PeerNameColors) -> Bool {
