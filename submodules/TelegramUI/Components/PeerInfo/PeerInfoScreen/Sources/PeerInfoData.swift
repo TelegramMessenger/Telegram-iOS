@@ -822,9 +822,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 var peer: Peer?
                 peer = peerView.peers[userPeerId]
                 
-                if let user = peer as? TelegramUser, let profileColor = user.nameColor {
+                /*if let user = peer as? TelegramUser, let profileColor = user.nameColor {
                     peer = user.withUpdatedProfileColor(PeerNameColor(rawValue: profileColor.rawValue)).withUpdatedProfileBackgroundEmojiId(user.backgroundEmojiId)
-                }
+                }*/
                 
                 return PeerInfoScreenData(
                     peer: peer,

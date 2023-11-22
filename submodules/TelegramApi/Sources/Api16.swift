@@ -687,6 +687,46 @@ public extension Api {
     }
 }
 public extension Api {
+    enum PeerColor: TypeConstructorDescription {
+        case peerColor(color: Int32, backgroundEmojiId: Int64)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerColor(let color, let backgroundEmojiId):
+                    if boxed {
+                        buffer.appendInt32(-1171816122)
+                    }
+                    serializeInt32(color, buffer: buffer, boxed: false)
+                    serializeInt64(backgroundEmojiId, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerColor(let color, let backgroundEmojiId):
+                return ("peerColor", [("color", color as Any), ("backgroundEmojiId", backgroundEmojiId as Any)])
+    }
+    }
+    
+        public static func parse_peerColor(_ reader: BufferReader) -> PeerColor? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.PeerColor.peerColor(color: _1!, backgroundEmojiId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum PeerLocated: TypeConstructorDescription {
         case peerLocated(peer: Api.Peer, expires: Int32, distance: Int32)
         case peerSelfLocated(expires: Int32)

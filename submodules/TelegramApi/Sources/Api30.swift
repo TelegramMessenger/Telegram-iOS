@@ -1,3 +1,143 @@
+public extension Api.photos {
+    enum Photo: TypeConstructorDescription {
+        case photo(photo: Api.Photo, users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .photo(let photo, let users):
+                    if boxed {
+                        buffer.appendInt32(539045032)
+                    }
+                    photo.serialize(buffer, true)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .photo(let photo, let users):
+                return ("photo", [("photo", photo as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_photo(_ reader: BufferReader) -> Photo? {
+            var _1: Api.Photo?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Photo
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.photos.Photo.photo(photo: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.photos {
+    enum Photos: TypeConstructorDescription {
+        case photos(photos: [Api.Photo], users: [Api.User])
+        case photosSlice(count: Int32, photos: [Api.Photo], users: [Api.User])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .photos(let photos, let users):
+                    if boxed {
+                        buffer.appendInt32(-1916114267)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(photos.count))
+                    for item in photos {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+                case .photosSlice(let count, let photos, let users):
+                    if boxed {
+                        buffer.appendInt32(352657236)
+                    }
+                    serializeInt32(count, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(photos.count))
+                    for item in photos {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(users.count))
+                    for item in users {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .photos(let photos, let users):
+                return ("photos", [("photos", photos as Any), ("users", users as Any)])
+                case .photosSlice(let count, let photos, let users):
+                return ("photosSlice", [("count", count as Any), ("photos", photos as Any), ("users", users as Any)])
+    }
+    }
+    
+        public static func parse_photos(_ reader: BufferReader) -> Photos? {
+            var _1: [Api.Photo]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
+            }
+            var _2: [Api.User]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.photos.Photos.photos(photos: _1!, users: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_photosSlice(_ reader: BufferReader) -> Photos? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: [Api.Photo]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Photo.self)
+            }
+            var _3: [Api.User]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.photos.Photos.photosSlice(count: _1!, photos: _2!, users: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.premium {
     enum BoostsList: TypeConstructorDescription {
         case boostsList(flags: Int32, count: Int32, boosts: [Api.Boost], nextOffset: String?, users: [Api.User])
@@ -1510,58 +1650,6 @@ public extension Api.updates {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.updates.Difference.differenceTooLong(pts: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.updates {
-    enum State: TypeConstructorDescription {
-        case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .state(let pts, let qts, let date, let seq, let unreadCount):
-                    if boxed {
-                        buffer.appendInt32(-1519637954)
-                    }
-                    serializeInt32(pts, buffer: buffer, boxed: false)
-                    serializeInt32(qts, buffer: buffer, boxed: false)
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    serializeInt32(seq, buffer: buffer, boxed: false)
-                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .state(let pts, let qts, let date, let seq, let unreadCount):
-                return ("state", [("pts", pts as Any), ("qts", qts as Any), ("date", date as Any), ("seq", seq as Any), ("unreadCount", unreadCount as Any)])
-    }
-    }
-    
-        public static func parse_state(_ reader: BufferReader) -> State? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            var _4: Int32?
-            _4 = reader.readInt32()
-            var _5: Int32?
-            _5 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
             }
             else {
                 return nil

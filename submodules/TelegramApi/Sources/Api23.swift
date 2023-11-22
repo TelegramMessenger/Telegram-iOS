@@ -452,14 +452,14 @@ public extension Api {
 }
 public extension Api {
     enum User: TypeConstructorDescription {
-        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Int32?, backgroundEmojiId: Int64?)
+        case user(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: Api.UserProfilePhoto?, status: Api.UserStatus?, botInfoVersion: Int32?, restrictionReason: [Api.RestrictionReason]?, botInlinePlaceholder: String?, langCode: String?, emojiStatus: Api.EmojiStatus?, usernames: [Api.Username]?, storiesMaxId: Int32?, color: Api.PeerColor?, profileColor: Api.PeerColor?)
         case userEmpty(id: Int64)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor):
                     if boxed {
-                        buffer.appendInt32(-346018011)
+                        buffer.appendInt32(559694904)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -486,8 +486,8 @@ public extension Api {
                         item.serialize(buffer, true)
                     }}
                     if Int(flags2) & Int(1 << 5) != 0 {serializeInt32(storiesMaxId!, buffer: buffer, boxed: false)}
-                    if Int(flags2) & Int(1 << 7) != 0 {serializeInt32(color!, buffer: buffer, boxed: false)}
-                    if Int(flags2) & Int(1 << 6) != 0 {serializeInt64(backgroundEmojiId!, buffer: buffer, boxed: false)}
+                    if Int(flags2) & Int(1 << 8) != 0 {color!.serialize(buffer, true)}
+                    if Int(flags2) & Int(1 << 9) != 0 {profileColor!.serialize(buffer, true)}
                     break
                 case .userEmpty(let id):
                     if boxed {
@@ -500,8 +500,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let backgroundEmojiId):
-                return ("user", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("phone", phone as Any), ("photo", photo as Any), ("status", status as Any), ("botInfoVersion", botInfoVersion as Any), ("restrictionReason", restrictionReason as Any), ("botInlinePlaceholder", botInlinePlaceholder as Any), ("langCode", langCode as Any), ("emojiStatus", emojiStatus as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any), ("backgroundEmojiId", backgroundEmojiId as Any)])
+                case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames, let storiesMaxId, let color, let profileColor):
+                return ("user", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("phone", phone as Any), ("photo", photo as Any), ("status", status as Any), ("botInfoVersion", botInfoVersion as Any), ("restrictionReason", restrictionReason as Any), ("botInlinePlaceholder", botInlinePlaceholder as Any), ("langCode", langCode as Any), ("emojiStatus", emojiStatus as Any), ("usernames", usernames as Any), ("storiesMaxId", storiesMaxId as Any), ("color", color as Any), ("profileColor", profileColor as Any)])
                 case .userEmpty(let id):
                 return ("userEmpty", [("id", id as Any)])
     }
@@ -552,10 +552,14 @@ public extension Api {
             } }
             var _17: Int32?
             if Int(_2!) & Int(1 << 5) != 0 {_17 = reader.readInt32() }
-            var _18: Int32?
-            if Int(_2!) & Int(1 << 7) != 0 {_18 = reader.readInt32() }
-            var _19: Int64?
-            if Int(_2!) & Int(1 << 6) != 0 {_19 = reader.readInt64() }
+            var _18: Api.PeerColor?
+            if Int(_2!) & Int(1 << 8) != 0 {if let signature = reader.readInt32() {
+                _18 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            } }
+            var _19: Api.PeerColor?
+            if Int(_2!) & Int(1 << 9) != 0 {if let signature = reader.readInt32() {
+                _19 = Api.parse(reader, signature: signature) as? Api.PeerColor
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -573,10 +577,10 @@ public extension Api {
             let _c15 = (Int(_1!) & Int(1 << 30) == 0) || _15 != nil
             let _c16 = (Int(_2!) & Int(1 << 0) == 0) || _16 != nil
             let _c17 = (Int(_2!) & Int(1 << 5) == 0) || _17 != nil
-            let _c18 = (Int(_2!) & Int(1 << 7) == 0) || _18 != nil
-            let _c19 = (Int(_2!) & Int(1 << 6) == 0) || _19 != nil
+            let _c18 = (Int(_2!) & Int(1 << 8) == 0) || _18 != nil
+            let _c19 = (Int(_2!) & Int(1 << 9) == 0) || _19 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 {
-                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18, backgroundEmojiId: _19)
+                return Api.User.user(flags: _1!, flags2: _2!, id: _3!, accessHash: _4, firstName: _5, lastName: _6, username: _7, phone: _8, photo: _9, status: _10, botInfoVersion: _11, restrictionReason: _12, botInlinePlaceholder: _13, langCode: _14, emojiStatus: _15, usernames: _16, storiesMaxId: _17, color: _18, profileColor: _19)
             }
             else {
                 return nil

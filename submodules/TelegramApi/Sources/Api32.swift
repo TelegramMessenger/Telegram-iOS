@@ -3947,6 +3947,36 @@ public extension Api.functions.help {
                 }
 }
 public extension Api.functions.help {
+                static func getPeerColors(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PeerColors>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-629083089)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getPeerColors", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.PeerColors? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.PeerColors?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.PeerColors
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.help {
+                static func getPeerProfileColors(hash: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PeerColors>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1412453891)
+                    serializeInt32(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "help.getPeerProfileColors", parameters: [("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.help.PeerColors? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.help.PeerColors?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.help.PeerColors
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.help {
                 static func getPremiumPromo() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.help.PremiumPromo>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1206152236)

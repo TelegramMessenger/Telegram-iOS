@@ -52,7 +52,6 @@ public enum UpdateNameColorAndEmojiError {
 }
 
 func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColor, backgroundEmojiId: Int64?, profileColor: PeerNameColor?, profileBackgroundEmojiId: Int64?) -> Signal<Void, UpdateNameColorAndEmojiError> {
-    let flags: Int32 = (1 << 0)
     return account.postbox.transaction { transaction -> Signal<Peer, NoError> in
         guard let peer = transaction.getPeer(account.peerId) as? TelegramUser else {
             return .complete()
@@ -65,12 +64,18 @@ func _internal_updateNameColorAndEmoji(account: Account, nameColor: PeerNameColo
     |> switchToLatest
     |> castError(UpdateNameColorAndEmojiError.self)
     |> mapToSignal { _ -> Signal<Void, UpdateNameColorAndEmojiError> in
-        return account.network.request(Api.functions.account.updateColor(flags: flags, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0))
+        let flagsReplies: Int32 = 1 << 0
+        let flagsProfile: Int32 = (1 << 0) | (1 << 1)
+        return combineLatest(
+            account.network.request(Api.functions.account.updateColor(flags: flagsReplies, color: nameColor.rawValue, backgroundEmojiId: backgroundEmojiId ?? 0)),
+            account.network.request(Api.functions.account.updateColor(flags: flagsProfile, color: profileColor?.rawValue ?? 0, backgroundEmojiId: profileBackgroundEmojiId ?? 0))
+        )
         |> mapError { _ -> UpdateNameColorAndEmojiError in
             return .generic
         }
-        |> mapToSignal { _ -> Signal<Void, UpdateNameColorAndEmojiError> in
+        |> mapToSignal { _, _ -> Signal<Void, UpdateNameColorAndEmojiError> in
             return .complete()
         }
     }
 }
+

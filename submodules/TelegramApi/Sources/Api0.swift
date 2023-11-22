@@ -166,7 +166,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-531931925] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsMentions($0) }
     dict[-566281095] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsRecent($0) }
     dict[106343499] = { return Api.ChannelParticipantsFilter.parse_channelParticipantsSearch($0) }
-    dict[427944574] = { return Api.Chat.parse_channel($0) }
+    dict[-1903702824] = { return Api.Chat.parse_channel($0) }
     dict[399807445] = { return Api.Chat.parse_channelForbidden($0) }
     dict[1103884886] = { return Api.Chat.parse_chat($0) }
     dict[693512293] = { return Api.Chat.parse_chatEmpty($0) }
@@ -636,6 +636,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[918946202] = { return Api.Peer.parse_peerChat($0) }
     dict[1498486562] = { return Api.Peer.parse_peerUser($0) }
     dict[-386039788] = { return Api.PeerBlocked.parse_peerBlocked($0) }
+    dict[-1171816122] = { return Api.PeerColor.parse_peerColor($0) }
     dict[-901375139] = { return Api.PeerLocated.parse_peerLocated($0) }
     dict[-118740917] = { return Api.PeerLocated.parse_peerSelfLocated($0) }
     dict[-1721619444] = { return Api.PeerNotifySettings.parse_peerNotifySettings($0) }
@@ -967,7 +968,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1886646706] = { return Api.UrlAuthResult.parse_urlAuthResultAccepted($0) }
     dict[-1445536993] = { return Api.UrlAuthResult.parse_urlAuthResultDefault($0) }
     dict[-1831650802] = { return Api.UrlAuthResult.parse_urlAuthResultRequest($0) }
-    dict[-346018011] = { return Api.User.parse_user($0) }
+    dict[559694904] = { return Api.User.parse_user($0) }
     dict[-742634630] = { return Api.User.parse_userEmpty($0) }
     dict[-1179571092] = { return Api.UserFull.parse_userFull($0) }
     dict[-2100168954] = { return Api.UserProfilePhoto.parse_userProfilePhoto($0) }
@@ -1082,6 +1083,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
     dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
+    dict[1780171841] = { return Api.help.PeerColorOption.parse_peerColorOption($0) }
+    dict[16313608] = { return Api.help.PeerColors.parse_peerColors($0) }
+    dict[732034510] = { return Api.help.PeerColors.parse_peerColorsNotModified($0) }
     dict[1395946908] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
     dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
     dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
@@ -1160,7 +1164,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
     dict[816245886] = { return Api.messages.Stickers.parse_stickers($0) }
     dict[-244016606] = { return Api.messages.Stickers.parse_stickersNotModified($0) }
-    dict[-1821037486] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
+    dict[-809903785] = { return Api.messages.TranscribedAudio.parse_transcribedAudio($0) }
     dict[870003448] = { return Api.messages.TranslatedText.parse_translateResult($0) }
     dict[1218005070] = { return Api.messages.VotesList.parse_votesList($0) }
     dict[-44166467] = { return Api.messages.WebPage.parse_webPage($0) }
@@ -1650,6 +1654,8 @@ public extension Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PeerBlocked:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.PeerColor:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PeerLocated:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PeerNotifySettings:
@@ -1937,6 +1943,10 @@ public extension Api {
             case let _1 as Api.help.InviteText:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PassportConfig:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PeerColorOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PeerColors:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PremiumPromo:
                 _1.serialize(buffer, boxed)
