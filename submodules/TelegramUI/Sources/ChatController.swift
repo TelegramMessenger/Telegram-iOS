@@ -4514,7 +4514,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> afterCompleted { [weak self] in
                         Queue.mainQueue().async {
                             if let self {
-                                self.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Chat_SimilarChannels_JoinedChannel(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Chat_SimilarChannels_JoinedChannel(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                             }
                         }
                     }
