@@ -839,7 +839,7 @@ private func prepareUploadStoryContent(account: Account, media: EngineStoryInput
     }
 }
 
-private func uploadedStoryContent(postbox: Postbox, network: Network, media: Media, embeddedStickers: [TelegramMediaFile], accountPeerId: PeerId, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, passFetchProgress: Bool) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
+private func uploadedStoryContent(postbox: Postbox, network: Network, media: Media, mediaReference: AnyMediaReference?, embeddedStickers: [TelegramMediaFile], accountPeerId: PeerId, messageMediaPreuploadManager: MessageMediaPreuploadManager, revalidationContext: MediaReferenceRevalidationContext, auxiliaryMethods: AccountAuxiliaryMethods, passFetchProgress: Bool) -> (signal: Signal<PendingMessageUploadedContentResult?, NoError>, media: Media) {
     let originalMedia: Media = media
     let contentToUpload: MessageContentToUpload
     
@@ -864,7 +864,8 @@ private func uploadedStoryContent(postbox: Postbox, network: Network, media: Med
         messageId: nil,
         attributes: attributes,
         text: "",
-        media: [media]
+        media: [media],
+        mediaReference: mediaReference
     )
         
     let contentSignal: Signal<PendingMessageUploadedContentResult, PendingMessageUploadError>
@@ -1024,16 +1025,28 @@ func _internal_uploadStoryImpl(
     randomId: Int64,
     forwardInfo: Stories.PendingForwardInfo?
 ) -> Signal<StoryUploadResult, NoError> {
-    return postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(toPeerId).flatMap(apiInputPeer)
+    return postbox.transaction { transaction -> (Peer, Peer?)? in
+        if let peer = transaction.getPeer(toPeerId) {
+            if let forwardInfo = forwardInfo {
+                return (peer, transaction.getPeer(forwardInfo.peerId))
+            } else {
+                return (peer, nil)
+            }
+        }
+        return nil
     }
-    |> mapToSignal { inputPeer -> Signal<StoryUploadResult, NoError> in
-        guard let inputPeer = inputPeer else {
+    |> mapToSignal { inputPeerAndForwardInfoPeer -> Signal<StoryUploadResult, NoError> in
+        guard let (inputPeer, forwardInfoPeer) = inputPeerAndForwardInfoPeer, let inputPeer = apiInputPeer(inputPeer) else {
             return .single(.completed(nil))
         }
         
+        var mediaReference: AnyMediaReference?
+        if let forwardInfo = forwardInfo, let forwardInfoPeer = forwardInfoPeer.flatMap(PeerReference.init) {
+            mediaReference = .story(peer: forwardInfoPeer, id: forwardInfo.storyId, media: media)
+        }
+        
         let passFetchProgress = media is TelegramMediaFile
-        let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
+        let (contentSignal, originalMedia) = uploadedStoryContent(postbox: postbox, network: network, media: media, mediaReference: mediaReference, embeddedStickers: embeddedStickers, accountPeerId: accountPeerId, messageMediaPreuploadManager: messageMediaPreuploadManager, revalidationContext: revalidationContext, auxiliaryMethods: auxiliaryMethods, passFetchProgress: passFetchProgress)
         return contentSignal
         |> mapToSignal { result -> Signal<StoryUploadResult, NoError> in
             switch result {
@@ -1209,7 +1222,7 @@ func _internal_editStory(account: Account, peerId: PeerId, id: Int32, media: Eng
         if case .video = media {
             passFetchProgress = true
         }
-        (contentSignal, originalMedia) = uploadedStoryContent(postbox: account.postbox, network: account.network, media: prepareUploadStoryContent(account: account, media: media), embeddedStickers: media.embeddedStickers, accountPeerId: account.peerId, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, auxiliaryMethods: account.auxiliaryMethods, passFetchProgress: passFetchProgress)
+        (contentSignal, originalMedia) = uploadedStoryContent(postbox: account.postbox, network: account.network, media: prepareUploadStoryContent(account: account, media: media), mediaReference: nil, embeddedStickers: media.embeddedStickers, accountPeerId: account.peerId, messageMediaPreuploadManager: account.messageMediaPreuploadManager, revalidationContext: account.mediaReferenceRevalidationContext, auxiliaryMethods: account.auxiliaryMethods, passFetchProgress: passFetchProgress)
     } else {
         contentSignal = .single(nil)
         originalMedia = nil

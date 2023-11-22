@@ -340,6 +340,9 @@ public final class MessageInputPanelComponent: Component {
         if (lhs.moreAction == nil) != (rhs.moreAction == nil) {
             return false
         }
+        if (lhs.setMediaRecordingActive == nil) != (rhs.setMediaRecordingActive == nil) {
+            return false
+        }
         if lhs.hideKeyboard != rhs.hideKeyboard {
             return false
         }

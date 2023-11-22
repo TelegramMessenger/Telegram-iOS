@@ -678,7 +678,8 @@ final class StoryContentCaptionComponent: Component {
                             authorName: authorName,
                             text: "Story",
                             isChannel: isChannel,
-                            isVibrant: false
+                            isVibrant: false,
+                            fillsWidth: false
                         )
                     ),
                     environment: {},

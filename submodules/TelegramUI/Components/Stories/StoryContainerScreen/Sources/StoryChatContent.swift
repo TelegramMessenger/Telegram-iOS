@@ -113,12 +113,7 @@ public final class StoryContentContextImpl: StoryContentContext {
                     if let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
                         for item in localState.items {
                             if let forwardInfo = item.forwardInfo, let peer = transaction.getPeer(forwardInfo.peerId) {
-                                let peer = EnginePeer(peer)
-                                if forwardInfo.isForwardingDisabled {
-                                    pendingForwardsInfo[item.randomId] = .unknown(name: peer.compactDisplayTitle)
-                                } else {
-                                    pendingForwardsInfo[item.randomId] = .known(peer: peer, storyId: forwardInfo.storyId)
-                                }
+                                pendingForwardsInfo[item.randomId] = .known(peer: EnginePeer(peer), storyId: forwardInfo.storyId)
                             }
                         }
                     }

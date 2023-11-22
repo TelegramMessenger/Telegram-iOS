@@ -104,6 +104,7 @@ final class StoryAuthorInfoComponent: Component {
             let titleColor = UIColor.white
             let subtitleColor = UIColor(white: 1.0, alpha: 0.8)
             let subtitle: NSAttributedString
+            let subtitleTruncationType: CTLineTruncationType
             if let forwardInfo = component.forwardInfo {
                 let authorName: String
                 switch forwardInfo {
@@ -117,6 +118,7 @@ final class StoryAuthorInfoComponent: Component {
                 combinedString.append(NSAttributedString(string: authorName, font: Font.medium(11.0), textColor: titleColor))
                 combinedString.append(NSAttributedString(string: " • \(timeString)", font: Font.regular(11.0), textColor: subtitleColor))
                 subtitle = combinedString
+                subtitleTruncationType = .middle
             } else {
                 var subtitleString = stringForStoryActivityTimestamp(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, preciseTime: true, relativeTimestamp: component.timestamp, relativeTo: timestamp)
                 if component.isEdited {
@@ -124,6 +126,7 @@ final class StoryAuthorInfoComponent: Component {
                     subtitleString.append(component.strings.Story_HeaderEdited)
                 }
                 subtitle = NSAttributedString(string: subtitleString, font: Font.regular(11.0), textColor: subtitleColor)
+                subtitleTruncationType = .end
             }
             
             let titleSize = self.title.update(
@@ -140,7 +143,7 @@ final class StoryAuthorInfoComponent: Component {
                 transition: .immediate,
                 component: AnyComponent(MultilineTextComponent(
                     text: .plain(subtitle),
-                    truncationType: .end,
+                    truncationType: subtitleTruncationType,
                     maximumNumberOfLines: 1
                 )),
                 environment: {},
