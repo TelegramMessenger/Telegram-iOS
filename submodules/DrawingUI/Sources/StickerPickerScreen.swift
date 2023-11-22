@@ -538,6 +538,9 @@ public class StickerPickerScreen: ViewController {
             self.storyStickersContentView?.reactionAction = { [weak self] in
                 self?.controller?.addReaction()
             }
+            self.storyStickersContentView?.cameraAction = { [weak self] in
+                self?.controller?.addCamera()
+            }
             
             let gifItems: Signal<EntityKeyboardGifContent?, NoError>
             if controller.hasGifs {
@@ -1966,6 +1969,7 @@ public class StickerPickerScreen: ViewController {
     public var presentLocationPicker: () -> Void = { }
     public var presentAudioPicker: () -> Void = { }
     public var addReaction: () -> Void = { }
+    public var addCamera: () -> Void = { }
     
     public init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>, defaultToEmoji: Bool = false, hasGifs: Bool = false) {
         self.context = context
@@ -2194,14 +2198,7 @@ private final class InteractiveReactionButtonContent: Component {
         }
         
         func update(component: InteractiveReactionButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-//            if component.useOpaqueTheme {
-//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
-//                self.tintBackgroundLayer.backgroundColor = UIColor.white.cgColor
-//            } else {
-//                self.backgroundLayer.backgroundColor = component.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-//                self.tintBackgroundLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
-//            }
-            
+            let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
             let iconSize = self.icon.update(
                 transition: .immediate,
                 component: AnyComponent(BundleIconComponent(
@@ -2217,10 +2214,89 @@ private final class InteractiveReactionButtonContent: Component {
                 if view.superview == nil {
                     self.addSubview(view)
                 }
-                transition.setFrame(view: view, frame: CGRect(origin: .zero, size: iconSize))
+                transition.setFrame(view: view, frame: CGRect(origin: CGPoint(x: 2.0, y: 0.0), size: iconSize))
             }
  
-            return iconSize
+            return bounds.size
+        }
+    }
+    
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+private final class RoundVideoButtonContent: Component {
+    let theme: PresentationTheme
+
+    public init(
+        theme: PresentationTheme
+    ) {
+        self.theme = theme
+    }
+    
+    public static func ==(lhs: RoundVideoButtonContent, rhs: RoundVideoButtonContent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        override public static var layerClass: AnyClass {
+            return PassthroughLayer.self
+        }
+                
+        private let backgroundLayer = SimpleLayer()
+        private var icon: ComponentView<Empty>
+        
+        private var component: InteractiveReactionButtonContent?
+    
+        override init(frame: CGRect) {
+            self.icon = ComponentView<Empty>()
+            
+            super.init(frame: frame)
+            
+            self.isExclusiveTouch = true
+            
+            self.layer.addSublayer(self.backgroundLayer)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(component: RoundVideoButtonContent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            self.backgroundLayer.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.11).cgColor
+            
+            let bounds = CGRect(origin: .zero, size: CGSize(width: 54.0, height: 54.0))
+            let backgroundSize = CGSize(width: 50.0, height: 50.0)
+            self.backgroundLayer.frame = backgroundSize.centered(in: bounds)
+            self.backgroundLayer.cornerRadius = backgroundSize.width / 2.0
+            
+            let iconSize = self.icon.update(
+                transition: .immediate,
+                component: AnyComponent(BundleIconComponent(
+                    name: "Chat List/Tabs/IconCamera",
+                    tintColor: nil,
+                    maxSize: CGSize(width: 30.0, height: 30.0)
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            if let view = self.icon.view {
+                if view.superview == nil {
+                    self.addSubview(view)
+                }
+                transition.setFrame(view: view, frame: iconSize.centered(in: bounds))
+            }
+ 
+            return bounds.size
         }
     }
     
@@ -2352,7 +2428,8 @@ final class StoryStickersContentView: UIView, EmojiCustomContentView {
     var locationAction: () -> Void = {}
     var audioAction: () -> Void = {}
     var reactionAction: () -> Void = {}
-            
+    var cameraAction: () -> Void = {}
+    
     func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, availableSize: CGSize, transition: Transition) -> CGSize {
         let padding: CGFloat = 22.0
         let size = self.container.update(

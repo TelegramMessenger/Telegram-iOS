@@ -54,58 +54,62 @@ func chatHistoryEntriesForView(
     }
     
     var joinMessage: Message?
-    if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn {
-        joinMessage = Message(
-            stableId: UInt32.max - 1000,
-            stableVersion: 0,
-            id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
-            globallyUniqueId: nil,
-            groupingKey: nil,
-            groupInfo: nil,
-            threadId: nil,
-            timestamp: invitedOn,
-            flags: [.Incoming],
-            tags: [],
-            globalTags: [],
-            localTags: [],
-            forwardInfo: nil,
-            author: channelPeer,
-            text: "",
-            attributes: [],
-            media: [TelegramMediaAction(action: .joinedByRequest)],
-            peers: SimpleDictionary<PeerId, Peer>(),
-            associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: [],
-            associatedMedia: [:],
-            associatedThreadInfo: nil,
-            associatedStories: [:]
-        )
-    } else if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus {
-        joinMessage = Message(
-            stableId: UInt32.max - 1000,
-            stableVersion: 0,
-            id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Local, id: 0),
-            globallyUniqueId: nil,
-            groupingKey: nil,
-            groupInfo: nil,
-            threadId: nil,
-            timestamp: peer.creationDate,
-            flags: [.Incoming],
-            tags: [],
-            globalTags: [],
-            localTags: [],
-            forwardInfo: nil,
-            author: channelPeer,
-            text: "",
-            attributes: [],
-            media: [TelegramMediaAction(action: .joinedChannel)],
-            peers: SimpleDictionary<PeerId, Peer>(),
-            associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: [],
-            associatedMedia: [:],
-            associatedThreadInfo: nil,
-            associatedStories: [:]
-        )
+    if (associatedData.subject?.isService ?? false) {
+        
+    } else {
+        if case let .peer(peerId) = location, case let cachedData = cachedData as? CachedChannelData, let invitedOn = cachedData?.invitedOn {
+            joinMessage = Message(
+                stableId: UInt32.max - 1000,
+                stableVersion: 0,
+                id: MessageId(peerId: peerId, namespace: Namespaces.Message.Local, id: 0),
+                globallyUniqueId: nil,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: invitedOn,
+                flags: [.Incoming],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: channelPeer,
+                text: "",
+                attributes: [],
+                media: [TelegramMediaAction(action: .joinedByRequest)],
+                peers: SimpleDictionary<PeerId, Peer>(),
+                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+        } else if let peer = channelPeer as? TelegramChannel, case .broadcast = peer.info, case .member = peer.participationStatus {
+            joinMessage = Message(
+                stableId: UInt32.max - 1000,
+                stableVersion: 0,
+                id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Local, id: 0),
+                globallyUniqueId: nil,
+                groupingKey: nil,
+                groupInfo: nil,
+                threadId: nil,
+                timestamp: peer.creationDate,
+                flags: [.Incoming],
+                tags: [],
+                globalTags: [],
+                localTags: [],
+                forwardInfo: nil,
+                author: channelPeer,
+                text: "",
+                attributes: [],
+                media: [TelegramMediaAction(action: .joinedChannel)],
+                peers: SimpleDictionary<PeerId, Peer>(),
+                associatedMessages: SimpleDictionary<MessageId, Message>(),
+                associatedMessageIds: [],
+                associatedMedia: [:],
+                associatedThreadInfo: nil,
+                associatedStories: [:]
+            )
+        }
     }
     
     var existingGroupStableIds: [UInt32] = []

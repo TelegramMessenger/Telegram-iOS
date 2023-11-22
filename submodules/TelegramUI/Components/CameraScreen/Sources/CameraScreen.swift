@@ -674,7 +674,19 @@ private final class CameraScreenComponent: CombinedComponent {
             self.resultDisposable.set((camera.stopRecording()
             |> deliverOnMainQueue).start(next: { [weak self] result in
                 if let self, case let .finished(mainResult, additionalResult, duration, positionChangeTimestamps, _) = result {
-                    self.completion.invoke(.single(.video(CameraScreen.Result.Video(videoPath: mainResult.0, coverImage: mainResult.1, mirror: mainResult.2, additionalVideoPath: additionalResult?.0, additionalCoverImage: additionalResult?.1, dimensions: PixelDimensions(mainResult.3), duration: duration, positionChangeTimestamps: positionChangeTimestamps, additionalVideoPosition: .topRight))))
+                    self.completion.invoke(.single(
+                        .video(CameraScreen.Result.Video(
+                            videoPath: mainResult.path,
+                            coverImage: mainResult.thumbnail,
+                            mirror: mainResult.isMirrored,
+                            additionalVideoPath: additionalResult?.path,
+                            additionalCoverImage: additionalResult?.thumbnail,
+                            dimensions: PixelDimensions(mainResult.dimensions),
+                            duration: duration,
+                            positionChangeTimestamps: positionChangeTimestamps,
+                            additionalVideoPosition: .topRight
+                        ))
+                    ))
                 }
             }))
             self.isTransitioning = true

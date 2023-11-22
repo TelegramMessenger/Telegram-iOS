@@ -8,17 +8,19 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 
-class MessageStatsOverviewItem: ListViewItem, ItemListItem {
+final class MessageStatsOverviewItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let stats: PostStats
     let publicShares: Int32?
+    let reactions: Int32
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, stats: PostStats, publicShares: Int32?, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, stats: PostStats, publicShares: Int32?, reactions: Int32, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.stats = stats
         self.publicShares = publicShares
+        self.reactions = reactions
         self.sectionId = sectionId
         self.style = style
     }
@@ -161,9 +163,19 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             let rightTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
             let centerTitleLabelLayoutAndApply: ((Display.TextNodeLayout, () -> Display.TextNode))?
                     
+            let centerTitle: String
+            let centerValue: String
+            if let _ = item.stats as? StoryStats {
+                centerTitle = "Reactions"
+                centerValue = compactNumericCountString(Int(item.reactions))
+            } else {
+                centerTitle = item.presentationData.strings.Stats_Message_PublicShares
+                centerValue = item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–"
+            }
+            
             leftValueLabelLayoutAndApply = makeLeftValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: compactNumericCountString(item.stats.views), font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            centerValueLabelLayoutAndApply = makeCenterValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { compactNumericCountString(Int($0)) } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            centerValueLabelLayoutAndApply = makeCenterValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: centerValue, font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             rightValueLabelLayoutAndApply = makeRightValueLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.publicShares.flatMap { "≈\( compactNumericCountString(max(0, item.stats.forwards - Int($0))))" } ?? "–", font: valueFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -173,12 +185,7 @@ class MessageStatsOverviewItemNode: ListViewItemNode {
             leftTitleLabelLayoutAndApply = makeLeftTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Stats_Message_Views, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             remainingWidth -= leftTitleLabelLayoutAndApply!.0.size.width - 4.0
             
-            let centerTitle: String
-            if let _ = item.stats as? StoryStats {
-                centerTitle = "Reactions"
-            } else {
-                centerTitle = item.presentationData.strings.Stats_Message_PublicShares
-            }
+
             
             centerTitleLabelLayoutAndApply = makeCenterTitleLabelLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: centerTitle, font: titleFont, textColor: item.presentationData.theme.list.sectionHeaderTextColor), backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: min(maxItemWidth, remainingWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             remainingWidth -= centerTitleLabelLayoutAndApply!.0.size.width - 4.0

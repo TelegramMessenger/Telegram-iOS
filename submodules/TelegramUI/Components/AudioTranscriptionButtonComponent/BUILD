@@ -15,6 +15,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
+        "//submodules/Components/BundleIconComponent:BundleIconComponent",
     ],
     visibility = [
         "//visibility:public",

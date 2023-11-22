@@ -802,9 +802,26 @@ public struct StoryCameraTransitionInCoordinator {
     }
 }
 
+public class MediaEditorTransitionOutExternalState {
+    public var storyTarget: Stories.PendingTarget?
+    public var isPeerArchived: Bool
+    public var transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?
+    
+    public init(storyTarget: Stories.PendingTarget?, isPeerArchived: Bool, transitionOut: ((Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?)?) {
+        self.storyTarget = storyTarget
+        self.isPeerArchived = isPeerArchived
+        self.transitionOut = transitionOut
+    }
+}
+
+public protocol MediaEditorScreenResult {
+    
+}
+
 public protocol TelegramRootControllerInterface: NavigationController {
     @discardableResult
     func openStoryCamera(customTarget: EnginePeer.Id?, transitionIn: StoryCameraTransitionIn?, transitionedIn: @escaping () -> Void, transitionOut: @escaping (Stories.PendingTarget?, Bool) -> StoryCameraTransitionOut?) -> StoryCameraTransitionInCoordinator?
+    func proceedWithStoryUpload(target: Stories.PendingTarget, result: MediaEditorScreenResult, existingMedia: EngineMedia?, forwardInfo: Stories.PendingForwardInfo?, externalState: MediaEditorTransitionOutExternalState, commit: @escaping (@escaping () -> Void) -> Void)
     
     func getContactsController() -> ViewController?
     func getChatsController() -> ViewController?
@@ -935,7 +952,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeChannelStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, boosts: Bool, boostStatus: ChannelBoostStatus?) -> ViewController
     func makeMessagesStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, messageId: EngineMessage.Id) -> ViewController
-    func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32) -> ViewController
+    func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32, storyItem: EngineStoryItem?) -> ViewController
     
     func makeDebugSettingsController(context: AccountContext?) -> ViewController?
     
@@ -1079,7 +1096,7 @@ public protocol AccountContext: AnyObject {
 
 public struct PremiumConfiguration {
     public static var defaultValue: PremiumConfiguration {
-        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false, giveawayGiftsPurchaseAvailable: false, boostsPerGiftCount: 3, minChannelNameColorLevel: 5)
+        return PremiumConfiguration(isPremiumDisabled: false, showPremiumGiftInAttachMenu: false, showPremiumGiftInTextField: false, giveawayGiftsPurchaseAvailable: false, boostsPerGiftCount: 3, minChannelNameColorLevel: 5, audioTransciptionTrialMaxDuration: 300, audioTransciptionTrialCount: 2)
     }
     
     public let isPremiumDisabled: Bool
@@ -1088,14 +1105,18 @@ public struct PremiumConfiguration {
     public let giveawayGiftsPurchaseAvailable: Bool
     public let boostsPerGiftCount: Int32
     public let minChannelNameColorLevel: Int32
+    public let audioTransciptionTrialMaxDuration: Int32
+    public let audioTransciptionTrialCount: Int32
     
-    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool, giveawayGiftsPurchaseAvailable: Bool, boostsPerGiftCount: Int32, minChannelNameColorLevel: Int32) {
+    fileprivate init(isPremiumDisabled: Bool, showPremiumGiftInAttachMenu: Bool, showPremiumGiftInTextField: Bool, giveawayGiftsPurchaseAvailable: Bool, boostsPerGiftCount: Int32, minChannelNameColorLevel: Int32, audioTransciptionTrialMaxDuration: Int32, audioTransciptionTrialCount: Int32) {
         self.isPremiumDisabled = isPremiumDisabled
         self.showPremiumGiftInAttachMenu = showPremiumGiftInAttachMenu
         self.showPremiumGiftInTextField = showPremiumGiftInTextField
         self.giveawayGiftsPurchaseAvailable = giveawayGiftsPurchaseAvailable
         self.boostsPerGiftCount = boostsPerGiftCount
         self.minChannelNameColorLevel = minChannelNameColorLevel
+        self.audioTransciptionTrialMaxDuration = audioTransciptionTrialMaxDuration
+        self.audioTransciptionTrialCount = audioTransciptionTrialCount
     }
     
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
@@ -1106,7 +1127,9 @@ public struct PremiumConfiguration {
                 showPremiumGiftInTextField: data["premium_gift_text_field_icon"] as? Bool ?? false,
                 giveawayGiftsPurchaseAvailable: data["giveaway_gifts_purchase_available"] as? Bool ?? false,
                 boostsPerGiftCount: Int32(data["boosts_per_sent_gift"] as? Double ?? 3),
-                minChannelNameColorLevel: Int32(data["channel_color_level_min"] as? Double ?? 5)
+                minChannelNameColorLevel: Int32(data["channel_color_level_min"] as? Double ?? 5),
+                audioTransciptionTrialMaxDuration: Int32(data["transcribe_audio_trial_duration_max"] as? Double ?? 300),
+                audioTransciptionTrialCount: Int32(data["transcribe_audio_trial_weekly_number"] as? Double ?? 2)
             )
         } else {
             return .defaultValue

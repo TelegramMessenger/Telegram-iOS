@@ -26,14 +26,17 @@ public func mediaEditorGenerateGradientImage(size: CGSize, colors: [UIColor]) ->
     return image
 }
 
-public func mediaEditorGetGradientColors(from image: UIImage) -> (UIColor, UIColor) {
+public func mediaEditorGetGradientColors(from image: UIImage) -> MediaEditor.GradientColors {
     let context = DrawingContext(size: CGSize(width: 5.0, height: 5.0), scale: 1.0, clear: false)!
     context.withFlippedContext({ context in
         if let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 5.0, height: 5.0))
         }
     })
-    return (context.colorAt(CGPoint(x: 2.0, y: 0.0)), context.colorAt(CGPoint(x: 2.0, y: 4.0)))
+    return MediaEditor.GradientColors(
+        top: context.colorAt(CGPoint(x: 2.0, y: 0.0)),
+        bottom: context.colorAt(CGPoint(x: 2.0, y: 4.0))
+    )
 }
 
 final class MediaEditorComposer {
@@ -110,9 +113,9 @@ final class MediaEditorComposer {
         if let additionalSampleBuffer, let additionalImageBuffer = CMSampleBufferGetImageBuffer(additionalSampleBuffer) {
             additionalPixelBuffer = VideoPixelBuffer(pixelBuffer: additionalImageBuffer, rotation: additionalTextureRotation, timestamp: time)
         }
-        self.renderer.consumeVideoPixelBuffer(pixelBuffer: mainPixelBuffer, additionalPixelBuffer: additionalPixelBuffer, render: true)
+        self.renderer.consume(main: .videoBuffer(mainPixelBuffer), additional: additionalPixelBuffer.flatMap { .videoBuffer($0) }, render: true)
         
-        if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
+        if let finalTexture = self.renderer.resultTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
             ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
             
             var pixelBuffer: CVPixelBuffer?
@@ -144,9 +147,9 @@ final class MediaEditorComposer {
         }
         if self.filteredImage == nil, let device = self.device {
             if let texture = loadTexture(image: inputImage, device: device) {
-                self.renderer.consumeTexture(texture, render: true)
+                self.renderer.consume(main: .texture(texture, .zero), additional: nil, render: true)
                 
-                if let finalTexture = self.renderer.finalTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
+                if let finalTexture = self.renderer.resultTexture, var ciImage = CIImage(mtlTexture: finalTexture, options: [.colorSpace: self.colorSpace]) {
                     ciImage = ciImage.transformed(by: CGAffineTransformMakeScale(1.0, -1.0).translatedBy(x: 0.0, y: -ciImage.extent.height))
                     self.filteredImage = ciImage
                 }

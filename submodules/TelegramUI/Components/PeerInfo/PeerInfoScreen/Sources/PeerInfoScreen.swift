@@ -2187,6 +2187,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
     private let addMemberDisposable = MetaDisposable()
     private let preloadHistoryDisposable = MetaDisposable()
     private var shareStatusDisposable: MetaDisposable?
+    private let joinChannelDisposable = MetaDisposable()
     
     private let editAvatarDisposable = MetaDisposable()
     private let updateAvatarDisposable = MetaDisposable()
@@ -2956,6 +2957,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         }, openNoAdsDemo: {
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
+        }, openRecommendedChannelContextMenu: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -2994,20 +2996,38 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.scrollNode.view.isScrollEnabled = !self.isMediaOnly
         
         self.paneContainerNode.chatControllerInteraction = self.chatInterfaceInteraction
-        self.paneContainerNode.openPeerContextAction = { [weak self] peer, node, gesture in
+        self.paneContainerNode.openPeerContextAction = { [weak self] recommended, peer, node, gesture in
             guard let strongSelf = self, let controller = strongSelf.controller else {
                 return
             }
             let presentationData = strongSelf.presentationData
             let chatController = strongSelf.context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
-            let items: [ContextMenuItem] = [
-                .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { _ in nil }, action: { _, f in
-                    f(.dismissWithoutContent)
-                    self?.chatInterfaceInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
-                }))
-            ]
-            let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            let items: [ContextMenuItem]
+            if recommended {
+                items = [
+                    .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ImageEnlarge"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        self?.chatInterfaceInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
+                    })),
+                    .action(ContextMenuActionItem(text: presentationData.strings.Chat_SimilarChannels_Join, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                        f(.dismissWithoutContent)
+                        
+                        guard let self else {
+                            return
+                        }
+                        self.joinChannel(peer: EnginePeer(peer))
+                    }))
+                ]
+            } else {
+                items = [
+                    .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ImageEnlarge"), color: theme.actionSheet.primaryTextColor) }, action: { _, f in
+                        f(.dismissWithoutContent)
+                        self?.chatInterfaceInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
+                    }))
+                ]
+            }
+            let contextController = ContextController(presentationData: presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
             controller.presentInGlobalOverlay(contextController)
         }
         
@@ -4092,6 +4112,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
         self.postingAvailabilityDisposable?.dispose()
         self.storyUploadProgressDisposable?.dispose()
         self.updateAvatarDisposable.dispose()
+        self.joinChannelDisposable.dispose()
     }
     
     override func didLoad() {
@@ -10210,6 +10231,43 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, PeerInfoScreenNodePro
             return true
         }
         return false
+    }
+    
+    fileprivate func joinChannel(peer: EnginePeer) {
+        let presentationData = self.presentationData
+        self.joinChannelDisposable.set((
+            self.context.peerChannelMemberCategoriesContextsManager.join(engine: self.context.engine, peerId: peer.id, hash: nil)
+            |> deliverOnMainQueue
+            |> afterCompleted { [weak self] in
+                Queue.mainQueue().async {
+                    if let self {
+                        self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Chat_SimilarChannels_JoinedChannel(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                    }
+                }
+            }
+        ).startStrict(error: { [weak self] error in
+            guard let self else {
+                return
+            }
+            let text: String
+            switch error {
+            case .inviteRequestSent:
+                self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationData.strings.Group_RequestToJoinSent, text: presentationData.strings.Group_RequestToJoinSentDescriptionGroup), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                return
+            case .tooMuchJoined:
+                self.controller?.push(oldChannelsController(context: context, intent: .join, completed: { [weak self] value in
+                    if value {
+                        self?.joinChannel(peer: peer)
+                    }
+                }))
+                return
+            case .tooMuchUsers:
+                text = self.presentationData.strings.Conversation_UsersTooMuchError
+            case .generic:
+                text = self.presentationData.strings.Channel_ErrorAccessDenied
+            }
+            self.controller?.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+        }))
     }
 }
 

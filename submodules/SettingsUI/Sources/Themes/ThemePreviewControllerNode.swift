@@ -119,7 +119,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.displaysAsynchronously = false
 
         self.ready.set(.single(true))
-        self.instantChatBackgroundNode.update(wallpaper: wallpaper)
+        self.instantChatBackgroundNode.update(wallpaper: wallpaper, animated: false)
 
         self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
@@ -207,7 +207,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.chatContainerNode.insertSubnode(self.wallpaperNode, belowSubnode: self.messagesContainerNode)
         }
 
-        self.wallpaperNode.update(wallpaper: self.wallpaper)
+        self.wallpaperNode.update(wallpaper: self.wallpaper, animated: false)
         self.wallpaperNode.updateBubbleTheme(bubbleTheme: self.previewTheme, bubbleCorners: self.presentationData.chatBubbleCorners)
 
         self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in

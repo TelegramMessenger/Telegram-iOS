@@ -22,8 +22,8 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func setExistingChatWallpaper(messageId: MessageId, settings: WallpaperSettings?) -> Signal<Void, SetExistingChatWallpaperError> {
-            return _internal_setExistingChatWallpaper(account: self.account, messageId: messageId, settings: settings)
+        public func setExistingChatWallpaper(messageId: MessageId, settings: WallpaperSettings?, forBoth: Bool) -> Signal<Void, SetExistingChatWallpaperError> {
+            return _internal_setExistingChatWallpaper(account: self.account, messageId: messageId, settings: settings, forBoth: forBoth)
         }
         
         public func revertChatWallpaper(peerId: EnginePeer.Id) -> Signal<Void, RevertChatWallpaperError> {

@@ -15,7 +15,11 @@ private func makeEntityView(context: AccountContext, entity: DrawingEntity) -> D
     } else if let entity = entity as? DrawingSimpleShapeEntity {
         return DrawingSimpleShapeEntityView(context: context, entity: entity)
     } else if let entity = entity as? DrawingStickerEntity {
-        return DrawingStickerEntityView(context: context, entity: entity)
+        if case let .file(_, type) = entity.content, case .reaction = type {
+            return DrawingReactionEntityView(context: context, entity: entity)
+        } else {
+            return DrawingStickerEntityView(context: context, entity: entity)
+        }
     } else if let entity = entity as? DrawingTextEntity {
         return DrawingTextEntityView(context: context, entity: entity)
     } else if let entity = entity as? DrawingVectorEntity {

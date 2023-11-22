@@ -63,8 +63,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                 ),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global())
             )
-            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile]), NoError> in
-                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile]) in
+            |> mapToSignal { _, views, globalNotificationSettings -> Signal<(CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo]), NoError> in
+                return context.account.postbox.transaction { transaction -> (CombinedView, [PeerId: Peer], EngineGlobalNotificationSettings, [MediaId: TelegramMediaFile], [Int64: EngineStoryItem.ForwardInfo]) in
                     var peers: [PeerId: Peer] = [:]
                     var allEntityFiles: [MediaId: TelegramMediaFile] = [:]
                     
@@ -76,6 +76,11 @@ public final class StoryContentContextImpl: StoryContentContext {
                                         if let peer = transaction.getPeer(peerId) {
                                             peers[peer.id] = peer
                                         }
+                                    }
+                                }
+                                if let forwardInfo = itemValue.forwardInfo, case let .known(peerId, _) = forwardInfo {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        peers[peer.id] = peer
                                     }
                                 }
                                 for entity in itemValue.entities {
@@ -104,10 +109,24 @@ public final class StoryContentContextImpl: StoryContentContext {
                         }
                     }
                     
-                    return (views, peers, globalNotificationSettings, allEntityFiles)
+                    var pendingForwardsInfo: [Int64: EngineStoryItem.ForwardInfo] = [:]
+                    if let stateView = views.views[PostboxViewKey.storiesState(key: .local)] as? StoryStatesView, let localState = stateView.value?.get(Stories.LocalState.self) {
+                        for item in localState.items {
+                            if let forwardInfo = item.forwardInfo, let peer = transaction.getPeer(forwardInfo.peerId) {
+                                let peer = EnginePeer(peer)
+                                if forwardInfo.isForwardingDisabled {
+                                    pendingForwardsInfo[item.randomId] = .unknown(name: peer.compactDisplayTitle)
+                                } else {
+                                    pendingForwardsInfo[item.randomId] = .known(peer: peer, storyId: forwardInfo.storyId)
+                                }
+                            }
+                        }
+                    }
+                    
+                    return (views, peers, globalNotificationSettings, allEntityFiles, pendingForwardsInfo)
                 }
             }
-            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles in
+            |> deliverOnMainQueue).startStrict(next: { [weak self] views, peers, globalNotificationSettings, allEntityFiles, pendingForwardsInfo in
                 guard let self else {
                     return
                 }
@@ -207,7 +226,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                         isForwardingDisabled: item.isForwardingDisabled,
                         isEdited: item.isEdited,
                         isMy: item.isMy,
-                        myReaction: item.myReaction
+                        myReaction: item.myReaction,
+                        forwardInfo: item.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
                     )
                 }
                 var totalCount = peerStoryItemsView.items.count
@@ -241,7 +261,8 @@ public final class StoryContentContextImpl: StoryContentContext {
                                 isForwardingDisabled: false,
                                 isEdited: false,
                                 isMy: true,
-                                myReaction: nil
+                                myReaction: nil,
+                                forwardInfo: pendingForwardsInfo[item.randomId]
                             ))
                             totalCount += 1
                         }
@@ -1002,10 +1023,21 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
     public init(
         context: AccountContext,
         storyId: StoryId,
+        storyItem: EngineStoryItem? = nil,
         readGlobally: Bool
     ) {
         self.context = context
         self.readGlobally = readGlobally
+        
+        let item: Signal<Stories.StoredItem?, NoError>
+        if let storyItem {
+            item = .single(.item(storyItem.asStoryItem()))
+        } else {
+            item = context.account.postbox.combinedView(keys: [PostboxViewKey.story(id: storyId)])
+            |> map { views -> Stories.StoredItem? in
+                return (views.views[PostboxViewKey.story(id: storyId)] as? StoryView)?.item?.get(Stories.StoredItem.self)
+            }
+        }
         
         self.storyDisposable = (combineLatest(queue: .mainQueue(),
             context.engine.data.subscribe(
@@ -1016,9 +1048,7 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                 TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: storyId.peerId),
                 TelegramEngine.EngineData.Item.NotificationSettings.Global()
             ),
-            context.account.postbox.combinedView(keys: [PostboxViewKey.story(id: storyId)]) |> mapToSignal { views -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]), NoError> in
-                let item = (views.views[PostboxViewKey.story(id: storyId)] as? StoryView)?.item?.get(Stories.StoredItem.self)
-            
+            item |> mapToSignal { item -> Signal<(Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]), NoError> in
                 return context.account.postbox.transaction { transaction -> (Stories.StoredItem?, [PeerId: Peer], [MediaId: TelegramMediaFile]) in
                     guard let item else {
                         return (nil, [:], [:])
@@ -1031,6 +1061,11 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                                 if let peer = transaction.getPeer(id) {
                                     peers[peer.id] = peer
                                 }
+                            }
+                        }
+                        if let forwardInfo = item.forwardInfo, case let .known(peerId, _) = forwardInfo {
+                            if let peer = transaction.getPeer(peerId) {
+                                peers[peer.id] = peer
                             }
                         }
                         for entity in item.entities {
@@ -1122,7 +1157,8 @@ public final class SingleStoryContentContextImpl: StoryContentContext {
                     isForwardingDisabled: itemValue.isForwardingDisabled,
                     isEdited: itemValue.isEdited,
                     isMy: itemValue.isMy,
-                    myReaction: itemValue.myReaction
+                    myReaction: itemValue.myReaction,
+                    forwardInfo: itemValue.forwardInfo.flatMap { EngineStoryItem.ForwardInfo($0, peers: peers) }
                 )
                 
                 let mainItem = StoryContentItem(

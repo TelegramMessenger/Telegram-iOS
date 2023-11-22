@@ -636,7 +636,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
             switch entry {
             case let .wallpaper(wallpaper, _):
                 Queue.mainQueue().justDispatch {
-                    self.nativeNode.update(wallpaper: wallpaper)
+                    self.nativeNode.update(wallpaper: wallpaper, animated: false)
                 }
 
                 if case let .file(file) = wallpaper, file.isPattern {
@@ -651,7 +651,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     isColor = true
                 } else if case let .gradient(gradient) = wallpaper {
                     self.nativeNode.isHidden = false
-                    self.nativeNode.update(wallpaper: wallpaper)
+                    self.nativeNode.update(wallpaper: wallpaper, animated: false)
                     self.patternButtonNode.isSelected = false
 
                     if gradient.colors.count >= 3 {
@@ -662,7 +662,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                     isColor = true
                 } else if case .color = wallpaper {
                     self.nativeNode.isHidden = false
-                    self.nativeNode.update(wallpaper: wallpaper)
+                    self.nativeNode.update(wallpaper: wallpaper, animated: false)
                     self.patternButtonNode.isSelected = false
                     isColor = true
                 } else {
@@ -989,7 +989,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                         strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data, synchronous: true)
                         
                         let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(image.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)], WallpaperSettings())
-                        strongSelf.nativeNode.update(wallpaper: wallpaper)
+                        strongSelf.nativeNode.update(wallpaper: wallpaper, animated: false)
                     }
                 }
             }

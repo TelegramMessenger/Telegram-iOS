@@ -1589,6 +1589,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, openNoAdsDemo: {
         }, displayGiveawayParticipationStatus: { _ in
         }, openPremiumStatusInfo: { _, _, _, _ in
+        }, openRecommendedChannelContextMenu: { _, _, _ in
         }, requestMessageUpdate: { _, _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
@@ -1878,8 +1879,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return messageStatsController(context: context, updatedPresentationData: updatedPresentationData, subject: .message(id: messageId))
     }
     
-    public func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32) -> ViewController {
-        return messageStatsController(context: context, updatedPresentationData: updatedPresentationData, subject: .story(peerId: peerId, id: storyId))
+    public func makeStoryStatsController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: EnginePeer.Id, storyId: Int32, storyItem: EngineStoryItem?) -> ViewController {
+        return messageStatsController(context: context, updatedPresentationData: updatedPresentationData, subject: .story(peerId: peerId, id: storyId, item: storyItem))
     }
 }
 

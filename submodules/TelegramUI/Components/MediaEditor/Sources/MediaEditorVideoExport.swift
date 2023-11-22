@@ -232,6 +232,23 @@ public final class MediaEditorVideoExport {
             }
         }
         
+        var additionalVideoTimeRange: CMTimeRange? {
+            if let videoTrimRange = self.values.additionalVideoTrimRange {
+                return CMTimeRange(start: CMTime(seconds: videoTrimRange.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: videoTrimRange.upperBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
+            } else {
+                return nil
+            }
+        }
+        
+        var additionalVideoStartTime: CMTime {
+            if let range = self.values.additionalVideoTrimRange {
+                let offset = -min(0.0, self.values.additionalVideoOffset ?? 0.0)
+                return CMTime(seconds: offset + range.lowerBound, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+            } else {
+                return .zero
+            }
+        }
+        
         var audioTimeRange: CMTimeRange? {
             if let audioTrack = self.values.audioTrack {
                 let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
@@ -475,11 +492,19 @@ public final class MediaEditorVideoExport {
         }
         if let timeRange = self.configuration.timeRange {
             reader.timeRange = timeRange
-            self.additionalReader?.timeRange = timeRange
+            if let additionalTimeRange = self.configuration.additionalVideoTimeRange {
+                self.additionalReader?.timeRange = additionalTimeRange
+            } else {
+                self.additionalReader?.timeRange = timeRange
+            }
         } else if asset.duration.seconds > 60.0 && isStory {
             let trimmedRange = CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), end: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)))
             reader.timeRange = trimmedRange
-            self.additionalReader?.timeRange = trimmedRange
+            if let additionalTimeRange = self.configuration.additionalVideoTimeRange {
+                self.additionalReader?.timeRange = additionalTimeRange
+            } else {
+                self.additionalReader?.timeRange = trimmedRange
+            }
         }
         
         self.writer = MediaEditorVideoAVAssetWriter()
@@ -802,7 +827,13 @@ public final class MediaEditorVideoExport {
                     self.statusValue = .progress(Float(progress))
                 }
                 
-                let additionalSampleBuffer = self.additionalVideoOutput?.copyNextSampleBuffer()
+                var additionalSampleBuffer: CMSampleBuffer?
+                if let additionalVideoOutput = self.additionalVideoOutput {
+                    if timestamp < self.configuration.additionalVideoStartTime {
+                    } else {
+                        additionalSampleBuffer = additionalVideoOutput.copyNextSampleBuffer()
+                    }
+                }
                 
                 if let composer = self.composer {
                     composer.processSampleBuffer(sampleBuffer: sampleBuffer, textureRotation: self.textureRotation, additionalSampleBuffer: additionalSampleBuffer, additionalTextureRotation: self.additionalTextureRotation, pool: writer.pixelBufferPool, completion: { pixelBuffer in

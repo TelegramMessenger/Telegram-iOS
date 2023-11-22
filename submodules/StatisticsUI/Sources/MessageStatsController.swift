@@ -153,7 +153,7 @@ private enum StatsEntry: ItemListNodeEntry {
                  let .publicForwardsTitle(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .overview(_, stats, publicShares):
-                return MessageStatsOverviewItem(presentationData: presentationData, stats: stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
+                return StatsOverviewItem(presentationData: presentationData, stats: stats as! Stats, publicShares: publicShares, sectionId: self.section, style: .blocks)
             case let .interactionsGraph(_, _, _, graph, type), let .reactionsGraph(_, _, _, graph, type):
                 return StatsGraphItem(presentationData: presentationData, graph: graph, type: type, getDetailsData: { date, completion in
                     let _ = arguments.loadDetailedGraph(graph, Int64(date.timeIntervalSince1970) * 1000).start(next: { graph in
@@ -221,7 +221,7 @@ private func messageStatsControllerEntries(data: PostStats?, messages: SearchMes
 
 public enum StatsSubject {
     case message(id: EngineMessage.Id)
-    case story(peerId: EnginePeer.Id, id: Int32)
+    case story(peerId: EnginePeer.Id, id: Int32, item: EngineStoryItem?)
 }
 
 protocol PostStats {
@@ -252,7 +252,7 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     var loadDetailedGraphImpl: ((StatsGraph, Int64) -> Signal<StatsGraph?, NoError>)?
     switch subject {
     case let .message(id):
-        let statsContext = MessageStatsContext(postbox: context.account.postbox, network: context.account.network, messageId: id)
+        let statsContext = MessageStatsContext(account: context.account, messageId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
         }
@@ -262,8 +262,8 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
         }
         dataPromise.set(.single(nil) |> then(dataSignal))
         anyStatsContext = statsContext
-    case let .story(peerId, id):
-        let statsContext = StoryStatsContext(postbox: context.account.postbox, network: context.account.network, peerId: peerId, storyId: id)
+    case let .story(peerId, id, _):
+        let statsContext = StoryStatsContext(account: context.account, peerId: peerId, storyId: id)
         loadDetailedGraphImpl = { [weak statsContext] graph, x in
             return statsContext?.loadDetailedGraph(graph, x: x) ?? .single(nil)
         }
@@ -303,16 +303,15 @@ public func messageStatsController(context: AccountContext, updatedPresentationD
     }
     
     let iconNodePromise = Promise<ASDisplayNode?>()
-    if case let .story(peerId, id) = subject {
+    if case let .story(peerId, id, storyItem) = subject, let storyItem {
         let _ = id
         iconNodePromise.set(
             context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue
             |> map { peer -> ASDisplayNode? in
-                if let _ = peer?._asPeer() {
-//                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-//                    return StoryIconNode(context: context, theme: presentationData.theme, peer: peer, storyItem: storyItem)
-                    return nil
+                if let peer = peer?._asPeer() {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    return StoryIconNode(context: context, theme: presentationData.theme, peer: peer, storyItem: storyItem)
                 } else {
                     return nil
                 }

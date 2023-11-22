@@ -85,15 +85,15 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
     
     func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
         switch self {
-            case let .topPeers(theme, strings):
-                return ShareControllerRecentPeersGridItem(environment: environment, context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
-            case let .peer(_, theme, peer, associatedPeer, presence, strings):
-                var peers: [EnginePeer.Id: EnginePeer] = [peer.id: peer]
-                if let associatedPeer = associatedPeer {
-                    peers[associatedPeer.id] = associatedPeer
-                }
-                let peer = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
-            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, peer: peer, presence: presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+        case let .topPeers(theme, strings):
+            return ShareControllerRecentPeersGridItem(environment: environment, context: context, theme: theme, strings: strings, controllerInteraction: interfaceInteraction)
+        case let .peer(_, theme, peer, associatedPeer, presence, strings):
+            var peers: [EnginePeer.Id: EnginePeer] = [peer.id: peer]
+            if let associatedPeer = associatedPeer {
+                peers[associatedPeer.id] = associatedPeer
+            }
+            let peer = EngineRenderedPeer(peerId: peer.id, peers: peers, associatedMedia: [:])
+            return ShareControllerPeerGridItem(environment: environment, context: context, theme: theme, strings: strings, item: .peer(peer: peer, presence: presence, topicId: nil, threadData: nil), controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -131,7 +131,9 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(environment: ShareControllerEnvironment, context: ShareControllerAccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, search: true)
+//        let item: ShareControllerPeerGridItem.ShareItem
+//        item = self.peer.flatMap { .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil) }
+        return ShareControllerPeerGridItem(environment: environment, context: context, theme: self.theme, strings: self.strings, item: self.peer.flatMap({ .peer(peer: $0, presence: self.presence, topicId: nil, threadData: nil) }), controllerInteraction: interfaceInteraction, search: true)
     }
 }
 

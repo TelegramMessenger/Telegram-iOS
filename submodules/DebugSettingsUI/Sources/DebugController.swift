@@ -47,6 +47,7 @@ private enum DebugControllerSection: Int32 {
     case sticker
     case logs
     case logging
+    case web
     case experiments
     case translation
     case videoExperiments
@@ -86,6 +87,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetCacheIndex
     case reindexCache
     case resetBiometricsData(PresentationTheme)
+    case webViewInspection(Bool)
     case resetWebViewCache(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
@@ -121,9 +123,11 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logs.rawValue
         case .logToFile, .logToConsole, .redactSensitiveData:
             return DebugControllerSection.logging.rawValue
+        case .webViewInspection, .resetWebViewCache:
+            return DebugControllerSection.web.rawValue
         case .keepChatNavigationStack, .skipReadHistory, .unidirectionalSwipeToReply, .dustEffect, .callUIV2, .crashOnSlowQueries, .crashOnMemoryPressure:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
+        case .clearTips, .resetNotifications, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetCacheIndex, .reindexCache, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .storiesExperiment, .storiesJpegExperiment, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .inlineForums, .localTranscription, .enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .logTranslationRecognition, .resetTranslationStates:
             return DebugControllerSection.translation.rawValue
@@ -164,43 +168,45 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 11
         case .redactSensitiveData:
             return 12
-        case .keepChatNavigationStack:
-            return 14
-        case .skipReadHistory:
-            return 15
-        case .unidirectionalSwipeToReply:
-            return 16
-        case .dustEffect:
-            return 17
-        case .callUIV2:
-            return 18
-        case .crashOnSlowQueries:
-            return 19
-        case .crashOnMemoryPressure:
-            return 20
-        case .clearTips:
-            return 21
-        case .resetNotifications:
-            return 22
-        case .crash:
-            return 23
-        case .resetData:
-            return 24
-        case .resetDatabase:
-            return 25
-        case .resetDatabaseAndCache:
-            return 26
-        case .resetHoles:
-            return 27
-        case .reindexUnread:
-            return 28
-        case .resetCacheIndex:
-            return 29
-        case .reindexCache:
-            return 30
-        case .resetBiometricsData:
-            return 31
+        case .webViewInspection:
+            return 13
         case .resetWebViewCache:
+            return 14
+        case .keepChatNavigationStack:
+            return 15
+        case .skipReadHistory:
+            return 16
+        case .unidirectionalSwipeToReply:
+            return 17
+        case .dustEffect:
+            return 18
+        case .callUIV2:
+            return 19
+        case .crashOnSlowQueries:
+            return 20
+        case .crashOnMemoryPressure:
+            return 21
+        case .clearTips:
+            return 22
+        case .resetNotifications:
+            return 23
+        case .crash:
+            return 24
+        case .resetData:
+            return 25
+        case .resetDatabase:
+            return 26
+        case .resetDatabaseAndCache:
+            return 27
+        case .resetHoles:
+            return 28
+        case .reindexUnread:
+            return 29
+        case .resetCacheIndex:
+            return 30
+        case .reindexCache:
+            return 31
+        case .resetBiometricsData:
             return 32
         case .optimizeDatabase:
             return 33
@@ -1163,6 +1169,14 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
+        case let .webViewInspection(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Allow Web View Inspection", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = updateExperimentalUISettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
+                    var settings = settings
+                    settings.allowWebViewInspection = value
+                    return settings
+                }).start()
+            })
         case .resetWebViewCache:
             return ItemListActionItem(presentationData: presentationData, title: "Clear Web View Cache", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 WKWebsiteDataStore.default().removeData(ofTypes: [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache], modifiedSince: Date(timeIntervalSince1970: 0), completionHandler:{ })
@@ -1404,6 +1418,9 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
     entries.append(.redactSensitiveData(presentationData.theme, loggingSettings.redactSensitiveData))
 
     if isMainApp {
+        entries.append(.webViewInspection(experimentalSettings.allowWebViewInspection))
+        entries.append(.resetWebViewCache(presentationData.theme))
+        
         entries.append(.keepChatNavigationStack(presentationData.theme, experimentalSettings.keepChatNavigationStack))
         #if DEBUG
         entries.append(.skipReadHistory(presentationData.theme, experimentalSettings.skipReadHistory))
@@ -1427,7 +1444,6 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.reindexUnread(presentationData.theme))
         entries.append(.resetCacheIndex)
         entries.append(.reindexCache)
-        entries.append(.resetWebViewCache(presentationData.theme))
     }
     entries.append(.optimizeDatabase(presentationData.theme))
     if isMainApp {

@@ -12,19 +12,77 @@ import FastBlur
 import AccountContext
 
 public struct MediaEditorPlayerState {
+    public struct Track: Equatable {
+        public enum Content: Equatable {
+            case video(frames: [UIImage], framesUpdateTimestamp: Double)
+            case audio(artist: String?, title: String?, samples: Data?, peak: Int32)
+            
+            public static func ==(lhs: Content, rhs: Content) -> Bool {
+                switch lhs {
+                case let .video(_, framesUpdateTimestamp):
+                    if case .video(_, framesUpdateTimestamp) = rhs {
+                        return true
+                    } else {
+                        return false
+                    }
+                case let .audio(lhsArtist, lhsTitle, lhsSamples, lhsPeak):
+                    if case let .audio(rhsArtist, rhsTitle, rhsSamples, rhsPeak) = rhs {
+                        return lhsArtist == rhsArtist && lhsTitle == rhsTitle && lhsSamples == rhsSamples && lhsPeak == rhsPeak
+                    } else {
+                        return false
+                    }
+                }
+            }
+        }
+        
+        public let id: Int32
+        public let content: Content
+        public let duration: Double
+        public let trimRange: Range<Double>?
+        public let offset: Double?
+        public let isMain: Bool
+        public let visibleInTimeline: Bool
+    }
+    
     public let generationTimestamp: Double
-    public let duration: Double
-    public let timeRange: Range<Double>?
+    public let tracks: [Track]
     public let position: Double
     public let isPlaying: Bool
-    public let frames: [UIImage]
-    public let framesCount: Int
-    public let framesUpdateTimestamp: Double
-    public let hasAudio: Bool
-    public let isAudioPlayerOnly: Bool
+    
+    public var isAudioOnly: Bool {
+        var hasVideoTrack = false
+        var hasAudioTrack = false
+        for track in tracks {
+            switch track.content {
+            case .video:
+                hasVideoTrack = true
+            case .audio:
+                hasAudioTrack = true
+            }
+        }
+        return !hasVideoTrack && hasAudioTrack
+    }
+    
+    public var hasAudio: Bool {
+        return true
+    }
 }
 
 public final class MediaEditor {
+    public struct GradientColors {
+        public let top: UIColor
+        public let bottom: UIColor
+        
+        public init(top: UIColor, bottom: UIColor) {
+            self.top = top
+            self.bottom = bottom
+        }
+        
+        public var array: [UIColor] {
+            return [self.top, self.bottom]
+        }
+    }
+    
     public enum Subject {
         case image(UIImage, PixelDimensions)
         case video(String, UIImage?, Bool, String?, PixelDimensions, Double)
@@ -47,13 +105,14 @@ public final class MediaEditor {
     private let subject: Subject
     
     private let clock = CMClockGetHostTimeClock()
+        
     private var player: AVPlayer?
     private var additionalPlayer: AVPlayer?
     private var audioPlayer: AVPlayer?
+    private var volumeFadeIn: SwiftSignalKit.Timer?
     
     private var timeObserver: Any?
     private weak var timeObserverPlayer: AVPlayer?
-    
     private var didPlayToEndTimeObserver: NSObjectProtocol?
     
     private weak var previewView: MediaEditorPreviewView?
@@ -76,14 +135,14 @@ public final class MediaEditor {
     
     private var textureSourceDisposable: Disposable?
     
-    private let gradientColorsPromise = Promise<(UIColor, UIColor)?>()
-    public var gradientColors: Signal<(UIColor, UIColor)?, NoError> {
-        return self.gradientColorsPromise.get()
-    }
-    private var gradientColorsValue: (UIColor, UIColor)? {
+    private let gradientColorsPromise = Promise<GradientColors?>()
+    private var gradientColorsValue: GradientColors? {
         didSet {
             self.gradientColorsPromise.set(.single(self.gradientColorsValue))
         }
+    }
+    public var gradientColors: Signal<GradientColors?, NoError> {
+        return self.gradientColorsPromise.get()
     }
     
     private let histogramPromise = Promise<Data>()
@@ -127,17 +186,40 @@ public final class MediaEditor {
     }
         
     private let playerPromise = Promise<AVPlayer?>()
-    private var playerPlaybackState: (Double, Double, Bool, Bool, Bool) = (0.0, 0.0, false, false, false) {
+    private let additionalPlayerPromise = Promise<AVPlayer?>(nil)
+    
+    private struct PlaybackState: Equatable {
+        let duration: Double
+        let position: Double
+        let isPlaying: Bool
+        let hasAudio: Bool
+        
+        init() {
+            self.duration = 0.0
+            self.position = 0.0
+            self.isPlaying = false
+            self.hasAudio = false
+        }
+        
+        init(duration: Double, position: Double, isPlaying: Bool, hasAudio: Bool) {
+            self.duration = duration
+            self.position = position
+            self.isPlaying = isPlaying
+            self.hasAudio = hasAudio
+        }
+    }
+    
+    private var playerPlaybackState: PlaybackState = PlaybackState() {
         didSet {
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
-    private let playerPlaybackStatePromise = Promise<(Double, Double, Bool, Bool, Bool)>((0.0, 0.0, false, false, false))
+    private let playerPlaybackStatePromise = Promise<PlaybackState>(PlaybackState())
     
     public var position: Signal<Double, NoError> {
         return self.playerPlaybackStatePromise.get()
-        |> map { _, position, _, _, _ -> Double in
-            return position
+        |> map { state -> Double in
+            return state.position
         }
     }
    
@@ -146,7 +228,7 @@ public final class MediaEditor {
             if let trimRange = self.values.videoTrimRange {
                 return trimRange.upperBound - trimRange.lowerBound
             } else {
-                return min(60.0, self.playerPlaybackState.0)
+                return min(60.0, self.playerPlaybackState.duration)
             }
         } else {
             return nil
@@ -155,7 +237,7 @@ public final class MediaEditor {
     
     public var originalDuration: Double? {
         if let _ = self.player {
-            return min(60.0, self.playerPlaybackState.0)
+            return min(60.0, self.playerPlaybackState.duration)
         } else {
             return nil
         }
@@ -164,42 +246,117 @@ public final class MediaEditor {
     public var onFirstDisplay: () -> Void = {}
     
     public func playerState(framesCount: Int) -> Signal<MediaEditorPlayerState?, NoError> {
+        let additionalFramesAndUpdateTimestamp = self.additionalPlayerPromise.get()
+        |> mapToSignal { player -> Signal<([UIImage], Double)?, NoError> in
+            if let player, let asset = player.currentItem?.asset {
+                return videoFrames(asset: asset, count: framesCount)
+                |> map(Optional.init)
+            } else {
+                return .single(nil)
+            }
+        }
+        
+        func artistAndTitleForTrack(_ audioTrack: MediaAudioTrack) -> (artist: String?, title: String?) {
+            let artist = audioTrack.artist
+            var title = audioTrack.title
+            if artist == nil && title == nil {
+                if let underscoreIndex = audioTrack.path.firstIndex(of: "_"), let dotIndex = audioTrack.path.lastIndex(of: ".") {
+                    title = String(audioTrack.path[audioTrack.path.index(after: underscoreIndex)..<dotIndex])
+                } else {
+                    title = audioTrack.path
+                }
+            }
+            return (artist: artist, title: title)
+        }
+        
         return self.playerPromise.get()
         |> mapToSignal { [weak self] player in
             if let self, player != nil {
                 if player === self.player, let asset = player?.currentItem?.asset {
-                    return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), self.videoFrames(asset: asset, count: framesCount))
-                    |> map { values, durationAndPosition, framesAndUpdateTimestamp in
-                        let (duration, position, isPlaying, hasAudio, isAudioPlayerOnly) = durationAndPosition
-                        let (frames, framesUpdateTimestamp) = framesAndUpdateTimestamp
+                    return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get(), videoFrames(asset: asset, count: framesCount), additionalFramesAndUpdateTimestamp)
+                    |> map { values, playbackState, framesAndUpdateTimestamp, additionalFramesAndUpdateTimestamp in
+                        var tracks: [MediaEditorPlayerState.Track] = []
+                        tracks.append(MediaEditorPlayerState.Track(
+                            id: 0,
+                            content: .video(
+                                frames: framesAndUpdateTimestamp.0,
+                                framesUpdateTimestamp: framesAndUpdateTimestamp.1
+                            ),
+                            duration: playbackState.duration,
+                            trimRange: values.videoTrimRange,
+                            offset: nil,
+                            isMain: true,
+                            visibleInTimeline: true
+                        ))
+                        
+                        if let additionalFramesAndUpdateTimestamp {
+                            tracks.append(MediaEditorPlayerState.Track(
+                                id: 1,
+                                content: .video(
+                                    frames: additionalFramesAndUpdateTimestamp.0,
+                                    framesUpdateTimestamp: additionalFramesAndUpdateTimestamp.1
+                                ),
+                                duration: playbackState.duration,
+                                trimRange: values.additionalVideoTrimRange,
+                                offset: values.additionalVideoOffset,
+                                isMain: false,
+                                visibleInTimeline: true
+                            ))
+                        }
+                        
+                        if let audioTrack = values.audioTrack {
+                            let (artist, title) = artistAndTitleForTrack(audioTrack)
+                            tracks.append(MediaEditorPlayerState.Track(
+                                id: 2,
+                                content: .audio(
+                                    artist: artist,
+                                    title: title,
+                                    samples: values.audioTrackSamples?.samples,
+                                    peak: values.audioTrackSamples?.peak ?? 0
+                                ),
+                                duration: audioTrack.duration,
+                                trimRange: values.audioTrackTrimRange,
+                                offset: values.audioTrackOffset,
+                                isMain: false,
+                                visibleInTimeline: true
+                            ))
+                        }
+                        
                         return MediaEditorPlayerState(
                             generationTimestamp: CACurrentMediaTime(),
-                            duration: duration,
-                            timeRange: values.videoTrimRange,
-                            position: position,
-                            isPlaying: isPlaying,
-                            frames: frames,
-                            framesCount: framesCount,
-                            framesUpdateTimestamp: framesUpdateTimestamp,
-                            hasAudio: hasAudio,
-                            isAudioPlayerOnly: isAudioPlayerOnly
+                            tracks: tracks,
+                            position: playbackState.position,
+                            isPlaying: playbackState.isPlaying
                         )
                     }
                 } else if player === self.audioPlayer {
                     return combineLatest(self.valuesPromise.get(), self.playerPlaybackStatePromise.get())
-                    |> map { values, durationAndPosition in
-                        let (duration, position, isPlaying, _, _) = durationAndPosition
+                    |> map { values, playbackState in
+                        var tracks: [MediaEditorPlayerState.Track] = []
+                        
+                        if let audioTrack = values.audioTrack {
+                            let (artist, title) = artistAndTitleForTrack(audioTrack)
+                            tracks.append(MediaEditorPlayerState.Track(
+                                id: 0,
+                                content: .audio(
+                                    artist: artist,
+                                    title: title,
+                                    samples: values.audioTrackSamples?.samples,
+                                    peak: values.audioTrackSamples?.peak ?? 0
+                                ),
+                                duration: audioTrack.duration,
+                                trimRange: values.audioTrackTrimRange,
+                                offset: values.audioTrackOffset,
+                                isMain: true,
+                                visibleInTimeline: true
+                            ))
+                        }
+                        
                         return MediaEditorPlayerState(
                             generationTimestamp: CACurrentMediaTime(),
-                            duration: duration,
-                            timeRange: values.audioTrackTrimRange,
-                            position: position,
-                            isPlaying: isPlaying,
-                            frames: [],
-                            framesCount: 0,
-                            framesUpdateTimestamp: 0,
-                            hasAudio: false,
-                            isAudioPlayerOnly: true
+                            tracks: tracks,
+                            position: playbackState.position,
+                            isPlaying: playbackState.isPlaying
                         )
                     }
                 } else {
@@ -207,88 +364,6 @@ public final class MediaEditor {
                 }
             } else {
                 return .single(nil)
-            }
-        }
-    }
-    
-    public func videoFrames(asset: AVAsset, count: Int) -> Signal<([UIImage], Double), NoError> {
-        func blurredImage(_ image: UIImage) -> UIImage? {
-            guard let image = image.cgImage else {
-                return nil
-            }
-            
-            let thumbnailSize = CGSize(width: image.width, height: image.height)
-            let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
-            if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
-                thumbnailContext.withFlippedContext { c in
-                    c.interpolationQuality = .none
-                    c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
-                }
-                imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                
-                let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
-                if let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0) {
-                    thumbnailContext2.withFlippedContext { c in
-                        c.interpolationQuality = .none
-                        if let image = thumbnailContext.generateImage()?.cgImage {
-                            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
-                        }
-                    }
-                    imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
-                    return thumbnailContext2.generateImage()
-                }
-            }
-            return nil
-        }
-
-        guard count > 0 else {
-            return .complete()
-        }
-        let scale = UIScreen.main.scale
-        let imageGenerator = AVAssetImageGenerator(asset: asset)
-        imageGenerator.maximumSize = CGSize(width: 48.0 * scale, height: 36.0 * scale)
-        imageGenerator.appliesPreferredTrackTransform = true
-        imageGenerator.requestedTimeToleranceBefore = .zero
-        imageGenerator.requestedTimeToleranceAfter = .zero
-                
-        var firstFrame: UIImage
-        if let cgImage = try? imageGenerator.copyCGImage(at: .zero, actualTime: nil) {
-            firstFrame = UIImage(cgImage: cgImage)
-            if let blurred = blurredImage(firstFrame) {
-                firstFrame = blurred
-            }
-        } else {
-            firstFrame = generateSingleColorImage(size: CGSize(width: 24.0, height: 36.0), color: .black)!
-        }
-        return Signal { subscriber in
-            subscriber.putNext((Array(repeating: firstFrame, count: count), CACurrentMediaTime()))
-            
-            var timestamps: [NSValue] = []
-            let duration = asset.duration.seconds
-            let interval = duration / Double(count)
-            for i in 0 ..< count {
-                timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(1000))))
-            }
-            
-            var updatedFrames: [UIImage] = []
-            imageGenerator.generateCGImagesAsynchronously(forTimes: timestamps) { _, image, _, _, _ in
-                if let image {
-                    updatedFrames.append(UIImage(cgImage: image))
-                    if updatedFrames.count == count {
-                        subscriber.putNext((updatedFrames, CACurrentMediaTime()))
-                        subscriber.putCompletion()
-                    } else {
-                        var tempFrames = updatedFrames
-                        for _ in 0 ..< count - updatedFrames.count {
-                            tempFrames.append(firstFrame)
-                        }
-                        subscriber.putNext((tempFrames, CACurrentMediaTime()))
-                    }
-                }
-            }
-            
-            return ActionDisposable {
-                imageGenerator.cancelAllCGImageGeneration()
             }
         }
     }
@@ -319,6 +394,9 @@ public final class MediaEditor {
                 additionalVideoScale: nil,
                 additionalVideoRotation: nil,
                 additionalVideoPositionChanges: [],
+                additionalVideoTrimRange: nil,
+                additionalVideoOffset: nil,
+                additionalVideoVolume: nil,
                 drawing: nil,
                 entities: [],
                 toolValues: [:],
@@ -344,33 +422,17 @@ public final class MediaEditor {
         }
         
         if case let .asset(asset) = subject {
-            self.playerPlaybackState = (asset.duration, 0.0, false, false, false)
+            self.playerPlaybackState = PlaybackState(duration: asset.duration, position: 0.0, isPlaying: false, hasAudio: asset.mediaType == .video)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         } else if case let .video(_, _, _, _, _, duration) = subject {
-            self.playerPlaybackState = (duration, 0.0, false, true, false)
+            self.playerPlaybackState = PlaybackState(duration: duration, position: 0.0, isPlaying: false, hasAudio: true)
             self.playerPlaybackStatePromise.set(.single(self.playerPlaybackState))
         }
     }
     
     deinit {
         self.textureSourceDisposable?.dispose()
-        self.destroyTimeObservers()
-    }
-    
-    private func destroyTimeObservers() {
-        if let timeObserver = self.timeObserver {
-            self.timeObserverPlayer?.removeTimeObserver(timeObserver)
-            
-            self.timeObserver = nil
-            self.timeObserverPlayer = nil
-        }
-        if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
-            NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
-            self.didPlayToEndTimeObserver = nil
-        }
-        
-        self.audioDelayTimer?.invalidate()
-        self.audioDelayTimer = nil
+        self.invalidateTimeObservers()
     }
     
     public func replaceSource(_ image: UIImage, additionalImage: UIImage?, time: CMTime) {
@@ -378,10 +440,9 @@ public final class MediaEditor {
             return
         }
         let additionalTexture = additionalImage.flatMap { loadTexture(image: $0, device: device) }
-        self.renderer.consumeTexture(texture, additionalTexture: additionalTexture, time: time, render: true)
+        self.renderer.consume(main: .texture(texture, time), additional: additionalTexture.flatMap { .texture($0, time) }, render: true, displayEnabled: false)
     }
     
-    private var volumeFade: SwiftSignalKit.Timer?
     private func setupSource() {
         guard let renderTarget = self.previewView else {
             return
@@ -393,11 +454,11 @@ public final class MediaEditor {
                 
         let context = self.context
         let clock = self.clock
-        let textureSource: Signal<(TextureSource, UIImage?, AVPlayer?, AVPlayer?, UIColor, UIColor), NoError>
+        let textureSource: Signal<(UIImage?, AVPlayer?, AVPlayer?, GradientColors), NoError>
         switch subject {
         case let .image(image, _):
             let colors = mediaEditorGetGradientColors(from: image)
-            textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
+            textureSource = .single((image, nil, nil, colors))
         case let .draft(draft):
             if draft.isVideo {
                 textureSource = Signal { subscriber in
@@ -414,8 +475,8 @@ public final class MediaEditor {
                     player.automaticallyWaitsToMinimizeStalling = false
    
                     if let gradientColors = draft.values.gradientColors {
-                        let colors = (gradientColors.first!, gradientColors.last!)
-                        subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
+                        let colors = GradientColors(top: gradientColors.first!, bottom: gradientColors.last!)
+                        subscriber.putNext((nil, player, nil, colors))
                         subscriber.putCompletion()
                         
                         return EmptyDisposable
@@ -424,12 +485,8 @@ public final class MediaEditor {
                         imageGenerator.appliesPreferredTrackTransform = true
                         imageGenerator.maximumSize = CGSize(width: 72, height: 128)
                         imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
-                            if let image {
-                                let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
-                                subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
-                            } else {
-                                subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, .black, .black))
-                            }
+                            let colors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
+                            subscriber.putNext((nil, player, nil, colors))
                             subscriber.putCompletion()
                         }
                         return ActionDisposable {
@@ -441,15 +498,16 @@ public final class MediaEditor {
                 guard let image = UIImage(contentsOfFile: draft.fullPath(engine: context.engine)) else {
                     return
                 }
-                let colors: (UIColor, UIColor)
+                let colors: GradientColors
                 if let gradientColors = draft.values.gradientColors {
-                    colors = (gradientColors.first!, gradientColors.last!)
+                    colors = GradientColors(top: gradientColors.first!, bottom: gradientColors.last!)
                 } else {
                     colors = mediaEditorGetGradientColors(from: image)
                 }
-                textureSource = .single((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
+                textureSource = .single((image, nil, nil, colors))
             }
         case let .video(path, transitionImage, mirror, additionalPath, _, _):
+            let _ = mirror
             textureSource = Signal { subscriber in
                 let asset = AVURLAsset(url: URL(fileURLWithPath: path))
                 let player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
@@ -474,7 +532,8 @@ public final class MediaEditor {
                 
                 if let transitionImage {
                     let colors = mediaEditorGetGradientColors(from: transitionImage)
-                    subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, colors.0, colors.1))
+                    //TODO pass mirror
+                    subscriber.putNext((nil, player, additionalPlayer, colors))
                     subscriber.putCompletion()
                     
                     return EmptyDisposable
@@ -483,12 +542,9 @@ public final class MediaEditor {
                     imageGenerator.appliesPreferredTrackTransform = true
                     imageGenerator.maximumSize = CGSize(width: 72, height: 128)
                     imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: CMTime(seconds: 0, preferredTimescale: CMTimeScale(30.0)))]) { _, image, _, _, _ in
-                        if let image {
-                            let colors = mediaEditorGetGradientColors(from: UIImage(cgImage: image))
-                            subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, colors.0, colors.1))
-                        } else {
-                            subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: additionalPlayer, mirror: mirror, renderTarget: renderTarget), nil, player, additionalPlayer, .black, .black))
-                        }
+                        let colors: GradientColors = image.flatMap({ mediaEditorGetGradientColors(from: UIImage(cgImage: $0)) }) ?? GradientColors(top: .black, bottom: .black)
+                        //TODO pass mirror
+                        subscriber.putNext((nil, player, additionalPlayer, colors))
                         subscriber.putCompletion()
                     }
                     return ActionDisposable {
@@ -515,7 +571,15 @@ public final class MediaEditor {
                                     let playerItem = AVPlayerItem(asset: asset)
                                     let player = AVPlayer(playerItem: playerItem)
                                     player.automaticallyWaitsToMinimizeStalling = false
-                                    subscriber.putNext((VideoTextureSource(player: player, additionalPlayer: nil, mirror: false, renderTarget: renderTarget), nil, player, nil, colors.0, colors.1))
+                                   
+                                    #if targetEnvironment(simulator)
+                                    let additionalPlayerItem = AVPlayerItem(asset: asset)
+                                    let additionalPlayer = AVPlayer(playerItem: additionalPlayerItem)
+                                    additionalPlayer.automaticallyWaitsToMinimizeStalling = false
+                                    subscriber.putNext((nil, player, additionalPlayer, colors))
+                                    #else
+                                    subscriber.putNext((nil, player, nil, colors))
+                                    #endif
                                     subscriber.putCompletion()
                                 }
                             })
@@ -541,7 +605,7 @@ public final class MediaEditor {
                             }
                             if !degraded {
                                 let colors = mediaEditorGetGradientColors(from: image)
-                                subscriber.putNext((ImageTextureSource(image: image, renderTarget: renderTarget), image, nil, nil, colors.0, colors.1))
+                                subscriber.putNext((image, nil, nil, colors))
                                 subscriber.putCompletion()
                             }
                         }
@@ -556,17 +620,35 @@ public final class MediaEditor {
         self.textureSourceDisposable = (textureSource
         |> deliverOnMainQueue).start(next: { [weak self] sourceAndColors in
             if let self {
-                let (source, image, player, additionalPlayer, topColor, bottomColor) = sourceAndColors
+                let (image, player, additionalPlayer, colors) = sourceAndColors
                 self.renderer.onNextRender = { [weak self] in
                     self?.onFirstDisplay()
                 }
-                self.renderer.textureSource = source
+                
+                let textureSource = UniversalTextureSource(renderTarget: renderTarget)
+            
                 self.player = player
-                self.additionalPlayer = additionalPlayer
-                                
                 self.playerPromise.set(.single(player))
-                self.gradientColorsValue = (topColor, bottomColor)
-                self.setGradientColors([topColor, bottomColor])
+                
+                self.additionalPlayer = additionalPlayer
+                self.additionalPlayerPromise.set(.single(additionalPlayer))
+            
+                if let image {
+                    textureSource.setMainInput(.image(image))
+                }
+                if let player, let playerItem = player.currentItem {
+                    textureSource.setMainInput(.video(playerItem))
+                }
+                if let additionalPlayer, let playerItem = additionalPlayer.currentItem {
+                    if self.values.additionalVideoPath == nil {
+                        self.values = self.values.withUpdatedAdditionalVideo(path: "", positionChanges: [])
+                    }
+                    textureSource.setAdditionalInput(.video(playerItem))
+                }
+                self.renderer.textureSource = textureSource
+                
+                self.gradientColorsValue = colors
+                self.setGradientColors(colors.array)
                 
                 if player == nil {
                     self.updateRenderChain()
@@ -582,8 +664,8 @@ public final class MediaEditor {
                 if let player {
                     player.isMuted = self.values.videoIsMuted
                     if let trimRange = self.values.videoTrimRange {
-                        self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
-                        self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+                        player.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+                        additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
                     }
 
                     if let initialSeekPosition = self.initialSeekPosition {
@@ -600,7 +682,7 @@ public final class MediaEditor {
                             additionalPlayer?.playImmediately(atRate: 1.0)
                             self.audioPlayer?.playImmediately(atRate: 1.0)
                             self.onPlaybackAction(.play)
-                            self.volumeFade = self.player?.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
+                            self.volumeFadeIn = player.fadeVolume(from: 0.0, to: 1.0, duration: 0.4)
                         }
                         if let audioPlayer = self.audioPlayer, audioPlayer.status != .readyToPlay {
                             Queue.mainQueue().after(0.1) {
@@ -630,12 +712,8 @@ public final class MediaEditor {
     
     private func setupTimeObservers() {
         var observedPlayer = self.player
-        var isAudioPlayerOnly = false
         if observedPlayer == nil {
             observedPlayer = self.audioPlayer
-            if observedPlayer != nil {
-                isAudioPlayerOnly = true
-            }
         }
         guard let observedPlayer else {
             return
@@ -654,7 +732,7 @@ public final class MediaEditor {
                 if time.seconds > 20000 {
                     
                 } else {
-                    self.playerPlaybackState = (duration, time.seconds, observedPlayer.rate > 0.0, hasAudio, isAudioPlayerOnly)
+                    self.playerPlaybackState = PlaybackState(duration: duration, position: time.seconds, isPlaying: observedPlayer.rate > 0.0, hasAudio: hasAudio)
                 }
             }
         }
@@ -670,11 +748,11 @@ public final class MediaEditor {
                     }
                     let targetTime = CMTime(seconds: start, preferredTimescale: CMTimeScale(1000))
                     self.player?.seek(to: targetTime)
-                    self.additionalPlayer?.seek(to: targetTime)
+//                    self.additionalPlayer?.seek(to: targetTime)
                     self.onPlaybackAction(.seek(start))
                     
                     self.player?.play()
-                    self.additionalPlayer?.play()
+//                    self.additionalPlayer?.play()
                     
                     if self.sourceIsVideo {
                         let audioTime = self.audioTime(for: targetTime)
@@ -689,6 +767,20 @@ public final class MediaEditor {
                             self.audioPlayer?.seek(to: audioTime)
                             self.audioPlayer?.play()
                         }
+                        
+                        
+                        let videoTime = self.videoTime(for: targetTime)
+                        if let videoDelay = self.videoDelay(for: targetTime) {
+                            self.additionalPlayer?.pause()
+                            self.videoDelayTimer = SwiftSignalKit.Timer(timeout: videoDelay, repeat: false, completion: { [weak self] in
+                                self?.additionalPlayer?.seek(to: videoTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                                self?.additionalPlayer?.play()
+                            }, queue: Queue.mainQueue())
+                            self.videoDelayTimer?.start()
+                        } else {
+                            self.additionalPlayer?.seek(to: videoTime)
+                            self.additionalPlayer?.play()
+                        }
                     } else {
                         self.audioPlayer?.seek(to: targetTime)
                         self.audioPlayer?.play()
@@ -702,8 +794,23 @@ public final class MediaEditor {
         }
     }
     
-    private func setupDidPlayToEndObserver() {
-       
+    private func invalidateTimeObservers() {
+        if let timeObserver = self.timeObserver {
+            self.timeObserverPlayer?.removeTimeObserver(timeObserver)
+            
+            self.timeObserver = nil
+            self.timeObserverPlayer = nil
+        }
+        if let didPlayToEndTimeObserver = self.didPlayToEndTimeObserver {
+            NotificationCenter.default.removeObserver(didPlayToEndTimeObserver)
+            self.didPlayToEndTimeObserver = nil
+        }
+        
+        self.videoDelayTimer?.invalidate()
+        self.videoDelayTimer = nil
+        
+        self.audioDelayTimer?.invalidate()
+        self.audioDelayTimer = nil
     }
     
     public func attachPreviewView(_ previewView: MediaEditorPreviewView) {
@@ -814,7 +921,7 @@ public final class MediaEditor {
         }
         if play {
             self.player?.play()
-            self.additionalPlayer?.play()
+//            self.additionalPlayer?.play()
             
             if self.sourceIsVideo {
                 let audioTime = self.audioTime(for: targetPosition)
@@ -828,9 +935,24 @@ public final class MediaEditor {
                     self.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
                     self.audioPlayer?.play()
                 }
+                
+                let videoTime = self.videoTime(for: targetPosition)
+                if let videoDelay = self.videoDelay(for: targetPosition) {
+                    self.videoDelayTimer = SwiftSignalKit.Timer(timeout: videoDelay, repeat: false, completion: { [weak self] in
+                        self?.additionalPlayer?.seek(to: videoTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                        self?.additionalPlayer?.play()
+                    }, queue: Queue.mainQueue())
+                    self.videoDelayTimer?.start()
+                } else {
+                    self.additionalPlayer?.seek(to: videoTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                    self.additionalPlayer?.play()
+                }
             } else {
                 self.audioPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
                 self.audioPlayer?.play()
+                
+                self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+                self.additionalPlayer?.play()
             }
             
             self.onPlaybackAction(.play)
@@ -852,9 +974,13 @@ public final class MediaEditor {
                 completion()
             }
         })
-                
-        self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
         
+        if let _ = self.videoDelay(for: targetPosition) {
+            
+        } else {
+            self.additionalPlayer?.seek(to: self.videoTime(for: targetPosition), toleranceBefore: .zero, toleranceAfter: .zero)
+        }
+                
         if let _ = self.audioDelay(for: targetPosition) {
             
         } else {
@@ -899,6 +1025,49 @@ public final class MediaEditor {
         }
     }
     
+    
+    
+    ///
+    
+    private var videoDelayTimer: SwiftSignalKit.Timer?
+    private func videoDelay(for time: CMTime) -> Double? {
+        var time = time
+        if time == .invalid {
+            time = .zero
+        }
+        let mainStart = self.values.videoTrimRange?.lowerBound ?? 0.0
+        var trackStart = self.values.additionalVideoTrimRange?.lowerBound ?? 0.0
+        if let offset = self.values.additionalVideoOffset, offset < 0.0 {
+            trackStart -= offset
+        }
+        if trackStart - mainStart > 0.0 {
+            let delay = trackStart - time.seconds
+            if delay > 0 {
+                return delay
+            }
+        }
+        return nil
+    }
+    
+    private func videoTime(for time: CMTime) -> CMTime {
+        var time = time
+        if time == .invalid {
+            time = .zero
+        }
+        let seconds = time.seconds
+        
+        let offset = self.values.additionalVideoOffset ?? 0.0
+        let trackOffset = max(0.0, offset)
+        let trackStart = self.values.additionalVideoTrimRange?.lowerBound ?? 0.0
+        if seconds < trackStart - min(0.0, offset) {
+            return CMTime(seconds: trackOffset + trackStart, preferredTimescale: CMTimeScale(1000.0))
+        } else {
+            return CMTime(seconds: trackOffset + seconds + min(0.0, offset), preferredTimescale: CMTimeScale(1000.0))
+        }
+    }
+    
+    ///
+    
     public var isPlaying: Bool {
         let effectivePlayer = self.player ?? self.audioPlayer
         return (effectivePlayer?.rate ?? 0.0) > 0.0
@@ -941,33 +1110,54 @@ public final class MediaEditor {
             }
         } else {
             let itemTime = self.player?.currentItem?.currentTime() ?? .invalid
+            let videoTime = self.videoTime(for: itemTime)
             let audioTime = self.audioTime(for: itemTime)
         
             self.player?.setRate(rate, time: itemTime, atHostTime: futureTime)
-            self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
+//            self.additionalPlayer?.setRate(rate, time: itemTime, atHostTime: futureTime)
             
-            if let audioPlayer = self.audioPlayer {
-                if rate > 0.0, let audioDelay = self.audioDelay(for: itemTime) {
-                    self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
-                        self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                        self?.audioPlayer?.play()
-                    }, queue: Queue.mainQueue())
-                    self.audioDelayTimer?.start()
-                } else {
-                    if audioPlayer.status == .readyToPlay {
-                        audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
-                        if rate > 0.0 {
-//                            audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                            audioPlayer.play()
-                        }
+            
+            if let additionalPlayer = self.additionalPlayer {
+                if rate > 0.0 {
+                    if let videoDelay = self.videoDelay(for: itemTime) {
+                        self.videoDelayTimer = SwiftSignalKit.Timer(timeout: videoDelay, repeat: false, completion: { [weak self] in
+                            self?.additionalPlayer?.seek(to: videoTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            self?.additionalPlayer?.play()
+                        }, queue: Queue.mainQueue())
+                        self.videoDelayTimer?.start()
                     } else {
-                        audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
-                        if rate > 0.0 {
-                            audioPlayer.play()
+                        if additionalPlayer.status == .readyToPlay {
+                            additionalPlayer.setRate(rate, time: videoTime, atHostTime: futureTime)
+                            additionalPlayer.play()
                         } else {
-                            audioPlayer.pause()
+                            additionalPlayer.seek(to: videoTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            additionalPlayer.play()
                         }
                     }
+                } else {
+                    additionalPlayer.pause()
+                }
+            }
+            
+            if let audioPlayer = self.audioPlayer {
+                if rate > 0.0 {
+                    if let audioDelay = self.audioDelay(for: itemTime) {
+                        self.audioDelayTimer = SwiftSignalKit.Timer(timeout: audioDelay, repeat: false, completion: { [weak self] in
+                            self?.audioPlayer?.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            self?.audioPlayer?.play()
+                        }, queue: Queue.mainQueue())
+                        self.audioDelayTimer?.start()
+                    } else {
+                        if audioPlayer.status == .readyToPlay {
+                            audioPlayer.setRate(rate, time: audioTime, atHostTime: futureTime)
+                            audioPlayer.play()
+                        } else {
+                            audioPlayer.seek(to: audioTime, toleranceBefore: .zero, toleranceAfter: .zero)
+                            audioPlayer.play()
+                        }
+                    }
+                } else {
+                    audioPlayer.pause()
                 }
             }
         }
@@ -976,6 +1166,9 @@ public final class MediaEditor {
             self.onPlaybackAction(.play)
         } else {
             self.onPlaybackAction(.pause)
+            
+            self.videoDelayTimer?.invalidate()
+            self.videoDelayTimer = nil
             
             self.audioDelayTimer?.invalidate()
             self.audioDelayTimer = nil
@@ -991,6 +1184,9 @@ public final class MediaEditor {
         
         self.audioDelayTimer?.invalidate()
         self.audioDelayTimer = nil
+        
+        self.videoDelayTimer?.invalidate()
+        self.videoDelayTimer = nil
     }
     
     private func updateVideoTimePosition() {
@@ -1022,7 +1218,10 @@ public final class MediaEditor {
                 }
             })
             
-            self.additionalPlayer?.seek(to: targetPosition, toleranceBefore: .zero, toleranceAfter: .zero)
+            if let _ = self.videoDelay(for: targetPosition) {
+            } else {
+                self.additionalPlayer?.seek(to: self.videoTime(for: targetPosition), toleranceBefore: .zero, toleranceAfter: .zero)
+            }
             
             if let _ = self.audioDelay(for: targetPosition) {
             } else {
@@ -1039,11 +1238,32 @@ public final class MediaEditor {
         
         if apply {
             self.player?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
-            self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
+//            self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: trimRange.upperBound, preferredTimescale: CMTimeScale(1000))
         }
     }
     
-    public func setAdditionalVideo(_ path: String, positionChanges: [VideoPositionChange]) {
+    public func setAdditionalVideo(_ path: String?, positionChanges: [VideoPositionChange]) {
+        if self.values.additionalVideoPath == nil, let path {
+            let asset = AVURLAsset(url: URL(fileURLWithPath: path))
+            let playerItem = AVPlayerItem(asset: asset)
+            let player = AVPlayer(playerItem: playerItem)
+            if #available(iOS 15.0, *) {
+                player.sourceClock = clock
+            } else {
+                player.masterClock = clock
+            }
+            player.automaticallyWaitsToMinimizeStalling = false
+            self.additionalPlayer = player
+            self.additionalPlayerPromise.set(.single(player))
+            
+            (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInput(.video(playerItem))
+        } else if path == nil {
+            self.additionalPlayer?.pause()
+            self.additionalPlayer = nil
+            self.additionalPlayerPromise.set(.single(nil))
+            (self.renderer.textureSource as? UniversalTextureSource)?.setAdditionalInput(nil)
+        }
+        
         self.updateValues(mode: .skipRendering) { values in
             return values.withUpdatedAdditionalVideo(path: path, positionChanges: positionChanges)
         }
@@ -1052,6 +1272,26 @@ public final class MediaEditor {
     public func setAdditionalVideoPosition(_ position: CGPoint, scale: CGFloat, rotation: CGFloat) {
         self.updateValues(mode: .forceRendering) { values in
             return values.withUpdatedAdditionalVideo(position: position, scale: scale, rotation: rotation)
+        }
+    }
+    
+    public func setAdditionalVideoTrimRange(_ trimRange: Range<Double>, apply: Bool) {
+        self.updateValues(mode: .generic) { values in
+            return values.withUpdatedAdditionalVideoTrimRange(trimRange)
+        }
+        
+        if apply {
+            self.updateAdditionalVideoPlaybackRange()
+        }
+    }
+    
+    public func setAdditionalVideoOffset(_ offset: Double?, apply: Bool) {
+        self.updateValues(mode: .generic) { values in
+            return values.withUpdatedAdditionalVideoOffset(offset)
+        }
+        
+        if apply {
+            self.updateAdditionalVideoPlaybackRange()
         }
     }
     
@@ -1069,7 +1309,12 @@ public final class MediaEditor {
     
     public func setAudioTrack(_ audioTrack: MediaAudioTrack?, trimRange: Range<Double>? = nil, offset: Double? = nil) {
         self.updateValues(mode: .skipRendering) { values in
-            return values.withUpdatedAudioTrack(audioTrack).withUpdatedAudioTrackSamples(nil).withUpdatedAudioTrackTrimRange(trimRange).withUpdatedAudioTrackVolume(nil).withUpdatedAudioTrackOffset(offset)
+            return values
+                .withUpdatedAudioTrack(audioTrack)
+                .withUpdatedAudioTrackSamples(nil)
+                .withUpdatedAudioTrackTrimRange(trimRange)
+                .withUpdatedAudioTrackVolume(nil)
+                .withUpdatedAudioTrackOffset(offset)
         }
         
         if let audioPlayer = self.audioPlayer {
@@ -1079,13 +1324,10 @@ public final class MediaEditor {
                 self.audioDelayTimer?.invalidate()
                 self.audioDelayTimer = nil
             } else {
-                self.destroyTimeObservers()
-            }
-            self.audioPlayer = nil
-             
-            if !self.sourceIsVideo {
+                self.invalidateTimeObservers()
                 self.playerPromise.set(.single(nil))
             }
+            self.audioPlayer = nil
         }
         
         self.setupAudioPlayback()
@@ -1094,12 +1336,11 @@ public final class MediaEditor {
     
     private func setupAudioPlayback() {
         if let audioTrack = self.values.audioTrack {
-            let path = fullDraftPath(peerId: self.context.account.peerId, path: audioTrack.path)
-            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: path))
-            let playerItem = AVPlayerItem(asset: audioAsset)
-            let player = AVPlayer(playerItem: playerItem)
-            player.automaticallyWaitsToMinimizeStalling = false
-            self.audioPlayer = player
+            let audioPath = fullDraftPath(peerId: self.context.account.peerId, path: audioTrack.path)
+            let audioAsset = AVURLAsset(url: URL(fileURLWithPath: audioPath))
+            let audioPlayer = AVPlayer(playerItem: AVPlayerItem(asset: audioAsset))
+            audioPlayer.automaticallyWaitsToMinimizeStalling = false
+            self.audioPlayer = audioPlayer
             self.maybeGenerateAudioSamples(asset: audioAsset)
             
             if let volume = self.values.audioTrackVolume {
@@ -1109,7 +1350,7 @@ public final class MediaEditor {
             self.setupTimeObservers()
             
             if !self.sourceIsVideo {
-                self.playerPromise.set(.single(player))
+                self.playerPromise.set(.single(audioPlayer))
             }
         }
     }
@@ -1134,6 +1375,15 @@ public final class MediaEditor {
         }
     }
     
+    private func updateAdditionalVideoPlaybackRange() {
+        if let upperBound = self.values.additionalVideoTrimRange?.upperBound {
+            let offset = max(0.0, self.values.additionalVideoOffset ?? 0.0)
+            self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = CMTime(seconds: offset + upperBound, preferredTimescale: CMTimeScale(1000))
+        } else {
+            self.additionalPlayer?.currentItem?.forwardPlaybackEndTime = .invalid
+        }
+    }
+    
     private func updateAudioPlaybackRange() {
         if let upperBound = self.values.audioTrackTrimRange?.upperBound {
             let offset = max(0.0, self.values.audioTrackOffset ?? 0.0)
@@ -1154,7 +1404,7 @@ public final class MediaEditor {
     private var previousUpdateTime: Double?
     private var scheduledUpdate = false
     private func updateRenderChain() {
-        self.renderer.renderPassedEnabled = !self.previewUnedited
+        self.renderer.skipEditingPasses = self.previewUnedited
         self.renderChain.update(values: self.values)
         self.renderer.videoFinishPass.update(values: self.values)
         
@@ -1266,6 +1516,88 @@ public final class MediaEditor {
                 }
             } catch {
             }
+        }
+    }
+}
+
+private func videoFrames(asset: AVAsset, count: Int) -> Signal<([UIImage], Double), NoError> {
+    func blurredImage(_ image: UIImage) -> UIImage? {
+        guard let image = image.cgImage else {
+            return nil
+        }
+        
+        let thumbnailSize = CGSize(width: image.width, height: image.height)
+        let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+        if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
+            thumbnailContext.withFlippedContext { c in
+                c.interpolationQuality = .none
+                c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+            }
+            imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+            
+            let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+            if let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0) {
+                thumbnailContext2.withFlippedContext { c in
+                    c.interpolationQuality = .none
+                    if let image = thumbnailContext.generateImage()?.cgImage {
+                        c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                    }
+                }
+                imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+                return thumbnailContext2.generateImage()
+            }
+        }
+        return nil
+    }
+
+    guard count > 0 else {
+        return .complete()
+    }
+    let scale = UIScreen.main.scale
+    let imageGenerator = AVAssetImageGenerator(asset: asset)
+    imageGenerator.maximumSize = CGSize(width: 48.0 * scale, height: 36.0 * scale)
+    imageGenerator.appliesPreferredTrackTransform = true
+    imageGenerator.requestedTimeToleranceBefore = .zero
+    imageGenerator.requestedTimeToleranceAfter = .zero
+            
+    var firstFrame: UIImage
+    if let cgImage = try? imageGenerator.copyCGImage(at: .zero, actualTime: nil) {
+        firstFrame = UIImage(cgImage: cgImage)
+        if let blurred = blurredImage(firstFrame) {
+            firstFrame = blurred
+        }
+    } else {
+        firstFrame = generateSingleColorImage(size: CGSize(width: 24.0, height: 36.0), color: .black)!
+    }
+    return Signal { subscriber in
+        subscriber.putNext((Array(repeating: firstFrame, count: count), CACurrentMediaTime()))
+        
+        var timestamps: [NSValue] = []
+        let duration = asset.duration.seconds
+        let interval = duration / Double(count)
+        for i in 0 ..< count {
+            timestamps.append(NSValue(time: CMTime(seconds: Double(i) * interval, preferredTimescale: CMTimeScale(1000))))
+        }
+        
+        var updatedFrames: [UIImage] = []
+        imageGenerator.generateCGImagesAsynchronously(forTimes: timestamps) { _, image, _, _, _ in
+            if let image {
+                updatedFrames.append(UIImage(cgImage: image))
+                if updatedFrames.count == count {
+                    subscriber.putNext((updatedFrames, CACurrentMediaTime()))
+                    subscriber.putCompletion()
+                } else {
+                    var tempFrames = updatedFrames
+                    for _ in 0 ..< count - updatedFrames.count {
+                        tempFrames.append(firstFrame)
+                    }
+                    subscriber.putNext((tempFrames, CACurrentMediaTime()))
+                }
+            }
+        }
+        
+        return ActionDisposable {
+            imageGenerator.cancelAllCGImageGeneration()
         }
     }
 }

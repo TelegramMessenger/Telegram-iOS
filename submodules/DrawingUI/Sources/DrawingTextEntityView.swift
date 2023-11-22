@@ -80,10 +80,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
         fatalError("init(coder:) has not been implemented")
     }
     
-    deinit {
-        self.displayLink?.invalidate()
-    }
-    
     override func animateInsertion() {
         
     }
@@ -516,50 +512,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
             self.updateTextAnimations()
         }
     }
-    
-    private var previousDisplayLinkTime: Double?
-    
-    private var displayLinkStart: Double?
-    private var displayLink: SharedDisplayLinkDriver.Link?
-    
-    private var pendingImage: (Double, UIImage)?
-    private var cachedFrames: [DrawingTextEntity.AnimationFrame] = []
-    
-    private func setupRecorder(delta: Double, duration: Double) {
-        self.cachedFrames.removeAll()
-        
-        self.displayLink?.invalidate()
-        self.displayLink = nil
-        
-        self.previousDisplayLinkTime = nil
-        let displayLinkStart = CACurrentMediaTime()
-        self.displayLinkStart = displayLinkStart
-        
-        self.displayLink = SharedDisplayLinkDriver.shared.add { [weak self] _ in
-            if let strongSelf = self {
-                let currentTime = CACurrentMediaTime()
-                if let previousDisplayLinkTime = strongSelf.previousDisplayLinkTime, currentTime < previousDisplayLinkTime + delta {
-                    return
-                }
-                if currentTime >= displayLinkStart + duration {
-                    strongSelf.displayLink?.invalidate()
-                    strongSelf.displayLink = nil
-                }
-                if let (timestamp, image) = strongSelf.pendingImage, let previousDisplayLinkTime = strongSelf.previousDisplayLinkTime {
-                    strongSelf.cachedFrames.append(DrawingTextEntity.AnimationFrame(timestamp: timestamp - displayLinkStart, duration: currentTime - previousDisplayLinkTime, image: image))
-                }
-                if let image = strongSelf.getPresentationRenderImage() {
-                    strongSelf.pendingImage = (currentTime, image)
-                }
-                if strongSelf.previousDisplayLinkTime == nil {
-                    strongSelf.previousDisplayLinkTime = displayLinkStart
-                } else {
-                    strongSelf.previousDisplayLinkTime = currentTime
-                }
-            }
-        }
-        self.displayLink?.isPaused = false
-    }
 
     func updateTextAnimations() {
         for layer in self.textView.characterLayers {
@@ -587,7 +539,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
                 layer.add(animation, forKey: "opacity")
                 offset += delta
             }
-            self.setupRecorder(delta: delta, duration: duration)
         case .wiggle:
             for layer in self.textView.characterLayers {
                 let animation = CABasicAnimation(keyPath: "transform.rotation.z")
@@ -599,7 +550,6 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
                 animation.repeatCount = .infinity
                 layer.add(animation, forKey: "transform.rotation.z")
             }
-            self.setupRecorder(delta: 0.033, duration: 1.2)
         case .zoomIn:
             let animation = CABasicAnimation(keyPath: "transform.scale")
             animation.fromValue = 0.001 as NSNumber
@@ -766,7 +716,7 @@ public final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate 
     }
     
     func getRenderAnimationFrames() -> [DrawingTextEntity.AnimationFrame]? {
-        return self.cachedFrames
+        return nil
     }
 }
 

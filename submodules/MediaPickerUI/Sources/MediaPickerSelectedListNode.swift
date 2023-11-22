@@ -1068,7 +1068,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         }
         
         let inset: CGFloat = insets.left == 70 ? insets.left : 0.0
-        self.wallpaperBackgroundNode.update(wallpaper: wallpaper)
+        self.wallpaperBackgroundNode.update(wallpaper: wallpaper, animated: false)
         self.wallpaperBackgroundNode.updateBubbleTheme(bubbleTheme: theme, bubbleCorners: bubbleCorners)
         transition.updateFrame(node: self.wallpaperBackgroundNode, frame: CGRect(origin: CGPoint(x: inset, y: 0.0), size: CGSize(width: size.width - inset * 2.0, height: size.height)))
         self.wallpaperBackgroundNode.updateLayout(size: CGSize(width: size.width - inset * 2.0, height: size.height), displayMode: .aspectFill, transition: transition)

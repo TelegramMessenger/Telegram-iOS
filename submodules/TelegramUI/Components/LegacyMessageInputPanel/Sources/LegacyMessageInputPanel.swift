@@ -249,6 +249,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     audioRecorder: nil,
                     videoRecordingStatus: nil,
                     isRecordingLocked: false,
+                    hasRecordedVideo: false,
                     recordedAudioPreview: nil,
                     hasRecordedVideoPreview: false,
                     wasRecordingDismissed: false,
@@ -261,6 +262,7 @@ public class LegacyMessageInputPanelNode: ASDisplayNode, TGCaptionPanelView {
                     customInputView: self.inputView,
                     forceIsEditing: false,
                     disabledPlaceholder: nil,
+                    header: nil,
                     isChannel: false,
                     storyItem: nil,
                     chatLocation: self.chatLocation

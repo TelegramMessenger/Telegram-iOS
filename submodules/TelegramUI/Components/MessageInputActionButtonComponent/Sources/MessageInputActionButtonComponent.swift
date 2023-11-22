@@ -23,6 +23,10 @@ private extension MessageInputActionButtonComponent.Mode {
             return "Chat/Input/Text/IconForwardSend"
         case .like:
             return "Stories/InputLikeOff"
+        case .removeVideoInput:
+            return "Media Editor/RemoveRecordedVideo"
+        case .repost:
+            return "Stories/InputRepost"
         default:
             return nil
         }
@@ -36,12 +40,14 @@ public final class MessageInputActionButtonComponent: Component {
         case apply
         case voiceInput
         case videoInput
+        case removeVideoInput
         case unavailableVoiceInput
         case delete
         case attach
         case forward
         case more
         case like(reaction: MessageReaction.Reaction?, file: TelegramMediaFile?, animationFileId: Int64?)
+        case repost
     }
     
     public enum Action {
@@ -333,7 +339,7 @@ public final class MessageInputActionButtonComponent: Component {
             switch component.mode {
             case .none:
                 break
-            case .send, .apply, .attach, .delete, .forward:
+            case .send, .apply, .attach, .delete, .forward, .removeVideoInput, .repost:
                 sendAlpha = 1.0
             case let .like(reaction, _, _):
                 if reaction != nil {
@@ -548,9 +554,9 @@ public final class MessageInputActionButtonComponent: Component {
                 
                 if previousComponent?.mode != component.mode {
                     switch component.mode {
-                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like:
+                    case .none, .send, .apply, .voiceInput, .attach, .delete, .forward, .unavailableVoiceInput, .more, .like, .repost:
                         micButton.updateMode(mode: .audio, animated: !transition.animation.isImmediate)
-                    case .videoInput:
+                    case .videoInput, .removeVideoInput:
                         micButton.updateMode(mode: .video, animated: !transition.animation.isImmediate)
                     }
                 }

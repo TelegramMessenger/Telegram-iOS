@@ -24,6 +24,7 @@ import AvatarNode
 import MultilineTextComponent
 import BundleIconComponent
 import ChatMessageBackground
+import ContextUI
 
 private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: EngineMessage, accountPeerId: EnginePeer.Id) -> NSAttributedString? {
     return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)
@@ -332,6 +333,9 @@ public class ChatMessageJoinedChannelBubbleContentNode: ChatMessageBubbleContent
                             addAppLogEvent(postbox: item.context.account.postbox, type: "channels.open_recommended_channel", data: json)
                         }
                         item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
+                    },
+                    contextAction: { peer, sourceView, gesture in
+                        item.controllerInteraction.openRecommendedChannelContextMenu(peer, sourceView, gesture)
                     }
                 )
             ),
@@ -509,19 +513,22 @@ private final class ChannelItemComponent: Component {
     let peer: EnginePeer
     let subtitle: String
     let action: (EnginePeer) -> Void
+    let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
     
     init(
         context: AccountContext,
         theme: PresentationTheme,
         peer: EnginePeer,
         subtitle: String,
-        action: @escaping (EnginePeer) -> Void
+        action: @escaping (EnginePeer) -> Void,
+        contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.peer = peer
         self.subtitle = subtitle
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: ChannelItemComponent, rhs: ChannelItemComponent) -> Bool {
@@ -541,6 +548,7 @@ private final class ChannelItemComponent: Component {
     }
     
     final class View: UIView {
+        private let contextContainer: ContextControllerSourceView
         private let containerButton: HighlightTrackingButton
         
         private let title = ComponentView<Empty>()
@@ -553,6 +561,8 @@ private final class ChannelItemComponent: Component {
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.contextContainer = ContextControllerSourceView()
+            
             self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 26.0))
             self.avatarNode.isUserInteractionEnabled = false
             
@@ -562,13 +572,21 @@ private final class ChannelItemComponent: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.containerButton)
-            self.addSubnode(self.avatarNode)
+            self.addSubview(self.contextContainer)
+            
+            self.contextContainer.addSubview(self.containerButton)
+            self.contextContainer.addSubnode(self.avatarNode)
             self.avatarNode.view.addSubview(self.avatarBadge)
             
             self.avatarNode.badgeView = self.avatarBadge
             
             self.containerButton.addTarget(self, action: #selector(self.pressed), for: .touchUpInside)
+            
+            self.contextContainer.activated = { [weak self] gesture, point in
+                if let self, let component = self.component {
+                    component.contextAction(component.peer, self.contextContainer, gesture)
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -628,21 +646,21 @@ private final class ChannelItemComponent: Component {
             if let titleView = self.title.view {
                 if titleView.superview == nil {
                     titleView.isUserInteractionEnabled = false
-                    self.addSubview(titleView)
+                    self.contextContainer.addSubview(titleView)
                 }
                 titleView.frame = titleFrame
             }
             if let subtitleView = self.subtitle.view {
                 if subtitleView.superview == nil {
                     subtitleView.isUserInteractionEnabled = false
-                    self.addSubview(subtitleView)
+                    self.contextContainer.addSubview(subtitleView)
                 }
                 subtitleView.frame = subtitleFrame
             }
             if let subtitleIconView = self.subtitleIcon.view {
                 if subtitleIconView.superview == nil {
                     subtitleIconView.isUserInteractionEnabled = false
-                    self.addSubview(subtitleIconView)
+                    self.contextContainer.addSubview(subtitleIconView)
                 }
                 subtitleIconView.frame = subtitleIconFrame
             }
@@ -654,7 +672,9 @@ private final class ChannelItemComponent: Component {
             let avatarBadgeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((avatarFrame.width - avatarBadgeSize.width) / 2.0), y: avatarFrame.height - avatarBadgeSize.height + 2.0), size: avatarBadgeSize).insetBy(dx: -strokeWidth, dy: -strokeWidth)
             self.avatarBadge.frame = avatarBadgeFrame
     
-            self.containerButton.frame = CGRect(origin: .zero, size: itemSize)
+            let bounds = CGRect(origin: .zero, size: itemSize)
+            self.contextContainer.frame = bounds
+            self.containerButton.frame = bounds
             
             return itemSize
         }
@@ -676,17 +696,20 @@ final class ChannelListPanelComponent: Component {
     let theme: PresentationTheme
     let peers: RecommendedChannels
     let action: (EnginePeer) -> Void
+    let contextAction: (EnginePeer, UIView, ContextGesture?) -> Void
 
     init(
         context: AccountContext,
         theme: PresentationTheme,
         peers: RecommendedChannels,
-        action: @escaping (EnginePeer) -> Void
+        action: @escaping (EnginePeer) -> Void,
+        contextAction: @escaping (EnginePeer, UIView, ContextGesture?) -> Void
     ) {
         self.context = context
         self.theme = theme
         self.peers = peers
         self.action = action
+        self.contextAction = contextAction
     }
     
     static func ==(lhs: ChannelListPanelComponent, rhs: ChannelListPanelComponent) -> Bool {
@@ -832,7 +855,8 @@ final class ChannelListPanelComponent: Component {
                             theme: component.theme,
                             peer: item.peer,
                             subtitle: subtitle,
-                            action: component.action
+                            action: component.action,
+                            contextAction: component.contextAction
                         )),
                         environment: {},
                         containerSize: CGSize(width: itemLayout.itemWidth, height: itemLayout.containerHeight)

@@ -431,13 +431,13 @@ public func stringForRelativeActivityTimestamp(strings: PresentationStrings, dat
     }
 }
 
-public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, preciseTime: Bool = false, relativeTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, preciseTime: Bool = false, relativeTimestamp: Int32, relativeTo timestamp: Int32, short: Bool = false) -> String {
     let difference = timestamp - relativeTimestamp
     if difference < 60 {
-        return strings.Time_JustNow
+        return short ? strings.ShortTime_JustNow : strings.Time_JustNow
     } else if difference < 60 * 60 {
         let minutes = difference / 60
-        return strings.Time_MinutesAgo(minutes)
+        return short ? strings.ShortTime_MinutesAgo(minutes) : strings.Time_MinutesAgo(minutes)
     } else {
         var t: time_t = time_t(relativeTimestamp)
         var timeinfo: tm = tm()
@@ -456,7 +456,7 @@ public func stringForStoryActivityTimestamp(strings: PresentationStrings, dateTi
             let day: RelativeTimestampFormatDay
             if dayDifference == 0 {
                 let minutes = difference / (60 * 60)
-                return strings.Time_HoursAgo(minutes)
+                return short ? strings.ShortTime_HoursAgo(minutes) : strings.Time_HoursAgo(minutes)
             } else {
                 day = .yesterday
             }

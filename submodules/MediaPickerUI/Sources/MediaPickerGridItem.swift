@@ -497,7 +497,7 @@ final class MediaPickerGridItemNode: GridItemNode {
                                 self.imageNode.contentMode = .scaleAspectFit
                                 Queue.concurrentDefaultQueue().async {
                                     let colors = mediaEditorGetGradientColors(from: image)
-                                    let gradientImage = mediaEditorGenerateGradientImage(size: CGSize(width: 3.0, height: 128.0), colors: [colors.0, colors.1])
+                                    let gradientImage = mediaEditorGenerateGradientImage(size: CGSize(width: 3.0, height: 128.0), colors: colors.array)
                                     Queue.mainQueue().async {
                                         self.backgroundNode.image = gradientImage
                                     }

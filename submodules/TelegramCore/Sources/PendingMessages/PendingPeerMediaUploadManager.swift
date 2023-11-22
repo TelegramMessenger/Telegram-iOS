@@ -85,7 +85,7 @@ private func uploadPeerMedia(postbox: Postbox, network: Network, stateManager: A
                 
             }
         } else {
-            return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: wallpaper, forBoth: forBoth,  applyUpdates: false)
+            return _internal_setChatWallpaper(postbox: postbox, network: network, stateManager: stateManager, peerId: peerId, wallpaper: wallpaper, forBoth: forBoth, applyUpdates: false)
             |> mapError { error -> PeerMediaUploadingItem.Error in
                 switch error {
                 case .generic:

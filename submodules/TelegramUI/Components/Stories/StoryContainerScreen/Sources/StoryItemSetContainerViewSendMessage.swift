@@ -1041,7 +1041,12 @@ final class StoryItemSetContainerSendMessage {
                 immediateExternalShare: false,
                 forceTheme: defaultDarkColorPresentationTheme
             )
-            
+            shareController.shareStory = { [weak view] in
+                guard let view else {
+                    return
+                }
+                view.openStoryEditing(repost: true)
+            }
             shareController.completed = { [weak view] peerIds in
                 guard let view, let component = view.component else {
                     return
@@ -1052,7 +1057,7 @@ final class StoryItemSetContainerSendMessage {
                         peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
                     )
                 )
-                         |> deliverOnMainQueue).start(next: { [weak view] peerList in
+                |> deliverOnMainQueue).start(next: { [weak view] peerList in
                     guard let view, let component = view.component else {
                         return
                     }

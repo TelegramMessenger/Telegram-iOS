@@ -483,6 +483,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     let selectAddMemberDisposable = MetaDisposable()
     let addMemberDisposable = MetaDisposable()
+    let joinChannelDisposable = MetaDisposable()
     
     var shouldDisplayDownButton = false
 
@@ -930,7 +931,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             let wallpaperPreviewController = WallpaperGalleryController(context: strongSelf.context, source: .wallpaper(wallpaper, options, [], intensity, nil, nil), mode: .peer(EnginePeer(peer), true))
-                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness, _ in
+                            wallpaperPreviewController.apply = { [weak wallpaperPreviewController] entry, options, _, _, brightness, forBoth in
                                 var settings: WallpaperSettings?
                                 if case let .wallpaper(wallpaper, _) = entry {
                                     let baseSettings = wallpaper.settings
@@ -942,7 +943,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     settings = WallpaperSettings(blur: options.contains(.blur), motion: options.contains(.motion), colors: baseSettings?.colors ?? [], intensity: intensity, rotation: baseSettings?.rotation)
                                 }
-                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: settings)
+                                let _ = (strongSelf.context.engine.themes.setExistingChatWallpaper(messageId: message.id, settings: settings, forBoth: forBoth)
                                 |> deliverOnMainQueue).startStandalone()
                                 Queue.mainQueue().after(0.1) {
                                     wallpaperPreviewController?.dismiss()
@@ -4486,6 +4487,67 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.push(controller)
             })
             
+        }, openRecommendedChannelContextMenu: { [weak self] peer, sourceView, gesture in
+            guard let self else {
+                return
+            }
+            
+            let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(id: peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            
+            var items: [ContextMenuItem] = [
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_LinkDialogOpen, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ImageEnlarge"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                    f(.dismissWithoutContent)
+                    self?.openPeer(peer: peer, navigation: .chat(textInputState: nil, subject: nil, peekData: nil), fromMessage: nil)
+                })),
+            ]
+            items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.Chat_SimilarChannels_Join, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Add"), color: theme.actionSheet.primaryTextColor) }, action: { [weak self] _, f in
+                f(.dismissWithoutContent)
+                
+                guard let self else {
+                    return
+                }
+                let presentationData = self.presentationData
+                self.joinChannelDisposable.set((
+                    self.context.peerChannelMemberCategoriesContextsManager.join(engine: self.context.engine, peerId: peer.id, hash: nil)
+                    |> deliverOnMainQueue
+                    |> afterCompleted { [weak self] in
+                        Queue.mainQueue().async {
+                            if let self {
+                                self.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.Chat_SimilarChannels_JoinedChannel(peer.compactDisplayTitle).string, timeout: nil, customUndoText: nil), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                            }
+                        }
+                    }
+                ).startStrict(error: { [weak self] error in
+                    guard let self else {
+                        return
+                    }
+                    let text: String
+                    switch error {
+                    case .inviteRequestSent:
+                        self.present(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationData.strings.Group_RequestToJoinSent, text: presentationData.strings.Group_RequestToJoinSentDescriptionGroup), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                        return
+                    case .tooMuchJoined:
+                        self.push(oldChannelsController(context: context, intent: .join))
+                        return
+                    case .tooMuchUsers:
+                        text = self.presentationData.strings.Conversation_UsersTooMuchError
+                    case .generic:
+                        text = self.presentationData.strings.Channel_ErrorAccessDenied
+                    }
+                    self.present(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }))
+            })))
+                      
+            self.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
+            
+            self.canReadHistory.set(false)
+            
+            let contextController = ContextController(presentationData: self.presentationData, source: .controller(ChatContextControllerContentSourceImpl(controller: chatController, sourceView: sourceView, passthroughTouches: true)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            contextController.dismissed = { [weak self] in
+                self?.canReadHistory.set(true)
+            }
+            self.presentInGlobalOverlay(contextController)
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let self {
                 self.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -6470,6 +6532,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.peerSuggestionsDismissDisposable.dispose()
             self.selectAddMemberDisposable.dispose()
             self.addMemberDisposable.dispose()
+            self.joinChannelDisposable.dispose()
             self.nextChannelToReadDisposable?.dispose()
             self.inviteRequestsDisposable.dispose()
             self.sendAsPeersDisposable?.dispose()
@@ -18577,6 +18640,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 final class ChatContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
+    weak var sourceView: UIView?
     let sourceRect: CGRect?
     
     let navigationController: NavigationController? = nil
@@ -18590,11 +18654,21 @@ final class ChatContextControllerContentSourceImpl: ContextControllerContentSour
         self.passthroughTouches = passthroughTouches
     }
     
+    init(controller: ViewController, sourceView: UIView?, sourceRect: CGRect? = nil, passthroughTouches: Bool) {
+        self.controller = controller
+        self.sourceView = sourceView
+        self.sourceRect = sourceRect
+        self.passthroughTouches = passthroughTouches
+    }
+    
     func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceView = self.sourceView
         let sourceNode = self.sourceNode
         let sourceRect = self.sourceRect
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
-            if let sourceNode = sourceNode {
+            if let sourceView = sourceView {
+                return (sourceView, sourceRect ?? sourceView.bounds)
+            } else if let sourceNode = sourceNode {
                 return (sourceNode.view, sourceRect ?? sourceNode.bounds)
             } else {
                 return nil

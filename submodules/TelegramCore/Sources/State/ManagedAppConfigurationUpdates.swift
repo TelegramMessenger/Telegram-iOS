@@ -33,6 +33,12 @@ func updateAppConfigurationOnce(postbox: Postbox, network: Network) -> Signal<Vo
                         configuration.hash = result.hash
                         return configuration
                     })
+                    
+                    if let audioTranscriptionCooldownUntilTimestamp = data["transcribe_audio_trial_cooldown_until"] as? Double {
+                        _internal_updateAudioTranscriptionTrialState(transaction: transaction, { $0.withUpdatedCooldownUntilTime(Int32(audioTranscriptionCooldownUntilTimestamp)) })
+                    } else {
+                        _internal_updateAudioTranscriptionTrialState(transaction: transaction, { $0.withUpdatedCooldownUntilTime(nil) })
+                    }
                 }
             }
         }

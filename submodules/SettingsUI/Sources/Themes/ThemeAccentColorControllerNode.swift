@@ -454,7 +454,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         }
 
-        self.backgroundNode.update(wallpaper: self.wallpaper)
+        self.backgroundNode.update(wallpaper: self.wallpaper, animated: false)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: self.theme, bubbleCorners: self.presentationData.chatBubbleCorners)
 
         self.stateDisposable = (self.statePromise.get()
@@ -551,7 +551,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             strongSelf.serviceBackgroundColor = serviceBackgroundColor
             strongSelf.serviceBackgroundColorPromise.set(.single(serviceBackgroundColor))
 
-            strongSelf.backgroundNode.update(wallpaper: wallpaper)
+            strongSelf.backgroundNode.update(wallpaper: wallpaper, animated: false)
             strongSelf.backgroundNode.updateBubbleTheme(bubbleTheme: strongSelf.theme, bubbleCorners: strongSelf.presentationData.chatBubbleCorners)
 
             strongSelf.ready.set(.single(true))

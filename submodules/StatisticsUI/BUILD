@@ -37,6 +37,7 @@ swift_library(
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/ShareController:ShareController",
         "//submodules/TelegramUI/Components/Stories/AvatarStoryIndicatorComponent",
+        "//submodules/TelegramUI/Components/Stories/StoryContainerScreen",
     ],
     visibility = [
         "//visibility:public",

@@ -33,6 +33,7 @@ swift_library(
         "//submodules/Components/MultilineTextComponent",
         "//submodules/Components/BundleIconComponent",
         "//submodules/ChatMessageBackground",
+        "//submodules/ContextUI",
     ],
     visibility = [
         "//visibility:public",

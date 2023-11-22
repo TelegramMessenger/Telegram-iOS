@@ -51,6 +51,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let translateToLanguage: String?
     public let maxReadStoryId: Int32?
     public let recommendedChannels: RecommendedChannels?
+    public let audioTranscriptionTrial: AudioTranscription.TrialState
     
     public init(
         automaticDownloadPeerType: MediaAutoDownloadPeerType,
@@ -75,7 +76,8 @@ public final class ChatMessageItemAssociatedData: Equatable {
         hasBots: Bool = false,
         translateToLanguage: String? = nil,
         maxReadStoryId: Int32? = nil,
-        recommendedChannels: RecommendedChannels? = nil
+        recommendedChannels: RecommendedChannels? = nil,
+        audioTranscriptionTrial: AudioTranscription.TrialState = .defaultValue
     ) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadPeerId = automaticDownloadPeerId
@@ -100,6 +102,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.translateToLanguage = translateToLanguage
         self.maxReadStoryId = maxReadStoryId
         self.recommendedChannels = recommendedChannels
+        self.audioTranscriptionTrial = audioTranscriptionTrial
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -167,6 +170,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.recommendedChannels != rhs.recommendedChannels {
+            return false
+        }
+        if lhs.audioTranscriptionTrial != rhs.audioTranscriptionTrial {
             return false
         }
         return true
@@ -724,6 +730,15 @@ public enum ChatControllerSubject: Equatable {
             } else {
                 return false
             }
+        }
+    }
+    
+    public var isService: Bool {
+        switch self {
+        case .message:
+            return false
+        default:
+            return true
         }
     }
 }
