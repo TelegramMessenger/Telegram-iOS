@@ -1210,7 +1210,7 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
         updateState { $0.withUpdatedGiftsSelected(selected).withUpdatedBoostersExpanded(false) }
     })
     
-    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil)
+    let messageView = context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: peerId, threadId: nil), index: .upperBound, anchorIndex: .upperBound, count: 200, fixedCombinedReadStates: nil)
     |> map { messageHistoryView, _, _ -> MessageHistoryView? in
         return messageHistoryView
     }
@@ -1262,7 +1262,19 @@ public func channelStatsController(context: AccountContext, updatedPresentationD
             }
         }
         
-        let messages = messageView?.entries.map { $0.message }.sorted(by: { (lhsMessage, rhsMessage) -> Bool in
+        var existingGroupingKeys = Set<Int64>()
+        var idsToFilter = Set<MessageId>()
+        var messages = messageView?.entries.map { $0.message } ?? []
+        for message in messages {
+            if let groupingKey = message.groupingKey {
+                if existingGroupingKeys.contains(groupingKey) {
+                    idsToFilter.insert(message.id)
+                } else {
+                    existingGroupingKeys.insert(groupingKey)
+                }
+            }
+        }
+        messages = messages.filter { !idsToFilter.contains($0.id) }.sorted(by: { (lhsMessage, rhsMessage) -> Bool in
             return lhsMessage.timestamp > rhsMessage.timestamp
         })
         let interactions = data?.postInteractions.reduce([ChannelStatsPostInteractions.PostId : ChannelStatsPostInteractions]()) { (map, interactions) -> [ChannelStatsPostInteractions.PostId : ChannelStatsPostInteractions] in

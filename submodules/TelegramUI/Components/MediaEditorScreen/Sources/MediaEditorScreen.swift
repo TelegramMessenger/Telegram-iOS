@@ -1054,9 +1054,12 @@ final class MediaEditorScreenComponent: Component {
                 if case let .video(_, _, _, additionalPath, _, _, _, _, _) = subject, additionalPath != nil {
                     canRecordVideo = false
                 }
-            }
-            if "".isEmpty {
-                canRecordVideo = false
+                if case let .asset(asset) = subject, asset.mediaType == .image {
+                    canRecordVideo = false
+                }
+                if case .image = subject {
+                    canRecordVideo = false
+                }
             }
             
             self.inputPanel.parentState = state
