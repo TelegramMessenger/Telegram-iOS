@@ -732,6 +732,15 @@ public enum ChatControllerSubject: Equatable {
             }
         }
     }
+    
+    public var isService: Bool {
+        switch self {
+        case .message:
+            return false
+        default:
+            return true
+        }
+    }
 }
 
 public enum ChatControllerPresentationMode: Equatable {
