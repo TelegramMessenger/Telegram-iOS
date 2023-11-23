@@ -1083,7 +1083,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
     dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
-    dict[1780171841] = { return Api.help.PeerColorOption.parse_peerColorOption($0) }
+    dict[324785199] = { return Api.help.PeerColorOption.parse_peerColorOption($0) }
+    dict[864391742] = { return Api.help.PeerColorSet.parse_peerColorProfileSet($0) }
+    dict[639736408] = { return Api.help.PeerColorSet.parse_peerColorSet($0) }
     dict[16313608] = { return Api.help.PeerColors.parse_peerColors($0) }
     dict[732034510] = { return Api.help.PeerColors.parse_peerColorsNotModified($0) }
     dict[1395946908] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
@@ -1945,6 +1947,8 @@ public extension Api {
             case let _1 as Api.help.PassportConfig:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PeerColorOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.help.PeerColorSet:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.PeerColors:
                 _1.serialize(buffer, boxed)

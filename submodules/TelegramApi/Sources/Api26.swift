@@ -1104,26 +1104,18 @@ public extension Api.help {
 }
 public extension Api.help {
     enum PeerColorOption: TypeConstructorDescription {
-        case peerColorOption(flags: Int32, colorId: Int32, colors: [Int32]?, darkColors: [Int32]?)
+        case peerColorOption(flags: Int32, colorId: Int32, colors: Api.help.PeerColorSet?, darkColors: Api.help.PeerColorSet?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .peerColorOption(let flags, let colorId, let colors, let darkColors):
                     if boxed {
-                        buffer.appendInt32(1780171841)
+                        buffer.appendInt32(324785199)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(colorId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(colors!.count))
-                    for item in colors! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }}
-                    if Int(flags) & Int(1 << 2) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(darkColors!.count))
-                    for item in darkColors! {
-                        serializeInt32(item, buffer: buffer, boxed: false)
-                    }}
+                    if Int(flags) & Int(1 << 1) != 0 {colors!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {darkColors!.serialize(buffer, true)}
                     break
     }
     }
@@ -1140,13 +1132,13 @@ public extension Api.help {
             _1 = reader.readInt32()
             var _2: Int32?
             _2 = reader.readInt32()
-            var _3: [Int32]?
-            if Int(_1!) & Int(1 << 1) != 0 {if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            var _3: Api.help.PeerColorSet?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.help.PeerColorSet
             } }
-            var _4: [Int32]?
-            if Int(_1!) & Int(1 << 2) != 0 {if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            var _4: Api.help.PeerColorSet?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _4 = Api.parse(reader, signature: signature) as? Api.help.PeerColorSet
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1154,6 +1146,94 @@ public extension Api.help {
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
             if _c1 && _c2 && _c3 && _c4 {
                 return Api.help.PeerColorOption.peerColorOption(flags: _1!, colorId: _2!, colors: _3, darkColors: _4)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api.help {
+    enum PeerColorSet: TypeConstructorDescription {
+        case peerColorProfileSet(palleteColors: [Int32], bgColors: [Int32], storyColors: [Int32])
+        case peerColorSet(colors: [Int32])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .peerColorProfileSet(let palleteColors, let bgColors, let storyColors):
+                    if boxed {
+                        buffer.appendInt32(864391742)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(palleteColors.count))
+                    for item in palleteColors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(bgColors.count))
+                    for item in bgColors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(storyColors.count))
+                    for item in storyColors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .peerColorSet(let colors):
+                    if boxed {
+                        buffer.appendInt32(639736408)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(colors.count))
+                    for item in colors {
+                        serializeInt32(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .peerColorProfileSet(let palleteColors, let bgColors, let storyColors):
+                return ("peerColorProfileSet", [("palleteColors", palleteColors as Any), ("bgColors", bgColors as Any), ("storyColors", storyColors as Any)])
+                case .peerColorSet(let colors):
+                return ("peerColorSet", [("colors", colors as Any)])
+    }
+    }
+    
+        public static func parse_peerColorProfileSet(_ reader: BufferReader) -> PeerColorSet? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _2: [Int32]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            var _3: [Int32]?
+            if let _ = reader.readInt32() {
+                _3 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.help.PeerColorSet.peerColorProfileSet(palleteColors: _1!, bgColors: _2!, storyColors: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_peerColorSet(_ reader: BufferReader) -> PeerColorSet? {
+            var _1: [Int32]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1471112230, elementType: Int32.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.help.PeerColorSet.peerColorSet(colors: _1!)
             }
             else {
                 return nil
@@ -1298,100 +1378,6 @@ public extension Api.help {
             let _c6 = _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
                 return Api.help.PremiumPromo.premiumPromo(statusText: _1!, statusEntities: _2!, videoSections: _3!, videos: _4!, periodOptions: _5!, users: _6!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api.help {
-    enum PromoData: TypeConstructorDescription {
-        case promoData(flags: Int32, expires: Int32, peer: Api.Peer, chats: [Api.Chat], users: [Api.User], psaType: String?, psaMessage: String?)
-        case promoDataEmpty(expires: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
-                    if boxed {
-                        buffer.appendInt32(-1942390465)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(chats.count))
-                    for item in chats {
-                        item.serialize(buffer, true)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(users.count))
-                    for item in users {
-                        item.serialize(buffer, true)
-                    }
-                    if Int(flags) & Int(1 << 1) != 0 {serializeString(psaType!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 2) != 0 {serializeString(psaMessage!, buffer: buffer, boxed: false)}
-                    break
-                case .promoDataEmpty(let expires):
-                    if boxed {
-                        buffer.appendInt32(-1728664459)
-                    }
-                    serializeInt32(expires, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .promoData(let flags, let expires, let peer, let chats, let users, let psaType, let psaMessage):
-                return ("promoData", [("flags", flags as Any), ("expires", expires as Any), ("peer", peer as Any), ("chats", chats as Any), ("users", users as Any), ("psaType", psaType as Any), ("psaMessage", psaMessage as Any)])
-                case .promoDataEmpty(let expires):
-                return ("promoDataEmpty", [("expires", expires as Any)])
-    }
-    }
-    
-        public static func parse_promoData(_ reader: BufferReader) -> PromoData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int32?
-            _2 = reader.readInt32()
-            var _3: Api.Peer?
-            if let signature = reader.readInt32() {
-                _3 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _4: [Api.Chat]?
-            if let _ = reader.readInt32() {
-                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Chat.self)
-            }
-            var _5: [Api.User]?
-            if let _ = reader.readInt32() {
-                _5 = Api.parseVector(reader, elementSignature: 0, elementType: Api.User.self)
-            }
-            var _6: String?
-            if Int(_1!) & Int(1 << 1) != 0 {_6 = parseString(reader) }
-            var _7: String?
-            if Int(_1!) & Int(1 << 2) != 0 {_7 = parseString(reader) }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 1) == 0) || _6 != nil
-            let _c7 = (Int(_1!) & Int(1 << 2) == 0) || _7 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
-                return Api.help.PromoData.promoData(flags: _1!, expires: _2!, peer: _3!, chats: _4!, users: _5!, psaType: _6, psaMessage: _7)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_promoDataEmpty(_ reader: BufferReader) -> PromoData? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.help.PromoData.promoDataEmpty(expires: _1!)
             }
             else {
                 return nil

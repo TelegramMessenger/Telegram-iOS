@@ -238,9 +238,11 @@ public final class PeerInfoCoverComponent: Component {
             var secondaryBackgroundColor: UIColor
             let patternColor: UIColor
             if let peer = component.peer, let colors = peer._asPeer().profileColor.flatMap({ component.context.peerNameColors.getProfile($0, dark: component.isDark) }) {
+                
                 backgroundColor = colors.main
                 secondaryBackgroundColor = colors.secondary ?? colors.main
-                patternColor = colors.main.withMultiplied(hue: 1.0, saturation: 1.0, brightness: 0.8).withMultipliedAlpha(0.8)
+                
+                patternColor = UIColor(white: 0.0, alpha: component.isDark ? 0.2 : 0.15).blendOver(background: backgroundColor)
             } else {
                 backgroundColor = .clear
                 secondaryBackgroundColor = .clear

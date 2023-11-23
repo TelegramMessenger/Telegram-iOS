@@ -222,58 +222,35 @@ public final class EngineAvailableColorOptions: Codable, Equatable {
 }
 
 private extension EngineAvailableColorOptions.ColorOption {
-    convenience init?(apiColors: [Int32]) {
+    convenience init?(apiColors: Api.help.PeerColorSet) {
         let palette: EngineAvailableColorOptions.MultiColorPack
         let background: EngineAvailableColorOptions.MultiColorPack
         let stories: EngineAvailableColorOptions.MultiColorPack?
         
-        if apiColors.count == 1 {
-            palette = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[0])
-            ])
+        switch apiColors {
+        case let .peerColorSet(colors):
+            if colors.isEmpty {
+                return nil
+            }
+            palette = EngineAvailableColorOptions.MultiColorPack(colors: colors.map(UInt32.init(bitPattern:)))
             background = palette
             stories = nil
-        } else if apiColors.count == 2 {
-            palette = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[0]),
-                UInt32(bitPattern: apiColors[1])
-            ])
-            background = palette
-            stories = nil
-        } else if apiColors.count == 3 {
-            palette = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[0]),
-                UInt32(bitPattern: apiColors[1]),
-                UInt32(bitPattern: apiColors[2])
-            ])
-            background = palette
-            stories = nil
-        } else if apiColors.count == 4 {
-            palette = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[0])
-            ])
-            background = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[1])
-            ])
-            stories = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[2]),
-                UInt32(bitPattern: apiColors[3])
-            ])
-        } else if apiColors.count == 6 {
-            palette = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[0]),
-                UInt32(bitPattern: apiColors[1])
-            ])
-            background = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[2]),
-                UInt32(bitPattern: apiColors[3])
-            ])
-            stories = EngineAvailableColorOptions.MultiColorPack(colors: [
-                UInt32(bitPattern: apiColors[4]),
-                UInt32(bitPattern: apiColors[5])
-            ])
-        } else {
-            return nil
+        case let .peerColorProfileSet(palleteColors, bgColors, storyColors):
+            if palleteColors.isEmpty {
+                return nil
+            }
+            palette = EngineAvailableColorOptions.MultiColorPack(colors: palleteColors.map(UInt32.init(bitPattern:)))
+            
+            if bgColors.isEmpty {
+                return nil
+            }
+            background = EngineAvailableColorOptions.MultiColorPack(colors: bgColors.map(UInt32.init(bitPattern:)))
+            
+            if !storyColors.isEmpty {
+                stories = EngineAvailableColorOptions.MultiColorPack(colors: storyColors.map(UInt32.init(bitPattern:)))
+            } else {
+                stories = nil
+            }
         }
         
         self.init(palette: palette, background: background, stories: stories)
@@ -287,6 +264,7 @@ private extension EngineAvailableColorOptions {
             switch apiColor {
             case let .peerColorOption(flags, colorId, colors, darkColors):
                 let isHidden = (flags & (1 << 0)) != 0
+                
                 let mappedColors = colors.flatMap(EngineAvailableColorOptions.ColorOption.init(apiColors:))
                 let mappedDarkColors = darkColors.flatMap(EngineAvailableColorOptions.ColorOption.init(apiColors:))
                 

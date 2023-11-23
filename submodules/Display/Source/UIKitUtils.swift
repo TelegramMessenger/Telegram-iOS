@@ -286,6 +286,35 @@ public extension UIColor {
         return self
     }
     
+    func blendOver(background: UIColor) -> UIColor {
+        let base = background
+        let blend = self
+        
+        func overlayChannel(baseChannel: CGFloat, blendChannel: CGFloat) -> CGFloat {
+            if baseChannel < 0.5 {
+                return 2 * baseChannel * blendChannel
+            } else {
+                return 1 - 2 * (1 - baseChannel) * (1 - blendChannel)
+            }
+        }
+        
+        var baseRed: CGFloat = 0, baseGreen: CGFloat = 0, baseBlue: CGFloat = 0, baseAlpha: CGFloat = 0
+        base.getRed(&baseRed, green: &baseGreen, blue: &baseBlue, alpha: &baseAlpha)
+        
+        var blendRed: CGFloat = 0, blendGreen: CGFloat = 0, blendBlue: CGFloat = 0, blendAlpha: CGFloat = 0
+        blend.getRed(&blendRed, green: &blendGreen, blue: &blendBlue, alpha: &blendAlpha)
+        
+        var red = overlayChannel(baseChannel: baseRed, blendChannel: blendRed)
+        var green = overlayChannel(baseChannel: baseGreen, blendChannel: blendGreen)
+        var blue = overlayChannel(baseChannel: baseBlue, blendChannel: blendBlue)
+        
+        red = max(0.0, min(1.0, red))
+        green = max(0.0, min(1.0, green))
+        blue = max(0.0, min(1.0, blue))
+        
+        return UIColor(red: red, green: green, blue: blue, alpha: blendAlpha).blitOver(background, alpha: 1.0)
+    }
+    
     func withMultipliedAlpha(_ alpha: CGFloat) -> UIColor {
         var r1: CGFloat = 0.0
         var g1: CGFloat = 0.0

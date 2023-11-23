@@ -526,15 +526,15 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let regularNavigationContentsSecondaryColor: UIColor
         if let profileColor = peer?.profileColor {
-            let backgroundColor = self.context.peerNameColors.getProfile(profileColor).main
+            let backgroundColor = self.context.peerNameColors.getProfile(profileColor, dark: presentationData.theme.overallDarkAppearance).main
             regularNavigationContentsSecondaryColor = UIColor(white: 1.0, alpha: 0.6).blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 1.5), alpha: 1.0)
             
             if presentationData.theme.overallDarkAppearance {
-                let baseButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.4)
-                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 2.2, brightness: 0.7), alpha: 1.0)
+                let baseButtonBackgroundColor: UIColor = UIColor(white: 0.0, alpha: 0.25)
+                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColor)
             } else {
-                let baseButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.3)
-                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blitOver(backgroundColor.withMultiplied(hue: 1.0, saturation: 0.8, brightness: 1.0), alpha: 1.0)
+                let baseButtonBackgroundColor: UIColor = UIColor(white: 1.0, alpha: 0.25)
+                regularContentButtonBackgroundColor = baseButtonBackgroundColor.blendOver(background: backgroundColor)
             }
             regularHeaderButtonBackgroundColor = regularContentButtonBackgroundColor
         } else {
