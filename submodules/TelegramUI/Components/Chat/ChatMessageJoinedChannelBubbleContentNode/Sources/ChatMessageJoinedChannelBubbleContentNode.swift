@@ -612,7 +612,7 @@ private final class ChannelItemComponent: Component {
                     maximumNumberOfLines: 2
                 )),
                 environment: {},
-                containerSize: CGSize(width: itemSize.width - 16.0, height: 100.0)
+                containerSize: CGSize(width: itemSize.width - 9.0, height: 100.0)
             )
             
             let subtitleSize = self.subtitle.update(

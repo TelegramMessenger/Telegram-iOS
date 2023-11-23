@@ -15,14 +15,16 @@ class StatsGraphItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let graph: StatsGraph
     let type: ChartType
+    let noInitialZoom: Bool
     let getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)?
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     
-    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(presentationData: ItemListPresentationData, graph: StatsGraph, type: ChartType, noInitialZoom: Bool = false, getDetailsData: ((Date, @escaping (String?) -> Void) -> Void)? = nil, sectionId: ItemListSectionId, style: ItemListStyle) {
         self.presentationData = presentationData
         self.graph = graph
         self.type = type
+        self.noInitialZoom = noInitialZoom
         self.getDetailsData = getDetailsData
         self.sectionId = sectionId
         self.style = style
@@ -266,7 +268,7 @@ class StatsGraphItemNode: ListViewItemNode {
                     
                     if let updatedGraph = updatedGraph {
                         if case .Loaded = updatedGraph, let updatedController = updatedController {
-                            strongSelf.chartNode.setup(controller: updatedController)
+                            strongSelf.chartNode.setup(controller: updatedController, noInitialZoom: item.noInitialZoom)
                             strongSelf.activityIndicator.isHidden = true
                             strongSelf.chartNode.isHidden = false
                         } else if case .OnDemand = updatedGraph {

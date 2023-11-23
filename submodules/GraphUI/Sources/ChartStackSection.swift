@@ -181,7 +181,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
         self.chartView.setNeedsDisplay()
     }
     
-    func setup(controller: BaseChartController, displayRange: Bool = true) {
+    func setup(controller: BaseChartController, displayRange: Bool = true, zoomToEnding: Bool = true) {
         self.controller = controller
         self.displayRange = displayRange
         
@@ -246,7 +246,7 @@ class ChartStackSection: UIView, ChartThemeContainer {
         controller.initializeChart()
         updateToolViews(animated: false)
         
-        let range: ClosedRange<CGFloat> = displayRange ? 0.8 ... 1.0 : 0.0 ... 1.0
+        let range: ClosedRange<CGFloat> = displayRange && zoomToEnding ? 0.8 ... 1.0 : 0.0 ... 1.0
         rangeView.setRange(range, animated: false)
         controller.updateChartRange(range, animated: false)
         
