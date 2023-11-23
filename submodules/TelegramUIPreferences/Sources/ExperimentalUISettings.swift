@@ -195,7 +195,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.storiesJpegExperiment = try container.decodeIfPresent(Bool.self, forKey: "storiesJpegExperiment") ?? false
         self.crashOnMemoryPressure = try container.decodeIfPresent(Bool.self, forKey: "crashOnMemoryPressure") ?? false
         self.unidirectionalSwipeToReply = try container.decodeIfPresent(Bool.self, forKey: "unidirectionalSwipeToReply") ?? false
-        self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect") ?? false
+        self.dustEffect = try container.decodeIfPresent(Bool.self, forKey: "dustEffect_2") ?? false
         self.callUIV2 = try container.decodeIfPresent(Bool.self, forKey: "callUIV2") ?? false
         self.allowWebViewInspection = try container.decodeIfPresent(Bool.self, forKey: "allowWebViewInspection") ?? false
     }
@@ -232,7 +232,7 @@ public struct ExperimentalUISettings: Codable, Equatable {
         try container.encode(self.storiesJpegExperiment, forKey: "storiesJpegExperiment")
         try container.encode(self.crashOnMemoryPressure, forKey: "crashOnMemoryPressure")
         try container.encode(self.unidirectionalSwipeToReply, forKey: "unidirectionalSwipeToReply")
-        try container.encode(self.dustEffect, forKey: "dustEffect")
+        try container.encode(self.dustEffect, forKey: "dustEffect_2")
         try container.encode(self.callUIV2, forKey: "callUIV2")
         try container.encode(self.allowWebViewInspection, forKey: "allowWebViewInspection")
     }

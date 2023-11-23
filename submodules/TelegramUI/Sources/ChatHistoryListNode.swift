@@ -2886,17 +2886,19 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
         let transition = self.enqueuedHistoryViewTransitions.removeFirst()
         
         var expiredMessageIds = Set<MessageId>()
-        if let previousHistoryView = self.historyView {
+        if let previousHistoryView = self.historyView, transition.options.contains(.AnimateInsertion) {
+            let demoDustEffect = self.context.sharedContext.immediateExperimentalUISettings.dustEffect
+            
             var existingIds = Set<MessageId>()
             for entry in transition.historyView.filteredEntries {
                 switch entry {
                 case let .MessageEntry(message, _, _, _, _, _):
-                    if message.autoremoveAttribute != nil {
+                    if message.autoremoveAttribute != nil || demoDustEffect {
                         existingIds.insert(message.id)
                     }
                 case let .MessageGroupEntry(_, messages, _):
                     for message in messages {
-                        if message.0.autoremoveAttribute != nil {
+                        if message.0.autoremoveAttribute != nil || demoDustEffect {
                             existingIds.insert(message.0.id)
                         }
                     }
@@ -2914,6 +2916,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             if exipiresAt >= currentTimestamp - 1 {
                                 expiredMessageIds.insert(message.id)
                             }
+                        } else if demoDustEffect {
+                            expiredMessageIds.insert(message.id)
                         }
                     }
                 case let .MessageGroupEntry(_, messages, _):
@@ -2922,6 +2926,8 @@ public final class ChatHistoryListNodeImpl: ListView, ChatHistoryNode, ChatHisto
                             if let autoremoveAttribute = message.0.autoremoveAttribute, let countdownBeginTime = autoremoveAttribute.countdownBeginTime {
                                 let exipiresAt = countdownBeginTime + autoremoveAttribute.timeout
                                 if exipiresAt >= currentTimestamp - 1 {
+                                    expiredMessageIds.insert(message.0.id)
+                                } else if demoDustEffect {
                                     expiredMessageIds.insert(message.0.id)
                                 }
                             }
