@@ -152,7 +152,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             guard let data = entry.get(MessageHistoryThreadData.self) else {
                 return nil
             }
-            return Message.AssociatedThreadInfo(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor)
+            return Message.AssociatedThreadInfo(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor, isClosed: data.isClosed)
         },
         decodeAutoremoveTimeout: { cachedData in
             if let cachedData = cachedData as? CachedUserData {
