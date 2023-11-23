@@ -336,7 +336,7 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         self.translateToLanguage = translateToLanguage
         self.peerIsCopyProtected = peerIsCopyProtected
         self.isSecret = isSecret
-        self.imageNode.captureProtected = message.isCopyProtected() || peerIsCopyProtected || isSecret
+        self.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected() || peerIsCopyProtected || isSecret
         self.footerContentNode.setMessage(message, displayInfo: displayInfo, translateToLanguage: translateToLanguage, peerIsCopyProtected: peerIsCopyProtected)
     }
     

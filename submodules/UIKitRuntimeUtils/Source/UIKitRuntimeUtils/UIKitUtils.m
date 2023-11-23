@@ -231,3 +231,48 @@ NSObject * _Nullable makeBlurFilter() {
 NSObject * _Nullable makeLuminanceToAlphaFilter() {
     return [(id<GraphicsFilterProtocol>)NSClassFromString(@"CAFilter") filterWithName:@"luminanceToAlpha"];
 }
+
+void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
+    static UITextField *textField = nil;
+    static UIView *secureView = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        textField = [[UITextField alloc] init];
+        for (UIView *subview in textField.subviews) {
+            if ([NSStringFromClass([subview class]) containsString:@"TextLayoutCanvasView"]) {
+                secureView = subview;
+                break;
+            }
+        }
+    });
+    if (secureView == nil) {
+        return;
+    }
+    
+    CALayer *previousLayer = secureView.layer;
+    [secureView setValue:layer forKey:@"layer"];
+    if (disableScreenshots) {
+        textField.secureTextEntry = false;
+        textField.secureTextEntry = true;
+    } else {
+        textField.secureTextEntry = true;
+        textField.secureTextEntry = false;
+    }
+    [secureView setValue:previousLayer forKey:@"layer"];
+}
+
+void setLayerContentsMaskMode(CALayer * _Nonnull layer, bool maskMode) {
+    static NSString *key = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        key = [@"contents" stringByAppendingString:@"Swizzle"];
+    });
+    if (key == nil) {
+        return;
+    }
+    if (maskMode) {
+        [layer setValue:@"AAAA" forKey:key];
+    } else {
+        [layer setValue:@"RGBA" forKey:key];
+    }
+}

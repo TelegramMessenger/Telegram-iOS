@@ -29,3 +29,6 @@ UIView * _Nullable getPortalViewSourceView(UIView * _Nonnull portalView);
 
 NSObject * _Nullable makeBlurFilter();
 NSObject * _Nullable makeLuminanceToAlphaFilter();
+
+void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots);
+void setLayerContentsMaskMode(CALayer * _Nonnull layer, bool maskMode);
