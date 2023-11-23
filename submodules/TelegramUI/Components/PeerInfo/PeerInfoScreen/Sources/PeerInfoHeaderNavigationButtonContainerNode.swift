@@ -81,14 +81,27 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 }
                 let buttonSize = buttonNode.update(key: spec.key, presentationData: presentationData, height: size.height)
                 var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
+                
+                let buttonY: CGFloat
+                if case .back = spec.key {
+                    buttonY = 0.0
+                } else {
+                    buttonY = expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)
+                }
+                let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: buttonY), size: buttonSize)
+                
                 nextButtonOrigin += buttonSize.width + 4.0
                 if spec.isForExpandedView {
                     nextExpandedButtonOrigin = nextButtonOrigin
                 } else {
                     nextRegularButtonOrigin = nextButtonOrigin
                 }
-                let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                let alphaFactor: CGFloat
+                if case .back = spec.key {
+                    alphaFactor = 1.0
+                } else {
+                    alphaFactor = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                }
                 if wasAdded {
                     buttonNode.frame = buttonFrame
                     buttonNode.alpha = 0.0
@@ -117,7 +130,13 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                 if let buttonNode = self.leftButtonNodes[spec.key] {
                     let buttonSize = buttonNode.bounds.size
                     var nextButtonOrigin = spec.isForExpandedView ? nextExpandedButtonOrigin : nextRegularButtonOrigin
-                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)), size: buttonSize)
+                    let buttonY: CGFloat
+                    if case .back = spec.key {
+                        buttonY = 0.0
+                    } else {
+                        buttonY = expandOffset + (spec.isForExpandedView ? maximumExpandOffset : 0.0)
+                    }
+                    let buttonFrame = CGRect(origin: CGPoint(x: nextButtonOrigin, y: buttonY), size: buttonSize)
                     nextButtonOrigin += buttonSize.width + 4.0
                     if spec.isForExpandedView {
                         nextExpandedButtonOrigin = nextButtonOrigin
@@ -125,7 +144,12 @@ final class PeerInfoHeaderNavigationButtonContainerNode: SparseNode {
                         nextRegularButtonOrigin = nextButtonOrigin
                     }
                     transition.updateFrameAdditiveToCenter(node: buttonNode, frame: buttonFrame)
-                    let alphaFactor: CGFloat = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                    let alphaFactor: CGFloat
+                    if case .back = spec.key {
+                        alphaFactor = 1.0
+                    } else {
+                        alphaFactor = spec.isForExpandedView ? expandFraction : (1.0 - expandFraction)
+                    }
                     
                     var buttonTransition = transition
                     if case let .animated(duration, curve) = buttonTransition, alphaFactor == 0.0 {
