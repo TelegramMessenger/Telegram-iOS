@@ -119,6 +119,10 @@ final class PeerNameColorProfilePreviewItemNode: ListViewItemNode {
                 guard let self else {
                     return
                 }
+                if let previousItem = self.item, (previousItem.peer?.profileColor != item.peer?.profileColor) || (previousItem.peer?.profileBackgroundEmojiId != item.peer?.profileBackgroundEmojiId) {
+                    UIView.transition(with: self.view, duration: 0.2, options: UIView.AnimationOptions.transitionCrossDissolve, animations: {
+                    })
+                }
                 self.item = item
                     
                 self.topStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
