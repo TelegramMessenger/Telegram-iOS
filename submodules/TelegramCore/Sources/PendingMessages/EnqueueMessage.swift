@@ -47,7 +47,7 @@ public struct EngineMessageReplyQuote: Codable, Equatable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
         try container.encode(self.text, forKey: .text)
-        try container.encode(self.offset.flatMap(Int32.init(clamping:)), forKey: .offset)
+        try container.encodeIfPresent(self.offset.flatMap(Int32.init(clamping:)), forKey: .offset)
         try container.encode(self.entities, forKey: .entities)
         if let media = self.media {
             let mediaEncoder = PostboxEncoder()
