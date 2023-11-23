@@ -17,6 +17,8 @@ import StickerResources
 import AvatarNode
 import AccountContext
 import AnimatedAvatarSetNode
+import ComponentFlow
+import EmojiStatusComponent
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let presentationData: PresentationData
@@ -36,6 +38,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private var stillStickerNode: TransformImageNode?
     private var stickerImageSize: CGSize?
     private var stickerOffset: CGPoint?
+    private var emojiStatus: ComponentView<Empty>?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -812,6 +815,65 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: context.account, resource: resource._asResource(), isVideo: file.isVideoSticker), width: 80, height: 80, playbackMode: loop ? .loop : .once, mode: .cached)
                     }
                 }
+            case let .customEmoji(context, file, loop, title, text, customUndoText, _):
+                self.avatarNode = nil
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+            
+                let imageBoundingSize = CGSize(width: 34.0, height: 34.0)
+            
+                let emojiStatus = ComponentView<Empty>()
+                self.emojiStatus = emojiStatus
+                let _ = emojiStatus.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: context,
+                        animationCache: context.animationCache,
+                        animationRenderer: context.animationRenderer,
+                        content: .animation(
+                            content: .file(file: file),
+                            size: imageBoundingSize,
+                            placeholderColor: UIColor(white: 1.0, alpha: 0.1),
+                            themeColor: .white,
+                            loopMode: loop ? .forever : .count(1)
+                        ),
+                        isVisibleForAnimations: true,
+                        useSharedAnimation: false,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: imageBoundingSize
+                )
+            
+                self.stickerImageSize = imageBoundingSize
+            
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                } else {
+                    self.titleNode.attributedText = nil
+                }
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 5
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
+            
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
+                self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
             case let .copy(text):
                 self.avatarNode = nil
                 self.iconNode = nil
@@ -1114,7 +1176,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             } else {
                 self.isUserInteractionEnabled = false
             }
-        case .sticker:
+        case .sticker, .customEmoji:
             self.isUserInteractionEnabled = displayUndo
         case .dice:
             self.panelWrapperNode.clipsToBounds = true
@@ -1144,6 +1206,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
         self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
         self.stillStickerNode.flatMap(self.panelWrapperNode.addSubnode)
+        if let emojiStatusView = self.emojiStatus?.view {
+            self.panelWrapperNode.view.addSubview(emojiStatusView)
+        }
         self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.slotMachineNode.flatMap(self.panelWrapperNode.addSubnode)
         self.avatarNode.flatMap(self.panelWrapperNode.addSubnode)
@@ -1200,6 +1265,12 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     @objc private func undoButtonPressed() {
         switch self.content {
         case let .sticker(_, _, _, _, _, _, customAction):
+            if let customAction = customAction {
+                customAction()
+            } else {
+                let _ = self.action(.undo)
+            }
+        case let .customEmoji(_, _, _, _, _, _, customAction):
             if let customAction = customAction {
                 customAction()
             } else {
@@ -1432,6 +1503,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stickerImageSize, boundingSize: stickerImageSize, intrinsicInsets: UIEdgeInsets()))
                 let _ = imageApply()
                 transition.updateFrame(node: stillStickerNode, frame: iconFrame)
+            }
+            
+            if let emojiStatusView = self.emojiStatus?.view {
+                transition.updateFrame(view: emojiStatusView, frame: iconFrame)
             }
             
             if let animatedStickerNode = self.animatedStickerNode {

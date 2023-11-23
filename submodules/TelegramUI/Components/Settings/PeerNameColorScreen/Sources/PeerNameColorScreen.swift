@@ -18,15 +18,18 @@ private final class PeerNameColorScreenArguments {
     let context: AccountContext
     let updateNameColor: (PeerNameColor?) -> Void
     let updateBackgroundEmojiId: (Int64?) -> Void
+    let resetColor: () -> Void
     
     init(
         context: AccountContext,
         updateNameColor: @escaping (PeerNameColor?) -> Void,
-        updateBackgroundEmojiId: @escaping (Int64?) -> Void
+        updateBackgroundEmojiId: @escaping (Int64?) -> Void,
+        resetColor: @escaping () -> Void
     ) {
         self.context = context
         self.updateNameColor = updateNameColor
         self.updateBackgroundEmojiId = updateBackgroundEmojiId
+        self.resetColor = resetColor
     }
 }
 
@@ -213,7 +216,7 @@ private enum PeerNameColorScreenEntry: ItemListNodeEntry {
         case .removeColor:
             //TODO:localize
             return ItemListActionItem(presentationData: presentationData, title: "Reset Profile Color", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                arguments.updateNameColor(nil)
+                arguments.resetColor()
             })
         case let .colorDescription(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
@@ -444,6 +447,19 @@ public func PeerNameColorScreen(
                 } else {
                     updatedState.hasUpdatedProfileBackgroundEmojiId = true
                     updatedState.updatedProfileBackgroundEmojiId = emojiId
+                }
+                return updatedState
+            }
+        },
+        resetColor: {
+            updateState { state in
+                var updatedState = state
+                
+                if state.selectedTabIndex == 1 {
+                    updatedState.updatedProfileColor = nil
+                    updatedState.hasUpdatedProfileColor = true
+                    updatedState.updatedProfileBackgroundEmojiId = nil
+                    updatedState.hasUpdatedProfileBackgroundEmojiId = true
                 }
                 return updatedState
             }

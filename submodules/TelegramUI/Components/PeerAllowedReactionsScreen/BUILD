@@ -31,6 +31,7 @@ swift_library(
         "//submodules/PremiumUI",
         "//submodules/UndoUI",
         "//submodules/TextFormat",
+        "//submodules/Components/HierarchyTrackingLayer",
     ],
     visibility = [
         "//visibility:public",

@@ -7,6 +7,47 @@ import ComponentDisplayAdapters
 import SwitchComponent
 import EntityKeyboard
 import AccountContext
+import HierarchyTrackingLayer
+
+private final class CaretIndicatorView: UIImageView {
+    private let hierarchyTrackingLayer: HierarchyTrackingLayer
+    
+    override init(frame: CGRect) {
+        self.hierarchyTrackingLayer = HierarchyTrackingLayer()
+        
+        super.init(frame: frame)
+        
+        self.layer.addSublayer(self.hierarchyTrackingLayer)
+        self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+            self?.restartAnimations(delayStart: false)
+        }
+    }
+    
+    required init?(coder: NSCoder) {
+        preconditionFailure()
+    }
+    
+    func restartAnimations(delayStart: Bool) {
+        self.layer.removeAnimation(forKey: "caret")
+        
+        let animation = CAKeyframeAnimation(keyPath: "opacity")
+        animation.values = [1.0 as NSNumber, 0.0 as NSNumber, 1.0 as NSNumber, 1.0 as NSNumber]
+        let firstDuration = 0.3
+        let secondDuration = 0.25
+        let restDuration = 0.35
+        let duration = firstDuration + secondDuration + restDuration
+        let keyTimes: [NSNumber] = [0.0 as NSNumber, (firstDuration / duration) as NSNumber, ((firstDuration + secondDuration) / duration) as NSNumber, ((firstDuration + secondDuration + restDuration) / duration) as NSNumber]
+        
+        animation.keyTimes = keyTimes
+        animation.duration = duration
+        animation.repeatCount = Float.greatestFiniteMagnitude
+        animation.fillMode = .both
+        if delayStart {
+            animation.beginTime = self.layer.convertTime(CACurrentMediaTime(), from: nil) + 0.8 * UIView.animationDurationFactor()
+        }
+        self.layer.add(animation, forKey: "caret")
+    }
+}
 
 final class EmojiListInputComponent: Component {
     let context: AccountContext
@@ -66,10 +107,10 @@ final class EmojiListInputComponent: Component {
         
         private var itemLayers: [Int64: EmojiPagerContentComponent.View.ItemLayer] = [:]
         private let trailingPlaceholder = ComponentView<Empty>()
-        private let caretIndicator: UIImageView
+        private let caretIndicator: CaretIndicatorView
         
         override init(frame: CGRect) {
-            self.caretIndicator = UIImageView()
+            self.caretIndicator = CaretIndicatorView(frame: CGRect())
             self.caretIndicator.image = generateImage(CGSize(width: 2.0, height: 4.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
                 context.setFillColor(UIColor.white.cgColor)
@@ -115,6 +156,14 @@ final class EmojiListInputComponent: Component {
             }
         }
         
+        func caretRect() -> CGRect? {
+            if !self.caretIndicator.isHidden {
+                return self.caretIndicator.frame
+            } else {
+                return nil
+            }
+        }
+        
         func update(component: EmojiListInputComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             let verticalInset: CGFloat = 12.0
             let placeholderSpacing: CGFloat = 6.0
@@ -135,6 +184,10 @@ final class EmojiListInputComponent: Component {
             
             var rowCount = (component.reactionItems.count + (itemsPerRow - 1)) / itemsPerRow
             rowCount = max(1, rowCount)
+            
+            if let previousComponent = self.component, (previousComponent.reactionItems.count != component.reactionItems.count || previousComponent.isInputActive != component.isInputActive) {
+                self.caretIndicator.restartAnimations(delayStart: true)
+            }
             
             self.component = component
             self.state = state
@@ -174,9 +227,7 @@ final class EmojiListInputComponent: Component {
             self.caretIndicator.tintColor = component.theme.list.itemAccentColor
             self.caretIndicator.isHidden = !component.isInputActive
             
-            if component.caretPosition >= component.reactionItems.count {
-                transition.setFrame(view: self.caretIndicator, frame: CGRect(origin: CGPoint(x: trailingPlaceholderFrame.minX, y: trailingPlaceholderFrame.minY + floorToScreenPixels((trailingPlaceholderFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0)))
-            }
+            var caretFrame = CGRect(origin: CGPoint(x: trailingPlaceholderFrame.minX, y: trailingPlaceholderFrame.minY + floorToScreenPixels((trailingPlaceholderFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
             
             var validIds: [Int64] = []
             for i in 0 ..< component.reactionItems.count {
@@ -205,7 +256,7 @@ final class EmojiListInputComponent: Component {
                             itemFile: item.file,
                             subgroupId: nil,
                             icon: .none,
-                            tintMode: .none
+                            tintMode: item.file.isCustomTemplateEmoji ? .primary : .none
                         ),
                         context: component.context,
                         attemptSynchronousLoad: false,
@@ -214,7 +265,7 @@ final class EmojiListInputComponent: Component {
                         renderer: component.context.animationRenderer,
                         placeholderColor: component.theme.list.mediaPlaceholderColor,
                         blurredBadgeColor: .clear,
-                        accentIconColor: component.theme.list.itemAccentColor,
+                        accentIconColor: component.theme.list.itemPrimaryTextColor,
                         pointSize: CGSize(width: 32.0, height: 32.0),
                         onUpdateDisplayPlaceholder: { _, _ in
                         }
@@ -224,10 +275,19 @@ final class EmojiListInputComponent: Component {
                 }
                 itemLayer.isVisibleForAnimations = true
                 
+                switch itemLayer.item.tintMode {
+                case .none:
+                    itemLayer.layerTintColor = nil
+                case .accent, .primary, .custom:
+                    itemLayer.layerTintColor = component.theme.list.itemPrimaryTextColor.cgColor
+                }
+                
                 itemTransition.setFrame(layer: itemLayer, frame: itemFrame)
                 
                 if component.caretPosition == i {
-                    transition.setFrame(view: self.caretIndicator, frame: CGRect(origin: CGPoint(x: itemFrame.minX - 2.0, y: itemFrame.minY + floorToScreenPixels((itemFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0)))
+                    caretFrame = CGRect(origin: CGPoint(x: itemFrame.minX - 2.0, y: itemFrame.minY + floorToScreenPixels((itemFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
+                } else if i == component.reactionItems.count - 1 && component.caretPosition == i + 1 {
+                    caretFrame = CGRect(origin: CGPoint(x: itemFrame.maxX + itemSpacing, y: itemFrame.minY + floorToScreenPixels((itemFrame.height - 22.0) * 0.5)), size: CGSize(width: 2.0, height: 22.0))
                 }
                 
                 if animateIn, !transition.animation.isImmediate {
@@ -253,6 +313,22 @@ final class EmojiListInputComponent: Component {
             }
             for key in removedIds {
                 self.itemLayers.removeValue(forKey: key)
+            }
+            
+            if !transition.animation.isImmediate && abs(caretFrame.midY - self.caretIndicator.center.y) > 2.0 {
+                if let caretSnapshot = self.caretIndicator.snapshotView(afterScreenUpdates: false) {
+                    caretSnapshot.frame = self.caretIndicator.frame
+                    self.insertSubview(caretSnapshot, aboveSubview: self.caretIndicator)
+                    caretSnapshot.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak caretSnapshot] _ in
+                        caretSnapshot?.removeFromSuperview()
+                    })
+                    caretSnapshot.layer.animateScale(from: 1.0, to: 0.001, duration: 0.15, removeOnCompletion: false)
+                }
+                self.caretIndicator.frame = caretFrame
+                self.caretIndicator.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                self.caretIndicator.layer.animateScale(from: 0.001, to: 1.0, duration: 0.15)
+            } else {
+                transition.setFrame(view: self.caretIndicator, frame: caretFrame)
             }
             
             return CGSize(width: availableSize.width, height: contentHeight)

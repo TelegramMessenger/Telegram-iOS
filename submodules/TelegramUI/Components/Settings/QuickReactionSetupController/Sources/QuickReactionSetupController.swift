@@ -46,7 +46,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     }
     
     case demoHeader(String)
-    case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?)
+    case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?, accountPeer: Peer?)
     case demoDescription(String)
     case quickReaction(String, MessageReaction.Reaction, AvailableReactions)
     case quickReactionDescription(String)
@@ -98,8 +98,8 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .demoMessage(lhsWallpaper, lhsFontSize, lhsBubbleCorners, lhsDateTimeFormat, lhsNameDisplayOrder, lhsAvailableReactions, lhsReaction):
-            if case let .demoMessage(rhsWallpaper, rhsFontSize, rhsBubbleCorners, rhsDateTimeFormat, rhsNameDisplayOrder, rhsAvailableReactions, rhsReaction) = rhs, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsBubbleCorners == rhsBubbleCorners, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameDisplayOrder == rhsNameDisplayOrder, lhsAvailableReactions == rhsAvailableReactions, lhsReaction == rhsReaction {
+        case let .demoMessage(lhsWallpaper, lhsFontSize, lhsBubbleCorners, lhsDateTimeFormat, lhsNameDisplayOrder, lhsAvailableReactions, lhsReaction, lhsAccountPeer):
+            if case let .demoMessage(rhsWallpaper, rhsFontSize, rhsBubbleCorners, rhsDateTimeFormat, rhsNameDisplayOrder, rhsAvailableReactions, rhsReaction, rhsAccountPeer) = rhs, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsBubbleCorners == rhsBubbleCorners, lhsDateTimeFormat == rhsDateTimeFormat, lhsNameDisplayOrder == rhsNameDisplayOrder, lhsAvailableReactions == rhsAvailableReactions, lhsReaction == rhsReaction, lhsAccountPeer?.id == rhsAccountPeer?.id {
                 return true
             } else {
                 return false
@@ -134,7 +134,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
         switch self {
         case let .demoHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .demoMessage(wallpaper, fontSize, chatBubbleCorners, dateTimeFormat, nameDisplayOrder, availableReactions, reaction):
+        case let .demoMessage(wallpaper, fontSize, chatBubbleCorners, dateTimeFormat, nameDisplayOrder, availableReactions, reaction, accountPeer):
             return ReactionChatPreviewItem(
                 context: arguments.context,
                 theme: presentationData.theme,
@@ -147,6 +147,7 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
                 nameDisplayOrder: nameDisplayOrder,
                 availableReactions: availableReactions,
                 reaction: reaction,
+                accountPeer: accountPeer,
                 toggleReaction: {
                     arguments.toggleReaction()
                 }
@@ -172,7 +173,8 @@ private func quickReactionSetupControllerEntries(
     availableReactions: AvailableReactions?,
     reactionSettings: ReactionSettings,
     state: QuickReactionSetupControllerState,
-    isPremium: Bool
+    isPremium: Bool,
+    accountPeer: Peer?
 ) -> [QuickReactionSetupControllerEntry] {
     var entries: [QuickReactionSetupControllerEntry] = []
     
@@ -185,7 +187,8 @@ private func quickReactionSetupControllerEntries(
             dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder,
             availableReactions: availableReactions,
-            reaction: state.hasReaction ? reactionSettings.effectiveQuickReaction(hasPremium: isPremium) : nil
+            reaction: state.hasReaction ? reactionSettings.effectiveQuickReaction(hasPremium: isPremium) : nil,
+            accountPeer: accountPeer
         ))
         entries.append(.demoDescription(presentationData.strings.Settings_QuickReactionSetup_DemoInfo))
         
@@ -257,7 +260,8 @@ public func quickReactionSetupController(
             availableReactions: availableReactions,
             reactionSettings: settings,
             state: state,
-            isPremium: isPremium
+            isPremium: isPremium,
+            accountPeer: accountPeer?._asPeer()
         )
         
         let controllerState = ItemListControllerState(
@@ -283,16 +287,7 @@ public func quickReactionSetupController(
     
     let controller = ItemListController(context: context, state: signal)
     
-    controller.didScrollWithOffset = { [weak controller] offset, transition, _, _ in
-        guard let controller = controller else {
-            return
-        }
-        controller.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? ReactionChatPreviewItemNode {
-                itemNode.standaloneReactionAnimation?.addRelativeContentOffset(CGPoint(x: 0.0, y: offset), transition: transition)
-            }
-        }
-    }
+    controller.alwaysSynchronous = true
     
     openQuickReactionImpl = { [weak controller] in
         let _ = (combineLatest(queue: .mainQueue(),

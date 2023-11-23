@@ -18,6 +18,7 @@ import ShareController
 import WebPBinding
 import ReactionImageComponent
 import FeaturedStickersScreen
+import QuickReactionSetupController
 
 private final class InstalledStickerPacksControllerArguments {
     let context: AccountContext

@@ -26,9 +26,10 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
     let nameDisplayOrder: PresentationPersonNameOrder
     let availableReactions: AvailableReactions?
     let reaction: MessageReaction.Reaction?
+    let accountPeer: Peer?
     let toggleReaction: () -> Void
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?, toggleReaction: @escaping () -> Void) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, wallpaper: TelegramWallpaper, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?, accountPeer: Peer?, toggleReaction: @escaping () -> Void) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -40,6 +41,7 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
         self.nameDisplayOrder = nameDisplayOrder
         self.availableReactions = availableReactions
         self.reaction = reaction
+        self.accountPeer = accountPeer
         self.toggleReaction = toggleReaction
     }
     
@@ -53,7 +55,7 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
             
             Queue.mainQueue().async {
                 completion(node, {
-                    return (nil, { _ in apply() })
+                    return (nil, { _ in apply(.None) })
                 })
             }
         }
@@ -68,7 +70,7 @@ class ReactionChatPreviewItem: ListViewItem, ItemListItem {
                     let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
                     Queue.mainQueue().async {
                         completion(layout, { _ in
-                            apply()
+                            apply(animation)
                         })
                     }
                 }
@@ -83,6 +85,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let maskNode: ASImageNode
     
+    private let clippingNode: ASDisplayNode
     private let containerNode: ASDisplayNode
     
     private var messageNode: ListViewItemNode?
@@ -104,14 +107,17 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         
         self.maskNode = ASImageNode()
         
+        self.clippingNode = ASDisplayNode()
+        self.clippingNode.clipsToBounds = true
+        self.clippingNode.layer.cornerRadius = 10.0
+        
         self.containerNode = ASDisplayNode()
         self.containerNode.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
         super.init(layerBacked: false, dynamicBounce: false)
         
-        self.clipsToBounds = true
-        
-        self.addSubnode(self.containerNode)
+        self.addSubnode(self.clippingNode)
+        self.clippingNode.addSubnode(self.containerNode)
     }
     
     deinit {
@@ -227,32 +233,30 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     self.standaloneReactionAnimation = nil
                 }
                 
-                if let supernode = self.supernode {
-                    let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
-                    self.loadNextGenericReactionEffect(context: item.context)
-                    self.standaloneReactionAnimation = standaloneReactionAnimation
-                    
-                    let animationCache = item.context.animationCache
-                    
-                    supernode.addSubnode(standaloneReactionAnimation)
-                    standaloneReactionAnimation.frame = supernode.bounds
-                    standaloneReactionAnimation.animateReactionSelection(
-                        context: item.context, theme: item.theme, animationCache: animationCache, reaction: reactionItem,
-                        avatarPeers: [],
-                        playHaptic: false,
-                        isLarge: false,
-                        targetView: targetView,
-                        addStandaloneReactionAnimation: nil,
-                        completion: { [weak standaloneReactionAnimation] in
-                        standaloneReactionAnimation?.removeFromSupernode()
-                        }
-                    )
-                }
+                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
+                self.loadNextGenericReactionEffect(context: item.context)
+                self.standaloneReactionAnimation = standaloneReactionAnimation
+                
+                let animationCache = item.context.animationCache
+                
+                self.addSubnode(standaloneReactionAnimation)
+                standaloneReactionAnimation.frame = self.bounds
+                standaloneReactionAnimation.animateReactionSelection(
+                    context: item.context, theme: item.theme, animationCache: animationCache, reaction: reactionItem,
+                    avatarPeers: [],
+                    playHaptic: false,
+                    isLarge: false,
+                    targetView: targetView,
+                    addStandaloneReactionAnimation: nil,
+                    completion: { [weak standaloneReactionAnimation] in
+                    standaloneReactionAnimation?.removeFromSupernode()
+                    }
+                )
             }
         }
     }
     
-    func asyncLayout() -> (_ item: ReactionChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    func asyncLayout() -> (_ item: ReactionChatPreviewItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let currentNode = self.messageNode
 
         let previousItem = self.item
@@ -280,15 +284,20 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             
             var attributes: [MessageAttribute] = []
             if let reaction = item.reaction {
-                attributes.append(ReactionsMessageAttribute(canViewList: false, reactions: [MessageReaction(value: reaction, count: 1, chosenOrder: 0)], recentPeers: []))
+                var recentPeers: [ReactionsMessageAttribute.RecentPeer] = []
+                if let accountPeer = item.accountPeer {
+                    recentPeers.append(ReactionsMessageAttribute.RecentPeer(value: reaction, isLarge: false, isUnseen: false, isMy: true, peerId: accountPeer.id, timestamp: nil))
+                    peers[accountPeer.id] = accountPeer
+                }
+                attributes.append(ReactionsMessageAttribute(canViewList: false, reactions: [MessageReaction(value: reaction, count: 1, chosenOrder: 0)], recentPeers: recentPeers))
             }
             
-            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, isCentered: true)
+            let messageItem = item.context.sharedContext.makeChatMessagePreviewItem(context: item.context, messages: [Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: chatPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[userPeerId], text: messageText, attributes: attributes, media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil, associatedStories: [:])], theme: item.theme, strings: item.strings, wallpaper: item.wallpaper, fontSize: item.fontSize, chatBubbleCorners: item.chatBubbleCorners, dateTimeFormat: item.dateTimeFormat, nameOrder: item.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: currentBackgroundNode, availableReactions: item.availableReactions, accountPeer: item.accountPeer, isCentered: true)
             
             var node: ListViewItemNode?
             if let current = currentNode {
                 node = current
-                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.3, transition: ControlledTransition(duration: 0.3, curve: .easeInOut, interactive: false)), completion: { (layout, apply) in
+                messageItem.updateNode(async: { $0() }, node: { return current }, params: params, previousItem: nil, nextItem: nil, animation: .System(duration: 0.4, transition: ControlledTransition(duration: 0.4, curve: .spring, interactive: false)), completion: { (layout, apply) in
                     let nodeFrame = CGRect(origin: current.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
                     
                     current.contentSize = layout.contentSize
@@ -300,6 +309,7 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
             } else {
                 messageItem.nodeConfiguredForParams(async: { $0() }, params: params, synchronousLoads: false, previousItem: nil, nextItem: nil, completion: { messageNode, apply in
                     node = messageNode
+                    
                     apply().1(ListViewItemApply(isOnScreen: true))
                 })
                 node?.isUserInteractionEnabled = false
@@ -310,14 +320,14 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                 contentSize.height += node.frame.size.height
             }
             if item.reaction == nil {
-                contentSize.height += 34.0
+                //contentSize.height += 34.0
             }
             insets = itemListNeighborsGroupedInsets(neighbors, params)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             let layoutSize = layout.size
             
-            return (layout, { [weak self] in
+            return (layout, { [weak self] animation in
                 if let strongSelf = self {
                     if let previousItem = strongSelf.item, previousItem.reaction != item.reaction {
                         if let standaloneReactionAnimation = strongSelf.standaloneReactionAnimation {
@@ -341,7 +351,9 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
-                    var topOffset: CGFloat = 16.0 + 17.0
+                    animation.animator.updateFrame(layer: strongSelf.clippingNode.layer, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
+                    
+                    var topOffset: CGFloat = 16.0
                     if let node = node {
                         strongSelf.messageNode = node
                         if node.supernode == nil {
@@ -357,17 +369,17 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
 
                     if let currentBackgroundNode = currentBackgroundNode, strongSelf.backgroundNode !== currentBackgroundNode {
                         strongSelf.backgroundNode = currentBackgroundNode
-                        strongSelf.insertSubnode(currentBackgroundNode, at: 0)
+                        strongSelf.clippingNode.insertSubnode(currentBackgroundNode, at: 0)
                     }
 
                     if strongSelf.topStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
+                        strongSelf.clippingNode.insertSubnode(strongSelf.topStripeNode, at: 1)
                     }
                     if strongSelf.bottomStripeNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
+                        strongSelf.clippingNode.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
                     if strongSelf.maskNode.supernode == nil {
-                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                        strongSelf.addSubnode(strongSelf.maskNode)
                     }
                     let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
@@ -413,13 +425,14 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     }
                     
                     if let backgroundNode = strongSelf.backgroundNode {
-                        backgroundNode.frame = backgroundFrame.insetBy(dx: 0.0, dy: -100.0)
+                        backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: backgroundFrame.width, height: 500.0)).insetBy(dx: 0.0, dy: -100.0)
                         backgroundNode.update(wallpaper: item.wallpaper, animated: false)
                         backgroundNode.updateBubbleTheme(bubbleTheme: item.theme, bubbleCorners: item.chatBubbleCorners)
                         backgroundNode.updateLayout(size: backgroundNode.bounds.size, displayMode: displayMode, transition: .immediate)
                     }
 
-                    strongSelf.maskNode.frame = backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0)
+                    animation.animator.updateFrame(layer: strongSelf.maskNode.layer, frame: backgroundFrame.insetBy(dx: params.leftInset, dy: 0.0), completion: nil)
+                    
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     

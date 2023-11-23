@@ -7,6 +7,7 @@ import ComponentDisplayAdapters
 import EntityKeyboard
 import AccountContext
 import PagerComponent
+import AudioToolbox
 
 public final class EmojiSelectionComponent: Component {
     public typealias EnvironmentType = Empty
@@ -89,8 +90,8 @@ public final class EmojiSelectionComponent: Component {
         private let shadowView: UIImageView
         private let cornersView: UIImageView
         
+        private let backspaceButton = ComponentView<Empty>()
         private let backspaceBackgroundView: UIImageView
-        private let backspaceButtonView: HighlightTrackingButton
         
         private var component: EmojiSelectionComponent?
         private weak var state: EmptyComponentState?
@@ -105,7 +106,6 @@ public final class EmojiSelectionComponent: Component {
             self.cornersView = UIImageView()
             
             self.backspaceBackgroundView = UIImageView()
-            self.backspaceButtonView = HighlightTrackingButton()
             
             super.init(frame: frame)
             
@@ -115,9 +115,6 @@ public final class EmojiSelectionComponent: Component {
             self.addSubview(self.panelHostView)
             self.addSubview(self.cornersView)
             self.addSubview(self.shadowView)
-            
-            self.backspaceButtonView.addSubview(self.backspaceBackgroundView)
-            self.addSubview(self.backspaceButtonView)
             
             self.shadowView.image = generateImage(CGSize(width: 16.0, height: 16.0), rotatedContext: { size, context in
                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -138,35 +135,6 @@ public final class EmojiSelectionComponent: Component {
                 context.fillPath()
                 context.clear(CGRect(origin: CGPoint(x: 8.0, y: 0.0), size: CGSize(width: 1.0, height: size.height)))
             })?.withRenderingMode(.alwaysTemplate).stretchableImage(withLeftCapWidth: 8, topCapHeight: 16)
-            
-            self.backspaceButtonView.highligthedChanged = { [weak self] highlighted in
-                if let self, self.backspaceButtonView.bounds.width > 0.0 {
-                    let topScale: CGFloat = (self.backspaceButtonView.bounds.width - 8.0) / self.backspaceButtonView.bounds.width
-                    let maxScale: CGFloat = (self.backspaceButtonView.bounds.width + 2.0) / self.backspaceButtonView.bounds.width
-                    
-                    if highlighted {
-                        self.backspaceButtonView.layer.removeAnimation(forKey: "sublayerTransform")
-                        self.backspaceButtonView.alpha = 0.7
-                        let transition = Transition(animation: .curve(duration: 0.2, curve: .easeInOut))
-                        transition.setScale(layer: self.backspaceButtonView.layer, scale: topScale)
-                    } else {
-                        self.backspaceButtonView.alpha = 1.0
-                        self.backspaceButtonView.layer.animateAlpha(from: 7, to: 1.0, duration: 0.2)
-                        
-                        let transition = Transition(animation: .none)
-                        transition.setScale(layer: self.backspaceButtonView.layer, scale: 1.0)
-                        
-                        self.backspaceButtonView.layer.animateScale(from: topScale, to: maxScale, duration: 0.13, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false, completion: { [weak self] _ in
-                            guard let self else {
-                                return
-                            }
-                            
-                            self.backspaceButtonView.layer.animateScale(from: maxScale, to: 1.0, duration: 0.1, timingFunction: CAMediaTimingFunctionName.easeIn.rawValue)
-                        })
-                    }
-                }
-            }
-            self.backspaceButtonView.addTarget(self, action: #selector(self.backspacePressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
@@ -174,10 +142,6 @@ public final class EmojiSelectionComponent: Component {
         }
         
         deinit {
-        }
-        
-        @objc private func backspacePressed() {
-            self.component?.backspace?()
         }
         
         func update(component: EmojiSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -199,6 +163,29 @@ public final class EmojiSelectionComponent: Component {
             
             let backspaceButtonInset = UIEdgeInsets(top: 9.0, left: 0.0, bottom: 36.0, right: 9.0)
             let backspaceButtonSize = CGSize(width: 36.0, height: 36.0)
+            
+            let _ = self.backspaceButton.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(HStack([], spacing: 0.0)),
+                    action: { [weak self] in
+                        guard let self, let component = self.component else {
+                            return
+                        }
+                        component.backspace?()
+                        AudioServicesPlaySystemSound(1155)
+                    }
+                ).withHoldAction({ [weak self] in
+                    guard let self, let component = self.component else {
+                        return
+                    }
+                    AudioServicesPlaySystemSound(1155)
+                    component.backspace?()
+                })),
+                environment: {},
+                containerSize: backspaceButtonSize
+            )
+            
             if previousComponent?.theme !== component.theme {
                 self.backspaceBackgroundView.image = generateImage(CGSize(width: backspaceButtonSize.width + 12.0 * 2.0, height: backspaceButtonSize.height + 12.0 * 2.0), rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
@@ -215,14 +202,22 @@ public final class EmojiSelectionComponent: Component {
             }
             self.backspaceBackgroundView.frame = CGRect(origin: CGPoint(), size: backspaceButtonSize).insetBy(dx: -12.0, dy: -12.0)
             let backspaceButtonFrame = CGRect(origin: CGPoint(x: availableSize.width - component.sideInset - backspaceButtonInset.right - backspaceButtonSize.width, y: availableSize.height - component.bottomInset - backspaceButtonInset.bottom), size: backspaceButtonSize)
-            transition.setPosition(view: self.backspaceButtonView, position: backspaceButtonFrame.center)
-            transition.setBounds(view: self.backspaceButtonView, bounds: CGRect(origin: CGPoint(), size: backspaceButtonFrame.size))
-            if component.backspace != nil {
-                transition.setAlpha(view: self.backspaceButtonView, alpha: 1.0)
-                transition.setScale(view: self.backspaceButtonView, scale: 1.0)
-            } else {
-                transition.setAlpha(view: self.backspaceButtonView, alpha: 0.0)
-                transition.setScale(view: self.backspaceButtonView, scale: 0.001)
+            
+            if let backspaceButtonView = self.backspaceButton.view {
+                if backspaceButtonView.superview == nil {
+                    backspaceButtonView.addSubview(self.backspaceBackgroundView)
+                    self.addSubview(backspaceButtonView)
+                }
+                transition.setPosition(view: backspaceButtonView, position: backspaceButtonFrame.center)
+                transition.setBounds(view: backspaceButtonView, bounds: CGRect(origin: CGPoint(), size: backspaceButtonFrame.size))
+                
+                if component.backspace != nil {
+                    transition.setAlpha(view: backspaceButtonView, alpha: 1.0)
+                    transition.setScale(view: backspaceButtonView, scale: 1.0)
+                } else {
+                    transition.setAlpha(view: backspaceButtonView, alpha: 0.0)
+                    transition.setScale(view: backspaceButtonView, scale: 0.001)
+                }
             }
             
             let keyboardSize = self.keyboardView.update(
@@ -233,7 +228,7 @@ public final class EmojiSelectionComponent: Component {
                     isContentInFocus: false,
                     containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: component.sideInset, bottom: component.bottomInset + 16.0, right: component.sideInset),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                    emojiContent: component.emojiContent,
+                    emojiContent: component.emojiContent.withCustomTintColor(component.theme.list.itemPrimaryTextColor),
                     stickerContent: nil,
                     maskContent: nil,
                     gifContent: nil,

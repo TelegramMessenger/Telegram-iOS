@@ -19,6 +19,7 @@ import UndoUI
 import BundleIconComponent
 import AnimatedTextComponent
 import TextFormat
+import AudioToolbox
 
 private final class ButtonSubtitleComponent: CombinedComponent {
     let count: Int
@@ -136,6 +137,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
         private var caretPosition: Int?
         
         private var displayInput: Bool = false
+        private var recenterOnCaret: Bool = false
         
         private var isApplyingSettings: Bool = false
         private var applyDisposable: Disposable?
@@ -209,14 +211,14 @@ final class PeerAllowedReactionsScreenComponent: Component {
                 } else {
                     let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
                     //TODO:localize
-                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: "Save Changes?", actions: [
+                    self.environment?.controller()?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: "Unsaved Changes", text: "You have changed the list of reactions. Apply changes?", actions: [
                         TextAlertAction(type: .genericAction, title: "Discard", action: { [weak self] in
                             guard let self else {
                                 return
                             }
                             self.environment?.controller()?.dismiss()
                         }),
-                        TextAlertAction(type: .defaultAction, title: "Save", action: { [weak self] in
+                        TextAlertAction(type: .defaultAction, title: "Apply", action: { [weak self] in
                             guard let self else {
                                 return
                             }
@@ -446,12 +448,30 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 return
                             }
                             
+                            AudioServicesPlaySystemSound(0x450)
+                            
                             if let index = enabledReactions.firstIndex(where: { $0.file.fileId.id == itemFile.fileId.id }) {
                                 enabledReactions.remove(at: index)
                                 if let caretPosition = self.caretPosition, caretPosition > index {
                                     self.caretPosition = max(0, caretPosition - 1)
                                 }
                             } else {
+                                if enabledReactions.count >= 100 {
+                                    //TODO:localize
+                                    let presentationData = component.context.sharedContext.currentPresentationData.with { $0 }
+                                    
+                                    var animateAsReplacement = false
+                                    if let currentUndoController = self.currentUndoController {
+                                        currentUndoController.dismiss()
+                                        animateAsReplacement = true
+                                    }
+                                    
+                                    let undoController = UndoOverlayController(presentationData: presentationData, content: .info(title: nil, text: "You can select at most 100 reactions.", timeout: nil, customUndoText: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                    self.currentUndoController = undoController
+                                    self.environment?.controller()?.present(undoController, in: .current)
+                                    return
+                                }
+                                
                                 let reaction: MessageReaction.Reaction
                                 if let availableReactions = self.availableReactions, let reactionItem = availableReactions.reactions.first(where: { $0.selectAnimation.fileId.id == itemFile.fileId.id }) {
                                     reaction = reactionItem.value
@@ -479,7 +499,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                                 animateAsReplacement = true
                                             }
                                             
-                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount) custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
+                                            let undoController = UndoOverlayController(presentationData: presentationData, content: .customEmoji(context: component.context, file: itemFile, loop: false, title: nil, text: "Your channel needs to reach **Level \(nextCustomReactionCount)** to add **\(nextCustomReactionCount)** custom emoji as reactions.**", undoText: nil, customAction: nil), elevatedLayout: false, position: .bottom, animateInAsReplacement: animateAsReplacement, action: { _ in return false })
                                             self.currentUndoController = undoController
                                             self.environment?.controller()?.present(undoController, in: .current)
                                         }
@@ -494,6 +514,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                     enabledReactions.append(item)
                                     self.caretPosition = enabledReactions.count
                                 }
+                                self.recenterOnCaret = true
                             }
                             self.enabledReactions = enabledReactions
                             if !self.isUpdating {
@@ -707,6 +728,7 @@ final class PeerAllowedReactionsScreenComponent: Component {
                             }
                             if self.emojiContent != nil && !self.displayInput {
                                 self.displayInput = true
+                                self.recenterOnCaret = true
                                 self.state?.updated(transition: .spring(duration: 0.5))
                             }
                         },
@@ -936,10 +958,12 @@ final class PeerAllowedReactionsScreenComponent: Component {
                                 if caretPosition > 0 {
                                     enabledReactions.remove(at: caretPosition - 1)
                                     self.caretPosition = caretPosition - 1
+                                    self.recenterOnCaret = true
                                 }
                             } else {
                                 enabledReactions.removeLast()
                                 self.caretPosition = enabledReactions.count
+                                self.recenterOnCaret = true
                             }
                             self.enabledReactions = enabledReactions
                             if !self.isUpdating {
@@ -1005,6 +1029,25 @@ final class PeerAllowedReactionsScreenComponent: Component {
             let scrollInsets = UIEdgeInsets(top: environment.navigationHeight, left: 0.0, bottom: environment.safeInsets.bottom, right: 0.0)
             if self.scrollView.scrollIndicatorInsets != scrollInsets {
                 self.scrollView.scrollIndicatorInsets = scrollInsets
+            }
+            
+            if self.recenterOnCaret {
+                self.recenterOnCaret = false
+                
+                if let reactionInputView = self.reactionInput?.view as? EmojiListInputComponent.View, let localCaretRect = reactionInputView.caretRect() {
+                    let caretRect = reactionInputView.convert(localCaretRect, to: self.scrollView)
+                    var scrollViewBounds = self.scrollView.bounds
+                    let minButtonDistance: CGFloat = 16.0
+                    if -scrollViewBounds.minY + caretRect.maxY > buttonFrame.minY - minButtonDistance {
+                        scrollViewBounds.origin.y = -(buttonFrame.minY - minButtonDistance - caretRect.maxY)
+                        if scrollViewBounds.origin.y < 0.0 {
+                            scrollViewBounds.origin.y = 0.0
+                        }
+                    }
+                    if self.scrollView.bounds != scrollViewBounds {
+                        transition.setBounds(view: self.scrollView, bounds: scrollViewBounds)
+                    }
+                }
             }
             
             self.updateScrolling(transition: transition)
@@ -1076,6 +1119,9 @@ public class PeerAllowedReactionsScreen: ViewControllerComponentContainer {
             peerId: peerId,
             initialContent: initialContent
         ), navigationBarAppearance: .default, theme: .default)
+        
+        //TODO:localize
+        self.title = "Reactions"
         
         self.scrollToTop = { [weak self] in
             guard let self, let componentView = self.node.hostView.componentView as? PeerAllowedReactionsScreenComponent.View else {
