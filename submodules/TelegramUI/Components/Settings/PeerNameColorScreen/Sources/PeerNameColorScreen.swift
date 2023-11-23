@@ -369,12 +369,12 @@ private func peerNameColorScreenEntries(
                 entries.append(.backgroundEmoji(emojiContent, colors.main, false, false))
             }
         } else {
-            if let emojiContent, profileColors != nil {
+            if let emojiContent {
                 var selectedItems = Set<MediaId>()
                 if let selectedProfileEmojiId {
                     selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: selectedProfileEmojiId))
                 }
-                let emojiContent = emojiContent.withSelectedItems(selectedItems).withCustomTintColor(profileColors?.main)
+                let emojiContent = emojiContent.withSelectedItems(selectedItems).withCustomTintColor(profileColors?.main ?? presentationData.theme.list.itemSecondaryTextColor)
                 
                 //TODO:localize
                 entries.append(.backgroundEmojiHeader("ADD ICON TO PROFILE", (selectedProfileEmojiId != nil && selectedProfileEmojiId != 0) ? presentationData.strings.NameColor_BackgroundEmoji_Remove : nil))

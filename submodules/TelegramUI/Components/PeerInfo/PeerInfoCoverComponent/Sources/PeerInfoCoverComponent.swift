@@ -137,6 +137,8 @@ public final class PeerInfoCoverComponent: Component {
             
             super.init(frame: frame)
             
+            self.clipsToBounds = true
+            
             self.addSubview(self.backgroundView)
             self.layer.addSublayer(self.backgroundGradientLayer)
             self.addSubview(self.avatarBackgroundPatternContainer)
@@ -235,14 +237,29 @@ public final class PeerInfoCoverComponent: Component {
             self.state = state
             
             let backgroundColor: UIColor
-            var secondaryBackgroundColor: UIColor
+            let secondaryBackgroundColor: UIColor
+            
+            let patternBackgroundColor: UIColor
+            let secondaryPatternBackgroundColor: UIColor
+            let useClearPatternColor: Bool
+            
             if let peer = component.peer, let colors = peer._asPeer().profileColor.flatMap({ component.context.peerNameColors.getProfile($0, dark: component.isDark) }) {
                 
                 backgroundColor = colors.main
                 secondaryBackgroundColor = colors.secondary ?? colors.main
+                
+                patternBackgroundColor = backgroundColor
+                secondaryPatternBackgroundColor = secondaryBackgroundColor
+                
+                useClearPatternColor = false
             } else {
                 backgroundColor = .clear
                 secondaryBackgroundColor = .clear
+                
+                patternBackgroundColor = component.isDark ? UIColor(white: 1.0, alpha: 0.2) : UIColor(white: 0.0, alpha: 0.2)
+                secondaryPatternBackgroundColor = patternBackgroundColor
+                
+                useClearPatternColor = true
             }
             
             self.backgroundView.backgroundColor = secondaryBackgroundColor
@@ -276,7 +293,7 @@ public final class PeerInfoCoverComponent: Component {
             transition.setFrame(view: self.avatarBackgroundPatternView, frame: CGSize(width: 200.0, height: 200.0).centered(around: CGPoint()))
             
             
-            let baseAvatarGradientAlpha: CGFloat = 0.8
+            let baseAvatarGradientAlpha: CGFloat = 0.24
             let numSteps = 10
             self.avatarBackgroundGradientLayer.colors = (0 ..< 10).map { i in
                 let step: CGFloat = 1.0 - CGFloat(i) / CGFloat(numSteps - 1)
@@ -329,9 +346,14 @@ public final class PeerInfoCoverComponent: Component {
                         self.avatarPatternContentLayers.append(itemLayer)
                     }
                     
-                    let gradientPosition: CGFloat = max(0.0, min(1.0, (avatarBackgroundPatternContainerFrame.midY + itemFrame.midY) / gradientHeight))
-                    let itemBackgroundColor: UIColor = secondaryBackgroundColor.mixedWith(backgroundColor, alpha: gradientPosition)
-                    let patternColor = UIColor(white: 0.0, alpha: component.isDark ? 0.2 : 0.2).blendOver(background: itemBackgroundColor)
+                    let patternColor: UIColor
+                    if useClearPatternColor {
+                        patternColor = patternBackgroundColor
+                    } else {
+                        let gradientPosition: CGFloat = max(0.0, min(1.0, (avatarBackgroundPatternContainerFrame.midY + itemFrame.midY) / gradientHeight))
+                        let itemBackgroundColor: UIColor = secondaryPatternBackgroundColor.mixedWith(patternBackgroundColor, alpha: gradientPosition)
+                        patternColor = UIColor(white: 0.0, alpha: component.isDark ? 0.2 : 0.2).blendOver(background: itemBackgroundColor)
+                    }
                     
                     itemLayer.frame = itemFrame
                     itemLayer.layerTintColor = patternColor.cgColor
